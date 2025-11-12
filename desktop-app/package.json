@@ -1,0 +1,31 @@
+{
+  "name": "receipt-extractor-desktop",
+  "version": "2.0.0",
+  "description": "AI-Powered Receipt Text Extraction Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run build:win",
+    "build:win": "electron-packager . ReceiptExtractor --platform=win32 --arch=x64 --out=dist --overwrite --asar=false --icon=assets/icon.ico",
+    "build:mac": "electron-packager . ReceiptExtractor --platform=darwin --arch=x64 --out=dist --overwrite --asar=false --icon=assets/icon.icns",
+    "build:linux": "electron-packager . ReceiptExtractor --platform=linux --arch=x64 --out=dist --overwrite --asar=false"
+  },
+  "keywords": [
+    "receipt",
+    "ocr",
+    "extraction",
+    "ai",
+    "electron",
+    "donut",
+    "florence"
+  ],
+  "author": "Receipt Extractor Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-packager": "^17.1.2"
+  }
+}

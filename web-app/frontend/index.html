@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Extractor - Web App</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧾 Receipt Extractor</h1>
+            <p>AI-Powered Text Detection from Receipts</p>
+        </header>
+
+        <main>
+            <!-- Model Selection -->
+            <section class="model-section">
+                <h2>Select Extraction Model</h2>
+                <div id="modelSelector" class="model-selector">
+                    <p class="loading">Loading models...</p>
+                </div>
+                <div id="modelInfo" class="model-info"></div>
+            </section>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Receipt Image</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <label for="fileInput" class="upload-label">
+                        <span class="upload-icon">📤</span>
+                        <span class="upload-text">Click to select or drag and drop</span>
+                        <span class="upload-hint">Supported: JPG, PNG, BMP, TIFF (Max 16MB)</span>
+                    </label>
+                </div>
+                <div id="imagePreview" class="image-preview hidden">
+                    <img id="previewImg" src="" alt="Preview">
+                </div>
+                <button id="extractBtn" class="btn btn-primary hidden" disabled>
+                    Extract Receipt Data
+                </button>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section hidden" id="resultsSection">
+                <h2>Extraction Results</h2>
+                <div id="processingInfo" class="processing-info"></div>
+
+                <div class="results-grid">
+                    <!-- Store Information -->
+                    <div class="result-card">
+                        <h3>Store Information</h3>
+                        <div id="storeInfo">
+                            <p><strong>Name:</strong> <span id="storeName">-</span></p>
+                            <p><strong>Address:</strong> <span id="storeAddress">-</span></p>
+                            <p><strong>Phone:</strong> <span id="storePhone">-</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Details -->
+                    <div class="result-card">
+                        <h3>Transaction Details</h3>
+                        <div id="transactionInfo">
+                            <p><strong>Date:</strong> <span id="transDate">-</span></p>
+                            <p><strong>Time:</strong> <span id="transTime">-</span></p>
+                            <p><strong>Total:</strong> <span id="total" class="highlight">-</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Line Items -->
+                <div class="result-card">
+                    <h3>Line Items (<span id="itemCount">0</span>)</h3>
+                    <div id="lineItems" class="line-items">
+                        <p class="no-items">No items extracted</p>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="export-section">
+                    <h3>Export Data</h3>
+                    <div class="export-buttons">
+                        <button id="exportJson" class="btn btn-secondary">Export as JSON</button>
+                        <button id="exportCsv" class="btn btn-secondary">Export as CSV</button>
+                        <button id="exportTxt" class="btn btn-secondary">Export as TXT</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section class="error-section hidden" id="errorSection">
+                <h3>Error</h3>
+                <p id="errorMessage"></p>
+            </section>
+        </main>
+
+        <footer>
+            <p>Receipt Extractor © 2024 | Open Source Models | No Authentication Required</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Processing receipt...</p>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
