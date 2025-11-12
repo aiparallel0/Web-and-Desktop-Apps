@@ -38,6 +38,25 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint - API information"""
+    return jsonify({
+        'service': 'Receipt Extraction API',
+        'version': '1.0',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'models': '/api/models',
+            'select_model': '/api/models/select (POST)',
+            'extract': '/api/extract (POST)',
+            'model_info': '/api/models/<model_id>/info',
+            'unload_models': '/api/models/unload (POST)'
+        },
+        'documentation': 'Access /api/health for health check or /api/models to see available models'
+    })
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
