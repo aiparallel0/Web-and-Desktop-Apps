@@ -1,0 +1,68 @@
+{
+  "available_models": {
+    "donut_sroie": {
+      "id": "donut_sroie",
+      "name": "SROIE Donut",
+      "type": "donut",
+      "huggingface_id": "philschmid/donut-base-sroie",
+      "task_prompt": "<s_sroie>",
+      "description": "Donut model trained on SROIE dataset - English receipts (4 fields: store, date, address, total)",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": false
+      }
+    },
+    "donut_cord": {
+      "id": "donut_cord",
+      "name": "CORD Donut",
+      "type": "donut",
+      "huggingface_id": "naver-clova-ix/donut-base-finetuned-cord-v2",
+      "task_prompt": "<s_cord-v2>",
+      "description": "Naver Donut model trained on CORD v2 dataset - Comprehensive receipt parsing",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true
+      }
+    },
+    "florence2": {
+      "id": "florence2",
+      "name": "Florence-2",
+      "type": "florence",
+      "huggingface_id": "microsoft/Florence-2-large",
+      "task_prompt": "<OCR_WITH_REGION>",
+      "description": "Microsoft Florence-2 - Advanced OCR with region detection",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true
+      }
+    },
+    "ocr_tesseract": {
+      "id": "ocr_tesseract",
+      "name": "Tesseract OCR",
+      "type": "ocr",
+      "description": "Traditional OCR with rule-based extraction - Fast and reliable",
+      "requires_auth": false,
+      "requires_tesseract": true,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true
+      }
+    }
+  },
+  "default_model": "donut_sroie"
+}

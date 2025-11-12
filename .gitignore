@@ -54,17 +54,21 @@ release/
 ehthumbs.db
 Thumbs.db
 
-# Model cache
+# Model cache (downloaded models, not source code)
 .cache/
-models/
 *.pth
 *.safetensors
 *.bin
+
+# Don't ignore our source code models directory
+!shared/models/
 
 # Output files (receipts)
 *.json
 !package.json
 !package-lock.json
+!**/config/*.json
+!**/models_config.json
 
 # Test files
 test_receipts/
