@@ -80,6 +80,7 @@ const extractBtn = document.getElementById('extractBtn');
 const saveBtn = document.getElementById('saveBtn');
 const toggleJsonBtn = document.getElementById('toggleJson');
 const removeImageBtn = document.getElementById('removeImage');
+const uploadArea = document.getElementById('uploadArea');
 
 const imagePreview = document.getElementById('imagePreview');
 const previewImg = document.getElementById('previewImg');
@@ -154,18 +155,29 @@ function setupEventListeners() {
 
     // Image selection
     selectImageBtn.addEventListener('click', handleSelectImage);
-    
+
+    // Upload area click (triggers file selection)
+    if (uploadArea) {
+        uploadArea.addEventListener('click', handleSelectImage);
+        uploadArea.style.cursor = 'pointer';
+
+        // Drag & Drop handlers
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+    }
+
     // Remove image
     if (removeImageBtn) {
         removeImageBtn.addEventListener('click', handleRemoveImage);
     }
-    
+
     // Extract
     extractBtn.addEventListener('click', handleExtract);
-    
+
     // Save
     saveBtn.addEventListener('click', handleSave);
-    
+
     // Toggle JSON
     toggleJsonBtn.addEventListener('click', handleToggleJson);
     
@@ -303,6 +315,97 @@ function handleRemoveImage() {
 
     // Accessibility: Announce removal
     announce('Image removed', 'polite');
+}
+
+// Handle Drag Over
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (uploadArea) {
+        uploadArea.style.borderColor = 'var(--color-primary)';
+        uploadArea.style.backgroundColor = 'rgba(0, 176, 240, 0.05)';
+    }
+}
+
+// Handle Drag Leave
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (uploadArea) {
+        uploadArea.style.borderColor = '';
+        uploadArea.style.backgroundColor = '';
+    }
+}
+
+// Handle Drop
+async function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (uploadArea) {
+        uploadArea.style.borderColor = '';
+        uploadArea.style.backgroundColor = '';
+    }
+
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+
+    const file = files[0];
+    const filePath = file.path;
+
+    // Validate file type
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'];
+    const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
+
+    if (!validExtensions.includes(ext)) {
+        showError('Invalid File Type', 'Please drop a valid image file (JPG, PNG, BMP, TIFF)');
+        announce('Invalid file type', 'assertive');
+        return;
+    }
+
+    try {
+        // Security: Validate path before using
+        const validPath = sanitize.path(filePath);
+        if (!validPath) {
+            throw new Error('Invalid file path');
+        }
+
+        selectedImagePath = validPath;
+        log.info('Image dropped:', selectedImagePath);
+
+        // Show preview
+        imagePreview.classList.remove('hidden');
+        previewImg.src = `file://${sanitize.path(filePath)}`;
+
+        // Display file name (sanitized)
+        const fileName = sanitize.html(filePath.split(/[\\\/]/).pop());
+        imagePath.textContent = fileName;
+
+        // Get file size
+        try {
+            const stats = await window.electronAPI.getFileStats(validPath);
+            if (stats && stats.size) {
+                const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+                fileSize.textContent = `${sizeMB} MB`;
+            }
+        } catch (e) {
+            fileSize.textContent = '';
+        }
+
+        // Enable extract button
+        extractBtn.disabled = false;
+
+        // Accessibility: Announce selection
+        announce(`Image dropped: ${fileName}`, 'polite');
+
+        log.info('Image preview updated via drag & drop');
+    } catch (error) {
+        log.error('Error handling dropped file:', error);
+        showError('Drop Error', sanitize.html(error.message));
+        announce('Error handling dropped file', 'assertive');
+    }
 }
 
 // Handle Extract
