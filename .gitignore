@@ -69,8 +69,16 @@ Thumbs.db
 !package-lock.json
 !**/config/*.json
 !**/models_config.json
+!tests/**/*.json
+!test_data/**/*.json
 
-# Test files
+# Test artifacts and coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Test output directories
 test_receipts/
 temp/
 tmp/
