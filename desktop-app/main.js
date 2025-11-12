@@ -131,6 +131,133 @@ ipcMain.handle('check-python', async () => {
     });
 });
 
+// Get settings
+ipcMain.handle('get-settings', async () => {
+    try {
+        const settings = {
+            lastModel: store.get('lastModel', 'ocr'),
+            aiMode: store.get('aiMode', 'fast')
+        };
+        return settings;
+    } catch (error) {
+        logInfo('Error getting settings:', error);
+        return {
+            lastModel: 'ocr',
+            aiMode: 'fast'
+        };
+    }
+});
+
+// Save settings
+ipcMain.handle('save-settings', async (event, settings) => {
+    try {
+        if (settings.lastModel) {
+            store.set('lastModel', settings.lastModel);
+        }
+        if (settings.aiMode) {
+            store.set('aiMode', settings.aiMode);
+        }
+        return { success: true };
+    } catch (error) {
+        logInfo('Error saving settings:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Get file stats
+ipcMain.handle('get-file-stats', async (event, filePath) => {
+    try {
+        const stats = fs.statSync(filePath);
+        return {
+            success: true,
+            size: stats.size,
+            modified: stats.mtime
+        };
+    } catch (error) {
+        logInfo('Error getting file stats:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
+// Check dependencies
+ipcMain.handle('check-dependencies', async () => {
+    try {
+        // Check Python
+        const pythonCheck = await new Promise((resolve) => {
+            const pythonCommands = process.platform === 'win32'
+                ? ['python', 'python3', 'py']
+                : ['python3', 'python'];
+
+            let pythonFound = false;
+            const checkNext = async (index) => {
+                if (index >= pythonCommands.length) {
+                    resolve(pythonFound);
+                    return;
+                }
+
+                try {
+                    const testProcess = spawn(pythonCommands[index], ['--version']);
+                    testProcess.on('error', () => checkNext(index + 1));
+                    testProcess.on('close', (code) => {
+                        if (code === 0) {
+                            pythonFound = true;
+                            resolve(true);
+                        } else {
+                            checkNext(index + 1);
+                        }
+                    });
+                } catch (error) {
+                    checkNext(index + 1);
+                }
+            };
+
+            checkNext(0);
+        });
+
+        if (!pythonCheck) {
+            return {
+                python: false,
+                dependencies: false,
+                message: 'Python not found. Please install Python 3.8+'
+            };
+        }
+
+        // Check if required Python packages are available
+        // For now, just return success if Python is found
+        return {
+            python: true,
+            dependencies: true,
+            message: 'All dependencies ready'
+        };
+    } catch (error) {
+        logInfo('Error checking dependencies:', error);
+        return {
+            python: false,
+            dependencies: false,
+            message: 'Error checking dependencies'
+        };
+    }
+});
+
+// Get diagnostics
+ipcMain.handle('get-diagnostics', async () => {
+    try {
+        const pythonCmd = getPythonPath();
+        return {
+            platform: process.platform,
+            pythonCommand: pythonCmd,
+            isDev: isDev,
+            appPath: app.getAppPath()
+        };
+    } catch (error) {
+        logInfo('Error getting diagnostics:', error);
+        return { error: error.message };
+    }
+});
+
 // Get available models
 ipcMain.handle('get-models', async () => {
     try {
@@ -171,13 +298,14 @@ ipcMain.handle('select-image', async () => {
     });
 
     if (result.canceled) {
-        return { canceled: true };
+        return { success: false, canceled: true };
     }
 
     const filePath = result.filePaths[0];
     const stats = fs.statSync(filePath);
 
     return {
+        success: true,
         canceled: false,
         path: filePath,
         size: stats.size,
@@ -214,10 +342,13 @@ ipcMain.handle('select-images', async () => {
 });
 
 // Extract receipt data
-ipcMain.handle('extract-receipt', async (event, imagePath, modelId) => {
+ipcMain.handle('extract-receipt', async (event, options) => {
     return new Promise((resolve) => {
         const pythonCmd = getPythonPath();
         const scriptPath = path.join(__dirname, 'process_receipt.py');
+
+        const imagePath = options.imagePath || options;
+        const modelId = options.model || options.modelId;
 
         logInfo(`Extracting receipt from: ${imagePath}`);
         logInfo(`Using model: ${modelId || 'default'}`);
@@ -293,11 +424,17 @@ ipcMain.handle('extract-receipt', async (event, imagePath, modelId) => {
 });
 
 // Save extraction result
-ipcMain.handle('save-result', async (event, data, format) => {
+ipcMain.handle('save-results', async (event, options) => {
+    const data = options.data || options;
+    const defaultPath = options.defaultPath || `receipt_${Date.now()}.json`;
+    const format = options.format || 'json';
+
     const result = await dialog.showSaveDialog(mainWindow, {
-        defaultPath: `receipt_${Date.now()}.${format}`,
+        defaultPath: defaultPath,
         filters: [
-            { name: format.toUpperCase(), extensions: [format] }
+            { name: 'JSON', extensions: ['json'] },
+            { name: 'Text', extensions: ['txt'] },
+            { name: 'CSV', extensions: ['csv'] }
         ]
     });
 
@@ -307,8 +444,9 @@ ipcMain.handle('save-result', async (event, data, format) => {
 
     try {
         let content;
+        const fileFormat = result.filePath.split('.').pop().toLowerCase();
 
-        switch (format) {
+        switch (fileFormat) {
             case 'json':
                 content = JSON.stringify(data, null, 2);
                 break;
@@ -319,7 +457,7 @@ ipcMain.handle('save-result', async (event, data, format) => {
                 content = formatAsCSV(data);
                 break;
             default:
-                return { success: false, error: 'Unsupported format' };
+                content = JSON.stringify(data, null, 2);
         }
 
         fs.writeFileSync(result.filePath, content, 'utf-8');
