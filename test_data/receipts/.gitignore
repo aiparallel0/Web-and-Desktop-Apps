@@ -1,0 +1,9 @@
+# Ignore all receipt images by default
+*.jpg
+*.jpeg
+*.png
+*.tiff
+*.tif
+
+# Allow specific examples if needed (remove ! to ignore all)
+# !example_receipt.jpg
