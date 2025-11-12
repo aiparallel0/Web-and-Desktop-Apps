@@ -1,0 +1,22 @@
+{
+  "store": {
+    "name": "TALDER JOE'S",
+    "address": "2001 GREENVILLE AVE DAILAS IX 75206",
+    "phone": "(469) 334-0614"
+  },
+  "items": [],
+  "totals": {
+    "subtotal": null,
+    "total": null,
+    "cash": null,
+    "change": null
+  },
+  "date": null,
+  "item_count": 0,
+  "coverage": "N/A",
+  "model": "SROIE",
+  "notes": [
+    "Store: TALDER JOE'S"
+  ],
+  "confidence": "50.00"
+}
