@@ -170,8 +170,15 @@ class DonutProcessor(BaseDonutProcessor):
 
             # Check if parsing was successful
             if not parsed_data:
-                logger.warning("Model output could not be parsed or is empty")
+                logger.warning("Model output could not be parsed as JSON")
                 logger.warning(f"Raw sequence was: {sequence[:200]}...")  # Log first 200 chars
+
+                # Try fallback text extraction for SROIE model
+                if 'sroie' in self.model_id.lower() and sequence:
+                    logger.info("Attempting fallback text extraction from plain text output")
+                    parsed_data = self._extract_from_text(sequence)
+                    if parsed_data:
+                        logger.info(f"Fallback extraction found: {parsed_data}")
 
             # Build ReceiptData
             receipt = self._build_receipt_data(parsed_data)
@@ -181,6 +188,9 @@ class DonutProcessor(BaseDonutProcessor):
             # Add diagnostic note if no data was extracted
             if not parsed_data:
                 receipt.extraction_notes.append("Model produced no parseable output")
+            elif 'sroie' in self.model_id.lower() and sequence and not self.parse_json_output(sequence):
+                # SROIE model produced text instead of JSON - we used fallback
+                receipt.extraction_notes.append("Model produced plain text instead of JSON - used fallback extraction")
             elif not any([receipt.store_name, receipt.store_address, receipt.total, receipt.transaction_date, receipt.items]):
                 receipt.extraction_notes.append("Model output parsed but no fields matched expected format")
 
@@ -223,6 +233,68 @@ class DonutProcessor(BaseDonutProcessor):
                         ))
 
         return receipt
+
+    def _extract_from_text(self, text: str) -> Dict:
+        """
+        Fallback: Extract structured data from plain text when JSON parsing fails.
+        This handles cases where SROIE model outputs text instead of JSON.
+        """
+        extracted = {}
+
+        # Clean up text - remove special tokens and weird characters
+        text = re.sub(r'[歲嵗的]', '', text)  # Remove garbled unicode
+        text = re.sub(r'</?s_\w+>', '', text)  # Remove special tokens like </s_address>
+
+        # Extract total (look for common patterns like "TOTAL 12.34" or just prices)
+        total_patterns = [
+            r'total[:\s]*\$?(\d+[.,]\d{2})',
+            r'(?:^|\s)(\d+[.,]\d{2})\s*$',  # Last price on line
+        ]
+        for pattern in total_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted['total'] = match.group(1).replace(',', '.')
+                break
+
+        # Extract date (various formats)
+        date_patterns = [
+            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+        ]
+        for pattern in date_patterns:
+            match = re.search(pattern, text)
+            if match:
+                extracted['date'] = match.group(1)
+                break
+
+        # Extract address (look for ZIP code and surrounding text)
+        address_match = re.search(r'([A-Z\s]+(?:TX|CA|NY|FL)[,\s]*\d{5}(?:-\d{4})?)', text)
+        if address_match:
+            extracted['address'] = address_match.group(1).strip()
+
+        # Extract store/company name (look for "STORE" or uppercase words at start)
+        store_patterns = [
+            r'(?:STORE|SHOP|MARKET)\s*#?\d+\s*-?\s*([A-Z\s]+)',
+            r'^([A-Z][A-Z\s]{2,20}?)(?:\s+\d|\s+[A-Z]{2}\s+\d)',  # Uppercase words before address
+        ]
+        for pattern in store_patterns:
+            match = re.search(pattern, text)
+            if match:
+                extracted['company'] = match.group(1).strip()
+                break
+
+        # If we found address but no company, try to extract from beginning
+        if 'address' in extracted and 'company' not in extracted:
+            # Text before address might be company name
+            addr_pos = text.find(extracted['address'])
+            if addr_pos > 0:
+                before_addr = text[:addr_pos].strip()
+                # Take last uppercase sequence before address
+                company_match = re.search(r'([A-Z][A-Z\s]{2,30})$', before_addr)
+                if company_match:
+                    extracted['company'] = company_match.group(1).strip()
+
+        return extracted
 
     def _calculate_confidence(self, receipt: ReceiptData) -> float:
         """Calculate confidence score based on extracted fields"""

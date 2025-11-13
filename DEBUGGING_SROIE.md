@@ -103,6 +103,37 @@ WARNING - No JSON object found in output
 
 ## Common Failure Modes and Diagnostics
 
+### Mode 0: Plain Text Instead of JSON (MOST COMMON)
+**Symptoms**:
+- Notes: "Model produced plain text instead of JSON - used fallback extraction"
+- Some fields may be populated from fallback extraction
+- Confidence: 20-80% depending on what was extracted
+
+**Logs to check**:
+```
+INFO - Raw model output: AVE DAILAS TX 75206 STOPE #403 - (469) 334-0614...
+WARNING - Failed to parse as direct JSON
+INFO - Attempting fallback text extraction from plain text output
+INFO - Fallback extraction found: {'address': '...', 'total': '...'}
+```
+
+**Root cause**:
+The `philschmid/donut-base-sroie` model sometimes produces plain text OCR output instead of structured JSON. This is a known issue with certain Donut model checkpoints.
+
+**Solution**:
+The fallback text extraction automatically kicks in and uses regex patterns to extract:
+- Address (by finding ZIP codes)
+- Total (by finding price patterns)
+- Date (by finding date patterns)
+- Store name (from text before address)
+
+This provides partial extraction even when the model doesn't produce proper JSON.
+
+**Recommendations**:
+1. Try the CORD model instead: `donut_cord` (better structured output)
+2. Try Florence-2 model: `florence2` (more reliable OCR)
+3. Try Tesseract OCR: `ocr_tesseract` (traditional OCR with rule-based extraction)
+
 ### Mode 1: Empty Model Output
 **Symptoms**:
 - All fields are null
