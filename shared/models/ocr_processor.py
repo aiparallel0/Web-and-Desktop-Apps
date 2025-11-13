@@ -93,9 +93,12 @@ class OCRProcessor:
             image = load_and_validate_image(image_path)
             processed_image = preprocess_for_ocr(image)
 
-            # Perform OCR
-            text = pytesseract.image_to_string(processed_image, lang='eng')
+            # Perform OCR with better configuration
+            # Using config to improve accuracy
+            custom_config = r'--oem 3 --psm 6'  # OEM 3 = Default, PSM 6 = Assume uniform block of text
+            text = pytesseract.image_to_string(processed_image, lang='eng', config=custom_config)
             logger.info("OCR extraction complete")
+            logger.info(f"Extracted text length: {len(text)} characters")
 
             # Parse the OCR text
             receipt = self._parse_receipt_text(text)
@@ -117,8 +120,21 @@ class OCRProcessor:
             receipt.extraction_notes.append("No text detected")
             return receipt
 
-        # Extract store name (typically first line)
-        receipt.store_name = lines[0] if lines else None
+        # Extract store name (typically first meaningful line with at least 2 characters)
+        # Skip very short lines that are likely OCR artifacts
+        receipt.store_name = None
+        for line in lines[:5]:  # Check first 5 lines
+            # Skip single characters and common OCR artifacts
+            if len(line) >= 2 and not line.isdigit() and line not in ['D', 'I', 'O', 'l', '1', '|']:
+                receipt.store_name = line
+                logger.info(f"Found store name: {line}")
+                break
+
+        if not receipt.store_name:
+            # If no meaningful store name found, still try the first line
+            receipt.store_name = lines[0] if lines else None
+            if receipt.store_name and len(receipt.store_name) < 2:
+                receipt.extraction_notes.append(f"Store name very short: '{receipt.store_name}' - possible OCR error")
 
         # Extract date
         date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'

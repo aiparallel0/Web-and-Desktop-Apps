@@ -173,12 +173,18 @@ class DonutProcessor(BaseDonutProcessor):
                 logger.warning("Model output could not be parsed as JSON")
                 logger.warning(f"Raw sequence was: {sequence[:200]}...")  # Log first 200 chars
 
-                # Try fallback text extraction for SROIE model
-                if 'sroie' in self.model_id.lower() and sequence:
-                    logger.info("Attempting fallback text extraction from plain text output")
-                    parsed_data = self._extract_from_text(sequence)
-                    if parsed_data:
-                        logger.info(f"Fallback extraction found: {parsed_data}")
+                # Try fallback text extraction for SROIE and CORD models
+                if sequence:
+                    if 'sroie' in self.model_id.lower():
+                        logger.info("Attempting fallback text extraction from plain text output (SROIE)")
+                        parsed_data = self._extract_from_text(sequence)
+                        if parsed_data:
+                            logger.info(f"Fallback extraction found: {parsed_data}")
+                    elif 'cord' in self.model_id.lower():
+                        logger.info("Attempting fallback text extraction from plain text output (CORD)")
+                        parsed_data = self._extract_from_text_cord(sequence)
+                        if parsed_data:
+                            logger.info(f"Fallback extraction found: {parsed_data}")
 
             # Build ReceiptData
             receipt = self._build_receipt_data(parsed_data)
@@ -188,9 +194,10 @@ class DonutProcessor(BaseDonutProcessor):
             # Add diagnostic note if no data was extracted
             if not parsed_data:
                 receipt.extraction_notes.append("Model produced no parseable output")
-            elif 'sroie' in self.model_id.lower() and sequence and not self.parse_json_output(sequence):
-                # SROIE model produced text instead of JSON - we used fallback
-                receipt.extraction_notes.append("Model produced plain text instead of JSON - used fallback extraction")
+            elif sequence and not self.parse_json_output(sequence):
+                # Model produced text instead of JSON - we used fallback
+                if 'sroie' in self.model_id.lower() or 'cord' in self.model_id.lower():
+                    receipt.extraction_notes.append("Model produced plain text instead of JSON - used fallback extraction")
             elif not any([receipt.store_name, receipt.store_address, receipt.total, receipt.transaction_date, receipt.items]):
                 receipt.extraction_notes.append("Model output parsed but no fields matched expected format")
 
@@ -296,6 +303,99 @@ class DonutProcessor(BaseDonutProcessor):
 
         return extracted
 
+    def _extract_from_text_cord(self, text: str) -> Dict:
+        """
+        Fallback: Extract structured data from plain text for CORD models.
+        CORD models are trained to extract more complex receipt data including line items.
+        """
+        extracted = {}
+
+        # Clean up text - remove special tokens
+        text = re.sub(r'</?s_\w+>', '', text)  # Remove special tokens like </s_cord-v2>
+        text = re.sub(r'[歲嵗的]', '', text)  # Remove garbled unicode
+
+        # Extract store/company name (usually at the beginning)
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        if lines:
+            # First meaningful line is usually the store name
+            for line in lines[:3]:
+                if len(line) > 2 and not re.match(r'^\d+[.,]\d{2}$', line):
+                    extracted['company'] = line
+                    break
+
+        # Extract total (look for common patterns)
+        total_patterns = [
+            r'(?:total|grand total|amount)[:\s]*\$?(\d+[.,]\d{2})',
+            r'(?:^|\n)total[:\s]*(\d+[.,]\d{2})',
+            r'(?:^|\s)(\d+[.,]\d{2})\s*$',  # Last price on line
+        ]
+        for pattern in total_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted['total'] = match.group(1).replace(',', '.')
+                break
+
+        # Extract date (various formats)
+        date_patterns = [
+            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+            r'(\d{2}/\d{2}/\d{4})',
+        ]
+        for pattern in date_patterns:
+            match = re.search(pattern, text)
+            if match:
+                extracted['date'] = match.group(1)
+                break
+
+        # Extract address (look for ZIP code and surrounding text)
+        address_patterns = [
+            r'([A-Z\s]+(?:TX|CA|NY|FL|WA|IL|MA|PA|OH)[,\s]*\d{5}(?:-\d{4})?)',
+            r'(\d+\s+[A-Z][a-z]+\s+(?:St|Ave|Rd|Blvd|Lane|Drive|Street|Avenue))',
+        ]
+        for pattern in address_patterns:
+            match = re.search(pattern, text)
+            if match:
+                extracted['address'] = match.group(1).strip()
+                break
+
+        # Extract menu items (CORD specific)
+        # Look for patterns like "Item Name 2.99" or "Item Name x2 5.98"
+        menu_items = []
+        item_patterns = [
+            r'([A-Za-z\s]{3,30})\s+(?:x\d+\s+)?\$?(\d+[.,]\d{2})',
+            r'([A-Za-z][A-Za-z\s]{2,30}?)\s+(\d+[.,]\d{2})',
+        ]
+
+        for line in lines:
+            # Skip lines that are likely headers or totals
+            line_lower = line.lower()
+            if any(word in line_lower for word in ['total', 'subtotal', 'tax', 'change', 'cash', 'card']):
+                continue
+
+            for pattern in item_patterns:
+                match = re.search(pattern, line)
+                if match:
+                    item_name = match.group(1).strip()
+                    item_price = match.group(2).replace(',', '.')
+
+                    # Validate item name and price
+                    if len(item_name) >= 3 and len(item_name) <= 50:
+                        try:
+                            price_val = float(item_price)
+                            if 0 < price_val < 1000:  # Reasonable price range
+                                menu_items.append({
+                                    'nm': item_name,
+                                    'price': item_price
+                                })
+                        except ValueError:
+                            pass
+                    break
+
+        if menu_items:
+            extracted['menu'] = menu_items
+
+        return extracted
+
     def _calculate_confidence(self, receipt: ReceiptData) -> float:
         """Calculate confidence score based on extracted fields"""
         score = 0.0
@@ -344,9 +444,11 @@ class FlorenceProcessor(BaseDonutProcessor):
         """Load Florence-2 model"""
         logger.info(f"Loading Florence-2 model: {self.model_id}")
         try:
+            # Load model with explicit attention implementation to avoid SDPA errors
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
-                trust_remote_code=True
+                trust_remote_code=True,
+                attn_implementation="eager"  # Explicitly use eager attention to avoid _supports_sdpa error
             )
             self.processor = AutoProcessor.from_pretrained(
                 self.model_id,
