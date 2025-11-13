@@ -70,21 +70,32 @@ class BaseDonutProcessor:
     @staticmethod
     def parse_json_output(json_str: str) -> Dict:
         """Parse JSON from model output"""
+        if not json_str or not json_str.strip():
+            logger.warning("Empty output from model")
+            return {}
+
         try:
             json_str = json_str.strip()
+            # Remove markdown code blocks if present
             if json_str.startswith('```json'):
                 json_str = json_str[7:]
             if json_str.endswith('```'):
                 json_str = json_str[:-3]
             json_str = json_str.strip()
             return json.loads(json_str)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"Failed to parse as direct JSON: {e}")
+            # Try to extract JSON from text
             try:
                 match = re.search(r'\{.*\}', json_str, re.DOTALL)
                 if match:
-                    return json.loads(match.group(0))
+                    extracted = match.group(0)
+                    logger.info(f"Attempting to parse extracted JSON: {extracted[:100]}...")
+                    return json.loads(extracted)
+                else:
+                    logger.warning("No JSON object found in output")
             except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f"Failed to extract JSON from text: {e}")
+                logger.warning(f"Failed to extract JSON from text: {e}")
         return {}
 
 
@@ -98,7 +109,13 @@ class DonutProcessor(BaseDonutProcessor):
             self.processor = TransformersDonutProcessor.from_pretrained(self.model_id)
             self.model = VisionEncoderDecoderModel.from_pretrained(self.model_id)
             self.model.to(self.device)
+
+            # Log model configuration
             logger.info(f"Model loaded on {self.device}")
+            logger.info(f"Model max length: {self.model.decoder.config.max_position_embeddings}")
+            logger.info(f"Task prompt: {self.task_prompt}")
+            logger.info(f"Tokenizer vocab size: {len(self.processor.tokenizer)}")
+
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
             raise
@@ -144,13 +161,31 @@ class DonutProcessor(BaseDonutProcessor):
             )
             sequence = re.sub(r"<.*?>", "", sequence, count=1).strip()
 
+            # Debug logging
+            logger.info(f"Raw model output: {sequence}")
+
             # Parse JSON output
             parsed_data = self.parse_json_output(sequence)
+            logger.info(f"Parsed data: {parsed_data}")
+
+            # Check if parsing was successful
+            if not parsed_data:
+                logger.warning("Model output could not be parsed or is empty")
+                logger.warning(f"Raw sequence was: {sequence[:200]}...")  # Log first 200 chars
 
             # Build ReceiptData
             receipt = self._build_receipt_data(parsed_data)
             receipt.processing_time = time.time() - start_time
             receipt.model_used = self.model_name
+
+            # Add diagnostic note if no data was extracted
+            if not parsed_data:
+                receipt.extraction_notes.append("Model produced no parseable output")
+            elif not any([receipt.store_name, receipt.store_address, receipt.total, receipt.transaction_date, receipt.items]):
+                receipt.extraction_notes.append("Model output parsed but no fields matched expected format")
+
+            # Calculate confidence score
+            receipt.confidence_score = self._calculate_confidence(receipt)
 
             return ExtractionResult(success=True, data=receipt)
 
@@ -188,6 +223,46 @@ class DonutProcessor(BaseDonutProcessor):
                         ))
 
         return receipt
+
+    def _calculate_confidence(self, receipt: ReceiptData) -> float:
+        """Calculate confidence score based on extracted fields"""
+        score = 0.0
+
+        # For SROIE model (basic field extraction)
+        if 'sroie' in self.model_id.lower():
+            if receipt.store_name:
+                score += 30
+            if receipt.total:
+                score += 30
+            if receipt.store_address:
+                score += 20
+            if receipt.transaction_date:
+                score += 20
+            return min(100.0, score)
+
+        # For models with item extraction (CORD, etc.)
+        if receipt.items:
+            # Items: up to 45 points (4.5 per item, max 10 items)
+            score += min(45, len(receipt.items) * 4.5)
+        if receipt.store_name:
+            score += 15
+        if receipt.total:
+            score += 25
+            # Coverage bonus if items exist
+            if receipt.items:
+                try:
+                    items_sum = sum(item.total_price for item in receipt.items)
+                    coverage = (items_sum / receipt.total * 100) if receipt.total > 0 else 0
+                    if 95 <= coverage <= 105:
+                        score += 15  # Perfect coverage
+                    elif 85 <= coverage <= 115:
+                        score += 10  # Good coverage
+                except (ValueError, ArithmeticError):
+                    pass
+        if receipt.transaction_date:
+            score += 5
+
+        return min(100.0, score)
 
 
 class FlorenceProcessor(BaseDonutProcessor):
