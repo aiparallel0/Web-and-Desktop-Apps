@@ -62,6 +62,21 @@
         "address": true,
         "items": true
       }
+    },
+    "ocr_paddle": {
+      "id": "ocr_paddle",
+      "name": "PaddleOCR + Simple Parser",
+      "type": "paddle",
+      "description": "Reliable, fast, proven technology. Straightforward OCR with rule-based extraction",
+      "requires_auth": false,
+      "requires_paddleocr": true,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true
+      }
     }
   },
   "default_model": "donut_sroie"
