@@ -16,7 +16,7 @@ import time
 from decimal import Decimal
 from typing import Dict, List, Optional
 import torch
-from transformers import DonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
+from transformers import DonutProcessor as TransformersDonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 
 # Add parent directory to path for imports
@@ -95,7 +95,7 @@ class DonutProcessor(BaseDonutProcessor):
         """Load Donut model"""
         logger.info(f"Loading Donut model: {self.model_id}")
         try:
-            self.processor = DonutProcessor.from_pretrained(self.model_id)
+            self.processor = TransformersDonutProcessor.from_pretrained(self.model_id)
             self.model = VisionEncoderDecoderModel.from_pretrained(self.model_id)
             self.model.to(self.device)
             logger.info(f"Model loaded on {self.device}")
