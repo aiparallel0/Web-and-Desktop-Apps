@@ -66,6 +66,9 @@ def test_load_and_validate_image():
     assert loaded_img.size == (200, 150)
     assert loaded_img.mode == 'RGB'
 
+    # Close the image to release the file handle (important for Windows)
+    loaded_img.close()
+
     # Clean up
     import os
     os.unlink(tmp_path)
