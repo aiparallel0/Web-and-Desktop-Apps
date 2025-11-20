@@ -210,6 +210,37 @@ class DonutProcessor(BaseDonutProcessor):
             logger.error(f"Extraction failed: {e}")
             return ExtractionResult(success=False, error=str(e))
 
+    def _safe_extract_string(self, value, max_depth=2, current_depth=0):
+        """
+        Safely extract a string value from potentially nested/malformed structures.
+        Handles cases where CORD model outputs nested dicts instead of strings.
+        """
+        if value is None:
+            return None
+
+        # If it's already a string, return it
+        if isinstance(value, str):
+            return value.strip() if value.strip() else None
+
+        # If it's a number, convert to string
+        if isinstance(value, (int, float)):
+            return str(value)
+
+        # If it's a dict and we haven't recursed too deep, try to extract a string value
+        if isinstance(value, dict) and current_depth < max_depth:
+            # Try common field names
+            for field in ['nm', 'name', 'price', 'num', 'unitprice', 'value', 'text']:
+                if field in value:
+                    result = self._safe_extract_string(value[field], max_depth, current_depth + 1)
+                    if result:
+                        return result
+            # If no known fields, try first string value
+            for v in value.values():
+                if isinstance(v, str) and v.strip():
+                    return v.strip()
+
+        return None
+
     def _build_receipt_data(self, parsed_data: Dict) -> ReceiptData:
         """Build ReceiptData from parsed JSON"""
         receipt = ReceiptData()
@@ -219,19 +250,48 @@ class DonutProcessor(BaseDonutProcessor):
         receipt.store_address = parsed_data.get('address')
         receipt.transaction_date = parsed_data.get('date')
 
-        # Extract total
-        total_str = parsed_data.get('total')
+        # Extract total from various possible locations
+        total_str = None
+        # CORD model: check in 'total' dict with 'total_price' field
+        if 'total' in parsed_data and isinstance(parsed_data['total'], dict):
+            total_str = parsed_data['total'].get('total_price')
+        # Standard: check 'total' as string
+        if not total_str:
+            total_str = parsed_data.get('total') if isinstance(parsed_data.get('total'), str) else None
+
         if total_str:
             receipt.total = self.normalize_price(total_str)
+
+        # Extract subtotal (CORD model specific)
+        if 'sub_total' in parsed_data and isinstance(parsed_data['sub_total'], dict):
+            subtotal_str = parsed_data['sub_total'].get('subtotal_price')
+            if subtotal_str:
+                receipt.subtotal = self.normalize_price(subtotal_str)
+
+        # Extract cash and change (CORD model specific)
+        if 'total' in parsed_data and isinstance(parsed_data['total'], dict):
+            total_dict = parsed_data['total']
+            cash_str = total_dict.get('cashprice')
+            if cash_str:
+                receipt.cash_tendered = self.normalize_price(cash_str)
+            change_str = total_dict.get('changeprice')
+            if change_str:
+                receipt.change_given = self.normalize_price(change_str)
 
         # Extract items if available
         items_data = parsed_data.get('menu', []) or parsed_data.get('items', [])
         for item_data in items_data:
             if isinstance(item_data, dict):
-                name = item_data.get('nm') or item_data.get('name')
-                price = item_data.get('price') or item_data.get('total_price')
+                # Safely extract name and price, handling malformed nested structures
+                name_raw = item_data.get('nm') or item_data.get('name')
+                price_raw = item_data.get('price') or item_data.get('total_price') or item_data.get('num')
 
-                if name and price:
+                # Use safe extraction to handle nested dicts
+                name = self._safe_extract_string(name_raw)
+                price = self._safe_extract_string(price_raw)
+
+                # Validate both are strings and not empty
+                if name and isinstance(name, str) and price and isinstance(price, str):
                     normalized_price = self.normalize_price(price)
                     if normalized_price:
                         receipt.items.append(LineItem(
