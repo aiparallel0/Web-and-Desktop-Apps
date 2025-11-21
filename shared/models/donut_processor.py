@@ -554,14 +554,15 @@ class FlorenceProcessor(BaseDonutProcessor):
 
             logger.info("Florence-2: Generating output...")
             try:
-                # Use greedy decoding (num_beams=1) to avoid past_key_values issue
-                # Florence-2 has a known issue with beam search and past_key_values
+                # Disable caching to avoid past_key_values issue
+                # Florence-2 has a known issue with past_key_values handling
                 generated_ids = self.model.generate(
                     input_ids=inputs["input_ids"],
                     pixel_values=inputs["pixel_values"],
                     max_new_tokens=1024,
-                    num_beams=1,  # Use greedy decoding instead of beam search
+                    num_beams=1,  # Use greedy decoding
                     do_sample=False,
+                    use_cache=False,  # Disable KV cache to avoid past_key_values bug
                 )
             except Exception as e:
                 logger.error(f"Florence-2: Failed during generation: {e}", exc_info=True)
