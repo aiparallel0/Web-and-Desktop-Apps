@@ -526,33 +526,64 @@ class FlorenceProcessor(BaseDonutProcessor):
 
         try:
             # Load image
+            logger.info("Florence-2: Loading image...")
             image = load_and_validate_image(image_path)
 
+            if image is None:
+                raise ValueError("Image is None after loading")
+
+            logger.info(f"Florence-2: Image loaded successfully, size: {image.size}")
+
             # Run OCR with region detection
-            inputs = self.processor(
-                text=self.task_prompt,
-                images=image,
-                return_tensors="pt"
-            ).to(self.device)
+            logger.info("Florence-2: Processing with model...")
+            try:
+                inputs = self.processor(
+                    text=self.task_prompt,
+                    images=image,
+                    return_tensors="pt"
+                )
 
-            generated_ids = self.model.generate(
-                input_ids=inputs["input_ids"],
-                pixel_values=inputs["pixel_values"],
-                max_new_tokens=1024,
-                num_beams=3,
-            )
+                if inputs is None:
+                    raise ValueError("Processor returned None")
 
+                logger.info(f"Florence-2: Inputs prepared, keys: {inputs.keys()}")
+                inputs = inputs.to(self.device)
+            except Exception as e:
+                logger.error(f"Florence-2: Failed during input processing: {e}", exc_info=True)
+                raise
+
+            logger.info("Florence-2: Generating output...")
+            try:
+                generated_ids = self.model.generate(
+                    input_ids=inputs["input_ids"],
+                    pixel_values=inputs["pixel_values"],
+                    max_new_tokens=1024,
+                    num_beams=3,
+                )
+            except Exception as e:
+                logger.error(f"Florence-2: Failed during generation: {e}", exc_info=True)
+                raise
+
+            logger.info("Florence-2: Decoding output...")
             generated_text = self.processor.batch_decode(
                 generated_ids,
                 skip_special_tokens=False
             )[0]
 
+            logger.info(f"Florence-2: Generated text length: {len(generated_text)}")
+
             # Parse Florence output
-            parsed_output = self.processor.post_process_generation(
-                generated_text,
-                task=self.task_prompt,
-                image_size=(image.width, image.height)
-            )
+            logger.info("Florence-2: Post-processing generation...")
+            try:
+                parsed_output = self.processor.post_process_generation(
+                    generated_text,
+                    task=self.task_prompt,
+                    image_size=(image.width, image.height)
+                )
+                logger.info(f"Florence-2: Parsed output keys: {parsed_output.keys() if parsed_output else 'None'}")
+            except Exception as e:
+                logger.error(f"Florence-2: Failed during post-processing: {e}", exc_info=True)
+                raise
 
             # Build receipt data from OCR results
             receipt = self._build_receipt_from_ocr(parsed_output)
@@ -562,7 +593,7 @@ class FlorenceProcessor(BaseDonutProcessor):
             return ExtractionResult(success=True, data=receipt)
 
         except Exception as e:
-            logger.error(f"Extraction failed: {e}")
+            logger.error(f"Florence-2 extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
 
     def _build_receipt_from_ocr(self, parsed_output: Dict) -> ReceiptData:
