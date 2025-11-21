@@ -2,6 +2,7 @@
 Image preprocessing utilities for receipt extraction
 Shared across all models and applications
 """
+import os
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 import logging
@@ -16,13 +17,33 @@ CONTRAST_THRESHOLD = 40
 def load_and_validate_image(image_path: str) -> Image.Image:
     """Load and validate image file"""
     try:
+        # Check if file exists
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+
+        # Check if file is readable
+        if not os.access(image_path, os.R_OK):
+            raise PermissionError(f"Cannot read image file: {image_path}")
+
+        # Check file size
+        file_size = os.path.getsize(image_path)
+        if file_size == 0:
+            raise ValueError(f"Image file is empty: {image_path}")
+
+        logger.info(f"Loading image from: {image_path} (size: {file_size} bytes)")
+
         image = Image.open(image_path)
+
+        if image is None:
+            raise ValueError(f"PIL failed to load image: {image_path}")
+
         if image.mode != 'RGB':
             image = image.convert('RGB')
-        logger.info(f"Loaded image: {image.size[0]}x{image.size[1]}")
+
+        logger.info(f"Loaded image successfully: {image.size[0]}x{image.size[1]}")
         return image
     except Exception as e:
-        logger.error(f"Failed to load image: {e}")
+        logger.error(f"Failed to load image from {image_path}: {e}")
         raise
 
 
@@ -80,6 +101,12 @@ def preprocess_for_ocr(image: Image.Image) -> Image.Image:
     try:
         # Convert to numpy array
         img_array = np.array(image)
+
+        # Validate array
+        if img_array is None or img_array.size == 0:
+            raise ValueError("Image array is empty or None")
+
+        logger.info(f"Image array shape: {img_array.shape}")
 
         # Convert to grayscale
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
