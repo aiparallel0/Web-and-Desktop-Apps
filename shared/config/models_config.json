@@ -66,6 +66,6 @@
       }
     }
   },
-  "default_model": "ocr_tesseract",
+  "default_model": "ocr_easyocr",
   "recommended_model": "ocr_easyocr"
 }
