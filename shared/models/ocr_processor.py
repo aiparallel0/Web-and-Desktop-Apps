@@ -44,11 +44,36 @@ class OCRProcessor:
         self.model_name = model_config['name']
         self.tesseract_path = self._find_tesseract()
 
+        if self.tesseract_path is None:
+            error_msg = (
+                "Tesseract OCR is not installed or not found in system PATH.\n"
+                "Please install Tesseract:\n"
+                "  - Windows: https://github.com/UB-Mannheim/tesseract/wiki\n"
+                "  - macOS: brew install tesseract\n"
+                "  - Linux: sudo apt-get install tesseract-ocr\n"
+                "After installation, restart the application."
+            )
+            logger.error(error_msg)
+            raise EnvironmentError(error_msg)
+
         if self.tesseract_path and self.tesseract_path != 'tesseract':
             pytesseract.pytesseract.tesseract_cmd = self.tesseract_path
             logger.info(f"Using Tesseract at: {self.tesseract_path}")
         else:
             logger.info("Using Tesseract from system PATH")
+
+        # Verify Tesseract is working
+        self._verify_tesseract()
+
+    def _verify_tesseract(self):
+        """Verify Tesseract is properly installed and working"""
+        try:
+            version = pytesseract.get_tesseract_version()
+            logger.info(f"Tesseract version: {version}")
+        except Exception as e:
+            error_msg = f"Tesseract found but not working properly: {e}"
+            logger.error(error_msg)
+            raise EnvironmentError(error_msg) from e
 
     def _find_tesseract(self) -> Optional[str]:
         """Find Tesseract installation"""
@@ -131,6 +156,7 @@ class OCRProcessor:
         return preprocessed
 
     def extract(self, image_path: str) -> ExtractionResult:
+        """Extract receipt data using Tesseract OCR with multi-pass strategy"""
         """Extract receipt data using Tesseract OCR - TRY MULTIPLE MODES"""
         start_time = time.time()
 
@@ -143,6 +169,44 @@ class OCRProcessor:
         try:
             # Load image
             image = load_and_validate_image(image_path)
+            processed_image = preprocess_for_ocr(image, aggressive=True)
+
+            # MULTI-PASS OCR STRATEGY for maximum accuracy
+            # Try multiple PSM modes and combine results
+
+            ocr_results = []
+
+            # Pass 1: PSM 6 - Single uniform block (good for well-structured receipts)
+            config1 = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
+            text1 = pytesseract.image_to_string(processed_image, lang='eng', config=config1)
+            ocr_results.append(('PSM 6', text1))
+
+            # Pass 2: PSM 4 - Single column of varying text (good for receipts with different sections)
+            config2 = r'--oem 3 --psm 4'
+            text2 = pytesseract.image_to_string(processed_image, lang='eng', config=config2)
+            ocr_results.append(('PSM 4', text2))
+
+            # Select best result (longest meaningful text)
+            best_mode, best_text = max(ocr_results, key=lambda x: len(x[1].strip()))
+
+            logger.info(f"OCR extraction complete using {best_mode}")
+            logger.info(f"Extracted text length: {len(best_text)} characters")
+
+            # Log first 200 chars for debugging
+            preview = best_text[:200].replace('\n', '\\n')
+            logger.info(f"Text preview: {preview}...")
+
+            # Parse the OCR text
+            receipt = self._parse_receipt_text(best_text)
+            receipt.processing_time = time.time() - start_time
+            receipt.model_used = f"{self.model_name} ({best_mode})"
+
+            # Add quality warning if extraction seems poor
+            if len(best_text.strip()) < 50:
+                receipt.extraction_notes.append(
+                    "OCR produced very little text - image quality may be poor. "
+                    "Try rescanning at higher resolution with better lighting."
+                )
 
             # Get multiple preprocessed versions
             preprocessed_versions = self._aggressive_preprocess(image)

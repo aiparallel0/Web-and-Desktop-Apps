@@ -5,6 +5,7 @@ Provides REST API for uploading images and extracting receipt data
 import os
 import sys
 import logging
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -27,15 +28,67 @@ CORS(app)  # Enable CORS for web frontend
 
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['REQUEST_TIMEOUT'] = 300  # 5 minutes max per request
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif'}
 
-# Initialize model manager
-model_manager = ModelManager()
+# Initialize model manager with resource limits
+# Max 3 models loaded at once to prevent memory exhaustion
+model_manager = ModelManager(max_loaded_models=3)
 
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def create_error_response(error_message: str, error_type: str = 'UnknownError', status_code: int = 500, details: dict = None):
+    """
+    Create structured error response
+
+    Args:
+        error_message: Human-readable error message
+        error_type: Type of error (e.g., 'ValidationError', 'ModelError', 'SystemError')
+        status_code: HTTP status code
+        details: Optional additional error details
+
+    Returns:
+        JSON response with error information
+    """
+    response = {
+        'success': False,
+        'error': {
+            'type': error_type,
+            'message': error_message,
+            'timestamp': time.time()
+        }
+    }
+
+    if details:
+        response['error']['details'] = details
+
+    return jsonify(response), status_code
+
+
+# Global error handlers
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle file too large errors"""
+    return create_error_response(
+        f"File too large. Maximum file size is {app.config['MAX_CONTENT_LENGTH'] / (1024*1024):.0f}MB",
+        error_type='FileTooLarge',
+        status_code=413
+    )
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle internal server errors"""
+    logger.error(f"Internal server error: {error}")
+    return create_error_response(
+        'Internal server error occurred',
+        error_type='InternalServerError',
+        status_code=500
+    )
 
 
 @app.route('/', methods=['GET'])
@@ -60,11 +113,66 @@ def index():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'receipt-extraction-api'
-    })
+    """Enhanced health check endpoint with system diagnostics"""
+    try:
+        import psutil
+        import platform
+
+        # Get system resources
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+
+        # Get model manager stats
+        resource_stats = model_manager.get_resource_stats()
+
+        health_data = {
+            'status': 'healthy',
+            'service': 'receipt-extraction-api',
+            'version': '2.0',
+            'timestamp': time.time(),
+
+            # System info
+            'system': {
+                'platform': platform.system(),
+                'python_version': platform.python_version(),
+                'cpu_count': psutil.cpu_count(),
+                'memory_total_gb': round(memory.total / (1024**3), 2),
+                'memory_available_gb': round(memory.available / (1024**3), 2),
+                'memory_percent_used': memory.percent,
+                'disk_total_gb': round(disk.total / (1024**3), 2),
+                'disk_free_gb': round(disk.free / (1024**3), 2),
+                'disk_percent_used': disk.percent
+            },
+
+            # Model manager state
+            'models': resource_stats
+        }
+
+        # Determine overall health status
+        if memory.percent > 90:
+            health_data['status'] = 'degraded'
+            health_data['warnings'] = ['Memory usage critical (>90%)']
+        elif memory.percent > 80:
+            health_data['status'] = 'warning'
+            health_data['warnings'] = ['Memory usage high (>80%)']
+
+        return jsonify(health_data)
+
+    except ImportError:
+        # psutil not available, return basic health check
+        return jsonify({
+            'status': 'healthy',
+            'service': 'receipt-extraction-api',
+            'version': '2.0',
+            'note': 'Install psutil for detailed system metrics'
+        })
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'receipt-extraction-api',
+            'error': str(e)
+        }), 500
 
 
 @app.route('/api/models', methods=['GET'])

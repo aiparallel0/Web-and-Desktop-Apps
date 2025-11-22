@@ -103,22 +103,48 @@ class DonutProcessor(BaseDonutProcessor):
     """Processor for Donut models (SROIE, CORD, etc.)"""
 
     def _load_model(self):
-        """Load Donut model"""
+        """Load Donut model with retry logic for network failures"""
         logger.info(f"Loading Donut model: {self.model_id}")
-        try:
-            self.processor = TransformersDonutProcessor.from_pretrained(self.model_id)
-            self.model = VisionEncoderDecoderModel.from_pretrained(self.model_id)
-            self.model.to(self.device)
 
-            # Log model configuration
-            logger.info(f"Model loaded on {self.device}")
-            logger.info(f"Model max length: {self.model.decoder.config.max_position_embeddings}")
-            logger.info(f"Task prompt: {self.task_prompt}")
-            logger.info(f"Tokenizer vocab size: {len(self.processor.tokenizer)}")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Download attempt {attempt + 1}/{max_retries}")
 
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            raise
+                # Download processor (tokenizer, image processor)
+                self.processor = TransformersDonutProcessor.from_pretrained(self.model_id)
+
+                # Download model weights
+                self.model = VisionEncoderDecoderModel.from_pretrained(self.model_id)
+                self.model.to(self.device)
+
+                # Log model configuration
+                logger.info(f"Model loaded successfully on {self.device}")
+                logger.info(f"Model max length: {self.model.decoder.config.max_position_embeddings}")
+                logger.info(f"Task prompt: {self.task_prompt}")
+                logger.info(f"Tokenizer vocab size: {len(self.processor.tokenizer)}")
+
+                return  # Success
+
+            except Exception as e:
+                logger.error(f"Load attempt {attempt + 1} failed: {e}")
+
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.info(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    error_msg = (
+                        f"Failed to load {self.model_id} after {max_retries} attempts.\n"
+                        f"This could be due to:\n"
+                        f"  - Network connection issues (check internet)\n"
+                        f"  - HuggingFace service unavailable\n"
+                        f"  - Insufficient disk space (models can be 500MB-1GB)\n"
+                        f"  - Model not found or access denied\n"
+                        f"Last error: {e}"
+                    )
+                    logger.error(error_msg)
+                    raise RuntimeError(error_msg) from e
 
     def extract(self, image_path: str) -> ExtractionResult:
         """Extract receipt data using Donut model"""
@@ -560,24 +586,48 @@ class FlorenceProcessor(BaseDonutProcessor):
     """Processor for Microsoft Florence-2 model"""
 
     def _load_model(self):
-        """Load Florence-2 model"""
+        """Load Florence-2 model with retry logic"""
         logger.info(f"Loading Florence-2 model: {self.model_id}")
-        try:
-            # Load model with explicit attention implementation to avoid SDPA errors
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                trust_remote_code=True,
-                attn_implementation="eager"  # Explicitly use eager attention to avoid _supports_sdpa error
-            )
-            self.processor = AutoProcessor.from_pretrained(
-                self.model_id,
-                trust_remote_code=True
-            )
-            self.model.to(self.device)
-            logger.info(f"Model loaded on {self.device}")
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            raise
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Download attempt {attempt + 1}/{max_retries}")
+
+                # Load model with explicit attention implementation to avoid SDPA errors
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    trust_remote_code=True,
+                    attn_implementation="eager"  # Explicitly use eager attention to avoid _supports_sdpa error
+                )
+                self.processor = AutoProcessor.from_pretrained(
+                    self.model_id,
+                    trust_remote_code=True
+                )
+                self.model.to(self.device)
+                logger.info(f"Florence-2 model loaded successfully on {self.device}")
+
+                return  # Success
+
+            except Exception as e:
+                logger.error(f"Load attempt {attempt + 1} failed: {e}")
+
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.info(f"Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    error_msg = (
+                        f"Failed to load Florence-2 ({self.model_id}) after {max_retries} attempts.\n"
+                        f"This could be due to:\n"
+                        f"  - Network connection issues\n"
+                        f"  - HuggingFace service unavailable\n"
+                        f"  - Insufficient disk space (~750MB required)\n"
+                        f"  - Missing dependencies (trust_remote_code requires transformers>=4.30)\n"
+                        f"Last error: {e}"
+                    )
+                    logger.error(error_msg)
+                    raise RuntimeError(error_msg) from e
 
     def extract(self, image_path: str) -> ExtractionResult:
         """Extract receipt data using Florence-2"""
