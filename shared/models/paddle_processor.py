@@ -69,8 +69,9 @@ class PaddleProcessor:
             image_np = np.array(image)
 
             # Perform OCR
+            # NOTE: cls parameter is set during initialization, not here!
             logger.info("Running PaddleOCR extraction...")
-            result = self.ocr.ocr(image_np, cls=True)
+            result = self.ocr.ocr(image_np)
 
             if not result or not result[0]:
                 logger.warning("PaddleOCR returned no results")
