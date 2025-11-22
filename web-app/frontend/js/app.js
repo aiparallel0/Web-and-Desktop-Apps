@@ -191,7 +191,7 @@ function processFile(file) {
     reader.onload = (e) => {
         elements.previewImg.src = e.target.result;
         elements.imagePreview.classList.remove('hidden');
-        elements.actionButtons.classList.remove('hidden');
+        // Enable buttons once image is loaded
         elements.extractBtn.disabled = false;
         elements.batchExtractBtn.disabled = false;
     };
