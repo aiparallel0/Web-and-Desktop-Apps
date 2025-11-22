@@ -44,13 +44,12 @@ class PaddleProcessor:
         # Initialize PaddleOCR
         # use_angle_cls=True enables rotation detection
         # lang='en' for English receipts
-        # show_log=False to reduce verbosity
         logger.info("Initializing PaddleOCR...")
         try:
+            # Note: show_log parameter removed as it's not supported in all PaddleOCR versions
             self.ocr = PaddleOCR(
                 use_angle_cls=True,
                 lang='en',
-                show_log=False,
                 use_gpu=False  # Set to True if GPU is available
             )
             logger.info("PaddleOCR initialized successfully")

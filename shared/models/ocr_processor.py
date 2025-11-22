@@ -88,6 +88,18 @@ class OCRProcessor:
         """Extract receipt data using Tesseract OCR"""
         start_time = time.time()
 
+        # Check if Tesseract is available
+        if not self.tesseract_path:
+            error_msg = (
+                "Tesseract OCR is not installed or not in your PATH. "
+                "Please install Tesseract:\n"
+                "- Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki\n"
+                "- macOS: brew install tesseract\n"
+                "- Linux: sudo apt-get install tesseract-ocr"
+            )
+            logger.error(error_msg)
+            return ExtractionResult(success=False, error=error_msg)
+
         try:
             # Load and preprocess image
             image = load_and_validate_image(image_path)
