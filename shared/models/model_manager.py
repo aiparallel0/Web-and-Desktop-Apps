@@ -100,6 +100,9 @@ class ModelManager:
         elif model_type == 'ocr':
             from .ocr_processor import OCRProcessor
             processor = OCRProcessor(model_config)
+        elif model_type == 'easyocr':
+            from .easyocr_processor import EasyOCRProcessor
+            processor = EasyOCRProcessor(model_config)
         elif model_type == 'paddle':
             from .paddle_processor import PaddleProcessor
             processor = PaddleProcessor(model_config)

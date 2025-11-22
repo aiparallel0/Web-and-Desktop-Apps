@@ -1,58 +1,10 @@
 {
   "available_models": {
-    "donut_sroie": {
-      "id": "donut_sroie",
-      "name": "SROIE Donut",
-      "type": "donut",
-      "huggingface_id": "philschmid/donut-base-sroie",
-      "task_prompt": "<s_sroie>",
-      "description": "Donut model trained on SROIE dataset - English receipts (4 fields: store, date, address, total)",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": false
-      }
-    },
-    "donut_cord": {
-      "id": "donut_cord",
-      "name": "CORD Donut",
-      "type": "donut",
-      "huggingface_id": "naver-clova-ix/donut-base-finetuned-cord-v2",
-      "task_prompt": "<s_cord-v2>",
-      "description": "Naver Donut model trained on CORD v2 dataset - Comprehensive receipt parsing",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": true
-      }
-    },
-    "florence2": {
-      "id": "florence2",
-      "name": "Florence-2",
-      "type": "florence",
-      "huggingface_id": "microsoft/Florence-2-large",
-      "task_prompt": "<OCR_WITH_REGION>",
-      "description": "Microsoft Florence-2 - Advanced OCR with region detection",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": true
-      }
-    },
     "ocr_tesseract": {
       "id": "ocr_tesseract",
       "name": "Tesseract OCR",
       "type": "ocr",
-      "description": "Traditional OCR with rule-based extraction - Fast and reliable",
+      "description": "Fast & reliable Tesseract OCR with rule-based parsing - Best for clear receipts",
       "requires_auth": false,
       "requires_tesseract": true,
       "capabilities": {
@@ -60,14 +12,30 @@
         "date": true,
         "total": true,
         "address": true,
-        "items": true
+        "items": true,
+        "phone": true
+      }
+    },
+    "ocr_easyocr": {
+      "id": "ocr_easyocr",
+      "name": "EasyOCR",
+      "type": "easyocr",
+      "description": "Ready-to-use OCR with 80+ languages - Excellent accuracy, no installation needed",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true
       }
     },
     "ocr_paddle": {
       "id": "ocr_paddle",
-      "name": "PaddleOCR + Simple Parser",
+      "name": "PaddleOCR",
       "type": "paddle",
-      "description": "Reliable, fast, proven technology. Straightforward OCR with rule-based extraction",
+      "description": "PaddlePaddle OCR - Multilingual, high accuracy, production-ready",
       "requires_auth": false,
       "requires_paddleocr": true,
       "capabilities": {
@@ -75,9 +43,29 @@
         "date": true,
         "total": true,
         "address": true,
-        "items": true
+        "items": true,
+        "phone": true
+      }
+    },
+    "florence2": {
+      "id": "florence2",
+      "name": "Florence-2 AI",
+      "type": "florence",
+      "huggingface_id": "microsoft/Florence-2-large",
+      "task_prompt": "<OCR_WITH_REGION>",
+      "description": "Microsoft Florence-2 - Advanced AI with region detection & OCR",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "advanced_parsing": true
       }
     }
   },
-  "default_model": "donut_sroie"
+  "default_model": "ocr_tesseract",
+  "recommended_model": "ocr_easyocr"
 }

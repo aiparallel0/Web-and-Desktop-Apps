@@ -1,236 +1,191 @@
-# Setup Guide
+# Receipt Extractor - Complete Setup Guide
 
-Complete setup instructions for Receipt Extractor project.
+## 🚀 Quick Start
 
-## System Requirements
-
-### Required
-- **Python 3.8+** with pip
-- **Git** (for cloning repository)
-- **4GB+ RAM** (8GB+ recommended for AI models)
-- **5GB+ disk space** (for models and dependencies)
-
-### Optional
-- **Node.js 16+** (for desktop app)
-- **Tesseract OCR** (for OCR model)
-- **CUDA-capable GPU** (for faster processing)
-
-## Installation Steps
-
-### 1. Clone Repository
+### 1. Install Python Dependencies
 
 ```bash
-git clone <repository-url>
-cd Web-and-Desktop-Apps
+# Install all OCR engines (RECOMMENDED)
+pip install -r requirements.txt
+
+# OR install only the essentials
+pip install pillow opencv-python numpy pytesseract easyocr
 ```
 
-### 2. Install Python Dependencies
-
-```bash
-pip install -r web-app/backend/requirements.txt
-```
-
-Or install manually:
-```bash
-pip install torch transformers pillow opencv-python numpy pytesseract flask flask-cors
-```
-
-### 3. Verify Installation
-
-Test the shared modules:
-```bash
-python -c "from shared.models.model_manager import ModelManager; print('OK')"
-```
-
-## Web Application Setup
-
-### Backend
-
-```bash
-cd web-app/backend
-python app.py
-```
-
-Server will start on `http://localhost:5000`
-
-### Frontend
-
-```bash
-cd web-app/frontend
-python -m http.server 8000
-```
-
-Navigate to `http://localhost:8000`
-
-## Desktop Application Setup
-
-### 1. Install Node Dependencies
-
-```bash
-cd desktop-app
-npm install
-```
-
-### 2. Run Desktop App
-
-```bash
-npm start
-```
-
-### 3. Build Executable (Optional)
+### 2. Install Tesseract (for Tesseract OCR engine)
 
 **Windows:**
-```bash
-npm run build:win
-```
-
-Output: `desktop-app/dist/ReceiptExtractor-win32-x64/`
+- Download and install from: https://github.com/UB-Mannheim/tesseract/wiki
+- Add to PATH or the app will auto-detect common installation locations
 
 **macOS:**
 ```bash
-npm run build:mac
+brew install tesseract
 ```
 
 **Linux:**
-```bash
-npm run build:linux
-```
-
-## Tesseract OCR Installation (Optional)
-
-### Windows
-1. Download installer from [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
-2. Run installer (default path: `C:\Program Files\Tesseract-OCR`)
-3. Add to PATH or let the app auto-detect
-
-### Linux (Ubuntu/Debian)
 ```bash
 sudo apt-get update
 sudo apt-get install tesseract-ocr
 ```
 
-### macOS
-```bash
-brew install tesseract
-```
-
-## GPU Acceleration (Optional)
-
-For CUDA support (NVIDIA GPUs only):
+### 3. Install Node Dependencies
 
 ```bash
-# Uninstall CPU-only PyTorch
-pip uninstall torch
-
-# Install CUDA-enabled PyTorch (example for CUDA 11.8)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+npm install
 ```
 
-Check CUDA availability:
-```bash
-python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
-```
-
-## First Run
-
-### Download Models
-
-Models are automatically downloaded on first use. First extraction will take 2-5 minutes depending on internet speed.
-
-Models are cached in:
-- **Linux/Mac:** `~/.cache/huggingface/`
-- **Windows:** `C:\Users\<username>\.cache\huggingface\`
-
-### Test Extraction
+### 4. Run the Application
 
 ```bash
-# Using Python directly
-python desktop-app/process_receipt.py path/to/receipt.jpg
+# Desktop app
+npm start
 
-# Using web API
-curl -X POST -F "image=@receipt.jpg" http://localhost:5000/api/extract
-```
-
-## Troubleshooting
-
-### Import Errors
-
-```bash
-# Reinstall dependencies
-pip install -r web-app/backend/requirements.txt --force-reinstall
-```
-
-### Model Download Issues
-
-- Check internet connection
-- Verify disk space (need ~2GB free)
-- Try manual download:
-  ```python
-  from transformers import DonutProcessor, VisionEncoderDecoderModel
-  DonutProcessor.from_pretrained("philschmid/donut-base-sroie")
-  VisionEncoderDecoderModel.from_pretrained("philschmid/donut-base-sroie")
-  ```
-
-### Python Not Found (Desktop App)
-
-- Add Python to system PATH
-- Restart terminal/app after PATH changes
-- Verify: `python --version` or `python3 --version`
-
-### Port Already in Use
-
-Change port in `web-app/backend/app.py`:
-```python
-app.run(host='0.0.0.0', port=5001, debug=True)  # Change 5000 to 5001
-```
-
-Also update frontend `js/app.js`:
-```javascript
-const API_BASE_URL = 'http://localhost:5001/api';  // Match backend port
-```
-
-## Development Setup
-
-### Enable Debug Mode
-
-**Web Backend:**
-Already enabled in development. Check `app.py`:
-```python
-app.run(host='0.0.0.0', port=5000, debug=True)
-```
-
-**Desktop App:**
-Automatically opens DevTools in development mode.
-
-### Hot Reload
-
-Web backend has auto-reload enabled with Flask debug mode.
-
-For frontend changes, simply refresh browser.
-
-Desktop app requires restart for changes.
-
-## Production Deployment
-
-### Web Application
-
-Use a production WSGI server:
-
-```bash
-pip install gunicorn
-
-# Run with gunicorn
+# Web app
 cd web-app/backend
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
+python app.py
+# Then open web-app/frontend/index.html in your browser
 ```
 
-### Desktop Application
+## 📦 Available OCR Engines
 
-Build distributables as shown above. Distribute the entire folder from `dist/`.
+### 1. **Tesseract OCR** (Default)
+- ⚡ **Fastest** (1-2 seconds)
+- 📦 Requires external installation
+- ✅ Best for clear, printed receipts
+- 🔧 Install: See step 2 above
 
-## Support
+### 2. **EasyOCR** (RECOMMENDED)
+- 🎯 **Most Accurate**
+- 📦 No external dependencies needed
+- ⏱️ Speed: 2-4 seconds
+- 🌍 Supports 80+ languages
+- 🔧 Install: `pip install easyocr`
 
-For issues or questions, check:
-1. Main README.md
-2. Troubleshooting section above
-3. Individual component READMEs in subdirectories
+### 3. **PaddleOCR** (Enterprise)
+- 🏆 **Production-Ready**
+- 📦 Requires PaddlePaddle
+- ⏱️ Speed: 2-3 seconds
+- 🌍 Multilingual support
+- 🔧 Install: `pip install paddleocr paddlepaddle`
+
+### 4. **Florence-2 AI** (Advanced)
+- 🤖 **AI-Powered**
+- 📦 Requires PyTorch & Transformers
+- ⏱️ Speed: 3-5 seconds
+- 🧠 Advanced region detection
+- 🔧 Install: `pip install torch transformers`
+
+## 🎯 Choose Your Setup
+
+### Minimal Setup (Tesseract Only)
+```bash
+pip install pillow opencv-python numpy pytesseract
+# Install Tesseract binary separately
+npm install
+npm start
+```
+
+### Recommended Setup (EasyOCR)
+```bash
+pip install pillow opencv-python numpy easyocr
+npm install
+npm start
+```
+
+### Full Setup (All Engines)
+```bash
+pip install -r requirements.txt
+npm install
+npm start
+```
+
+## 🔧 Troubleshooting
+
+### "Tesseract not found"
+- Make sure Tesseract is installed and in your PATH
+- On Windows, the app auto-detects common installation paths
+- Try reinstalling from https://github.com/UB-Mannheim/tesseract/wiki
+
+### "Module not found" errors
+```bash
+pip install --upgrade -r requirements.txt
+```
+
+### EasyOCR slow first run
+- EasyOCR downloads models on first use (~50MB)
+- Subsequent runs will be fast
+
+### PaddleOCR issues
+```bash
+# Try reinstalling
+pip uninstall paddleocr paddlepaddle
+pip install paddleocr paddlepaddle
+```
+
+## 📝 What's New
+
+### Complete Overhaul (Latest Version)
+
+✅ **Fixed ALL button issues** - Extract, Save, and all buttons now work reliably
+✅ **New OCR engines** - Added EasyOCR, PaddleOCR, kept Tesseract
+✅ **Simplified models** - Removed broken Donut models, kept only working ones
+✅ **Better error handling** - Clear messages when dependencies missing
+✅ **Debug logging** - Enable DEBUG=true in renderer.js for troubleshooting
+✅ **Robust text detection** - Pre-trained, production-ready OCR models
+✅ **Fast & reliable** - All models tested and working
+
+### Model Comparison
+
+| Model | Speed | Accuracy | Setup | Best For |
+|-------|-------|----------|-------|----------|
+| Tesseract | ⚡⚡⚡ | ⭐⭐⭐ | Manual | Clear receipts |
+| EasyOCR | ⚡⚡ | ⭐⭐⭐⭐ | Automatic | General use (RECOMMENDED) |
+| PaddleOCR | ⚡⚡ | ⭐⭐⭐⭐ | Manual | Enterprise/Production |
+| Florence-2 | ⚡ | ⭐⭐⭐⭐⭐ | Manual | Best accuracy |
+
+## 🎨 Features
+
+- ✅ Multiple OCR engines with auto-switching
+- ✅ Drag & drop support
+- ✅ Batch processing
+- ✅ JSON, CSV, TXT export
+- ✅ Dark/Light themes
+- ✅ Keyboard shortcuts
+- ✅ Session statistics
+- ✅ Receipt history
+- ✅ Multi-language support (with EasyOCR/Paddle)
+
+## 📚 Usage
+
+1. **Select an engine** - Choose from Tesseract, EasyOCR, PaddleOCR, or Florence-2
+2. **Select/Drop image** - Choose a receipt image or drag & drop
+3. **Extract** - Click Execute button or press Ctrl+E
+4. **Review** - Check extracted data
+5. **Export** - Save as JSON, CSV, or TXT
+
+## 🔑 Keyboard Shortcuts
+
+- `Ctrl+O` - Select image
+- `Ctrl+E` - Extract receipt
+- `Ctrl+S` - Save results
+- `Ctrl+J` - Toggle JSON view
+
+## 💡 Tips
+
+1. **For best results:** Use EasyOCR (no setup needed, great accuracy)
+2. **For speed:** Use Tesseract (requires installation)
+3. **For production:** Use PaddleOCR (enterprise-grade)
+4. **For accuracy:** Use Florence-2 (AI-powered)
+
+## 🐛 Still Having Issues?
+
+1. Enable debug logging: Set `DEBUG = true` in `renderer.js`
+2. Check console logs in DevTools (Ctrl+Shift+I)
+3. Verify Python dependencies: `pip list`
+4. Test Tesseract: `tesseract --version`
+5. Try switching to EasyOCR (no external deps needed)
+
+---
+
+**Need Help?** Open an issue on GitHub with debug logs!
