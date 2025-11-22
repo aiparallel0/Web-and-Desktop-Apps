@@ -151,7 +151,7 @@ class OCRProcessor:
         return None
 
     def extract(self, image_path: str) -> ExtractionResult:
-        """Extract receipt data using Tesseract OCR"""
+        """Extract receipt data using Tesseract OCR with multi-pass strategy"""
         start_time = time.time()
 
         # Check if Tesseract is available
@@ -169,24 +169,49 @@ class OCRProcessor:
         try:
             # Load and preprocess image
             image = load_and_validate_image(image_path)
-            processed_image = preprocess_for_ocr(image)
+            processed_image = preprocess_for_ocr(image, aggressive=True)
 
-            # Perform OCR with PSM 6 (required for receipts - proven pattern)
-            # PSM 6 = Assume a single uniform block of text (best for receipts)
-            custom_config = r'--oem 3 --psm 6'
-            text = pytesseract.image_to_string(processed_image, lang='eng', config=custom_config)
-            logger.info("OCR extraction complete")
-            logger.info(f"Extracted text length: {len(text)} characters")
+            # MULTI-PASS OCR STRATEGY for maximum accuracy
+            # Try multiple PSM modes and combine results
+
+            ocr_results = []
+
+            # Pass 1: PSM 6 - Single uniform block (good for well-structured receipts)
+            config1 = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
+            text1 = pytesseract.image_to_string(processed_image, lang='eng', config=config1)
+            ocr_results.append(('PSM 6', text1))
+
+            # Pass 2: PSM 4 - Single column of varying text (good for receipts with different sections)
+            config2 = r'--oem 3 --psm 4'
+            text2 = pytesseract.image_to_string(processed_image, lang='eng', config=config2)
+            ocr_results.append(('PSM 4', text2))
+
+            # Select best result (longest meaningful text)
+            best_mode, best_text = max(ocr_results, key=lambda x: len(x[1].strip()))
+
+            logger.info(f"OCR extraction complete using {best_mode}")
+            logger.info(f"Extracted text length: {len(best_text)} characters")
+
+            # Log first 200 chars for debugging
+            preview = best_text[:200].replace('\n', '\\n')
+            logger.info(f"Text preview: {preview}...")
 
             # Parse the OCR text
-            receipt = self._parse_receipt_text(text)
+            receipt = self._parse_receipt_text(best_text)
             receipt.processing_time = time.time() - start_time
-            receipt.model_used = self.model_name
+            receipt.model_used = f"{self.model_name} ({best_mode})"
+
+            # Add quality warning if extraction seems poor
+            if len(best_text.strip()) < 50:
+                receipt.extraction_notes.append(
+                    "OCR produced very little text - image quality may be poor. "
+                    "Try rescanning at higher resolution with better lighting."
+                )
 
             return ExtractionResult(success=True, data=receipt)
 
         except Exception as e:
-            logger.error(f"OCR extraction failed: {e}")
+            logger.error(f"OCR extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
 
     def _parse_receipt_text(self, text: str) -> ReceiptData:

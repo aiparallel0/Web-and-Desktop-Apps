@@ -94,8 +94,17 @@ def assess_image_quality(image: Image.Image) -> dict:
         return {'overall_quality': 'unknown'}
 
 
-def preprocess_for_ocr(image: Image.Image) -> Image.Image:
-    """Preprocess image specifically for OCR"""
+def preprocess_for_ocr(image: Image.Image, aggressive: bool = True) -> Image.Image:
+    """
+    Preprocess image specifically for OCR with aggressive thermal receipt optimization
+
+    Args:
+        image: Input PIL Image
+        aggressive: If True, applies aggressive preprocessing for low-quality receipts
+
+    Returns:
+        Preprocessed PIL Image optimized for OCR
+    """
     import cv2
 
     try:
@@ -109,24 +118,122 @@ def preprocess_for_ocr(image: Image.Image) -> Image.Image:
         logger.info(f"Image array shape: {img_array.shape}")
 
         # Convert to grayscale
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        if len(img_array.shape) == 3:
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = img_array
 
-        # Apply adaptive thresholding
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 11, 2
-        )
+        if aggressive:
+            # AGGRESSIVE PREPROCESSING FOR THERMAL RECEIPTS
 
-        # Denoise
-        denoised = cv2.fastNlMeansDenoising(binary)
+            # Step 1: Upscale if resolution is too low (improves OCR accuracy)
+            height, width = gray.shape
+            if max(height, width) < 1000:
+                scale_factor = 1500 / max(height, width)
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+                gray = cv2.resize(gray, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+                logger.info(f"Upscaled image from {width}x{height} to {new_width}x{new_height}")
 
-        # Convert back to PIL Image
-        result = Image.fromarray(denoised)
-        logger.info("OCR preprocessing complete")
+            # Step 2: Deskew (fix rotation) - critical for receipts
+            gray = _deskew_image(gray)
+
+            # Step 3: Denoise BEFORE contrast enhancement
+            gray = cv2.fastNlMeansDenoising(gray, h=10)
+
+            # Step 4: CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            # This is CRITICAL for faded thermal receipts
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            gray = clahe.apply(gray)
+
+            # Step 5: Bilateral filter to preserve edges while smoothing
+            gray = cv2.bilateralFilter(gray, 9, 75, 75)
+
+            # Step 6: Otsu's binarization (better than adaptive for receipts)
+            _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+            # Step 7: Morphological operations to clean up noise
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+            # Step 8: Invert if background is dark (some receipts)
+            if np.mean(binary) < 127:
+                binary = cv2.bitwise_not(binary)
+                logger.info("Inverted image (dark background detected)")
+
+            result = Image.fromarray(binary)
+            logger.info("Aggressive OCR preprocessing complete")
+
+        else:
+            # STANDARD PREPROCESSING
+            # Apply adaptive thresholding
+            binary = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY, 11, 2
+            )
+
+            # Denoise
+            denoised = cv2.fastNlMeansDenoising(binary)
+
+            result = Image.fromarray(denoised)
+            logger.info("Standard OCR preprocessing complete")
+
         return result
+
     except Exception as e:
         logger.warning(f"OCR preprocessing failed, using enhanced image: {e}")
         return enhance_image(image)
+
+
+def _deskew_image(image: np.ndarray) -> np.ndarray:
+    """
+    Detect and correct skew in receipt images
+
+    Args:
+        image: Grayscale numpy array
+
+    Returns:
+        Deskewed image
+    """
+    import cv2
+
+    try:
+        # Compute angle using Hough transform
+        coords = np.column_stack(np.where(image > 0))
+
+        if len(coords) < 10:
+            logger.warning("Not enough edge points for deskewing")
+            return image
+
+        angle = cv2.minAreaRect(coords)[-1]
+
+        # Correct angle range
+        if angle < -45:
+            angle = 90 + angle
+        elif angle > 45:
+            angle = angle - 90
+
+        # Only correct if skew is significant (> 0.5 degrees)
+        if abs(angle) < 0.5:
+            logger.info(f"Skew angle {angle:.2f}° is negligible, skipping correction")
+            return image
+
+        # Rotate image
+        (h, w) = image.shape
+        center = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+        rotated = cv2.warpAffine(
+            image, M, (w, h),
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_REPLICATE
+        )
+
+        logger.info(f"Deskewed image by {angle:.2f} degrees")
+        return rotated
+
+    except Exception as e:
+        logger.warning(f"Deskew failed: {e}")
+        return image
 
 
 def resize_if_needed(image: Image.Image, max_size: int = 2048) -> Image.Image:
