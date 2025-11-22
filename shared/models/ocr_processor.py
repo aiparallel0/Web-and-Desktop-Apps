@@ -44,11 +44,36 @@ class OCRProcessor:
         self.model_name = model_config['name']
         self.tesseract_path = self._find_tesseract()
 
+        if self.tesseract_path is None:
+            error_msg = (
+                "Tesseract OCR is not installed or not found in system PATH.\n"
+                "Please install Tesseract:\n"
+                "  - Windows: https://github.com/UB-Mannheim/tesseract/wiki\n"
+                "  - macOS: brew install tesseract\n"
+                "  - Linux: sudo apt-get install tesseract-ocr\n"
+                "After installation, restart the application."
+            )
+            logger.error(error_msg)
+            raise EnvironmentError(error_msg)
+
         if self.tesseract_path and self.tesseract_path != 'tesseract':
             pytesseract.pytesseract.tesseract_cmd = self.tesseract_path
             logger.info(f"Using Tesseract at: {self.tesseract_path}")
         else:
             logger.info("Using Tesseract from system PATH")
+
+        # Verify Tesseract is working
+        self._verify_tesseract()
+
+    def _verify_tesseract(self):
+        """Verify Tesseract is properly installed and working"""
+        try:
+            version = pytesseract.get_tesseract_version()
+            logger.info(f"Tesseract version: {version}")
+        except Exception as e:
+            error_msg = f"Tesseract found but not working properly: {e}"
+            logger.error(error_msg)
+            raise EnvironmentError(error_msg) from e
 
     def _find_tesseract(self) -> Optional[str]:
         """Find Tesseract installation with extensive path checking"""
