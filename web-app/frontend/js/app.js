@@ -43,10 +43,20 @@ function setupEventListeners() {
     elements.uploadArea.addEventListener('drop', handleDrop);
 
     // Extract button
-    elements.extractBtn.addEventListener('click', handleExtract);
+    if (elements.extractBtn) {
+        elements.extractBtn.addEventListener('click', handleExtract);
+        console.log('Extract button listener attached');
+    } else {
+        console.error('Extract button not found!');
+    }
 
     // Batch extract button
-    elements.batchExtractBtn.addEventListener('click', handleBatchExtract);
+    if (elements.batchExtractBtn) {
+        elements.batchExtractBtn.addEventListener('click', handleBatchExtract);
+        console.log('Batch extract button listener attached');
+    } else {
+        console.error('Batch extract button not found!');
+    }
 
     // Export buttons
     document.getElementById('exportJson').addEventListener('click', () => exportData('json'));
@@ -194,6 +204,10 @@ function processFile(file) {
         // Enable buttons once image is loaded
         elements.extractBtn.disabled = false;
         elements.batchExtractBtn.disabled = false;
+        console.log('Buttons enabled:', {
+            extractBtn: !elements.extractBtn.disabled,
+            batchExtractBtn: !elements.batchExtractBtn.disabled
+        });
     };
     reader.readAsDataURL(file);
 
@@ -249,12 +263,14 @@ async function handleExtract() {
 
 // Handle batch extraction (all models)
 async function handleBatchExtract() {
+    console.log('handleBatchExtract called');
     const file = elements.fileInput.files[0];
     if (!file) {
         showError('Please select an image first');
         return;
     }
 
+    console.log('Starting batch extraction with file:', file.name);
     // Show loading
     showLoading(true, 'Processing with ALL models... This may take a few minutes.');
     hideError();
