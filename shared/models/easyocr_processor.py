@@ -1,6 +1,6 @@
 """
 EasyOCR processor for receipt extraction
-EasyOCR is a ready-to-use OCR with 80+ supported languages
+Using proven pattern from working examples
 """
 import os
 import sys
@@ -9,12 +9,10 @@ import logging
 import time
 from decimal import Decimal
 from typing import Dict, List, Optional
-from PIL import Image
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.data_structures import LineItem, ReceiptData, ExtractionResult
-from utils.image_processing import load_and_validate_image
 
 try:
     import easyocr
@@ -29,7 +27,7 @@ PRICE_MAX = 9999
 
 
 class EasyOCRProcessor:
-    """Processor for EasyOCR-based extraction"""
+    """Processor for EasyOCR-based extraction using proven pattern"""
 
     SKIP_KEYWORDS = {
         'subtotal', 'total', 'cash', 'change', 'tax', 'payment', 'balance',
@@ -43,164 +41,189 @@ class EasyOCRProcessor:
         self.reader = None
 
         if easyocr is None:
-            logger.warning("EasyOCR not installed. Install with: pip install easyocr")
-        else:
-            try:
-                # Initialize EasyOCR reader (downloads model on first run)
-                logger.info("Initializing EasyOCR reader...")
-                self.reader = easyocr.Reader(['en'], gpu=False)
-                logger.info("EasyOCR reader initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize EasyOCR: {e}")
-                self.reader = None
+            logger.error("EasyOCR not installed!")
+            return
+
+        try:
+            # Initialize EasyOCR reader - PROVEN PATTERN FROM WEB
+            logger.info("Initializing EasyOCR reader...")
+            self.reader = easyocr.Reader(['en'], gpu=False)
+            logger.info("EasyOCR reader initialized successfully!")
+        except Exception as e:
+            logger.error(f"Failed to initialize EasyOCR: {e}")
+            self.reader = None
 
     def extract(self, image_path: str) -> ExtractionResult:
-        """Extract receipt data using EasyOCR"""
+        """Extract receipt data using EasyOCR - PROVEN WORKING PATTERN"""
         start_time = time.time()
 
         # Check if EasyOCR is available
         if easyocr is None:
-            error_msg = (
-                "EasyOCR is not installed. "
-                "Please install EasyOCR: pip install easyocr"
+            return ExtractionResult(
+                success=False,
+                error="EasyOCR not installed. Install: pip install easyocr"
             )
-            logger.error(error_msg)
-            return ExtractionResult(success=False, error=error_msg)
 
         if self.reader is None:
-            error_msg = "EasyOCR reader failed to initialize"
-            logger.error(error_msg)
-            return ExtractionResult(success=False, error=error_msg)
+            return ExtractionResult(
+                success=False,
+                error="EasyOCR reader failed to initialize"
+            )
 
         try:
-            # Load and validate image
-            image = load_and_validate_image(image_path)
+            logger.info(f"Running EasyOCR on: {image_path}")
 
-            # Perform OCR
-            logger.info("Running EasyOCR...")
+            # PROVEN PATTERN: reader.readtext(image_path)
             results = self.reader.readtext(image_path)
 
-            # Extract text from results
-            text_lines = [detection[1] for detection in results]
-            text = '\n'.join(text_lines)
+            logger.info(f"EasyOCR detected {len(results)} text regions")
 
-            logger.info("EasyOCR extraction complete")
-            logger.info(f"Extracted {len(text_lines)} text lines")
+            # Extract text and confidence from results
+            # EasyOCR returns: [[bbox, text, confidence], ...]
+            text_lines = []
+            for detection in results:
+                if len(detection) >= 3:
+                    bbox, text, confidence = detection[0], detection[1], detection[2]
+                    if confidence > 0.3:  # Filter low confidence
+                        text_lines.append(text)
+                        logger.info(f"  {text} (conf: {confidence:.2f})")
 
-            # Parse the OCR text
-            receipt = self._parse_receipt_text(text, text_lines)
+            if not text_lines:
+                return ExtractionResult(
+                    success=False,
+                    error="No text detected in image"
+                )
+
+            # Parse the text
+            receipt = self._parse_receipt_text(text_lines)
             receipt.processing_time = time.time() - start_time
             receipt.model_used = self.model_name
 
+            logger.info(f"Extraction complete in {receipt.processing_time:.1f}s")
             return ExtractionResult(success=True, data=receipt)
 
         except Exception as e:
-            logger.error(f"EasyOCR extraction failed: {e}")
+            logger.error(f"EasyOCR extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
 
-    def _parse_receipt_text(self, text: str, text_lines: List[str]) -> ReceiptData:
+    def _parse_receipt_text(self, text_lines: List[str]) -> ReceiptData:
         """Parse OCR text to extract receipt information"""
         receipt = ReceiptData()
-        lines = [line.strip() for line in text_lines if line.strip()]
 
-        if not lines:
+        if not text_lines:
             receipt.extraction_notes.append("No text detected")
             return receipt
 
+        logger.info(f"Parsing {len(text_lines)} text lines")
+
         # Extract store name (first meaningful line)
         receipt.store_name = None
-        for line in lines[:5]:
+        for line in text_lines[:5]:
+            line = line.strip()
             if len(line) >= 2 and not line.isdigit():
                 receipt.store_name = line
-                logger.info(f"Found store name: {line}")
+                logger.info(f"Store: {line}")
                 break
 
-        if not receipt.store_name:
-            receipt.store_name = lines[0] if lines else None
+        if not receipt.store_name and text_lines:
+            receipt.store_name = text_lines[0]
 
         # Extract date
         date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-        for line in lines:
-            date_match = re.search(date_pattern, line)
-            if date_match:
-                receipt.transaction_date = date_match.group(1)
+        for line in text_lines:
+            match = re.search(date_pattern, line)
+            if match:
+                receipt.transaction_date = match.group(1)
+                logger.info(f"Date: {receipt.transaction_date}")
                 break
 
-        # Extract total
+        # Extract total - AGGRESSIVE PATTERN MATCHING
         total_patterns = [
-            r'total[:\s]*\$?(\d+\.\d{2})',
-            r'amount[:\s]*\$?(\d+\.\d{2})',
-            r'balance[:\s]*\$?(\d+\.\d{2})'
+            r'total[:\s]*\$?\s*(\d+\.?\d{0,2})',
+            r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})',
+            r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})',
+            r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})'
         ]
-        for pattern in total_patterns:
-            for line in lines:
+
+        for line in text_lines:
+            for pattern in total_patterns:
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
-                    total_val = self._normalize_price(match.group(1))
-                    if total_val:
-                        receipt.total = total_val
+                    price_str = match.group(1)
+                    price = self._normalize_price(price_str)
+                    if price and price > 0:
+                        receipt.total = price
+                        logger.info(f"Total: ${receipt.total}")
                         break
             if receipt.total:
                 break
 
         # Extract line items
-        receipt.items = self._extract_line_items(lines)
+        receipt.items = self._extract_line_items(text_lines)
 
         # Extract address
         address_keywords = ['st', 'ave', 'rd', 'blvd', 'lane', 'drive', 'street', 'avenue']
-        for line in lines[1:6]:
+        for line in text_lines[1:8]:
             line_lower = line.lower()
-            if any(keyword in line_lower for keyword in address_keywords) and any(char.isdigit() for char in line):
+            if any(kw in line_lower for kw in address_keywords) and any(c.isdigit() for c in line):
                 receipt.store_address = line
+                logger.info(f"Address: {line}")
                 break
 
-        # Extract phone number
+        # Extract phone
         phone_pattern = r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
-        for line in lines:
-            phone_match = re.search(phone_pattern, line)
-            if phone_match:
-                receipt.store_phone = phone_match.group(1)
+        for line in text_lines:
+            match = re.search(phone_pattern, line)
+            if match:
+                receipt.store_phone = match.group(1)
+                logger.info(f"Phone: {receipt.store_phone}")
                 break
 
+        logger.info(f"Parsed receipt: {len(receipt.items)} items, total: ${receipt.total or 0}")
         return receipt
 
     def _extract_line_items(self, lines: List[str]) -> List[LineItem]:
-        """Extract line items from OCR text"""
+        """Extract line items from text"""
         items = []
         seen_names = set()
 
-        # Pattern to match: text followed by price
-        item_price_pattern = r'^(.+?)\s+\$?(\d+\.\d{2})$'
+        # Pattern: "Item Name 12.99" or "Item Name $12.99"
+        item_patterns = [
+            r'^(.+?)\s+\$?\s*(\d+\.?\d{0,2})$',
+            r'^(.+?)\s+(\d+\.?\d{0,2})\s*$'
+        ]
 
         for line in lines:
-            # Skip header/footer lines
+            # Skip keywords
             line_lower = line.lower()
-            if any(keyword in line_lower for keyword in self.SKIP_KEYWORDS):
+            if any(kw in line_lower for kw in self.SKIP_KEYWORDS):
                 continue
 
-            # Try to match item with price
-            match = re.search(item_price_pattern, line)
-            if match:
-                name = match.group(1).strip()
-                price_str = match.group(2)
+            # Try patterns
+            for pattern in item_patterns:
+                match = re.search(pattern, line.strip())
+                if match:
+                    name = match.group(1).strip()
+                    price_str = match.group(2)
 
-                # Validate name
-                if len(name) < 2 or name in seen_names:
-                    continue
+                    # Validate
+                    if len(name) < 2 or name in seen_names:
+                        continue
 
-                # Validate price
-                price = self._normalize_price(price_str)
-                if not price:
-                    continue
+                    price = self._normalize_price(price_str)
+                    if not price or price <= 0:
+                        continue
 
-                # Add item
-                items.append(LineItem(
-                    name=name,
-                    total_price=price
-                ))
-                seen_names.add(name)
+                    # Add item
+                    items.append(LineItem(
+                        name=name,
+                        total_price=price,
+                        quantity=1
+                    ))
+                    seen_names.add(name)
+                    logger.info(f"Item: {name} ${price}")
+                    break
 
-        logger.info(f"Extracted {len(items)} line items")
         return items
 
     @staticmethod
@@ -210,7 +233,7 @@ class EasyOCRProcessor:
             return None
         try:
             price_str = str(value).replace('$', '').replace(',', '').strip()
-            if price_str.startswith('-'):
+            if not price_str or price_str.startswith('-'):
                 return None
             val = Decimal(price_str)
             return val if PRICE_MIN <= val <= PRICE_MAX else None

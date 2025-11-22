@@ -146,9 +146,9 @@ class OCRProcessor:
             image = load_and_validate_image(image_path)
             processed_image = preprocess_for_ocr(image)
 
-            # Perform OCR with better configuration
-            # Using config to improve accuracy
-            custom_config = r'--oem 3 --psm 6'  # OEM 3 = Default, PSM 6 = Assume uniform block of text
+            # Perform OCR with PSM 6 (required for receipts - proven pattern)
+            # PSM 6 = Assume a single uniform block of text (best for receipts)
+            custom_config = r'--oem 3 --psm 6'
             text = pytesseract.image_to_string(processed_image, lang='eng', config=custom_config)
             logger.info("OCR extraction complete")
             logger.info(f"Extracted text length: {len(text)} characters")
