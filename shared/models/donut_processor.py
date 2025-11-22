@@ -305,6 +305,7 @@ class DonutProcessor(BaseDonutProcessor):
         """
         Fallback: Extract structured data from plain text when JSON parsing fails.
         This handles cases where SROIE model outputs text instead of JSON.
+        Enhanced with better pattern matching and multi-format support.
         """
         extracted = {}
 
@@ -312,10 +313,14 @@ class DonutProcessor(BaseDonutProcessor):
         text = re.sub(r'[歲嵗的]', '', text)  # Remove garbled unicode
         text = re.sub(r'</?s_\w+>', '', text)  # Remove special tokens like </s_address>
 
+        # Split into lines for better analysis
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+
         # Extract total (look for common patterns like "TOTAL 12.34" or just prices)
         total_patterns = [
-            r'total[:\s]*\$?(\d+[.,]\d{2})',
-            r'(?:^|\s)(\d+[.,]\d{2})\s*$',  # Last price on line
+            r'(?:total|grand\s*total|amount\s*due)[:\s]*\$?\s*(\d+[.,]\d{2})',
+            r'(?:^|\n)total[:\s]*(\d+[.,]\d{2})',
+            r'\btotal\b[:\s]*\$?\s*(\d+[.,]\d{2})',
         ]
         for pattern in total_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
@@ -323,10 +328,22 @@ class DonutProcessor(BaseDonutProcessor):
                 extracted['total'] = match.group(1).replace(',', '.')
                 break
 
+        # If no total found yet, look for the last meaningful price in the text
+        if 'total' not in extracted:
+            all_prices = re.findall(r'\$?\s*(\d+[.,]\d{2})\b', text)
+            if all_prices:
+                # Filter out unlikely totals (too small or too large)
+                valid_prices = [p.replace(',', '.') for p in all_prices]
+                valid_prices = [p for p in valid_prices if 1.0 <= float(p) <= 1000.0]
+                if valid_prices:
+                    extracted['total'] = valid_prices[-1]  # Last valid price is often the total
+
         # Extract date (various formats)
         date_patterns = [
-            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',  # MM/DD/YYYY or DD-MM-YYYY
+            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',    # YYYY-MM-DD
+            r'(\d{2}/\d{2}/\d{4})',              # MM/DD/YYYY strict
+            r'(\w{3}\s+\d{1,2},?\s+\d{4})',      # Jan 15, 2024
         ]
         for pattern in date_patterns:
             match = re.search(pattern, text)
@@ -334,21 +351,42 @@ class DonutProcessor(BaseDonutProcessor):
                 extracted['date'] = match.group(1)
                 break
 
-        # Extract address (look for ZIP code and surrounding text)
-        address_match = re.search(r'([A-Z\s]+(?:TX|CA|NY|FL)[,\s]*\d{5}(?:-\d{4})?)', text)
-        if address_match:
-            extracted['address'] = address_match.group(1).strip()
+        # Extract address (look for ZIP code and surrounding text, or street patterns)
+        address_patterns = [
+            r'([A-Z\s]+(?:TX|CA|NY|FL|WA|IL|MA|PA|OH|GA|NC|MI|VA)[,\s]*\d{5}(?:-\d{4})?)',
+            r'(\d+\s+[A-Z][a-z]+\s+(?:St|Ave|Rd|Blvd|Lane|Drive|Street|Avenue|Boulevard|Way|Plaza)\.?[,\s]+[A-Z]{2}\s+\d{5})',
+            r'([A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5})',  # City, STATE ZIP
+        ]
+        for pattern in address_patterns:
+            match = re.search(pattern, text)
+            if match:
+                extracted['address'] = match.group(1).strip()
+                break
 
-        # Extract store/company name (look for "STORE" or uppercase words at start)
+        # Extract store/company name (enhanced with multiple strategies)
         store_patterns = [
             r'(?:STORE|SHOP|MARKET)\s*#?\d+\s*-?\s*([A-Z\s]+)',
-            r'^([A-Z][A-Z\s]{2,20}?)(?:\s+\d|\s+[A-Z]{2}\s+\d)',  # Uppercase words before address
+            r'^([A-Z][A-Z\s&\'-]{2,30}?)(?:\s+\d|\s+[A-Z]{2}\s+\d)',  # Uppercase words before address
+            r'^([A-Z][A-Z\s&\'-]{3,40}?)$',  # All caps line (first meaningful one)
         ]
+
+        # Try patterns first
         for pattern in store_patterns:
-            match = re.search(pattern, text)
+            match = re.search(pattern, text, re.MULTILINE)
             if match:
                 extracted['company'] = match.group(1).strip()
                 break
+
+        # If no company found, try first meaningful line
+        if 'company' not in extracted and lines:
+            for line in lines[:5]:
+                # Skip if it looks like a date, price, or address
+                if (len(line) >= 3 and
+                    not re.search(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', line) and
+                    not re.search(r'\$?\d+[.,]\d{2}', line) and
+                    not re.search(r'\d{5}', line)):
+                    extracted['company'] = line
+                    break
 
         # If we found address but no company, try to extract from beginning
         if 'address' in extracted and 'company' not in extracted:
@@ -357,7 +395,7 @@ class DonutProcessor(BaseDonutProcessor):
             if addr_pos > 0:
                 before_addr = text[:addr_pos].strip()
                 # Take last uppercase sequence before address
-                company_match = re.search(r'([A-Z][A-Z\s]{2,30})$', before_addr)
+                company_match = re.search(r'([A-Z][A-Z\s&\'-]{2,40})$', before_addr)
                 if company_match:
                     extracted['company'] = company_match.group(1).strip()
 
@@ -556,13 +594,15 @@ class FlorenceProcessor(BaseDonutProcessor):
             try:
                 # Disable caching to avoid past_key_values issue
                 # Florence-2 has a known issue with past_key_values handling
+                # Reduced max_new_tokens from 1024 to 512 to prevent hanging on CPU
                 generated_ids = self.model.generate(
                     input_ids=inputs["input_ids"],
                     pixel_values=inputs["pixel_values"],
-                    max_new_tokens=1024,
+                    max_new_tokens=512,  # Reduced from 1024 to improve speed
                     num_beams=1,  # Use greedy decoding
                     do_sample=False,
                     use_cache=False,  # Disable KV cache to avoid past_key_values bug
+                    early_stopping=True,  # Stop early if EOS token is generated
                 )
             except Exception as e:
                 logger.error(f"Florence-2: Failed during generation: {e}", exc_info=True)
