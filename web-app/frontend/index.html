@@ -37,9 +37,14 @@
                 <div id="imagePreview" class="image-preview hidden">
                     <img id="previewImg" src="" alt="Preview">
                 </div>
-                <button id="extractBtn" class="btn btn-primary hidden" disabled>
-                    Extract Receipt Data
-                </button>
+                <div class="button-group hidden" id="actionButtons">
+                    <button id="extractBtn" class="btn btn-primary" disabled>
+                        Extract Receipt Data
+                    </button>
+                    <button id="batchExtractBtn" class="btn btn-batch" disabled>
+                        🚀 Extract with ALL Models
+                    </button>
+                </div>
             </section>
 
             <!-- Results Section -->

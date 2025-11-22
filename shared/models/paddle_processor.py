@@ -46,11 +46,11 @@ class PaddleProcessor:
         # lang='en' for English receipts
         logger.info("Initializing PaddleOCR...")
         try:
-            # Note: show_log parameter removed as it's not supported in all PaddleOCR versions
+            # Note: show_log and use_gpu parameters removed as they're not supported in all PaddleOCR versions
+            # PaddleOCR will automatically detect and use GPU if available
             self.ocr = PaddleOCR(
                 use_angle_cls=True,
-                lang='en',
-                use_gpu=False  # Set to True if GPU is available
+                lang='en'
             )
             logger.info("PaddleOCR initialized successfully")
         except Exception as e:
