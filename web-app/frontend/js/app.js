@@ -19,6 +19,8 @@ const elements = {
     imagePreview: document.getElementById('imagePreview'),
     previewImg: document.getElementById('previewImg'),
     extractBtn: document.getElementById('extractBtn'),
+    batchExtractBtn: document.getElementById('batchExtractBtn'),
+    actionButtons: document.getElementById('actionButtons'),
     resultsSection: document.getElementById('resultsSection'),
     errorSection: document.getElementById('errorSection'),
     loadingOverlay: document.getElementById('loadingOverlay')
@@ -42,6 +44,9 @@ function setupEventListeners() {
 
     // Extract button
     elements.extractBtn.addEventListener('click', handleExtract);
+
+    // Batch extract button
+    elements.batchExtractBtn.addEventListener('click', handleBatchExtract);
 
     // Export buttons
     document.getElementById('exportJson').addEventListener('click', () => exportData('json'));
@@ -186,8 +191,9 @@ function processFile(file) {
     reader.onload = (e) => {
         elements.previewImg.src = e.target.result;
         elements.imagePreview.classList.remove('hidden');
-        elements.extractBtn.classList.remove('hidden');
+        elements.actionButtons.classList.remove('hidden');
         elements.extractBtn.disabled = false;
+        elements.batchExtractBtn.disabled = false;
     };
     reader.readAsDataURL(file);
 
@@ -239,6 +245,63 @@ async function handleExtract() {
     } finally {
         showLoading(false);
     }
+}
+
+// Handle batch extraction (all models)
+async function handleBatchExtract() {
+    const file = elements.fileInput.files[0];
+    if (!file) {
+        showError('Please select an image first');
+        return;
+    }
+
+    // Show loading
+    showLoading(true, 'Processing with ALL models... This may take a few minutes.');
+    hideError();
+    elements.resultsSection.classList.add('hidden');
+
+    try {
+        // Create form data
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // Send request to batch endpoint
+        const response = await fetch(`${API_BASE_URL}/extract/batch`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Save batch results and trigger download
+            downloadBatchResults(data);
+            // Show success message
+            showSuccess(`Successfully extracted with ${data.models_count} models! Results downloaded as JSON.`);
+        } else {
+            showError(data.error || 'Batch extraction failed');
+        }
+    } catch (error) {
+        console.error('Batch extraction error:', error);
+        showError('Failed to perform batch extraction. Please try again.');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Download batch results as JSON
+function downloadBatchResults(data) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const filename = `batch_extraction_${timestamp}.json`;
+
+    const content = JSON.stringify(data, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // Display extraction results
@@ -378,9 +441,13 @@ function convertToText(data) {
 }
 
 // Show loading overlay
-function showLoading(show) {
+function showLoading(show, message = 'Processing receipt...') {
     if (show) {
         elements.loadingOverlay.classList.remove('hidden');
+        const loadingText = elements.loadingOverlay.querySelector('p');
+        if (loadingText) {
+            loadingText.textContent = message;
+        }
     } else {
         elements.loadingOverlay.classList.add('hidden');
     }
@@ -390,6 +457,25 @@ function showLoading(show) {
 function showError(message) {
     elements.errorSection.classList.remove('hidden');
     document.getElementById('errorMessage').textContent = message;
+}
+
+// Show success message
+function showSuccess(message) {
+    // Temporarily show success in the error section (repurpose it)
+    const errorSection = elements.errorSection;
+    errorSection.style.backgroundColor = '#d1fae5';
+    errorSection.style.borderColor = '#10b981';
+    errorSection.classList.remove('hidden');
+    document.getElementById('errorMessage').textContent = '✓ ' + message;
+    document.getElementById('errorMessage').style.color = '#065f46';
+
+    // Reset after 5 seconds
+    setTimeout(() => {
+        errorSection.style.backgroundColor = '';
+        errorSection.style.borderColor = '';
+        document.getElementById('errorMessage').style.color = '';
+        hideError();
+    }, 5000);
 }
 
 // Hide error

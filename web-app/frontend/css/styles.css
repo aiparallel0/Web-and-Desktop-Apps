@@ -235,6 +235,38 @@ h3 {
     background: #475569;
 }
 
+.btn-batch {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+}
+
+.btn-batch:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-batch:disabled {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    cursor: not-allowed;
+    opacity: 0.6;
+    box-shadow: none;
+}
+
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.button-group .btn {
+    margin-top: 0;
+    flex: 1;
+    min-width: 200px;
+}
+
 /* Results */
 .results-grid {
     display: grid;

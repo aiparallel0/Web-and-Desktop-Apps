@@ -408,18 +408,39 @@ class DonutProcessor(BaseDonutProcessor):
         """
         extracted = {}
 
-        # Clean up text - remove special tokens
+        # Clean up text - remove special tokens and separators
         text = re.sub(r'</?s_\w+>', '', text)  # Remove special tokens like </s_cord-v2>
-        text = re.sub(r'[歲嵗的]', '', text)  # Remove garbled unicode
+        text = re.sub(r'<sep/>', '\n', text)  # Convert <sep/> to newlines
+        text = re.sub(r'[歲嵗的있습니다]', '', text)  # Remove garbled unicode and Korean chars
+        text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
 
         # Extract store/company name (usually at the beginning)
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         if lines:
             # First meaningful line is usually the store name
-            for line in lines[:3]:
-                if len(line) > 2 and not re.match(r'^\d+[.,]\d{2}$', line):
-                    extracted['company'] = line
-                    break
+            # Must be uppercase, reasonable length, and not contain prices or dates
+            for line in lines[:5]:
+                # Clean the line further
+                line = line.strip()
+                # Skip if it's too long (likely concatenated text)
+                if len(line) > 50:
+                    continue
+                # Skip if it contains prices
+                if re.search(r'\d+[.,]\d{2}', line):
+                    continue
+                # Skip if it's mostly numbers
+                if len(re.findall(r'\d', line)) > len(line) / 2:
+                    continue
+                # Accept if it's meaningful
+                if len(line) >= 3 and len(line) <= 50:
+                    # If it contains common store keywords, use it
+                    if any(keyword in line.upper() for keyword in ['TRADER', 'JOE', 'STORE', 'MARKET', 'SHOP']):
+                        extracted['company'] = line
+                        break
+                    # Otherwise, check if it's mostly letters
+                    if len(re.findall(r'[A-Za-z]', line)) > len(line) / 2:
+                        extracted['company'] = line
+                        break
 
         # Extract total (look for common patterns)
         total_patterns = [
@@ -594,15 +615,18 @@ class FlorenceProcessor(BaseDonutProcessor):
             try:
                 # Disable caching to avoid past_key_values issue
                 # Florence-2 has a known issue with past_key_values handling
-                # Reduced max_new_tokens from 1024 to 512 to prevent hanging on CPU
+                # Aggressively reduced max_new_tokens to 256 for much faster processing
+                # Note: Florence-2-large is very slow on CPU (770M params)
+                # For production use, consider using GPU or a lighter OCR model
                 generated_ids = self.model.generate(
                     input_ids=inputs["input_ids"],
                     pixel_values=inputs["pixel_values"],
-                    max_new_tokens=512,  # Reduced from 1024 to improve speed
+                    max_new_tokens=256,  # Reduced from 512 to 256 for faster processing
                     num_beams=1,  # Use greedy decoding
                     do_sample=False,
                     use_cache=False,  # Disable KV cache to avoid past_key_values bug
                     early_stopping=True,  # Stop early if EOS token is generated
+                    pad_token_id=self.processor.tokenizer.pad_token_id,
                 )
             except Exception as e:
                 logger.error(f"Florence-2: Failed during generation: {e}", exc_info=True)

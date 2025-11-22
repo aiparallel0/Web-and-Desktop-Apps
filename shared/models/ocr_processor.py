@@ -51,23 +51,10 @@ class OCRProcessor:
             logger.info("Using Tesseract from system PATH")
 
     def _find_tesseract(self) -> Optional[str]:
-        """Find Tesseract installation"""
+        """Find Tesseract installation with extensive path checking"""
         logger.info("Searching for Tesseract OCR...")
 
-        windows_paths = [
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-            r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe',
-            r'C:\Tesseract-OCR\tesseract.exe',
-        ]
-
-        if sys.platform == 'win32':
-            for path in windows_paths:
-                if os.path.exists(path):
-                    logger.info(f"Found Tesseract: {path}")
-                    return path
-
-        # Try system PATH
+        # Try system PATH first (most common)
         try:
             result = subprocess.run(
                 ['tesseract', '--version'],
@@ -79,9 +66,63 @@ class OCRProcessor:
                 logger.info("Found Tesseract in system PATH")
                 return 'tesseract'
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+            logger.debug("Tesseract not found in PATH, checking common installation directories...")
 
-        logger.warning("Tesseract not found. Please install from: https://github.com/UB-Mannheim/tesseract/wiki")
+        # Windows: Check common installation paths
+        if sys.platform == 'win32':
+            windows_paths = [
+                r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+                r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+                r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe',
+                r'C:\Tesseract-OCR\tesseract.exe',
+                # Additional common paths
+                os.path.expanduser(r'~\AppData\Local\Tesseract-OCR\tesseract.exe'),
+                os.path.expanduser(r'~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'),
+                r'C:\tools\tesseract\tesseract.exe',
+                r'D:\Program Files\Tesseract-OCR\tesseract.exe',
+                r'D:\Tesseract-OCR\tesseract.exe',
+            ]
+
+            for path in windows_paths:
+                if os.path.exists(path):
+                    logger.info(f"Found Tesseract: {path}")
+                    # Test if it actually works
+                    try:
+                        test_result = subprocess.run(
+                            [path, '--version'],
+                            capture_output=True,
+                            timeout=5
+                        )
+                        if test_result.returncode == 0:
+                            return path
+                    except Exception:
+                        continue
+
+        # macOS: Check Homebrew and MacPorts paths
+        elif sys.platform == 'darwin':
+            mac_paths = [
+                '/usr/local/bin/tesseract',
+                '/opt/homebrew/bin/tesseract',  # M1/M2 Macs
+                '/opt/local/bin/tesseract',     # MacPorts
+            ]
+            for path in mac_paths:
+                if os.path.exists(path):
+                    logger.info(f"Found Tesseract: {path}")
+                    return path
+
+        # Linux: Check common paths
+        else:
+            linux_paths = [
+                '/usr/bin/tesseract',
+                '/usr/local/bin/tesseract',
+            ]
+            for path in linux_paths:
+                if os.path.exists(path):
+                    logger.info(f"Found Tesseract: {path}")
+                    return path
+
+        logger.warning("Tesseract not found in any common location. Please install from: https://github.com/UB-Mannheim/tesseract/wiki")
+        logger.warning("After installation, either add Tesseract to your system PATH or the application will auto-detect it.")
         return None
 
     def extract(self, image_path: str) -> ExtractionResult:

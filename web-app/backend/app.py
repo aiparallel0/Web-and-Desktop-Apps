@@ -43,13 +43,14 @@ def index():
     """Root endpoint - API information"""
     return jsonify({
         'service': 'Receipt Extraction API',
-        'version': '1.0',
+        'version': '1.1',
         'status': 'running',
         'endpoints': {
             'health': '/api/health',
             'models': '/api/models',
             'select_model': '/api/models/select (POST)',
             'extract': '/api/extract (POST)',
+            'batch_extract': '/api/extract/batch (POST) - Extract with ALL models',
             'model_info': '/api/models/<model_id>/info',
             'unload_models': '/api/models/unload (POST)'
         },
@@ -177,6 +178,105 @@ def extract_receipt():
 
     except Exception as e:
         logger.error(f"Extraction error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/extract/batch', methods=['POST'])
+def extract_batch():
+    """Extract receipt data using ALL models and return combined results"""
+    try:
+        # Check if file is present
+        if 'image' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No image file provided'
+            }), 400
+
+        file = request.files['image']
+
+        # Check if filename is empty
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
+
+        # Check if file type is allowed
+        if not allowed_file(file.filename):
+            return jsonify({
+                'success': False,
+                'error': f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
+            }), 400
+
+        # Save file to temporary location
+        filename = secure_filename(file.filename)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+            temp_path = temp_file.name
+            file.save(temp_path)
+
+        try:
+            # Get all available models
+            available_models = model_manager.get_available_models()
+            logger.info(f"Running batch extraction with {len(available_models)} models")
+
+            # Store results from all models
+            batch_results = {
+                'success': True,
+                'image_filename': filename,
+                'models_count': len(available_models),
+                'results': {}
+            }
+
+            # Process image with each model
+            for model_info in available_models:
+                model_id = model_info['id']
+                model_name = model_info['name']
+
+                logger.info(f"Processing with model: {model_name} ({model_id})")
+
+                try:
+                    # Get processor for this model
+                    processor = model_manager.get_processor(model_id)
+
+                    # Extract receipt data
+                    result = processor.extract(temp_path)
+
+                    # Store result
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': result.to_dict()
+                    }
+
+                    logger.info(f"✓ {model_name}: {'Success' if result.success else 'Failed'}")
+
+                except Exception as e:
+                    # If one model fails, continue with others
+                    logger.error(f"Model {model_name} failed: {e}")
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': {
+                            'success': False,
+                            'error': str(e)
+                        }
+                    }
+
+            logger.info(f"Batch extraction complete: {len(batch_results['results'])} models processed")
+
+            # Return combined results
+            return jsonify(batch_results)
+
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    except Exception as e:
+        logger.error(f"Batch extraction error: {e}", exc_info=True)
         return jsonify({
             'success': False,
             'error': str(e)
