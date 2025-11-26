@@ -91,6 +91,11 @@ class PaddleProcessor:
                     bbox = line[0]
                     text_info = line[1]
 
+                    # Validate bbox structure - should be a list of 4 coordinate pairs
+                    if not isinstance(bbox, (list, tuple)) or len(bbox) < 1:
+                        logger.warning(f"Invalid bbox format: {type(bbox)} - {bbox}")
+                        continue
+
                     # Handle different PaddleOCR return formats
                     if isinstance(text_info, (tuple, list)) and len(text_info) == 2:
                         text, confidence = text_info
@@ -108,12 +113,25 @@ class PaddleProcessor:
                             'confidence': confidence,
                             'bbox': bbox
                         })
-                except (ValueError, TypeError) as e:
+                except (ValueError, TypeError, IndexError) as e:
                     logger.warning(f"Failed to parse PaddleOCR line: {e}. Line structure: {line}")
                     continue
 
             # Sort text lines by vertical position (top to bottom)
-            text_lines = sorted(text_lines, key=lambda x: x['bbox'][0][1])
+            # Use safe accessor to handle different bbox formats
+            def safe_get_y_coord(line_dict):
+                """Safely extract Y coordinate from bbox for sorting"""
+                try:
+                    bbox = line_dict['bbox']
+                    if isinstance(bbox, (list, tuple)) and len(bbox) > 0:
+                        first_point = bbox[0]
+                        if isinstance(first_point, (list, tuple)) and len(first_point) > 1:
+                            return first_point[1]  # Y coordinate
+                    return 0  # Default if can't extract
+                except (KeyError, IndexError, TypeError):
+                    return 0
+
+            text_lines = sorted(text_lines, key=safe_get_y_coord)
 
             logger.info(f"PaddleOCR detected {len(text_lines)} text lines")
 
