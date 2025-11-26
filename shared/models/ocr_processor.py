@@ -1,428 +1,204 @@
-"""
-Tesseract OCR processor for receipt extraction - AGGRESSIVE MULTI-MODE VERSION
-"""
-import os
-import sys
-import re
-import logging
-import time
-import subprocess
+import os,sys,re,logging,time,subprocess
 from decimal import Decimal
-from typing import Dict, List, Optional
-from PIL import Image, ImageEnhance, ImageFilter
-import cv2
-import numpy as np
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from utils.data_structures import LineItem, ReceiptData, ExtractionResult
-from utils.image_processing import load_and_validate_image, preprocess_for_ocr
-
+from typing import Dict,List,Optional
+from PIL import Image,ImageEnhance,ImageFilter
+import cv2,numpy as np
+sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
+from utils.data_structures import LineItem,ReceiptData,ExtractionResult
+from utils.image_processing import load_and_validate_image,preprocess_for_ocr
 try:
     import pytesseract
 except ImportError:
-    raise ImportError("pytesseract is required for OCR processing. Install: pip install pytesseract")
-
-logger = logging.getLogger(__name__)
-
-# Price validation
-PRICE_MIN = 0
-PRICE_MAX = 9999
-
+    raise ImportError("pytesseract required: pip install pytesseract")
+logger=logging.getLogger(__name__)
+PRICE_MIN,PRICE_MAX=0,9999
 
 class OCRProcessor:
-    """Processor for Tesseract OCR-based extraction with AGGRESSIVE multi-mode approach"""
+    SKIP_KEYWORDS={'subtotal','total','cash','change','tax','payment','balance','thank','visit','welcome','receipt','cashier','card','debit','credit','approved','transaction'}
 
-    SKIP_KEYWORDS = {
-        'subtotal', 'total', 'cash', 'change', 'tax', 'payment', 'balance',
-        'thank', 'visit', 'welcome', 'receipt', 'cashier', 'card', 'debit',
-        'credit', 'approved', 'transaction'
-    }
-
-    def __init__(self, model_config: Dict):
-        self.model_config = model_config
-        self.model_name = model_config['name']
-        self.tesseract_path = self._find_tesseract()
-
+    def __init__(self,model_config:Dict):
+        self.model_config=model_config
+        self.model_name=model_config['name']
+        self.tesseract_path=self._find_tesseract()
         if self.tesseract_path is None:
-            error_msg = (
-                "Tesseract OCR is not installed or not found in system PATH.\n"
-                "Please install Tesseract:\n"
-                "  - Windows: https://github.com/UB-Mannheim/tesseract/wiki\n"
-                "  - macOS: brew install tesseract\n"
-                "  - Linux: sudo apt-get install tesseract-ocr\n"
-                "After installation, restart the application."
-            )
-            logger.error(error_msg)
-            raise EnvironmentError(error_msg)
-
-        if self.tesseract_path and self.tesseract_path != 'tesseract':
-            pytesseract.pytesseract.tesseract_cmd = self.tesseract_path
-            logger.info(f"Using Tesseract at: {self.tesseract_path}")
-        else:
-            logger.info("Using Tesseract from system PATH")
-
-        # Verify Tesseract is working
+            raise EnvironmentError("Tesseract not installed. Install: https://github.com/UB-Mannheim/tesseract/wiki")
+        if self.tesseract_path and self.tesseract_path!='tesseract':
+            pytesseract.pytesseract.tesseract_cmd=self.tesseract_path
+            logger.info(f"Tesseract: {self.tesseract_path}")
         self._verify_tesseract()
 
     def _verify_tesseract(self):
-        """Verify Tesseract is properly installed and working"""
         try:
-            version = pytesseract.get_tesseract_version()
-            logger.info(f"Tesseract version: {version}")
+            version=pytesseract.get_tesseract_version()
+            logger.info(f"Tesseract v{version}")
         except Exception as e:
-            error_msg = f"Tesseract found but not working properly: {e}"
-            logger.error(error_msg)
-            raise EnvironmentError(error_msg) from e
+            raise EnvironmentError(f"Tesseract not working: {e}") from e
 
-    def _find_tesseract(self) -> Optional[str]:
-        """Find Tesseract installation"""
-        logger.info("Searching for Tesseract OCR...")
-
-        # Try system PATH first
+    def _find_tesseract(self)->Optional[str]:
+        logger.info("Searching Tesseract...")
         try:
-            result = subprocess.run(['tesseract', '--version'], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                logger.info("Found Tesseract in system PATH")
-                return 'tesseract'
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            logger.debug("Tesseract not found in PATH")
-
-        # Windows paths
-        if sys.platform == 'win32':
-            windows_paths = [
-                r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-                r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-                r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe',
-                r'C:\Tesseract-OCR\tesseract.exe',
-            ]
-            for path in windows_paths:
-                if os.path.exists(path):
-                    logger.info(f"Found Tesseract: {path}")
-                    return path
-
-        # macOS paths
-        elif sys.platform == 'darwin':
-            mac_paths = [
-                '/usr/local/bin/tesseract',
-                '/opt/homebrew/bin/tesseract',
-                '/opt/local/bin/tesseract',
-            ]
-            for path in mac_paths:
-                if os.path.exists(path):
-                    logger.info(f"Found Tesseract: {path}")
-                    return path
-
-        # Linux paths
+            result=subprocess.run(['tesseract','--version'],capture_output=True,text=True,timeout=5)
+            if result.returncode==0:return 'tesseract'
+        except (subprocess.TimeoutExpired,FileNotFoundError):pass
+        if sys.platform=='win32':
+            paths=[r'C:\Program Files\Tesseract-OCR\tesseract.exe',r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe']
+            for p in paths:
+                if os.path.exists(p):return p
+        elif sys.platform=='darwin':
+            paths=['/usr/local/bin/tesseract','/opt/homebrew/bin/tesseract']
+            for p in paths:
+                if os.path.exists(p):return p
         else:
-            linux_paths = ['/usr/bin/tesseract', '/usr/local/bin/tesseract']
-            for path in linux_paths:
-                if os.path.exists(path):
-                    logger.info(f"Found Tesseract: {path}")
-                    return path
-
-        logger.warning("Tesseract not found!")
+            paths=['/usr/bin/tesseract','/usr/local/bin/tesseract']
+            for p in paths:
+                if os.path.exists(p):return p
         return None
 
-    def _aggressive_preprocess(self, image: Image.Image) -> List[Image.Image]:
-        """Create MULTIPLE preprocessed versions to try different approaches"""
-        preprocessed = []
-
-        # Convert to numpy
-        img_np = np.array(image)
-
-        # Version 1: AGGRESSIVE upscaling + denoising + thresholding
-        logger.info("Creating version 1: Aggressive upscale + denoise")
-        upscaled = cv2.resize(img_np, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-        gray1 = cv2.cvtColor(upscaled, cv2.COLOR_RGB2GRAY)
-        denoised1 = cv2.fastNlMeansDenoising(gray1, h=10)
-        _, thresh1 = cv2.threshold(denoised1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    def _aggressive_preprocess(self,image:Image.Image)->List[Image.Image]:
+        preprocessed=[]
+        img_np=np.array(image)
+        upscaled=cv2.resize(img_np,None,fx=2,fy=2,interpolation=cv2.INTER_CUBIC)
+        gray1=cv2.cvtColor(upscaled,cv2.COLOR_RGB2GRAY)
+        denoised1=cv2.fastNlMeansDenoising(gray1,h=10)
+        _,thresh1=cv2.threshold(denoised1,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
         preprocessed.append(Image.fromarray(thresh1))
-
-        # Version 2: Adaptive threshold
-        logger.info("Creating version 2: Adaptive threshold")
-        gray2 = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        adaptive = cv2.adaptiveThreshold(gray2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        gray2=cv2.cvtColor(img_np,cv2.COLOR_RGB2GRAY)
+        adaptive=cv2.adaptiveThreshold(gray2,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
         preprocessed.append(Image.fromarray(adaptive))
-
-        # Version 3: Simple grayscale with high contrast
-        logger.info("Creating version 3: High contrast grayscale")
-        gray3 = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        enhanced = Image.fromarray(gray3)
-        enhancer = ImageEnhance.Contrast(enhanced)
-        enhanced = enhancer.enhance(2.0)
-        preprocessed.append(enhanced)
-
+        gray3=cv2.cvtColor(img_np,cv2.COLOR_RGB2GRAY)
+        enhanced=Image.fromarray(gray3)
+        enhancer=ImageEnhance.Contrast(enhanced)
+        preprocessed.append(enhancer.enhance(2.0))
         return preprocessed
 
-    def extract(self, image_path: str) -> ExtractionResult:
-        """Extract receipt data using Tesseract OCR with multi-pass strategy to maximize accuracy"""
-        start_time = time.time()
-
+    def extract(self,image_path:str)->ExtractionResult:
+        start_time=time.time()
         if not self.tesseract_path:
-            return ExtractionResult(
-                success=False,
-                error="Tesseract OCR not installed. Install from: https://github.com/UB-Mannheim/tesseract/wiki"
-            )
-
+            return ExtractionResult(success=False,error="Tesseract not installed")
         try:
-            # Load image
-            image = load_and_validate_image(image_path)
-            processed_image = preprocess_for_ocr(image, aggressive=True)
-
-            # MULTI-PASS OCR STRATEGY for maximum accuracy
-            # Try multiple PSM modes and combine results
-
-            ocr_results = []
-
-            # Pass 1: PSM 6 - Single uniform block (good for well-structured receipts)
-            config1 = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
-            text1 = pytesseract.image_to_string(processed_image, lang='eng', config=config1)
-            ocr_results.append(('PSM 6', text1))
-
-            # Pass 2: PSM 4 - Single column of varying text (good for receipts with different sections)
-            config2 = r'--oem 3 --psm 4'
-            text2 = pytesseract.image_to_string(processed_image, lang='eng', config=config2)
-            ocr_results.append(('PSM 4', text2))
-
-            # Select best result (longest meaningful text)
-            best_mode, best_text = max(ocr_results, key=lambda x: len(x[1].strip()))
-
-            logger.info(f"OCR extraction complete using {best_mode}")
-            logger.info(f"Extracted text length: {len(best_text)} characters")
-
-            # Log first 200 chars for debugging
-            preview = best_text[:200].replace('\n', '\\n')
-            logger.info(f"Text preview: {preview}...")
-
-            # Parse the OCR text
-            receipt = self._parse_receipt_text(best_text)
-            receipt.processing_time = time.time() - start_time
-            receipt.model_used = f"{self.model_name} ({best_mode})"
-
-            # Add quality warning if extraction seems poor
-            if len(best_text.strip()) < 50:
-                receipt.extraction_notes.append(
-                    "OCR produced very little text - image quality may be poor. "
-                    "Try rescanning at higher resolution with better lighting."
-                )
-
-            # Get multiple preprocessed versions
-            preprocessed_versions = self._aggressive_preprocess(image)
-
-            # PSM (Page Segmentation Modes) to try (in order of preference for receipts)
-            # Reference: https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method
-            psm_modes = [
-                6,   # PSM 6: Uniform block of text (best for well-structured receipts)
-                4,   # PSM 4: Single column of text (good for vertical layouts)
-                11,  # PSM 11: Sparse text (for low-density receipts)
-                3,   # PSM 3: Fully automatic page segmentation (fallback)
-            ]
-
-            best_result = None
-            best_score = 0
-
-            logger.info(f"Trying {len(preprocessed_versions)} preprocessing methods with {len(psm_modes)} PSM modes")
-
-            # Try each preprocessing version with each PSM mode
-            for version_idx, processed_img in enumerate(preprocessed_versions):
+            image=load_and_validate_image(image_path)
+            processed=preprocess_for_ocr(image,aggressive=True)
+            ocr_results=[]
+            config1=r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
+            text1=pytesseract.image_to_string(processed,lang='eng',config=config1)
+            ocr_results.append(('PSM 6',text1))
+            config2=r'--oem 3 --psm 4'
+            text2=pytesseract.image_to_string(processed,lang='eng',config=config2)
+            ocr_results.append(('PSM 4',text2))
+            best_mode,best_text=max(ocr_results,key=lambda x:len(x[1].strip()))
+            logger.info(f"OCR complete: {best_mode}, len={len(best_text)}")
+            receipt=self._parse_receipt_text(best_text)
+            receipt.processing_time=time.time()-start_time
+            receipt.model_used=f"{self.model_name} ({best_mode})"
+            if len(best_text.strip())<50:
+                receipt.extraction_notes.append("Low OCR output - poor image quality")
+            preprocessed_versions=self._aggressive_preprocess(image)
+            psm_modes=[6,4,11,3]
+            best_result,best_score=None,0
+            for v_idx,proc_img in enumerate(preprocessed_versions):
                 for psm in psm_modes:
                     try:
-                        # OEM 3 = Default OCR Engine Mode (uses LSTM neural networks)
-                        # PSM = Page Segmentation Mode (varies based on layout)
-                        config = f'--oem 3 --psm {psm}'
-                        logger.info(f"Trying version {version_idx+1}, PSM {psm}")
-
-                        text = pytesseract.image_to_string(processed_img, lang='eng', config=config)
-
-                        if not text or len(text.strip()) < 10:
-                            continue
-
-                        # Score the result based on how much useful data we can extract
-                        receipt = self._parse_receipt_text(text)
-                        score = self._score_result(receipt, text)
-
-                        logger.info(f"  Result score: {score} (text length: {len(text)})")
-
-                        if score > best_score:
-                            best_score = score
-                            best_result = receipt
-                            logger.info(f"  ✓ New best result! Score: {score}")
-
-                    except Exception as e:
-                        logger.warning(f"PSM {psm} failed: {e}")
-                        continue
-
-            if best_result is None or best_score == 0:
-                return ExtractionResult(
-                    success=False,
-                    error="Tesseract could not extract readable text. Try EasyOCR instead."
-                )
-
-            best_result.processing_time = time.time() - start_time
-            best_result.model_used = self.model_name
-
-            # Calculate confidence score (0-1 scale) based on extraction quality
-            max_possible_score = 95  # Max from _score_result (20+15+30+10+10+10)
-            best_result.confidence_score = min(1.0, best_score / max_possible_score)
-
-            logger.info(f"Best result score: {best_score}, items: {len(best_result.items)}, total: ${best_result.total or 0}")
-            return ExtractionResult(success=True, data=best_result)
-
+                        config=f'--oem 3 --psm {psm}'
+                        text=pytesseract.image_to_string(proc_img,lang='eng',config=config)
+                        if not text or len(text.strip())<10:continue
+                        rec=self._parse_receipt_text(text)
+                        score=self._score_result(rec,text)
+                        if score>best_score:
+                            best_score=score
+                            best_result=rec
+                    except:continue
+            if best_result is None or best_score==0:
+                return ExtractionResult(success=False,error="No readable text. Try EasyOCR.")
+            best_result.processing_time=time.time()-start_time
+            best_result.model_used=self.model_name
+            best_result.confidence_score=min(1.0,best_score/95)
+            return ExtractionResult(success=True,data=best_result)
         except Exception as e:
-            logger.error(f"OCR extraction failed: {e}", exc_info=True)
-            return ExtractionResult(success=False, error=str(e))
+            logger.error(f"OCR failed: {e}",exc_info=True)
+            return ExtractionResult(success=False,error=str(e))
 
-    def _score_result(self, receipt: ReceiptData, text: str) -> int:
-        """Score extraction result quality"""
-        score = 0
+    def _score_result(self,receipt:ReceiptData,text:str)->int:
+        score=0
+        if receipt.store_name and len(receipt.store_name)>2:score+=20
+        if receipt.transaction_date:score+=15
+        if receipt.total and receipt.total>0:score+=30
+        if receipt.items:score+=10*len(receipt.items)
+        if receipt.store_address:score+=10
+        if receipt.store_phone:score+=10
+        special_ratio=sum(1 for c in text if not c.isalnum() and not c.isspace())/max(len(text),1)
+        if special_ratio>0.3:score-=20
+        return max(0,score)
 
-        # Points for each field extracted
-        if receipt.store_name and len(receipt.store_name) > 2:
-            score += 20
-        if receipt.transaction_date:
-            score += 15
-        if receipt.total and receipt.total > 0:
-            score += 30
-        if receipt.items and len(receipt.items) > 0:
-            score += 10 * len(receipt.items)
-        if receipt.store_address:
-            score += 10
-        if receipt.store_phone:
-            score += 10
-
-        # Penalty for gibberish (lots of special characters)
-        special_char_ratio = sum(1 for c in text if not c.isalnum() and not c.isspace()) / max(len(text), 1)
-        if special_char_ratio > 0.3:
-            score -= 20
-
-        return max(0, score)
-
-    def _parse_receipt_text(self, text: str) -> ReceiptData:
-        """Parse OCR text to extract receipt information"""
-        receipt = ReceiptData()
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-
-        if not lines:
-            return receipt
-
-        # Extract store name
+    def _parse_receipt_text(self,text:str)->ReceiptData:
+        receipt=ReceiptData()
+        lines=[line.strip() for line in text.split('\n') if line.strip()]
+        if not lines:return receipt
         for line in lines[:5]:
-            if len(line) >= 3 and not line.isdigit():
-                receipt.store_name = line
+            if len(line)>=3 and not line.isdigit():
+                receipt.store_name=line
                 break
-
-        # Extract date
-        date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
+        date_pattern=r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
         for line in lines:
-            match = re.search(date_pattern, line)
-            if match:
-                receipt.transaction_date = match.group(1)
+            m=re.search(date_pattern,line)
+            if m:
+                receipt.transaction_date=m.group(1)
                 break
-
-        # Extract total - AGGRESSIVE patterns
-        total_patterns = [
-            r'total[:\s]*\$?\s*(\d+\.?\d{0,2})',
-            r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})',
-            r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})',
-            r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})',
-            r'\$\s*(\d+\.\d{2})\s*(?:total|amount)',
-        ]
+        total_patterns=[r'total[:\s]*\$?\s*(\d+\.?\d{0,2})',r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})',r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})',r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})']
         for line in lines:
             for pattern in total_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    price = self._normalize_price(match.group(1))
-                    if price and price > 0:
-                        receipt.total = price
+                m=re.search(pattern,line,re.IGNORECASE)
+                if m:
+                    price=self._normalize_price(m.group(1))
+                    if price and price>0:
+                        receipt.total=price
                         break
-            if receipt.total:
-                break
-
-        # Extract line items
-        receipt.items = self._extract_line_items(lines)
-
-        # Extract address
-        address_keywords = ['st', 'ave', 'rd', 'blvd', 'lane', 'drive', 'street', 'avenue']
+            if receipt.total:break
+        receipt.items=self._extract_line_items(lines)
+        addr_kw=['st','ave','rd','blvd','lane','drive','street','avenue']
         for line in lines[1:8]:
-            line_lower = line.lower()
-            if any(kw in line_lower for kw in address_keywords) and any(c.isdigit() for c in line):
-                receipt.store_address = line
+            ll=line.lower()
+            if any(kw in ll for kw in addr_kw) and any(c.isdigit() for c in line):
+                receipt.store_address=line
                 break
-
-        # Extract phone
-        phone_pattern = r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
+        phone_pattern=r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
         for line in lines:
-            match = re.search(phone_pattern, line)
-            if match:
-                receipt.store_phone = match.group(1)
+            m=re.search(phone_pattern,line)
+            if m:
+                receipt.store_phone=m.group(1)
                 break
-
         return receipt
 
-    def _extract_line_items(self, lines: List[str]) -> List[LineItem]:
-        """Extract line items from OCR text with improved filtering"""
-        items = []
-        seen_names = set()
-
-        # Patterns for item with price
-        item_patterns = [
-            r'^(.+?)\s+\$?\s*(\d+\.?\d{0,2})$',
-            r'^(.+?)\s+(\d+\.?\d{0,2})\s*$'
-        ]
-
+    def _extract_line_items(self,lines:List[str])->List[LineItem]:
+        items,seen=[],set()
+        patterns=[r'^(.+?)\s+\$?\s*(\d+\.?\d{0,2})$',r'^(.+?)\s+(\d+\.?\d{0,2})\s*$']
         for line in lines:
-            line_lower = line.lower()
-            if any(kw in line_lower for kw in self.SKIP_KEYWORDS):
-                continue
-
-            for pattern in item_patterns:
-                match = re.search(pattern, line.strip())
-                if match:
-                    name = match.group(1).strip()
-                    price_str = match.group(2)
-
-                    # Filter 1: Name must be at least 3 characters
-                    if len(name) < 3 or name in seen_names:
-                        continue
-
-                    # Filter 2: Skip if name is mostly numbers (likely a date/transaction ID)
-                    alphas = sum(1 for c in name if c.isalpha())
-                    digits = sum(1 for c in name if c.isdigit())
-                    if digits > alphas:  # More digits than letters = not a product name
-                        continue
-
-                    # Filter 3: Skip very short names with special chars (like "2 @")
-                    if len(name) < 5 and not name.replace(' ', '').isalpha():
-                        continue
-
-                    # Filter 4: Validate price (must be reasonable)
-                    price = self._normalize_price(price_str)
-                    if not price or price <= 0 or price > 1000:  # Max $1000 per item
-                        continue
-
-                    # Filter 5: Skip if name contains common footer/header patterns
-                    skip_patterns = ['store', 'thank', 'visit', 'phone', 'fax', 'email',
-                                   'open', 'hours', 'daily', 'am', 'pm']
-                    if any(skip in name.lower() for skip in skip_patterns):
-                        continue
-
-                    items.append(LineItem(name=name, total_price=price, quantity=1))
-                    seen_names.add(name)
+            ll=line.lower()
+            if any(kw in ll for kw in self.SKIP_KEYWORDS):continue
+            for pattern in patterns:
+                m=re.search(pattern,line.strip())
+                if m:
+                    name=m.group(1).strip()
+                    price_str=m.group(2)
+                    if len(name)<3 or name in seen:continue
+                    alphas=sum(1 for c in name if c.isalpha())
+                    digits=sum(1 for c in name if c.isdigit())
+                    if digits>alphas:continue
+                    if len(name)<5 and not name.replace(' ','').isalpha():continue
+                    price=self._normalize_price(price_str)
+                    if not price or price<=0 or price>1000:continue
+                    skip_patterns=['store','thank','visit','phone','fax','email','open','hours','daily','am','pm']
+                    if any(skip in name.lower() for skip in skip_patterns):continue
+                    items.append(LineItem(name=name,total_price=price,quantity=1))
+                    seen.add(name)
                     break
-
         return items
 
     @staticmethod
-    def _normalize_price(value) -> Optional[Decimal]:
-        """Normalize price values"""
-        if value is None:
-            return None
+    def _normalize_price(value)->Optional[Decimal]:
+        if value is None:return None
         try:
-            price_str = str(value).replace('$', '').replace(',', '').strip()
-            if not price_str or price_str.startswith('-'):
-                return None
-            val = Decimal(price_str)
-            return val if PRICE_MIN <= val <= PRICE_MAX else None
-        except (ValueError, ArithmeticError):
-            return None
+            price_str=str(value).replace('$','').replace(',','').strip()
+            if not price_str or price_str.startswith('-'):return None
+            val=Decimal(price_str)
+            return val if PRICE_MIN<=val<=PRICE_MAX else None
+        except (ValueError,ArithmeticError):return None
