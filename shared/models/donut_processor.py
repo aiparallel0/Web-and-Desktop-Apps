@@ -429,62 +429,46 @@ class DonutProcessor(BaseDonutProcessor):
 
     def _extract_from_text_cord(self, text: str) -> Dict:
         """
-        Fallback: Extract structured data from plain text for CORD models.
-        CORD models are trained to extract more complex receipt data including line items.
+        Parse structured CORD model output with XML-like tags.
+        CORD models output structured data like: <s_nm>NAME</s_nm><s_price>1.99</s_price>
         """
         extracted = {}
 
-        # Clean up text - remove special tokens and separators
-        text = re.sub(r'</?s_\w+>', '', text)  # Remove special tokens like </s_cord-v2>
-        text = re.sub(r'<sep/>', '\n', text)  # Convert <sep/> to newlines
-        text = re.sub(r'[歲嵗的있습니다]', '', text)  # Remove garbled unicode and Korean chars
-        text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+        # Remove Korean unicode artifacts
+        text = re.sub(r'[있습니다]', '', text)
 
-        # Extract store/company name (usually at the beginning)
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        if lines:
-            # First meaningful line is usually the store name
-            # Must be uppercase, reasonable length, and not contain prices or dates
-            for line in lines[:5]:
-                # Clean the line further
-                line = line.strip()
-                # Skip if it's too long (likely concatenated text)
-                if len(line) > 50:
-                    continue
-                # Skip if it contains prices
-                if re.search(r'\d+[.,]\d{2}', line):
-                    continue
-                # Skip if it's mostly numbers
-                if len(re.findall(r'\d', line)) > len(line) / 2:
-                    continue
-                # Accept if it's meaningful
-                if len(line) >= 3 and len(line) <= 50:
-                    # If it contains common store keywords, use it
-                    if any(keyword in line.upper() for keyword in ['TRADER', 'JOE', 'STORE', 'MARKET', 'SHOP']):
-                        extracted['company'] = line
-                        break
-                    # Otherwise, check if it's mostly letters
-                    if len(re.findall(r'[A-Za-z]', line)) > len(line) / 2:
-                        extracted['company'] = line
-                        break
+        # Extract store name (first <s_nm> tag)
+        store_match = re.search(r'<s_nm>\s*([^<]+?)\s*</s_nm>', text)
+        if store_match:
+            extracted['company'] = store_match.group(1).strip()
 
-        # Extract total (look for common patterns)
-        total_patterns = [
-            r'(?:total|grand total|amount)[:\s]*\$?(\d+[.,]\d{2})',
-            r'(?:^|\n)total[:\s]*(\d+[.,]\d{2})',
-            r'(?:^|\s)(\d+[.,]\d{2})\s*$',  # Last price on line
-        ]
-        for pattern in total_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                extracted['total'] = match.group(1).replace(',', '.')
+        # Extract address (usually second <s_num> or early <s_num> with "Ave/St/Rd")
+        address_matches = re.findall(r'<s_num>\s*([^<]+?)\s*</s_num>', text)
+        for addr in address_matches[:5]:  # Check first few
+            if any(keyword in addr for keyword in ['Ave', 'St', 'Rd', 'Blvd', 'Street', 'Avenue']):
+                extracted['address'] = addr.strip()
                 break
 
-        # Extract date (various formats)
+        # Extract totals
+        total_match = re.search(r'<s_total_price>\s*\$?(\d+[.,]\d{2})\s*</s_total_price>', text)
+        if not total_match:
+            total_match = re.search(r'<s_subtotal_price>\s*\$?(\d+[.,]\d{2})\s*</s_subtotal_price>', text)
+        if total_match:
+            extracted['total'] = total_match.group(1).replace(',', '.')
+
+        # Extract cash and change
+        cash_match = re.search(r'<s_cashprice>\s*\$?(\d+[.,]\d{2})\s*</s_cashprice>', text)
+        if cash_match:
+            extracted['cash'] = cash_match.group(1).replace(',', '.')
+
+        change_match = re.search(r'<s_changeprice>\s*\$?(\d+[.,]\d{2})\s*</s_changeprice>', text)
+        if change_match:
+            extracted['change'] = change_match.group(1).replace(',', '.')
+
+        # Extract date (from transaction info or early in text)
         date_patterns = [
-            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
-            r'(\d{2}/\d{2}/\d{4})',
+            r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})',
+            r'(\d{4}[-/]\d{1,2}[-/]\d{1,2})',
         ]
         for pattern in date_patterns:
             match = re.search(pattern, text)
@@ -492,52 +476,46 @@ class DonutProcessor(BaseDonutProcessor):
                 extracted['date'] = match.group(1)
                 break
 
-        # Extract address (look for ZIP code and surrounding text)
-        address_patterns = [
-            r'([A-Z\s]+(?:TX|CA|NY|FL|WA|IL|MA|PA|OH)[,\s]*\d{5}(?:-\d{4})?)',
-            r'(\d+\s+[A-Z][a-z]+\s+(?:St|Ave|Rd|Blvd|Lane|Drive|Street|Avenue))',
-        ]
-        for pattern in address_patterns:
-            match = re.search(pattern, text)
-            if match:
-                extracted['address'] = match.group(1).strip()
-                break
+        # Extract phone number
+        phone_match = re.search(r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})', text)
+        if phone_match:
+            extracted['phone'] = phone_match.group(1)
 
-        # Extract menu items (CORD specific)
-        # Look for patterns like "Item Name 2.99" or "Item Name x2 5.98"
+        # Extract menu items from <s_menu> section
+        # Items are sequences of <s_nm>name</s_nm> ... <s_price>X.XX</s_price><sep/>
         menu_items = []
-        item_patterns = [
-            r'([A-Za-z\s]{3,30})\s+(?:x\d+\s+)?\$?(\d+[.,]\d{2})',
-            r'([A-Za-z][A-Za-z\s]{2,30}?)\s+(\d+[.,]\d{2})',
-        ]
 
-        for line in lines:
-            # Skip lines that are likely headers or totals
-            line_lower = line.lower()
-            if any(word in line_lower for word in ['total', 'subtotal', 'tax', 'change', 'cash', 'card']):
-                continue
+        # Split by <sep/> to get item groups
+        item_groups = text.split('<sep/>')
 
-            for pattern in item_patterns:
-                match = re.search(pattern, line)
-                if match:
-                    item_name = match.group(1).strip()
-                    item_price = match.group(2).replace(',', '.')
+        for group in item_groups:
+            # Look for name and price in this group
+            name_match = re.search(r'<s_nm>\s*([^<]+?)\s*</s_nm>', group)
+            price_match = re.search(r'<s_price>\s*\$?(\d+[.,]\d{2})\s*</s_price>', group)
 
-                    # Validate item name and price
-                    if len(item_name) >= 3 and len(item_name) <= 50:
-                        try:
-                            price_val = float(item_price)
-                            if 0 < price_val < 1000:  # Reasonable price range
-                                menu_items.append({
-                                    'nm': item_name,
-                                    'price': item_price
-                                })
-                        except ValueError:
-                            pass
-                    break
+            if name_match and price_match:
+                name = name_match.group(1).strip()
+                price = price_match.group(1).replace(',', '.')
+
+                # Filter out header/footer text
+                if len(name) >= 3 and not any(skip in name.upper() for skip in
+                    ['STORE #', 'OPEN ', 'DAILY', 'GROCERY NON TAXABLE', 'ITEMS ']):
+
+                    # Try to extract quantity if present
+                    qty_match = re.search(r'<s_cnt>\s*(\d+)\s*</s_cnt>', group)
+                    quantity = int(qty_match.group(1)) if qty_match else 1
+
+                    menu_items.append({
+                        'name': name,
+                        'price': price,
+                        'quantity': quantity
+                    })
 
         if menu_items:
             extracted['menu'] = menu_items
+
+        logger.info(f"CORD parsing extracted: company={extracted.get('company')}, "
+                   f"total={extracted.get('total')}, items={len(menu_items)}")
 
         return extracted
 
