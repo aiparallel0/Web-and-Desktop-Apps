@@ -3,6 +3,9 @@ flask>=2.3.0
 flask-cors>=4.0.0
 werkzeug>=2.3.0
 
+# System Monitoring (for health checks)
+psutil>=5.9.8
+
 # Core AI/ML Dependencies
 torch>=2.0.0
 transformers>=4.40.0
