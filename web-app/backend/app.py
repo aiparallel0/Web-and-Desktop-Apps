@@ -4,6 +4,7 @@ Provides REST API for uploading images and extracting receipt data
 """
 import os
 import sys
+import re
 import logging
 import time
 import gc
@@ -241,10 +242,30 @@ def select_model():
         data = request.get_json()
         model_id = data.get('model_id')
 
+        # Validate model_id
         if not model_id:
             return jsonify({
                 'success': False,
                 'error': 'model_id is required'
+            }), 400
+
+        if not isinstance(model_id, str):
+            return jsonify({
+                'success': False,
+                'error': 'model_id must be a string'
+            }), 400
+
+        if len(model_id) > 100:
+            return jsonify({
+                'success': False,
+                'error': 'model_id too long'
+            }), 400
+
+        # Sanitize model_id (allow only alphanumeric, underscore, dash)
+        if not re.match(r'^[a-zA-Z0-9_-]+$', model_id):
+            return jsonify({
+                'success': False,
+                'error': 'model_id contains invalid characters'
             }), 400
 
         success = model_manager.select_model(model_id)
@@ -469,7 +490,8 @@ def unload_models():
 
 
 if __name__ == '__main__':
-    # Run development server
+    # Run server (debug mode controlled by environment variable for security)
     logger.info("Starting Receipt Extraction API...")
     logger.info(f"Available models: {len(model_manager.get_available_models())}")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)

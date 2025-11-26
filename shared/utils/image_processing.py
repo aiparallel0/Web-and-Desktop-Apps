@@ -37,8 +37,16 @@ def load_and_validate_image(image_path: str) -> Image.Image:
         if image is None:
             raise ValueError(f"PIL failed to load image: {image_path}")
 
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        # Convert to RGB if needed, handling alpha channel appropriately
+        if image.mode not in ('RGB', 'L'):
+            if image.mode == 'RGBA':
+                # Create a white background for RGBA images
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
+                image = background
+            else:
+                # For other modes, direct conversion
+                image = image.convert('RGB')
 
         logger.info(f"Loaded image successfully: {image.size[0]}x{image.size[1]}")
         return image

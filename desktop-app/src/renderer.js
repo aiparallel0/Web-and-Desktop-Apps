@@ -89,8 +89,8 @@ const fileSize = document.getElementById('fileSize');
 
 const engineOCR = document.getElementById('engineOCR');
 const engineFlorence2 = document.getElementById('engineFlorence2');
-const engineCORD = document.getElementById('engineCORD');
-const engineAdamCodd = document.getElementById('engineAdamCodd');
+const engineSROIE = document.getElementById('engineSROIE');
+const engineHybrid = document.getElementById('engineHybrid');
 const aiSettings = document.getElementById('aiSettings');
 const aiMode = document.getElementById('aiMode');
 
@@ -127,20 +127,20 @@ function setupEventListeners() {
         } else if (engineFlorence2.checked) {
             aiSettings.style.display = 'block';
             updateEngineInfo('florence2');
-        } else if (engineCORD.checked) {
+        } else if (engineSROIE.checked) {
             aiSettings.style.display = 'block';
-            updateEngineInfo('cord');
-        } else if (engineAdamCodd.checked) {
+            updateEngineInfo('donut_cord');
+        } else if (engineHybrid.checked) {
             aiSettings.style.display = 'block';
-            updateEngineInfo('adamcodd');
+            updateEngineInfo('hybrid');
         }
         saveSettings();
     }
 
     engineOCR.addEventListener('change', updateEngineSelection);
     engineFlorence2.addEventListener('change', updateEngineSelection);
-    engineCORD.addEventListener('change', updateEngineSelection);
-    engineAdamCodd.addEventListener('change', updateEngineSelection);
+    engineSROIE.addEventListener('change', updateEngineSelection);
+    engineHybrid.addEventListener('change', updateEngineSelection);
 
     // Mode selector buttons
     const modeButtons = document.querySelectorAll('.mode-btn');
@@ -205,8 +205,8 @@ function setupEventListeners() {
         'Delete': () => selectedImagePath && handleRemoveImage(),
         '1': () => selectEngine('ocr'),
         '2': () => selectEngine('florence2'),
-        '3': () => selectEngine('cord'),
-        '4': () => selectEngine('adamcodd')
+        '3': () => selectEngine('donut_cord'),
+        '4': () => selectEngine('hybrid')
     };
 
     // Global keyboard event listener
@@ -233,16 +233,17 @@ function setupEventListeners() {
 function selectEngine(engineName) {
     const engines = {
         'ocr': engineOCR,
+        'ocr_easyocr': engineOCR,
         'florence2': engineFlorence2,
-        'cord': engineCORD,
-        'adamcodd': engineAdamCodd
+        'donut_cord': engineSROIE,
+        'hybrid': engineHybrid
     };
 
     const engine = engines[engineName];
     if (engine) {
         engine.checked = true;
         engine.dispatchEvent(new Event('change'));
-        announce(`Selected ${engineName.toUpperCase()} engine`, 'polite');
+        announce(`Selected ${engineName} engine`, 'polite');
     }
 }
 
@@ -415,10 +416,10 @@ async function handleExtract() {
         return;
     }
     
-    let selectedEngine = 'ocr';
+    let selectedEngine = 'ocr_easyocr';
     if (engineFlorence2.checked) selectedEngine = 'florence2';
-    else if (engineCORD.checked) selectedEngine = 'cord';
-    else if (engineAdamCodd.checked) selectedEngine = 'adamcodd';
+    else if (engineSROIE.checked) selectedEngine = 'donut_cord';
+    else if (engineHybrid.checked) selectedEngine = 'hybrid';
 
     log.info('Starting extraction with:', selectedEngine);
 
@@ -434,9 +435,12 @@ async function handleExtract() {
     if (engineBadgeText) {
         const badgeNames = {
             'ocr': 'OCR',
+            'ocr_easyocr': 'OCR',
+            'ocr_tesseract': 'Tesseract',
+            'ocr_paddle': 'PaddleOCR',
             'florence2': 'Florence-2',
-            'cord': 'CORD',
-            'adamcodd': 'AdamCodd'
+            'donut_cord': 'Donut CORD',
+            'hybrid': 'Hybrid'
         };
         engineBadgeText.textContent = badgeNames[selectedEngine] || 'OCR';
     }
@@ -701,7 +705,7 @@ function displayValidation(receipt, duration) {
     
     checks.forEach(check => {
         const li = document.createElement('li');
-        li.textContent = `${check.passed ? 'âœ“' : 'âœ—'} ${check.text}`;
+        li.textContent = `${check.passed ? '✓' : '✗'} ${check.text}`;
         li.style.color = check.passed ? 'var(--color-success)' : 'var(--color-error)';
         validationList.appendChild(li);
     });
@@ -796,7 +800,7 @@ async function handleSave() {
         });
 
         if (result && result.success) {
-            saveBtn.textContent = 'âœ" Saved';
+            saveBtn.textContent = '✓ Saved';
             announce('Results saved successfully', 'polite');
             setTimeout(() => {
                 saveBtn.textContent = originalText;
@@ -848,19 +852,23 @@ function updateEngineInfo(engine) {
     const engineInfo = {
         'ocr': {
             title: 'OCR Method',
-            text: 'Fast and reliable for clear, printed receipts. Uses Tesseract OCR engine. Processing time: 1-2 seconds.'
+            text: 'Fast and reliable for clear, printed receipts. Uses EasyOCR engine. Processing time: 1-2 seconds.'
+        },
+        'ocr_easyocr': {
+            title: 'EasyOCR',
+            text: 'Fast and reliable for clear, printed receipts. Supports 80+ languages. Processing time: 1-2 seconds.'
         },
         'florence2': {
             title: 'Florence-2 (RECOMMENDED)',
             text: 'Microsoft Florence-2 with fast OCR and region detection. Best public model with no authentication required. Processing time: 2-5 seconds.'
         },
-        'cord': {
-            title: 'CORD Model',
-            text: 'Basic 4-field extraction (store, date, address, total). Good for simple receipts. Processing time: 5-10 seconds.'
+        'donut_cord': {
+            title: 'Donut CORD Model',
+            text: 'AI-powered extraction with structured parsing. Good for various receipt formats. Processing time: 5-10 seconds.'
         },
-        'adamcodd': {
-            title: 'AdamCodd Donut',
-            text: 'Comprehensive extraction including items and prices. Requires HuggingFace authentication. Processing time: 5-10 seconds.'
+        'hybrid': {
+            title: 'Hybrid Multi-Model',
+            text: 'Combines multiple models for maximum accuracy. Uses best results from each model. Processing time: 10-20 seconds.'
         }
     };
     
@@ -887,26 +895,25 @@ async function loadSettings() {
     try {
         const settings = await window.electronAPI.getSettings();
         log.info('Loaded settings:', settings);
-        
-        const model = settings.lastModel || 'ocr';
-        
+
+        const model = settings.lastModel || 'ocr_easyocr';
+
         engineOCR.checked = false;
         engineFlorence2.checked = false;
-        engineCORD.checked = false;
-        engineAdamCodd.checked = false;
+        engineSROIE.checked = false;
+        engineHybrid.checked = false;
 
         if (model === 'florence2') engineFlorence2.checked = true;
-        else if (model === 'cord') engineCORD.checked = true;
-        else if (model === 'adamcodd') engineAdamCodd.checked = true;
-        else if (model === 'sroie') engineCORD.checked = true; // Migrate old sroie to cord
+        else if (model === 'donut_cord' || model === 'cord' || model === 'sroie') engineSROIE.checked = true;
+        else if (model === 'hybrid' || model === 'adamcodd') engineHybrid.checked = true;
         else engineOCR.checked = true;
-        
-        if (model === 'ocr') {
+
+        if (model === 'ocr' || model === 'ocr_easyocr' || model === 'ocr_tesseract' || model === 'ocr_paddle') {
             aiSettings.style.display = 'none';
         } else {
             aiSettings.style.display = 'block';
         }
-        
+
         if (settings.aiMode) {
             aiMode.value = settings.aiMode;
             // Update mode button states
@@ -924,10 +931,10 @@ async function loadSettings() {
 
 // Save Settings
 function saveSettings() {
-    let selectedModel = 'ocr';
+    let selectedModel = 'ocr_easyocr';
     if (engineFlorence2.checked) selectedModel = 'florence2';
-    else if (engineCORD.checked) selectedModel = 'cord';
-    else if (engineAdamCodd.checked) selectedModel = 'adamcodd';
+    else if (engineSROIE.checked) selectedModel = 'donut_cord';
+    else if (engineHybrid.checked) selectedModel = 'hybrid';
 
     const settings = {
         lastModel: selectedModel,
