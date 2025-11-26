@@ -73,6 +73,16 @@ class PaddleProcessor:
             logger.info("Running PaddleOCR extraction...")
             result = self.ocr.ocr(image_np)
 
+            # DEBUG: Log the actual result structure
+            logger.info(f"PaddleOCR result type: {type(result)}")
+            logger.info(f"PaddleOCR result length: {len(result) if result else 0}")
+            if result and len(result) > 0:
+                logger.info(f"First element type: {type(result[0])}")
+                logger.info(f"First element length: {len(result[0]) if result[0] else 0}")
+                if result[0] and len(result[0]) > 0:
+                    logger.info(f"First line structure: {result[0][0]}")
+                    logger.info(f"First line type: {type(result[0][0])}")
+
             if not result or not result[0]:
                 logger.warning("PaddleOCR returned no results")
                 return ExtractionResult(
