@@ -260,6 +260,10 @@ class OCRProcessor:
             best_result.processing_time = time.time() - start_time
             best_result.model_used = self.model_name
 
+            # Calculate confidence score (0-1 scale) based on extraction quality
+            max_possible_score = 95  # Max from _score_result (20+15+30+10+10+10)
+            best_result.confidence_score = min(1.0, best_score / max_possible_score)
+
             logger.info(f"Best result score: {best_score}, items: {len(best_result.items)}, total: ${best_result.total or 0}")
             return ExtractionResult(success=True, data=best_result)
 
@@ -355,7 +359,7 @@ class OCRProcessor:
         return receipt
 
     def _extract_line_items(self, lines: List[str]) -> List[LineItem]:
-        """Extract line items from OCR text"""
+        """Extract line items from OCR text with improved filtering"""
         items = []
         seen_names = set()
 
@@ -376,11 +380,29 @@ class OCRProcessor:
                     name = match.group(1).strip()
                     price_str = match.group(2)
 
-                    if len(name) < 2 or name in seen_names:
+                    # Filter 1: Name must be at least 3 characters
+                    if len(name) < 3 or name in seen_names:
                         continue
 
+                    # Filter 2: Skip if name is mostly numbers (likely a date/transaction ID)
+                    alphas = sum(1 for c in name if c.isalpha())
+                    digits = sum(1 for c in name if c.isdigit())
+                    if digits > alphas:  # More digits than letters = not a product name
+                        continue
+
+                    # Filter 3: Skip very short names with special chars (like "2 @")
+                    if len(name) < 5 and not name.replace(' ', '').isalpha():
+                        continue
+
+                    # Filter 4: Validate price (must be reasonable)
                     price = self._normalize_price(price_str)
-                    if not price or price <= 0:
+                    if not price or price <= 0 or price > 1000:  # Max $1000 per item
+                        continue
+
+                    # Filter 5: Skip if name contains common footer/header patterns
+                    skip_patterns = ['store', 'thank', 'visit', 'phone', 'fax', 'email',
+                                   'open', 'hours', 'daily', 'am', 'pm']
+                    if any(skip in name.lower() for skip in skip_patterns):
                         continue
 
                     items.append(LineItem(name=name, total_price=price, quantity=1))

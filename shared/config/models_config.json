@@ -65,24 +65,6 @@
         "advanced_parsing": true
       }
     },
-    "donut_sroie": {
-      "id": "donut_sroie",
-      "name": "Donut SROIE",
-      "type": "donut",
-      "huggingface_id": "naver-clova-ix/donut-base-finetuned-sroie",
-      "task_prompt": "<s_sroie>",
-      "description": "Donut model fine-tuned on SROIE dataset - Specialized for receipt information extraction",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": true,
-        "phone": false,
-        "advanced_parsing": true
-      }
-    },
     "florence2": {
       "id": "florence2",
       "name": "Florence-2 AI",
