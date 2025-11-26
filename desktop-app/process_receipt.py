@@ -62,7 +62,7 @@ def main():
         logger.info(f"Using model: {model_id}")
 
         # Get processor
-        processor = model_manager.get_processor()
+        processor = model_manager.get_processor(model_id)
 
         # Extract receipt
         logger.info(f"Processing image: {image_path}")

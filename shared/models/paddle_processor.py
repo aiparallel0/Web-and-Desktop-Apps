@@ -153,7 +153,7 @@ class PaddleProcessor:
             # Calculate confidence score
             if text_lines:
                 avg_confidence = sum(line['confidence'] for line in text_lines) / len(text_lines)
-                receipt.confidence = round(avg_confidence, 2)
+                receipt.confidence_score = round(avg_confidence, 2)
 
             return ExtractionResult(success=True, data=receipt)
 

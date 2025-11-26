@@ -58,10 +58,11 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def extract(self, image_path: str):
+    def extract(self, image_path: str) -> 'ExtractionResult':
         """
         Extract receipt data from image
         Must be implemented by subclasses
+        Returns ExtractionResult with success status and data or error
         """
         pass
 

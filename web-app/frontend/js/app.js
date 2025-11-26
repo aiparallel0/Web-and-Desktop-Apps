@@ -247,11 +247,12 @@ async function handleExtract() {
 
         const data = await response.json();
 
-        if (data.success) {
+        if (data.success && data.data) {
             currentExtractionData = data.data;
             displayResults(data.data);
         } else {
-            showError(data.error || 'Extraction failed');
+            const errorMsg = data.error || 'Extraction failed';
+            showError(typeof errorMsg === 'object' ? errorMsg.message || 'Extraction failed' : errorMsg);
         }
     } catch (error) {
         console.error('Extraction error:', error);

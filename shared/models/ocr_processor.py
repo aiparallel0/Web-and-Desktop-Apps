@@ -156,8 +156,7 @@ class OCRProcessor:
         return preprocessed
 
     def extract(self, image_path: str) -> ExtractionResult:
-        """Extract receipt data using Tesseract OCR with multi-pass strategy"""
-        """Extract receipt data using Tesseract OCR - TRY MULTIPLE MODES"""
+        """Extract receipt data using Tesseract OCR with multi-pass strategy to maximize accuracy"""
         start_time = time.time()
 
         if not self.tesseract_path:
@@ -211,12 +210,13 @@ class OCRProcessor:
             # Get multiple preprocessed versions
             preprocessed_versions = self._aggressive_preprocess(image)
 
-            # PSM modes to try (in order of preference for receipts)
+            # PSM (Page Segmentation Modes) to try (in order of preference for receipts)
+            # Reference: https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method
             psm_modes = [
-                6,   # Uniform block of text
-                4,   # Single column of text
-                11,  # Sparse text
-                3,   # Fully automatic
+                6,   # PSM 6: Uniform block of text (best for well-structured receipts)
+                4,   # PSM 4: Single column of text (good for vertical layouts)
+                11,  # PSM 11: Sparse text (for low-density receipts)
+                3,   # PSM 3: Fully automatic page segmentation (fallback)
             ]
 
             best_result = None
@@ -228,6 +228,8 @@ class OCRProcessor:
             for version_idx, processed_img in enumerate(preprocessed_versions):
                 for psm in psm_modes:
                     try:
+                        # OEM 3 = Default OCR Engine Mode (uses LSTM neural networks)
+                        # PSM = Page Segmentation Mode (varies based on layout)
                         config = f'--oem 3 --psm {psm}'
                         logger.info(f"Trying version {version_idx+1}, PSM {psm}")
 

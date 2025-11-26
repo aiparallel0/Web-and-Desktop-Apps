@@ -393,9 +393,35 @@ ipcMain.handle('extract-receipt', async (event, options) => {
 
             try {
                 // Parse the last JSON output (ignore log messages)
-                const jsonMatch = outputData.match(/\{[\s\S]*\}(?![\s\S]*\{)/);
-                if (jsonMatch) {
-                    const result = JSON.parse(jsonMatch[0]);
+                // Try to find valid JSON by attempting to parse from the last complete JSON object
+                let result = null;
+                const lines = outputData.split('\n');
+
+                // Try to find the last valid JSON object by parsing from the end
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    const line = lines[i].trim();
+                    if (line.startsWith('{')) {
+                        try {
+                            result = JSON.parse(line);
+                            break; // Found valid JSON
+                        } catch (e) {
+                            // Not valid JSON on this line, try accumulating lines
+                            let accumulated = line;
+                            for (let j = i + 1; j < lines.length; j++) {
+                                accumulated += '\n' + lines[j];
+                                try {
+                                    result = JSON.parse(accumulated);
+                                    break;
+                                } catch (e2) {
+                                    continue;
+                                }
+                            }
+                            if (result) break;
+                        }
+                    }
+                }
+
+                if (result) {
                     resolve(result);
                 } else {
                     resolve({
@@ -507,7 +533,9 @@ function formatAsCSV(data) {
 
     if (data.items && data.items.length > 0) {
         data.items.forEach(item => {
-            csv += `"${item.name}",${item.quantity},${item.total_price}\n`;
+            const quantity = item.quantity || 1;
+            const price = item.total_price || '0.00';
+            csv += `"${item.name}",${quantity},${price}\n`;
         });
     }
 
