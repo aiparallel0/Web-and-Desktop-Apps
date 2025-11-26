@@ -16,7 +16,7 @@ import numpy as np
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.data_structures import LineItem, ReceiptData, ExtractionResult
-from utils.image_processing import load_and_validate_image
+from utils.image_processing import load_and_validate_image, preprocess_for_ocr
 
 try:
     import pytesseract
