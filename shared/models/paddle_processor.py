@@ -84,14 +84,33 @@ class PaddleProcessor:
             # PaddleOCR returns: [[[bbox], (text, confidence)], ...]
             text_lines = []
             for line in result[0]:
-                if line and len(line) >= 2:
-                    bbox, (text, confidence) = line[0], line[1]
+                if not line or len(line) < 2:
+                    continue
+
+                try:
+                    bbox = line[0]
+                    text_info = line[1]
+
+                    # Handle different PaddleOCR return formats
+                    if isinstance(text_info, (tuple, list)) and len(text_info) == 2:
+                        text, confidence = text_info
+                    elif isinstance(text_info, str):
+                        # Sometimes PaddleOCR returns just the text without confidence
+                        text = text_info
+                        confidence = 1.0  # Assume high confidence if not provided
+                    else:
+                        logger.warning(f"Unexpected text_info format: {type(text_info)} - {text_info}")
+                        continue
+
                     if confidence > 0.5:  # Filter low confidence detections
                         text_lines.append({
                             'text': text,
                             'confidence': confidence,
                             'bbox': bbox
                         })
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse PaddleOCR line: {e}. Line structure: {line}")
+                    continue
 
             # Sort text lines by vertical position (top to bottom)
             text_lines = sorted(text_lines, key=lambda x: x['bbox'][0][1])

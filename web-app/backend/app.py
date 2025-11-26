@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import time
+import gc
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -39,6 +40,42 @@ model_manager = ModelManager(max_loaded_models=3)
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def safe_delete_temp_file(file_path: str, max_retries: int = 3):
+    """
+    Safely delete temporary file with Windows file locking handling
+
+    Args:
+        file_path: Path to temporary file to delete
+        max_retries: Maximum number of deletion attempts (default 3)
+    """
+    if not os.path.exists(file_path):
+        return
+
+    for attempt in range(max_retries):
+        try:
+            # Force garbage collection to release file handles
+            gc.collect()
+
+            # Small delay on Windows to allow file handles to close
+            if sys.platform == 'win32' and attempt > 0:
+                time.sleep(0.1 * (attempt + 1))  # Exponential backoff: 0.1s, 0.2s, 0.3s
+
+            os.unlink(file_path)
+            logger.debug(f"Successfully deleted temp file: {file_path}")
+            return
+
+        except PermissionError as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Temp file deletion attempt {attempt + 1} failed (retrying): {e}")
+            else:
+                # On final failure, log but don't crash - OS will clean up temp files eventually
+                logger.error(f"Failed to delete temp file after {max_retries} attempts: {file_path}. "
+                           f"OS will clean up on reboot. Error: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error deleting temp file {file_path}: {e}")
+            break
 
 
 def create_error_response(error_message: str, error_type: str = 'UnknownError', status_code: int = 500, details: dict = None):
@@ -281,8 +318,7 @@ def extract_receipt():
 
         finally:
             # Clean up temporary file
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
+            safe_delete_temp_file(temp_path)
 
     except Exception as e:
         logger.error(f"Extraction error: {e}", exc_info=True)
@@ -380,8 +416,7 @@ def extract_batch():
 
         finally:
             # Clean up temporary file
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
+            safe_delete_temp_file(temp_path)
 
     except Exception as e:
         logger.error(f"Batch extraction error: {e}", exc_info=True)
