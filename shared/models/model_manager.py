@@ -38,6 +38,9 @@ class ModelManager:
         self.model_last_used = {}  # Track LRU for eviction
         self.model_load_times = {}  # Track when models were loaded
 
+        # Check GPU availability
+        self._check_gpu_availability()
+
     def _load_config(self) -> dict:
         """Load and validate models configuration"""
         try:
@@ -89,6 +92,34 @@ class ModelManager:
                 )
 
         logger.info("Configuration validation passed")
+
+    def _check_gpu_availability(self):
+        """Check and log GPU availability for acceleration"""
+        try:
+            import torch
+            cuda_available = torch.cuda.is_available()
+
+            if cuda_available:
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                cuda_version = torch.version.cuda
+                logger.info(f"🚀 GPU ACCELERATION ENABLED")
+                logger.info(f"   GPU: {gpu_name}")
+                logger.info(f"   VRAM: {gpu_memory:.1f} GB")
+                logger.info(f"   CUDA: {cuda_version}")
+                logger.info(f"   Models will run 10-15x faster!")
+            else:
+                logger.warning("⚠️  GPU NOT AVAILABLE - Running on CPU")
+                logger.warning("   Models will be slower (10-60 seconds per receipt)")
+                logger.warning("   To enable GPU acceleration:")
+                logger.warning("   1. Install CUDA Toolkit: https://developer.nvidia.com/cuda-downloads")
+                logger.warning("   2. Install GPU PyTorch: pip install torch --index-url https://download.pytorch.org/whl/cu121")
+                logger.warning("   3. See CUDA_GPU_SETUP.md for detailed instructions")
+
+        except ImportError:
+            logger.warning("PyTorch not available - cannot check GPU status")
+        except Exception as e:
+            logger.debug(f"GPU check failed: {e}")
 
     def _validate_model_config(self, model_id: str, model_config: dict):
         """Validate individual model configuration"""
