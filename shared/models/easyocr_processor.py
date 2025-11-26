@@ -41,8 +41,9 @@ class EasyOCRProcessor:
         self.reader = None
 
         if easyocr is None:
-            logger.error("EasyOCR not installed!")
-            return
+            error_msg = "EasyOCR not installed! Install with: pip install easyocr"
+            logger.error(error_msg)
+            raise ImportError(error_msg)
 
         try:
             # Initialize EasyOCR reader - PROVEN PATTERN FROM WEB
@@ -50,8 +51,9 @@ class EasyOCRProcessor:
             self.reader = easyocr.Reader(['en'], gpu=False)
             logger.info("EasyOCR reader initialized successfully!")
         except Exception as e:
-            logger.error(f"Failed to initialize EasyOCR: {e}")
-            self.reader = None
+            error_msg = f"Failed to initialize EasyOCR: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg) from e
 
     def extract(self, image_path: str) -> ExtractionResult:
         """Extract receipt data using EasyOCR - PROVEN WORKING PATTERN"""

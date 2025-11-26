@@ -23,6 +23,9 @@ flask>=2.3.0
 flask-cors>=4.0.0
 werkzeug>=2.3.0
 
+# System monitoring (for health checks)
+psutil>=5.9.8
+
 # Testing
 pytest>=7.4.0
 
