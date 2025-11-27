@@ -25,42 +25,63 @@ class ReceiptDataset(Dataset):
         return {'pixel_values':pixel_values,'labels':labels}
 
 class DonutFinetuner:
-    def __init__(self,model_id:str='donut_cord'):
+    def __init__(self,model_id:str='donut_cord',image_size:tuple=(960,720)):
         self.model_id=model_id
         self.device='cuda'if torch.cuda.is_available()else'cpu'
-        logger.info(f"Initializing DonutFinetuner on {self.device}")
+        self.image_size=image_size
+        logger.info(f"Initializing DonutFinetuner on {self.device} with image size {image_size}")
 
-        if model_id=='donut_cord':
+        if model_id=='donut_receipts':
+            base_model='AdamCodd/donut-receipts-extract'
+        elif model_id=='donut_cord':
             base_model='naver-clova-ix/donut-base-finetuned-cord-v2'
-        else:
+        elif model_id=='donut_base':
             base_model='naver-clova-ix/donut-base'
+        else:
+            base_model='AdamCodd/donut-receipts-extract'
+            logger.info(f"Unknown model_id '{model_id}', using default: {base_model}")
 
         try:
             self.model=VisionEncoderDecoderModel.from_pretrained(base_model)
             self.processor=DonutProcessor.from_pretrained(base_model)
+            if hasattr(self.processor.image_processor,'size'):
+                self.processor.image_processor.size={"height":image_size[1],"width":image_size[0]}
+                logger.info(f"Set processor image size to {image_size}")
             self.model.to(self.device)
             logger.info(f"Loaded model: {base_model}")
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
             raise
 
-    def train(self,training_data:List[Dict],epochs:int=3,batch_size:int=4,learning_rate:float=5e-5,progress_callback:Optional[Callable]=None)->Dict:
+    def train(self,training_data:List[Dict],epochs:int=3,batch_size:int=4,learning_rate:float=5e-5,progress_callback:Optional[Callable]=None,warmup_ratio:float=0.1)->Dict:
         logger.info(f"Starting training with {len(training_data)} samples for {epochs} epochs")
+        logger.info(f"Training config: lr={learning_rate}, batch_size={batch_size}, warmup_ratio={warmup_ratio}")
 
         try:
             train_dataset=ReceiptDataset(training_data,self.processor)
+            gradient_accumulation_steps=max(1,8//batch_size)if not torch.cuda.is_available()else 1
 
             training_args=Seq2SeqTrainingArguments(
                 output_dir='./finetuned_donut',
                 num_train_epochs=epochs,
                 per_device_train_batch_size=batch_size,
+                gradient_accumulation_steps=gradient_accumulation_steps,
                 learning_rate=learning_rate,
+                warmup_ratio=warmup_ratio,
                 fp16=torch.cuda.is_available(),
                 save_strategy='epoch',
+                save_total_limit=2,
                 logging_steps=10,
+                logging_first_step=True,
+                evaluation_strategy='no',
                 predict_with_generate=True,
                 remove_unused_columns=False,
+                dataloader_num_workers=0,
+                weight_decay=0.01,
+                adam_beta1=0.9,
+                adam_beta2=0.999,
             )
+            logger.info(f"Using gradient accumulation: {gradient_accumulation_steps} steps (effective batch size: {batch_size*gradient_accumulation_steps})")
 
             class ProgressCallback:
                 def __init__(self,callback_fn):

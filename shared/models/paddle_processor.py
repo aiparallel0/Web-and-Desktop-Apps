@@ -33,6 +33,9 @@ class PaddleProcessor:
             image=load_and_validate_image(image_path)
             preprocessed=preprocess_for_ocr(image,aggressive=True)
             image_np=np.array(preprocessed)
+            if len(image_np.shape)==2:
+                image_np=np.stack([image_np]*3,axis=-1)
+                logger.info(f"Converted grayscale to RGB: {image_np.shape}")
             logger.info("Running PaddleOCR extraction...")
             result=self.ocr.ocr(image_np)
             logger.info(f"Result type:{type(result)}, len:{len(result) if result else 0}")
