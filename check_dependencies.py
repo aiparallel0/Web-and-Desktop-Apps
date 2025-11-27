@@ -123,13 +123,25 @@ def check_and_install():
                 else:
                     print("  [FAIL] Failed to install easyocr")
 
+        # Handle PaddleOCR - install both if both missing
         if 'paddleocr' in missing_ocr and 'paddlepaddle' in missing_ocr:
-            response = input("Install PaddleOCR? (y/n): ")
+            response = input("Install PaddleOCR and PaddlePaddle? (y/n): ")
             if response.lower() == 'y':
                 if install_package('paddlepaddle'):
                     print("  [OK] Installed paddlepaddle")
+                    missing_ocr.remove('paddlepaddle')
                 if install_package('paddleocr'):
                     print("  [OK] Installed paddleocr")
+                    missing_ocr.remove('paddleocr')
+        # Handle case where only paddlepaddle is missing (paddleocr already installed)
+        elif 'paddlepaddle' in missing_ocr and 'paddleocr' not in missing_ocr:
+            response = input("Install PaddlePaddle (required for PaddleOCR)? (y/n): ")
+            if response.lower() == 'y':
+                if install_package('paddlepaddle'):
+                    print("  [OK] Installed paddlepaddle")
+                    missing_ocr.remove('paddlepaddle')
+                else:
+                    print("  [FAIL] Failed to install paddlepaddle")
 
     if missing_ai:
         print(f"\nNOTE: {len(missing_ai)} AI packages missing (optional).")
@@ -189,36 +201,64 @@ def check_and_install():
     print("\n" + "=" * 60)
     print("Dependency Check Complete")
     print("=" * 60)
+    sys.stdout.flush()
 
     # Recheck after installation
+    print("\nRechecking installed packages...")
+    sys.stdout.flush()
     core_ok = all(check_package(pkg[0]) for pkg in core_deps)
     ocr_ok = any(check_package(pkg[0]) for pkg in ocr_deps)
 
     if core_ok and ocr_ok:
-        print("[SUCCESS] All required dependencies are installed!")
+        print("\n[SUCCESS] All required dependencies are installed!")
         print("\nYou can now run the application:")
         print("  cd web-app/backend")
         print("  python app.py")
+        print("\n" + "=" * 60)
+        print("Setup complete - you can close this window")
+        print("=" * 60)
+        sys.stdout.flush()
         return True
     elif core_ok:
-        print("[OK] Core dependencies installed")
+        print("\n[OK] Core dependencies installed")
         print("[WARNING] No OCR engines installed")
         print("\nPlease install at least one OCR engine:")
         print("  pip install easyocr")
+        print("\n" + "=" * 60)
+        print("Setup incomplete - please install OCR engines")
+        print("=" * 60)
+        sys.stdout.flush()
         return False
     else:
-        print("[ERROR] Some core dependencies are still missing")
+        print("\n[ERROR] Some core dependencies are still missing")
         print("\nPlease install manually:")
         print("  pip install -r web-app/backend/requirements.txt")
+        print("\n" + "=" * 60)
+        print("Setup failed - please install dependencies manually")
+        print("=" * 60)
+        sys.stdout.flush()
         return False
 
 if __name__ == "__main__":
     try:
         success = check_and_install()
+        sys.stdout.flush()
+        print("\nDependency check script finished.")
+        sys.stdout.flush()
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
-        print("\n\nInstallation cancelled by user.")
+        print("\n\n" + "=" * 60)
+        print("Installation cancelled by user.")
+        print("=" * 60)
+        sys.stdout.flush()
         sys.exit(1)
     except Exception as e:
-        print(f"\n\nError: {e}")
+        print("\n\n" + "=" * 60)
+        print(f"ERROR: Dependency check failed")
+        print("=" * 60)
+        print(f"Error details: {e}")
+        import traceback
+        traceback.print_exc()
+        print("\n" + "=" * 60)
+        sys.stdout.flush()
         sys.exit(1)
