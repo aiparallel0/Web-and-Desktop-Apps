@@ -19,12 +19,21 @@ def check_package(package_name, import_name=None):
 def install_package(package_name):
     """Install a package using pip"""
     try:
-        print(f"  Installing {package_name}...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
-        return True
-    except subprocess.CalledProcessError:
+        print(f"\n  Installing {package_name}...")
+        print(f"  (This may take a moment...)")
+        result = subprocess.run([sys.executable, "-m", "pip", "install", package_name],
+                              capture_output=True,
+                              text=True)
+        if result.returncode == 0:
+            print(f"  [OK] Successfully installed {package_name}")
+            return True
+        else:
+            print(f"  [FAIL] Failed to install {package_name}")
+            if result.stderr:
+                print(f"  Error: {result.stderr[:200]}")
+            return False
+    except Exception as e:
+        print(f"  [FAIL] Exception: {e}")
         return False
 
 def check_and_install():
