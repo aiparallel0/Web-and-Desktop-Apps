@@ -44,27 +44,27 @@ def main():
     has_ocr = False
     try:
         import easyocr
-        print("✓ EasyOCR available")
+        print("[OK] EasyOCR available")
         has_ocr = True
     except ImportError:
         pass
 
     try:
         import paddleocr
-        print("✓ PaddleOCR available")
+        print("[OK] PaddleOCR available")
         has_ocr = True
     except ImportError:
         pass
 
     try:
         import pytesseract
-        print("✓ Tesseract available")
+        print("[OK] Tesseract available")
         has_ocr = True
     except ImportError:
         pass
 
     if not has_ocr:
-        print("\n⚠️  WARNING: No OCR engines installed!")
+        print("\n[WARNING] No OCR engines installed!")
         print("The application needs at least one OCR engine to work.")
         print("\nRecommended: pip install easyocr")
         response = input("\nContinue anyway? (y/n): ")

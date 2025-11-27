@@ -27,7 +27,7 @@ requests==2.31.0
 #
 # torch>=2.2.0
 # transformers>=4.37.0
-# accelerate>=0.27.0
+# accelerate>=0.26.0  # IMPORTANT: Version 0.26.0+ required for Trainer
 # huggingface-hub>=0.20.0
 # sentencepiece>=0.1.99  # Requires C++ compiler on Windows
 # protobuf>=3.20.0
@@ -49,7 +49,7 @@ requests==2.31.0
 #   pip install -r requirements.txt
 #
 # For advanced AI models + finetuning (requires C++ build tools):
-#   pip install torch transformers accelerate huggingface-hub sentencepiece protobuf
+#   pip install torch transformers "accelerate>=0.26.0" huggingface-hub sentencepiece protobuf
 #
 # On Windows (to avoid sentencepiece build errors):
 #   1. Install Visual Studio Build Tools: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
