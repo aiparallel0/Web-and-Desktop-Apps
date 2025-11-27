@@ -1,22 +1,37 @@
 #!/bin/bash
 
 ###############################################################################
-# Receipt Extractor Web App - Single-Click Launcher
+# Receipt Extractor - Sophisticated Launcher with Professional UI
 #
-# This script will:
-# 1. Check for Python and dependencies
-# 2. Start the backend API server
-# 3. Start the frontend web server
-# 4. Open your default browser automatically
-# 5. Handle graceful shutdown (Ctrl+C)
+# Features:
+# - Interactive menu-driven interface
+# - Automated testing and validation
+# - Dependency checks and installation
+# - GPU detection and configuration
+# - Health monitoring and diagnostics
+# - Professional error handling
+# - Detailed logging and reporting
 ###############################################################################
 
-# Colors for output
+# Colors and formatting
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m' # No Color
+
+# Unicode symbols (fallback to ASCII if not supported)
+CHECK_MARK="[OK]"
+CROSS_MARK="[FAIL]"
+WARNING_MARK="[WARN]"
+INFO_MARK="[INFO]"
+ROCKET="[LAUNCH]"
+WRENCH="[TOOL]"
+TEST_TUBE="[TEST]"
 
 # Configuration
 BACKEND_PORT=5000
@@ -24,208 +39,737 @@ FRONTEND_PORT=3000
 BACKEND_DIR="web-app/backend"
 FRONTEND_DIR="web-app/frontend"
 LOG_DIR="logs"
+TEST_DIR="tests"
 
-# Get the directory where this script is located
+# Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# Create logs directory if it doesn't exist
+# Create directories
 mkdir -p "$LOG_DIR"
+mkdir -p "$LOG_DIR/test-reports"
 
-echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}  Receipt Extractor - Single-Click Launcher${NC}"
-echo -e "${BLUE}================================================${NC}"
-echo ""
+# Global state variables
+BACKEND_PID=""
+FRONTEND_PID=""
+TESTS_PASSED=false
+DEPS_CHECKED=false
+GPU_AVAILABLE=false
+HEALTH_STATUS="unknown"
 
-# Function to cleanup on exit
+###############################################################################
+# UI Functions
+###############################################################################
+
+print_banner() {
+    clear
+    echo -e "${CYAN}${BOLD}"
+    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "║                                                                ║"
+    echo "║        Receipt Extractor - Professional Launcher v2.0          ║"
+    echo "║                                                                ║"
+    echo "║    AI-Powered Receipt Processing with Advanced OCR Models      ║"
+    echo "║                                                                ║"
+    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+print_separator() {
+    echo -e "${DIM}────────────────────────────────────────────────────────────────${NC}"
+}
+
+print_section() {
+    echo ""
+    echo -e "${BOLD}${BLUE}▶ $1${NC}"
+    print_separator
+}
+
+print_success() {
+    echo -e "${GREEN}${CHECK_MARK}${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}${CROSS_MARK}${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}${WARNING_MARK}${NC} $1"
+}
+
+print_info() {
+    echo -e "${CYAN}${INFO_MARK}${NC} $1"
+}
+
+show_menu() {
+    print_banner
+    echo -e "${BOLD}Main Menu:${NC}"
+    echo ""
+    echo -e "  ${GREEN}1)${NC} ${ROCKET} Quick Launch (Skip Tests)"
+    echo -e "  ${GREEN}2)${NC} ${ROCKET} Full Launch (With Tests & Validation)"
+    echo -e "  ${GREEN}3)${NC} ${TEST_TUBE} Run Tests Only"
+    echo -e "  ${GREEN}4)${NC} ${WRENCH} Check & Install Dependencies"
+    echo -e "  ${GREEN}5)${NC} ${WRENCH} Check GPU Status"
+    echo -e "  ${GREEN}6)${NC} ${INFO_MARK} System Health Report"
+    echo -e "  ${GREEN}7)${NC} ${INFO_MARK} View Logs"
+    echo -e "  ${GREEN}8)${NC} ${WRENCH} Developer Mode (Debug Logging)"
+    echo -e "  ${GREEN}9)${NC} ${INFO_MARK} Help & Documentation"
+    echo -e "  ${RED}0)${NC} Exit"
+    echo ""
+    echo -ne "${BOLD}Select an option [0-9]:${NC} "
+}
+
+###############################################################################
+# Cleanup and Signal Handling
+###############################################################################
+
 cleanup() {
     echo ""
-    echo -e "${YELLOW}Shutting down servers...${NC}"
+    print_section "Shutting Down"
 
     # Kill backend
     if [ ! -z "$BACKEND_PID" ]; then
         kill $BACKEND_PID 2>/dev/null
-        echo -e "${GREEN}✓ Backend stopped${NC}"
+        wait $BACKEND_PID 2>/dev/null
+        print_success "Backend server stopped"
     fi
 
     # Kill frontend
     if [ ! -z "$FRONTEND_PID" ]; then
         kill $FRONTEND_PID 2>/dev/null
-        echo -e "${GREEN}✓ Frontend stopped${NC}"
+        wait $FRONTEND_PID 2>/dev/null
+        print_success "Frontend server stopped"
     fi
 
-    echo -e "${GREEN}Cleanup complete. Goodbye!${NC}"
+    echo ""
+    echo -e "${GREEN}${BOLD}Cleanup complete. Thank you for using Receipt Extractor!${NC}"
     exit 0
 }
 
-# Set up trap to catch Ctrl+C and other termination signals
-trap cleanup SIGINT SIGTERM EXIT
+# Set up trap to catch Ctrl+C
+trap cleanup SIGINT SIGTERM
 
-# Check if Python is installed
-echo -e "${YELLOW}Checking Python installation...${NC}"
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}✗ Python 3 is not installed!${NC}"
-    echo "Please install Python 3.8 or higher."
-    exit 1
-fi
+###############################################################################
+# System Checks
+###############################################################################
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-echo -e "${GREEN}✓ Found Python $PYTHON_VERSION${NC}"
+check_python() {
+    print_section "Python Environment Check"
 
-# Check if pip is installed
-if ! command -v pip3 &> /dev/null; then
-    echo -e "${RED}✗ pip3 is not installed!${NC}"
-    echo "Please install pip3 first."
-    exit 1
-fi
-echo -e "${GREEN}✓ pip3 is available${NC}"
+    if ! command -v python3 &> /dev/null; then
+        print_error "Python 3 is not installed"
+        echo "Please install Python 3.8 or higher"
+        return 1
+    fi
 
-# Check if backend directory exists
-if [ ! -d "$BACKEND_DIR" ]; then
-    echo -e "${RED}✗ Backend directory not found: $BACKEND_DIR${NC}"
-    exit 1
-fi
+    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+    print_success "Python $PYTHON_VERSION detected"
 
-# Check if frontend directory exists
-if [ ! -d "$FRONTEND_DIR" ]; then
-    echo -e "${RED}✗ Frontend directory not found: $FRONTEND_DIR${NC}"
-    exit 1
-fi
+    if ! command -v pip3 &> /dev/null; then
+        print_error "pip3 is not installed"
+        return 1
+    fi
 
-# Check and install dependencies
-echo ""
-echo -e "${YELLOW}Checking Python dependencies...${NC}"
-cd "$BACKEND_DIR"
+    print_success "pip3 available"
+    return 0
+}
 
-# Check if requirements.txt exists
-if [ ! -f "requirements.txt" ]; then
-    echo -e "${RED}✗ requirements.txt not found in $BACKEND_DIR${NC}"
-    exit 1
-fi
+check_directories() {
+    print_section "Directory Structure Validation"
 
-# Install/upgrade dependencies (suppress verbose output)
-echo "Installing/updating dependencies (this may take a moment)..."
-pip3 install -q -r requirements.txt 2>"$SCRIPT_DIR/$LOG_DIR/pip-install.log"
+    local all_ok=true
 
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ All dependencies installed${NC}"
-else
-    echo -e "${YELLOW}⚠ Some warnings during installation (check logs/$LOG_DIR/pip-install.log)${NC}"
-fi
+    if [ ! -d "$BACKEND_DIR" ]; then
+        print_error "Backend directory not found: $BACKEND_DIR"
+        all_ok=false
+    else
+        print_success "Backend directory exists"
+    fi
 
-cd "$SCRIPT_DIR"
+    if [ ! -d "$FRONTEND_DIR" ]; then
+        print_error "Frontend directory not found: $FRONTEND_DIR"
+        all_ok=false
+    else
+        print_success "Frontend directory exists"
+    fi
 
-# Check if ports are already in use
-echo ""
-echo -e "${YELLOW}Checking port availability...${NC}"
+    if [ ! -f "$BACKEND_DIR/requirements.txt" ]; then
+        print_error "requirements.txt not found in $BACKEND_DIR"
+        all_ok=false
+    else
+        print_success "requirements.txt found"
+    fi
 
-if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${RED}✗ Port $BACKEND_PORT is already in use!${NC}"
-    echo "Please stop the process using port $BACKEND_PORT and try again."
-    exit 1
-fi
+    if $all_ok; then
+        return 0
+    else
+        return 1
+    fi
+}
 
-if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${RED}✗ Port $FRONTEND_PORT is already in use!${NC}"
-    echo "Please stop the process using port $FRONTEND_PORT and try again."
-    exit 1
-fi
+check_ports() {
+    print_section "Port Availability Check"
 
-echo -e "${GREEN}✓ Ports $BACKEND_PORT and $FRONTEND_PORT are available${NC}"
+    local ports_ok=true
 
-# Start backend server
-echo ""
-echo -e "${YELLOW}Starting backend API server...${NC}"
-cd "$BACKEND_DIR"
-python3 app.py > "$SCRIPT_DIR/$LOG_DIR/backend.log" 2>&1 &
-BACKEND_PID=$!
-cd "$SCRIPT_DIR"
+    if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        print_error "Port $BACKEND_PORT is already in use"
+        ports_ok=false
+    else
+        print_success "Port $BACKEND_PORT is available"
+    fi
 
-# Wait a moment for backend to start
-sleep 2
+    if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        print_error "Port $FRONTEND_PORT is already in use"
+        ports_ok=false
+    else
+        print_success "Port $FRONTEND_PORT is available"
+    fi
 
-# Check if backend is running
-if ! kill -0 $BACKEND_PID 2>/dev/null; then
-    echo -e "${RED}✗ Backend failed to start!${NC}"
-    echo "Check logs/backend.log for details."
-    exit 1
-fi
+    if $ports_ok; then
+        return 0
+    else
+        return 1
+    fi
+}
 
-echo -e "${GREEN}✓ Backend API running on http://localhost:$BACKEND_PORT (PID: $BACKEND_PID)${NC}"
+###############################################################################
+# Advanced Features
+###############################################################################
 
-# Start frontend server
-echo -e "${YELLOW}Starting frontend web server...${NC}"
-cd "$FRONTEND_DIR"
-python3 -m http.server $FRONTEND_PORT > "$SCRIPT_DIR/$LOG_DIR/frontend.log" 2>&1 &
-FRONTEND_PID=$!
-cd "$SCRIPT_DIR"
+run_dependency_check() {
+    print_section "Dependency Analysis"
 
-# Wait a moment for frontend to start
-sleep 1
+    if [ -f "check_dependencies.py" ]; then
+        print_info "Running interactive dependency checker..."
+        echo ""
+        python3 check_dependencies.py
+        local exit_code=$?
 
-# Check if frontend is running
-if ! kill -0 $FRONTEND_PID 2>/dev/null; then
-    echo -e "${RED}✗ Frontend failed to start!${NC}"
-    echo "Check logs/frontend.log for details."
-    kill $BACKEND_PID 2>/dev/null
-    exit 1
-fi
+        if [ $exit_code -eq 0 ]; then
+            DEPS_CHECKED=true
+            print_success "All dependencies verified"
+            return 0
+        else
+            print_warning "Some dependencies may be missing"
+            return 1
+        fi
+    else
+        print_warning "check_dependencies.py not found, using pip install"
+        cd "$BACKEND_DIR"
+        pip3 install -q -r requirements.txt 2>"$SCRIPT_DIR/$LOG_DIR/pip-install.log"
+        cd "$SCRIPT_DIR"
+        DEPS_CHECKED=true
+        return 0
+    fi
+}
 
-echo -e "${GREEN}✓ Frontend web server running on http://localhost:$FRONTEND_PORT (PID: $FRONTEND_PID)${NC}"
+check_gpu_status() {
+    print_section "GPU Detection & Configuration"
 
-# Open browser
-echo ""
-echo -e "${BLUE}Opening browser...${NC}"
-sleep 1
+    if [ -f "check_gpu.py" ]; then
+        python3 check_gpu.py 2>&1 | tee "$LOG_DIR/gpu-check.log"
 
-# Try different browser commands (Linux)
-if command -v xdg-open &> /dev/null; then
-    xdg-open "http://localhost:$FRONTEND_PORT" 2>/dev/null
-elif command -v gnome-open &> /dev/null; then
-    gnome-open "http://localhost:$FRONTEND_PORT" 2>/dev/null
-elif command -v firefox &> /dev/null; then
-    firefox "http://localhost:$FRONTEND_PORT" 2>/dev/null &
-elif command -v chromium-browser &> /dev/null; then
-    chromium-browser "http://localhost:$FRONTEND_PORT" 2>/dev/null &
-else
-    echo -e "${YELLOW}⚠ Could not auto-open browser${NC}"
-    echo "Please manually open: http://localhost:$FRONTEND_PORT"
-fi
+        if grep -q "CUDA available: True" "$LOG_DIR/gpu-check.log" 2>/dev/null; then
+            GPU_AVAILABLE=true
+            print_success "GPU acceleration available"
+        else
+            GPU_AVAILABLE=false
+            print_warning "No GPU detected - models will run on CPU"
+        fi
+    else
+        print_warning "GPU check utility not found"
+        GPU_AVAILABLE=false
+    fi
 
-# Display success message
-echo ""
-echo -e "${GREEN}================================================${NC}"
-echo -e "${GREEN}  🚀 Receipt Extractor is now running!${NC}"
-echo -e "${GREEN}================================================${NC}"
-echo ""
-echo -e "  Frontend:  ${BLUE}http://localhost:$FRONTEND_PORT${NC}"
-echo -e "  Backend:   ${BLUE}http://localhost:$BACKEND_PORT${NC}"
-echo -e "  API Docs:  ${BLUE}http://localhost:$BACKEND_PORT/api/models${NC}"
-echo ""
-echo -e "${YELLOW}Press Ctrl+C to stop all servers${NC}"
-echo ""
-echo "Logs are being written to:"
-echo "  - logs/backend.log"
-echo "  - logs/frontend.log"
-echo ""
+    echo ""
+    echo -ne "Press Enter to continue..."
+    read
+}
 
-# Keep script running and monitor processes
-while true; do
-    # Check if backend is still running
+run_tests() {
+    print_section "Running Test Suite"
+
+    local test_failed=false
+    local test_count=0
+    local passed_count=0
+
+    # Run system health test
+    if [ -f "tests/test_system_health.py" ]; then
+        echo ""
+        print_info "Running system health tests..."
+        python3 -m pytest tests/test_system_health.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/health.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "System health tests passed"
+            ((passed_count++))
+        else
+            print_error "System health tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run image processing tests
+    if [ -f "tests/shared/test_image_processing.py" ]; then
+        echo ""
+        print_info "Running image processing tests..."
+        python3 -m pytest tests/shared/test_image_processing.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/image.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Image processing tests passed"
+            ((passed_count++))
+        else
+            print_error "Image processing tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run model manager tests
+    if [ -f "tests/shared/test_model_manager.py" ]; then
+        echo ""
+        print_info "Running model manager tests..."
+        python3 -m pytest tests/shared/test_model_manager.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/models.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Model manager tests passed"
+            ((passed_count++))
+        else
+            print_warning "Model manager tests failed (may require AI models)"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run API tests
+    if [ -f "tests/web/test_api.py" ]; then
+        echo ""
+        print_info "Running API tests..."
+        python3 -m pytest tests/web/test_api.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/api.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "API tests passed"
+            ((passed_count++))
+        else
+            print_error "API tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run simple OCR test
+    if [ -f "test_ocr_simple.py" ]; then
+        echo ""
+        print_info "Running OCR validation test..."
+        python3 test_ocr_simple.py 2>&1 | tee "$LOG_DIR/test-reports/ocr.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "OCR validation passed"
+            ((passed_count++))
+        else
+            print_warning "OCR validation failed (may need Tesseract)"
+        fi
+        ((test_count++))
+    fi
+
+    echo ""
+    print_separator
+    echo -e "${BOLD}Test Summary:${NC}"
+    echo -e "  Total Tests: ${test_count}"
+    echo -e "  Passed: ${GREEN}${passed_count}${NC}"
+    echo -e "  Failed: ${RED}$((test_count - passed_count))${NC}"
+
+    if [ $test_failed = true ]; then
+        echo ""
+        print_warning "Some tests failed, but app may still work"
+        echo -ne "Continue anyway? [y/N]: "
+        read continue_choice
+        if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
+            return 1
+        fi
+    fi
+
+    TESTS_PASSED=true
+    return 0
+}
+
+system_health_report() {
+    print_section "System Health Report"
+
+    echo ""
+    echo -e "${BOLD}Environment:${NC}"
+    echo "  Python: $(python3 --version 2>&1)"
+    echo "  Working Directory: $SCRIPT_DIR"
+    echo "  Log Directory: $LOG_DIR"
+
+    echo ""
+    echo -e "${BOLD}Dependencies:${NC}"
+    if [ "$DEPS_CHECKED" = true ]; then
+        echo -e "  Status: ${GREEN}Verified${NC}"
+    else
+        echo -e "  Status: ${YELLOW}Not Checked${NC}"
+    fi
+
+    echo ""
+    echo -e "${BOLD}GPU Acceleration:${NC}"
+    if [ "$GPU_AVAILABLE" = true ]; then
+        echo -e "  Status: ${GREEN}Available${NC}"
+    else
+        echo -e "  Status: ${YELLOW}Not Available (CPU mode)${NC}"
+    fi
+
+    echo ""
+    echo -e "${BOLD}Tests:${NC}"
+    if [ "$TESTS_PASSED" = true ]; then
+        echo -e "  Status: ${GREEN}Passed${NC}"
+    else
+        echo -e "  Status: ${YELLOW}Not Run${NC}"
+    fi
+
+    echo ""
+    echo -e "${BOLD}Ports:${NC}"
+    echo "  Backend: $BACKEND_PORT"
+    echo "  Frontend: $FRONTEND_PORT"
+
+    echo ""
+    echo -e "${BOLD}Services:${NC}"
+    if [ ! -z "$BACKEND_PID" ]; then
+        if kill -0 $BACKEND_PID 2>/dev/null; then
+            echo -e "  Backend: ${GREEN}Running${NC} (PID: $BACKEND_PID)"
+        else
+            echo -e "  Backend: ${RED}Stopped${NC}"
+        fi
+    else
+        echo -e "  Backend: ${YELLOW}Not Started${NC}"
+    fi
+
+    if [ ! -z "$FRONTEND_PID" ]; then
+        if kill -0 $FRONTEND_PID 2>/dev/null; then
+            echo -e "  Frontend: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
+        else
+            echo -e "  Frontend: ${RED}Stopped${NC}"
+        fi
+    else
+        echo -e "  Frontend: ${YELLOW}Not Started${NC}"
+    fi
+
+    echo ""
+    echo -ne "Press Enter to continue..."
+    read
+}
+
+view_logs() {
+    print_section "Log Viewer"
+
+    echo ""
+    echo "Available logs:"
+    echo "  1) Backend log"
+    echo "  2) Frontend log"
+    echo "  3) Test reports"
+    echo "  4) Dependency check log"
+    echo "  5) Back to main menu"
+    echo ""
+    echo -ne "Select log to view [1-5]: "
+    read log_choice
+
+    case $log_choice in
+        1)
+            if [ -f "$LOG_DIR/backend.log" ]; then
+                less "$LOG_DIR/backend.log"
+            else
+                print_warning "Backend log not found"
+                sleep 2
+            fi
+            ;;
+        2)
+            if [ -f "$LOG_DIR/frontend.log" ]; then
+                less "$LOG_DIR/frontend.log"
+            else
+                print_warning "Frontend log not found"
+                sleep 2
+            fi
+            ;;
+        3)
+            if [ -d "$LOG_DIR/test-reports" ] && [ "$(ls -A $LOG_DIR/test-reports)" ]; then
+                ls -1 "$LOG_DIR/test-reports"
+                echo ""
+                echo -ne "Enter log filename to view: "
+                read test_log
+                if [ -f "$LOG_DIR/test-reports/$test_log" ]; then
+                    less "$LOG_DIR/test-reports/$test_log"
+                fi
+            else
+                print_warning "No test reports found"
+                sleep 2
+            fi
+            ;;
+        4)
+            if [ -f "$LOG_DIR/pip-install.log" ]; then
+                less "$LOG_DIR/pip-install.log"
+            else
+                print_warning "Dependency log not found"
+                sleep 2
+            fi
+            ;;
+    esac
+}
+
+show_help() {
+    print_section "Help & Documentation"
+
+    echo ""
+    echo -e "${BOLD}Quick Start:${NC}"
+    echo "  1. Select option 2 (Full Launch) for first-time setup"
+    echo "  2. This will check dependencies, run tests, and start the app"
+    echo "  3. Your browser will open automatically to the app"
+    echo ""
+    echo -e "${BOLD}Menu Options:${NC}"
+    echo "  ${GREEN}Quick Launch:${NC} Start app immediately without tests"
+    echo "  ${GREEN}Full Launch:${NC} Run all checks and tests before starting"
+    echo "  ${GREEN}Run Tests:${NC} Execute test suite without starting app"
+    echo "  ${GREEN}Check Dependencies:${NC} Verify and install required packages"
+    echo "  ${GREEN}Check GPU:${NC} Detect GPU availability for acceleration"
+    echo "  ${GREEN}Health Report:${NC} View system status and diagnostics"
+    echo ""
+    echo -e "${BOLD}Documentation:${NC}"
+    echo "  - README.md: Main documentation"
+    echo "  - SETUP.md: Installation guide"
+    echo "  - WINDOWS_INSTALLATION.md: Windows-specific setup"
+    echo "  - web-app/README.md: Web app documentation"
+    echo ""
+    echo -e "${BOLD}Logs Location:${NC}"
+    echo "  All logs are stored in: $LOG_DIR/"
+    echo ""
+    echo -ne "Press Enter to continue..."
+    read
+}
+
+###############################################################################
+# Launch Functions
+###############################################################################
+
+start_servers() {
+    local skip_checks=$1
+
+    if [ "$skip_checks" != "true" ]; then
+        # Run all checks
+        check_python || return 1
+        check_directories || return 1
+        check_ports || return 1
+
+        if [ "$DEPS_CHECKED" != true ]; then
+            run_dependency_check || {
+                print_warning "Dependency check failed, but continuing..."
+            }
+        fi
+    fi
+
+    print_section "Starting Services"
+
+    # Start backend
+    print_info "Starting backend API server..."
+    cd "$BACKEND_DIR"
+    python3 app.py > "$SCRIPT_DIR/$LOG_DIR/backend.log" 2>&1 &
+    BACKEND_PID=$!
+    cd "$SCRIPT_DIR"
+
+    sleep 3
+
     if ! kill -0 $BACKEND_PID 2>/dev/null; then
-        echo -e "${RED}Backend process died unexpectedly!${NC}"
-        echo "Check logs/backend.log for details."
-        break
+        print_error "Backend failed to start"
+        echo "Check logs/backend.log for details"
+        tail -20 "$LOG_DIR/backend.log"
+        return 1
     fi
 
-    # Check if frontend is still running
-    if ! kill -0 $FRONTEND_PID 2>/dev/null; then
-        echo -e "${RED}Frontend process died unexpectedly!${NC}"
-        echo "Check logs/frontend.log for details."
-        break
-    fi
+    print_success "Backend running on http://localhost:$BACKEND_PORT (PID: $BACKEND_PID)"
+
+    # Start frontend
+    print_info "Starting frontend web server..."
+    cd "$FRONTEND_DIR"
+    python3 -m http.server $FRONTEND_PORT > "$SCRIPT_DIR/$LOG_DIR/frontend.log" 2>&1 &
+    FRONTEND_PID=$!
+    cd "$SCRIPT_DIR"
 
     sleep 2
-done
 
-# Cleanup will be called by trap
+    if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+        print_error "Frontend failed to start"
+        echo "Check logs/frontend.log for details"
+        kill $BACKEND_PID 2>/dev/null
+        return 1
+    fi
+
+    print_success "Frontend running on http://localhost:$FRONTEND_PORT (PID: $FRONTEND_PID)"
+
+    # Open browser
+    print_section "Opening Application"
+    sleep 1
+
+    if command -v xdg-open &> /dev/null; then
+        xdg-open "http://localhost:$FRONTEND_PORT" 2>/dev/null &
+    elif command -v open &> /dev/null; then
+        open "http://localhost:$FRONTEND_PORT" 2>/dev/null &
+    else
+        print_warning "Could not auto-open browser"
+    fi
+
+    # Success message
+    echo ""
+    echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
+    echo -e "${GREEN}${BOLD}║        🚀 Receipt Extractor is now running!                   ║${NC}"
+    echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
+    echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${BOLD}Frontend:${NC}  ${BLUE}http://localhost:$FRONTEND_PORT${NC}"
+    echo -e "  ${BOLD}Backend:${NC}   ${BLUE}http://localhost:$BACKEND_PORT${NC}"
+    echo -e "  ${BOLD}API Docs:${NC}  ${BLUE}http://localhost:$BACKEND_PORT/api/health${NC}"
+    echo ""
+    echo -e "${YELLOW}${BOLD}Press Ctrl+C to stop all servers${NC}"
+    echo ""
+    echo -e "${DIM}Logs: logs/backend.log | logs/frontend.log${NC}"
+    echo ""
+
+    # Monitor processes
+    monitor_services
+}
+
+monitor_services() {
+    while true; do
+        if ! kill -0 $BACKEND_PID 2>/dev/null; then
+            print_error "Backend process died unexpectedly!"
+            echo "Last 20 lines of backend.log:"
+            tail -20 "$LOG_DIR/backend.log"
+            break
+        fi
+
+        if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+            print_error "Frontend process died unexpectedly!"
+            echo "Last 20 lines of frontend.log:"
+            tail -20 "$LOG_DIR/frontend.log"
+            break
+        fi
+
+        sleep 3
+    done
+}
+
+quick_launch() {
+    print_banner
+    print_section "Quick Launch Mode"
+    print_warning "Skipping tests and validation for faster startup"
+    echo ""
+    start_servers "false"
+}
+
+full_launch() {
+    print_banner
+    print_section "Full Launch Mode"
+    print_info "Running comprehensive checks and tests..."
+    echo ""
+
+    check_python || return 1
+    check_directories || return 1
+    run_dependency_check
+
+    echo ""
+    echo -ne "Run GPU check? [y/N]: "
+    read gpu_choice
+    if [[ "$gpu_choice" =~ ^[Yy]$ ]]; then
+        check_gpu_status
+    fi
+
+    echo ""
+    echo -ne "Run test suite? [Y/n]: "
+    read test_choice
+    if [[ ! "$test_choice" =~ ^[Nn]$ ]]; then
+        run_tests || {
+            print_error "Tests failed - aborting launch"
+            echo -ne "Press Enter to return to menu..."
+            read
+            return 1
+        }
+    fi
+
+    echo ""
+    check_ports || return 1
+
+    echo ""
+    echo -ne "Ready to launch. Press Enter to continue..."
+    read
+
+    start_servers "true"
+}
+
+###############################################################################
+# Main Program
+###############################################################################
+
+main() {
+    while true; do
+        show_menu
+        read choice
+
+        case $choice in
+            1)
+                quick_launch
+                ;;
+            2)
+                full_launch
+                ;;
+            3)
+                print_banner
+                run_tests
+                echo ""
+                echo -ne "Press Enter to continue..."
+                read
+                ;;
+            4)
+                print_banner
+                run_dependency_check
+                echo ""
+                echo -ne "Press Enter to continue..."
+                read
+                ;;
+            5)
+                print_banner
+                check_gpu_status
+                ;;
+            6)
+                print_banner
+                system_health_report
+                ;;
+            7)
+                view_logs
+                ;;
+            8)
+                print_banner
+                print_section "Developer Mode"
+                print_info "Starting with debug logging enabled..."
+                export FLASK_DEBUG=1
+                export FLASK_ENV=development
+                start_servers "false"
+                ;;
+            9)
+                print_banner
+                show_help
+                ;;
+            0)
+                cleanup
+                ;;
+            *)
+                print_error "Invalid option. Please try again."
+                sleep 2
+                ;;
+        esac
+    done
+}
+
+# Check if running with sudo (warn if so)
+if [ "$EUID" -eq 0 ]; then
+    print_warning "Running as root is not recommended"
+    echo -ne "Continue anyway? [y/N]: "
+    read sudo_choice
+    if [[ ! "$sudo_choice" =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+# Start main program
+main
