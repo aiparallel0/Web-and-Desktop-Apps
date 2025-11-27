@@ -34,14 +34,14 @@ class PaddleProcessor:
             preprocessed=preprocess_for_ocr(image,aggressive=True)
             image_np=np.array(preprocessed)
             logger.info("Running PaddleOCR extraction...")
-            result=self.ocr.ocr(image_np,cls=True)
+            result=self.ocr.ocr(image_np)
             logger.info(f"Result type:{type(result)}, len:{len(result) if result else 0}")
             if result and len(result)>0:
                 logger.info(f"First elem: type={type(result[0])}, len={len(result[0]) if result[0] else 0}")
             if not result or not result[0]:
                 logger.warning("No results, retrying with original image")
                 image_np=np.array(image)
-                result=self.ocr.ocr(image_np,cls=True)
+                result=self.ocr.ocr(image_np)
             if not result or not result[0]:
                 logger.warning("PaddleOCR: no text detected")
                 return ExtractionResult(success=False,error="No text detected")
