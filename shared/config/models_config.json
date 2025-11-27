@@ -65,6 +65,25 @@
         "advanced_parsing": true
       }
     },
+    "donut_receipts": {
+      "id": "donut_receipts",
+      "name": "Donut Receipts Pro",
+      "type": "donut",
+      "huggingface_id": "AdamCodd/donut-receipts-extract",
+      "task_prompt": "<s_receipt>",
+      "description": "Optimized Donut model trained specifically for receipt extraction - Best accuracy for receipts",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "advanced_parsing": true,
+        "json_output": true
+      }
+    },
     "florence2": {
       "id": "florence2",
       "name": "Florence-2 AI",
@@ -85,5 +104,6 @@
     }
   },
   "default_model": "ocr_easyocr",
-  "recommended_model": "ocr_easyocr"
+  "recommended_model": "donut_receipts",
+  "best_for_finetuning": "donut_receipts"
 }
