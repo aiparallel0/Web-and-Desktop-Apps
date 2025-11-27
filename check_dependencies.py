@@ -21,19 +21,46 @@ def install_package(package_name):
     try:
         print(f"\n  Installing {package_name}...")
         print(f"  (This may take a moment...)")
-        result = subprocess.run([sys.executable, "-m", "pip", "install", package_name],
-                              capture_output=True,
-                              text=True)
+        sys.stdout.flush()
+
+        # Special handling for paddlepaddle - ignore system PyYAML to avoid conflicts
+        if package_name == 'paddlepaddle':
+            print(f"  Note: Using --ignore-installed to avoid system package conflicts")
+            sys.stdout.flush()
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--ignore-installed", "PyYAML", "-q"],
+                timeout=60
+            )
+            if result.returncode != 0:
+                print(f"  [WARNING] PyYAML installation had issues, continuing anyway...")
+
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", package_name, "-q"],
+                timeout=180
+            )
+        else:
+            # For other packages, use standard installation without capturing output
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", package_name, "-q"],
+                timeout=180
+            )
+
+        sys.stdout.flush()
         if result.returncode == 0:
             print(f"  [OK] Successfully installed {package_name}")
+            sys.stdout.flush()
             return True
         else:
-            print(f"  [FAIL] Failed to install {package_name}")
-            if result.stderr:
-                print(f"  Error: {result.stderr[:200]}")
+            print(f"  [FAIL] Failed to install {package_name} (exit code: {result.returncode})")
+            sys.stdout.flush()
             return False
+    except subprocess.TimeoutExpired:
+        print(f"  [FAIL] Installation timed out after 3 minutes")
+        sys.stdout.flush()
+        return False
     except Exception as e:
         print(f"  [FAIL] Exception: {e}")
+        sys.stdout.flush()
         return False
 
 def check_and_install():
@@ -153,18 +180,30 @@ def check_and_install():
             response2 = input("Continue? (y/n): ")
             if response2.lower() == 'y':
                 print("\nInstalling AI packages...")
+                sys.stdout.flush()
+
                 # Install PyTorch first
                 if 'torch' in missing_ai:
                     print("  Installing torch (CPU version)...")
+                    print("  (This is a large download, may take 5-10 minutes...)")
+                    sys.stdout.flush()
                     try:
-                        subprocess.check_call([
+                        result = subprocess.run([
                             sys.executable, "-m", "pip", "install",
                             "torch", "--index-url",
-                            "https://download.pytorch.org/whl/cpu"
-                        ])
-                        print("  [OK] Installed torch")
-                    except:
-                        print("  [FAIL] Failed to install torch")
+                            "https://download.pytorch.org/whl/cpu", "-q"
+                        ], timeout=600)
+                        if result.returncode == 0:
+                            print("  [OK] Installed torch")
+                        else:
+                            print("  [FAIL] Failed to install torch")
+                        sys.stdout.flush()
+                    except subprocess.TimeoutExpired:
+                        print("  [FAIL] torch installation timed out")
+                        sys.stdout.flush()
+                    except Exception as e:
+                        print(f"  [FAIL] Failed to install torch: {e}")
+                        sys.stdout.flush()
 
                 # Install transformers
                 if 'transformers' in missing_ai:
@@ -174,28 +213,48 @@ def check_and_install():
                 # Install accelerate with specific version
                 if 'accelerate' in missing_ai:
                     print("  Installing accelerate>=0.26.0...")
+                    sys.stdout.flush()
                     try:
-                        subprocess.check_call([
+                        result = subprocess.run([
                             sys.executable, "-m", "pip", "install",
-                            "accelerate>=0.26.0"
-                        ])
-                        print("  [OK] Installed accelerate")
-                    except:
-                        print("  [FAIL] Failed to install accelerate")
+                            "accelerate>=0.26.0", "-q"
+                        ], timeout=180)
+                        if result.returncode == 0:
+                            print("  [OK] Installed accelerate")
+                        else:
+                            print("  [FAIL] Failed to install accelerate")
+                        sys.stdout.flush()
+                    except subprocess.TimeoutExpired:
+                        print("  [FAIL] accelerate installation timed out")
+                        sys.stdout.flush()
+                    except Exception as e:
+                        print(f"  [FAIL] Failed to install accelerate: {e}")
+                        sys.stdout.flush()
 
                 # Install sentencepiece (may fail on Windows)
                 if 'sentencepiece' in missing_ai:
                     print("  Installing sentencepiece...")
+                    sys.stdout.flush()
                     try:
-                        subprocess.check_call([
+                        result = subprocess.run([
                             sys.executable, "-m", "pip", "install",
-                            "sentencepiece", "--only-binary", ":all:"
-                        ])
-                        print("  [OK] Installed sentencepiece")
-                    except:
-                        print("  [FAIL] Failed to install sentencepiece")
+                            "sentencepiece", "--only-binary", ":all:", "-q"
+                        ], timeout=180)
+                        if result.returncode == 0:
+                            print("  [OK] Installed sentencepiece")
+                        else:
+                            print("  [FAIL] Failed to install sentencepiece")
+                            print("     This may require Visual Studio Build Tools on Windows.")
+                            print("     See WINDOWS_INSTALLATION.md for details.")
+                        sys.stdout.flush()
+                    except subprocess.TimeoutExpired:
+                        print("  [FAIL] sentencepiece installation timed out")
+                        sys.stdout.flush()
+                    except Exception as e:
+                        print(f"  [FAIL] Failed to install sentencepiece: {e}")
                         print("     This may require Visual Studio Build Tools on Windows.")
                         print("     See WINDOWS_INSTALLATION.md for details.")
+                        sys.stdout.flush()
 
     # Final summary
     print("\n" + "=" * 60)
