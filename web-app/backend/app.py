@@ -134,19 +134,38 @@ def extract_batch_multi():
   files=request.files.getlist('images')
   if not files or len(files)==0:return jsonify({'success':False,'error':'No files selected'}),400
   model_id=request.form.get('model_id')
+  use_all_models=request.form.get('use_all_models','false').lower()=='true'
   temp_paths=[]
   try:
    batch_results={'success':True,'images_count':len(files),'results':[]}
-   for file in files:
-    if file.filename==''or not allowed_file(file.filename):continue
-    filename=secure_filename(file.filename)
-    with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
-    try:
-     processor=model_manager.get_processor(model_id)
-     result=processor.extract(temp_path)
-     batch_results['results'].append({'filename':filename,'extraction':result.to_dict()})
-     logger.info(f"Processed {filename}: {'Success'if result.success else'Failed'}")
-    except Exception as e:logger.error(f"Failed to process {filename}: {e}");batch_results['results'].append({'filename':filename,'extraction':{'success':False,'error':str(e)}})
+   if use_all_models:
+    available_models=model_manager.get_available_models()
+    logger.info(f"Batch processing {len(files)} images with {len(available_models)} models")
+    for file in files:
+     if file.filename==''or not allowed_file(file.filename):continue
+     filename=secure_filename(file.filename)
+     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
+     file_results={'filename':filename,'models':{}}
+     for model_info in available_models:
+      mid=model_info['id']
+      try:
+       processor=model_manager.get_processor(mid)
+       result=processor.extract(temp_path)
+       file_results['models'][mid]={'model_name':model_info['name'],'extraction':result.to_dict()}
+      except Exception as e:logger.error(f"Model {mid} failed on {filename}: {e}");file_results['models'][mid]={'model_name':model_info['name'],'extraction':{'success':False,'error':str(e)}}
+     batch_results['results'].append(file_results)
+     logger.info(f"Processed {filename} with {len(available_models)} models")
+   else:
+    for file in files:
+     if file.filename==''or not allowed_file(file.filename):continue
+     filename=secure_filename(file.filename)
+     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
+     try:
+      processor=model_manager.get_processor(model_id)
+      result=processor.extract(temp_path)
+      batch_results['results'].append({'filename':filename,'extraction':result.to_dict()})
+      logger.info(f"Processed {filename}: {'Success'if result.success else'Failed'}")
+     except Exception as e:logger.error(f"Failed to process {filename}: {e}");batch_results['results'].append({'filename':filename,'extraction':{'success':False,'error':str(e)}})
    return jsonify(batch_results)
   finally:
    for temp_path in temp_paths:safe_delete_temp_file(temp_path)
@@ -202,23 +221,37 @@ def start_finetune(job_id):
   epochs=data.get('epochs',3)
   batch_size=data.get('batch_size',4)
   learning_rate=data.get('learning_rate',5e-5)
+  def get_model_type(model_id):
+   model_types={'donut_cord':'donut','donut_base':'donut','florence_v2':'florence','easyocr':'ocr','paddle':'ocr'}
+   return model_types.get(model_id,model_id.split('_')[0]if'_'in model_id else'unknown')
   def run_finetuning():
    try:
-    logger.info(f"Starting finetuning job {job_id}")
+    logger.info(f"Starting finetuning job {job_id} for model {job['model_id']}")
     trainer=ModelTrainer(job['model_id'],job['config'])
     for sample in job['training_data']:trainer.add_training_sample(sample['image'],sample['truth'])
     job['progress']=10
     if job['mode']=='local':
      try:
-      from shared.models.donut_finetuner import DonutFinetuner
-      finetuner=DonutFinetuner(job['model_id'])
-      job['progress']=20
-      metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
-      job['progress']=90
-      output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
-      output_dir.mkdir(exist_ok=True)
-      finetuner.save_model(str(output_dir))
-      job['model_path']=str(output_dir)
+      model_type=get_model_type(job['model_id'])
+      logger.info(f"Detected model type: {model_type}")
+      if model_type=='donut':
+       from shared.models.donut_finetuner import DonutFinetuner
+       finetuner=DonutFinetuner(job['model_id'])
+       job['progress']=20
+       metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
+       job['progress']=90
+       output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
+       output_dir.mkdir(exist_ok=True)
+       finetuner.save_model(str(output_dir))
+       job['model_path']=str(output_dir)
+      elif model_type=='florence':
+       logger.warning(f"Florence-2 finetuning is not yet fully implemented. This requires additional training code.")
+       raise Exception(f"Florence-2 model finetuning not yet implemented. Currently only Donut models support finetuning. To add Florence-2 support, create a florence_finetuner.py similar to donut_finetuner.py.")
+      elif model_type=='ocr':
+       logger.warning(f"OCR model finetuning requires custom implementation for {job['model_id']}")
+       raise Exception(f"OCR model finetuning not yet implemented for {job['model_id']}. Traditional OCR models (EasyOCR, PaddleOCR) use pre-trained weights and typically don't support direct finetuning in the same way as transformer models.")
+      else:
+       raise Exception(f"Unknown model type '{model_type}' for model '{job['model_id']}'. Supported for finetuning: Donut models. To add support for other models, create appropriate finetuner classes.")
      except ImportError as e:
       raise Exception(f"Finetuning dependencies not installed: {e}. Run: pip install torch transformers accelerate sentencepiece")
     elif job['mode']=='cloud':

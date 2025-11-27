@@ -13,7 +13,10 @@ const elements={
  actionButtons:document.getElementById('actionButtons'),
  resultsSection:document.getElementById('resultsSection'),
  errorSection:document.getElementById('errorSection'),
- loadingOverlay:document.getElementById('loadingOverlay')
+ loadingOverlay:document.getElementById('loadingOverlay'),
+ batchModelSelect:document.getElementById('batchModelSelect'),
+ useAllModels:document.getElementById('useAllModels'),
+ finetuneModelSelect:document.getElementById('finetuneModelSelect')
 };
 
 async function init(){
@@ -86,6 +89,12 @@ function setupBatchProcessing(){
  cloudBtns.forEach(btn=>{
   btn.addEventListener('click',()=>loadCloudFiles(btn.dataset.provider));
  });
+
+ elements.useAllModels?.addEventListener('change',(e)=>{
+  if(elements.batchModelSelect){
+   elements.batchModelSelect.disabled=e.target.checked;
+  }
+ });
 }
 
 function setupFinetuning(){
@@ -144,12 +153,22 @@ function displayFinetuneFiles(){
 
 async function processBatchImages(){
  if(batchFiles.length===0){showError('No files selected');return;}
- if(!selectedModel){showError('Please select a model first');return;}
 
- showLoading(true,`Processing ${batchFiles.length} images...`);
+ const useAllModelsChecked=elements.useAllModels?.checked;
+ const selectedBatchModel=elements.batchModelSelect?.value;
+
+ if(!useAllModelsChecked&&!selectedBatchModel){
+  showError('Please select a model or enable "Extract with ALL models"');
+  return;
+ }
+
+ const modelToUse=useAllModelsChecked?'all':selectedBatchModel;
+ showLoading(true,`Processing ${batchFiles.length} images with ${useAllModelsChecked?'all models':selectedBatchModel}...`);
+
  const formData=new FormData();
  batchFiles.forEach(file=>formData.append('images',file));
- formData.append('model_id',selectedModel);
+ formData.append('model_id',modelToUse);
+ formData.append('use_all_models',useAllModelsChecked?'true':'false');
 
  try{
   const response=await fetch(`${API_BASE_URL}/extract/batch-multi`,{method:'POST',body:formData});
@@ -261,7 +280,12 @@ function displayCloudFiles(files,provider){
 
 async function startFinetuning(){
  if(finetuneFiles.length===0){showError('Please upload training images');return;}
- if(!selectedModel){showError('Please select a model to finetune');return;}
+
+ const selectedFinetuneModel=elements.finetuneModelSelect?.value;
+ if(!selectedFinetuneModel){
+  showError('Please select a model to finetune');
+  return;
+ }
 
  const mode=document.querySelector('input[name="ftMode"]:checked').value;
 
@@ -280,7 +304,7 @@ async function startFinetuning(){
   const prepareResponse=await fetch(`${API_BASE_URL}/finetune/prepare`,{
    method:'POST',
    headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({model_id:selectedModel,mode,config:{epochs,batchSize,learningRate}})
+   body:JSON.stringify({model_id:selectedFinetuneModel,mode,config:{epochs,batchSize,learningRate}})
   });
   const prepareData=await prepareResponse.json();
 
@@ -443,6 +467,36 @@ function renderModels(){
   elements.modelSelector.appendChild(card);
  });
  updateModelInfo();
+ populateModelDropdowns();
+}
+
+function populateModelDropdowns(){
+ if(elements.batchModelSelect){
+  elements.batchModelSelect.innerHTML='<option value="">Select a model</option>';
+  availableModels.forEach(model=>{
+   const option=document.createElement('option');
+   option.value=model.id;
+   option.textContent=`${model.name} (${model.type})`;
+   if(model.id===selectedModel){
+    option.selected=true;
+   }
+   elements.batchModelSelect.appendChild(option);
+  });
+ }
+
+ if(elements.finetuneModelSelect){
+  elements.finetuneModelSelect.innerHTML='<option value="">Select a model</option>';
+  const finetuneableModels=availableModels.filter(m=>['donut','florence','easyocr','paddle'].includes(m.type));
+  finetuneableModels.forEach(model=>{
+   const option=document.createElement('option');
+   option.value=model.id;
+   option.textContent=`${model.name} (${model.type})`;
+   if(model.id===selectedModel){
+    option.selected=true;
+   }
+   elements.finetuneModelSelect.appendChild(option);
+  });
+ }
 }
 
 async function selectModel(modelId){
