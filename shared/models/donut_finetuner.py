@@ -31,14 +31,12 @@ class DonutFinetuner:
         self.image_size=image_size
         logger.info(f"Initializing DonutFinetuner on {self.device} with image size {image_size}")
 
-        if model_id=='donut_receipts':
-            base_model='AdamCodd/donut-receipts-extract'
-        elif model_id=='donut_cord':
+        if model_id=='donut_cord':
             base_model='naver-clova-ix/donut-base-finetuned-cord-v2'
         elif model_id=='donut_base':
             base_model='naver-clova-ix/donut-base'
         else:
-            base_model='AdamCodd/donut-receipts-extract'
+            base_model='naver-clova-ix/donut-base'
             logger.info(f"Unknown model_id '{model_id}', using default: {base_model}")
 
         try:

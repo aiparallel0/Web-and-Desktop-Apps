@@ -113,9 +113,10 @@ show_menu() {
     echo -e "  ${GREEN}7)${NC} ${INFO_MARK} View Logs"
     echo -e "  ${GREEN}8)${NC} ${WRENCH} Developer Mode (Debug Logging)"
     echo -e "  ${GREEN}9)${NC} ${INFO_MARK} Help & Documentation"
+    echo -e "  ${CYAN}E)${NC} ${INFO_MARK} Export System Report for AI Analysis"
     echo -e "  ${RED}0)${NC} Exit"
     echo ""
-    echo -ne "${BOLD}Select an option [0-9]:${NC} "
+    echo -ne "${BOLD}Select an option [0-9/E]:${NC} "
 }
 
 ###############################################################################
@@ -697,6 +698,218 @@ full_launch() {
     start_servers "true"
 }
 
+export_system_report() {
+    print_section "Exporting System Report for AI Analysis"
+
+    local timestamp=$(date +"%Y%m%d_%H%M%S")
+    local report_file="$LOG_DIR/ai-analysis-report_${timestamp}.md"
+
+    print_info "Generating comprehensive system report..."
+    print_info "Format: Markdown (optimized for Claude Code/AI agents)"
+
+    # Generate report
+    {
+        echo "# Receipt Extractor - System Analysis Report"
+        echo "**Generated:** $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "**Purpose:** Comprehensive system state for AI-assisted development"
+        echo ""
+        echo "---"
+        echo ""
+
+        echo "## Executive Summary"
+        echo ""
+        echo "This report contains complete system diagnostics, test results, error logs,"
+        echo "and configuration details for the Receipt Extractor application."
+        echo "Use this report to understand the current state and identify issues."
+        echo ""
+
+        echo "## System Environment"
+        echo ""
+        echo "### Platform Information"
+        echo "- **OS:** $(uname -s)"
+        echo "- **Kernel:** $(uname -r)"
+        echo "- **Architecture:** $(uname -m)"
+        echo "- **Python Version:** $(python3 --version 2>&1)"
+        echo "- **Working Directory:** $SCRIPT_DIR"
+        echo ""
+
+        echo "### Hardware Resources"
+        if command -v free &> /dev/null; then
+            echo "- **Memory:** $(free -h | awk '/^Mem:/ {print $2 " total, " $3 " used, " $4 " available"}')"
+        fi
+        if command -v df &> /dev/null; then
+            echo "- **Disk Space:** $(df -h . | awk 'NR==2 {print $2 " total, " $3 " used, " $4 " available"}')"
+        fi
+        echo ""
+
+        echo "## Dependency Status"
+        echo ""
+        if [ -f "$LOG_DIR/pip-install.log" ]; then
+            echo "### Last Dependency Install Log"
+            echo "\`\`\`"
+            tail -50 "$LOG_DIR/pip-install.log" 2>/dev/null
+            echo "\`\`\`"
+            echo ""
+        fi
+
+        echo "### Python Packages"
+        echo "\`\`\`"
+        python3 -m pip list 2>&1 | grep -E "(flask|torch|transformers|paddleocr|easyocr|opencv|pillow)" || echo "Package list unavailable"
+        echo "\`\`\`"
+        echo ""
+
+        echo "## GPU Configuration"
+        echo ""
+        if [ -f "$LOG_DIR/gpu-check.log" ]; then
+            echo "### GPU Detection Results"
+            echo "\`\`\`"
+            cat "$LOG_DIR/gpu-check.log" 2>/dev/null
+            echo "\`\`\`"
+        else
+            echo "GPU check not run. Status: ${GPU_AVAILABLE}"
+        fi
+        echo ""
+
+        echo "## Test Results"
+        echo ""
+        if [ "$TESTS_PASSED" = true ]; then
+            echo "**Overall Status:** ✅ PASSED"
+        else
+            echo "**Overall Status:** ⚠️ NOT RUN OR FAILED"
+        fi
+        echo ""
+
+        if [ -d "$LOG_DIR/test-reports" ] && [ "$(ls -A $LOG_DIR/test-reports 2>/dev/null)" ]; then
+            for test_log in "$LOG_DIR/test-reports"/*.log; do
+                if [ -f "$test_log" ]; then
+                    echo "### Test: $(basename "$test_log" .log)"
+                    echo "\`\`\`"
+                    cat "$test_log"
+                    echo "\`\`\`"
+                    echo ""
+                fi
+            done
+        else
+            echo "No test results available. Run option 3 to execute tests."
+        fi
+
+        echo "## Application Logs"
+        echo ""
+
+        if [ -f "$LOG_DIR/backend.log" ]; then
+            echo "### Backend Log (Last 100 lines)"
+            echo "\`\`\`"
+            tail -100 "$LOG_DIR/backend.log" 2>/dev/null
+            echo "\`\`\`"
+            echo ""
+        else
+            echo "Backend log not available (app not started)"
+            echo ""
+        fi
+
+        if [ -f "$LOG_DIR/frontend.log" ]; then
+            echo "### Frontend Log (Last 50 lines)"
+            echo "\`\`\`"
+            tail -50 "$LOG_DIR/frontend.log" 2>/dev/null
+            echo "\`\`\`"
+            echo ""
+        else
+            echo "Frontend log not available (app not started)"
+            echo ""
+        fi
+
+        echo "## Configuration Files"
+        echo ""
+
+        if [ -f "shared/config/models_config.json" ]; then
+            echo "### Models Configuration"
+            echo "\`\`\`json"
+            cat "shared/config/models_config.json" 2>/dev/null
+            echo "\`\`\`"
+            echo ""
+        fi
+
+        echo "## File Structure"
+        echo ""
+        echo "\`\`\`"
+        tree -L 3 -I '__pycache__|*.pyc|node_modules' . 2>/dev/null || find . -maxdepth 3 -type f -name "*.py" | head -50
+        echo "\`\`\`"
+        echo ""
+
+        echo "## Current Issues & Errors"
+        echo ""
+        echo "### Recent Errors from Logs"
+        if [ -f "$LOG_DIR/backend.log" ]; then
+            echo "\`\`\`"
+            grep -i "error\|exception\|fail" "$LOG_DIR/backend.log" | tail -20 2>/dev/null || echo "No errors found"
+            echo "\`\`\`"
+        else
+            echo "No backend log available"
+        fi
+        echo ""
+
+        echo "## Recommendations for AI Agent"
+        echo ""
+        echo "### Priority Actions"
+        echo "1. Review test results and fix any failing tests"
+        echo "2. Check error logs for runtime issues"
+        echo "3. Verify all dependencies are installed correctly"
+        echo "4. Ensure GPU is configured if AI models are needed"
+        echo "5. Review configuration files for correct settings"
+        echo ""
+
+        echo "### Common Development Tasks"
+        echo "- **Add new model:** Update \`shared/config/models_config.json\`"
+        echo "- **Fix test failures:** Check \`tests/\` directory"
+        echo "- **Debug backend:** Review \`logs/backend.log\`"
+        echo "- **Update dependencies:** Modify \`web-app/backend/requirements.txt\`"
+        echo ""
+
+        echo "### Files to Focus On"
+        echo "- \`web-app/backend/app.py\` - Main API server"
+        echo "- \`shared/models/model_manager.py\` - Model loading logic"
+        echo "- \`shared/models/donut_processor.py\` - Donut model processing"
+        echo "- \`shared/models/paddle_processor.py\` - PaddleOCR processing"
+        echo "- \`tests/\` - Test suite"
+        echo ""
+
+        echo "---"
+        echo ""
+        echo "**End of Report**"
+        echo ""
+        echo "This report was generated automatically by the Receipt Extractor launcher."
+        echo "Use it with AI coding assistants like Claude Code for efficient debugging and development."
+
+    } > "$report_file"
+
+    print_success "Report generated: $report_file"
+    echo ""
+    echo -e "${BOLD}Report Details:${NC}"
+    echo "  - Format: Markdown (.md)"
+    echo "  - Size: $(du -h "$report_file" | cut -f1)"
+    echo "  - Lines: $(wc -l < "$report_file")"
+    echo ""
+    echo -e "${BOLD}How to Use:${NC}"
+    echo "  1. Share this report with Claude Code or AI assistant"
+    echo "  2. Ask it to analyze issues and suggest fixes"
+    echo "  3. Request specific improvements or debugging help"
+    echo ""
+    echo -e "${BOLD}Example prompts:${NC}"
+    echo '  - "Analyze this system report and identify all errors"'
+    echo '  - "Based on this report, fix the failing tests"'
+    echo '  - "Review the configuration and suggest optimizations"'
+    echo ""
+    echo -ne "Open report now? [y/N]: "
+    read view_choice
+    if [[ "$view_choice" =~ ^[Yy]$ ]]; then
+        less "$report_file"
+    fi
+
+    echo ""
+    echo -ne "Press Enter to continue..."
+    read
+}
+
 ###############################################################################
 # Main Program
 ###############################################################################
@@ -749,6 +962,10 @@ main() {
             9)
                 print_banner
                 show_help
+                ;;
+            [Ee])
+                print_banner
+                export_system_report
                 ;;
             0)
                 cleanup
