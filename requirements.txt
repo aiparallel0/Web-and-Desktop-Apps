@@ -10,7 +10,7 @@ numpy>=1.24.0
 pytesseract>=0.3.10      # Tesseract OCR (requires tesseract binary installed)
 easyocr>=1.7.0           # EasyOCR - RECOMMENDED (no external deps needed)
 paddleocr>=2.7.0         # PaddleOCR (optional, enterprise-grade)
-paddlepaddle>=2.5.0      # Required for PaddleOCR
+paddlepaddle>=2.6.2      # Required for PaddleOCR
 
 # Optional: Advanced AI models
 # Uncomment if you want to use Florence-2 or other transformer models

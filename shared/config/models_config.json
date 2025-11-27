@@ -84,7 +84,7 @@
       }
     }
   },
-  "default_model": "ocr_easyocr",
+  "default_model": "ocr_tesseract",
   "recommended_model": "donut_cord",
   "best_for_finetuning": "donut_cord"
 }

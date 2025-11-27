@@ -12,7 +12,7 @@ easyocr==1.7.0
 
 # Additional OCR Engines (Optional - choose based on needs)
 pytesseract==0.3.10  # Requires tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki
-paddlepaddle==2.6.0
+paddlepaddle>=2.6.2
 paddleocr==2.7.0
 
 # Utilities

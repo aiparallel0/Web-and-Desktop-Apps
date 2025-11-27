@@ -19,7 +19,7 @@ numpy==1.26.4
 pytesseract==0.3.10
 easyocr==1.7.1
 paddleocr==2.7.3
-paddlepaddle==2.6.0
+paddlepaddle==2.6.2
 
 # Deep Learning frameworks
 torch==2.2.0
