@@ -191,6 +191,11 @@ def start_finetune(job_id):
   if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
   job=finetune_jobs[job_id]
   if len(job['training_data'])<1:return jsonify({'success':False,'error':'Not enough training data'}),400
+  try:
+   import torch
+   import transformers
+  except ImportError:
+   return jsonify({'success':False,'error':'Finetuning requires PyTorch and Transformers. Install with: pip install torch transformers accelerate sentencepiece'}),400
   job['status']='running'
   job['started']=time.time()
   data=request.get_json()or{}
@@ -204,18 +209,22 @@ def start_finetune(job_id):
     for sample in job['training_data']:trainer.add_training_sample(sample['image'],sample['truth'])
     job['progress']=10
     if job['mode']=='local':
-     from shared.models.donut_finetuner import DonutFinetuner
-     finetuner=DonutFinetuner(job['model_id'])
-     job['progress']=20
-     metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
-     job['progress']=90
-     output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
-     output_dir.mkdir(exist_ok=True)
-     finetuner.save_model(str(output_dir))
-     job['model_path']=str(output_dir)
+     try:
+      from shared.models.donut_finetuner import DonutFinetuner
+      finetuner=DonutFinetuner(job['model_id'])
+      job['progress']=20
+      metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
+      job['progress']=90
+      output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
+      output_dir.mkdir(exist_ok=True)
+      finetuner.save_model(str(output_dir))
+      job['model_path']=str(output_dir)
+     except ImportError as e:
+      raise Exception(f"Finetuning dependencies not installed: {e}. Run: pip install torch transformers accelerate sentencepiece")
     elif job['mode']=='cloud':
      job['progress']=30
-     logger.info(f"Cloud finetuning requested - would integrate with HuggingFace Spaces, Replicate, or RunPod")
+     logger.warning(f"Cloud finetuning is not yet implemented. This is a placeholder. Please integrate with HuggingFace Spaces, Replicate, or RunPod APIs.")
+     return jsonify({'success':False,'error':'Cloud finetuning not yet implemented. Please use local mode or integrate cloud APIs.'}),501
      time.sleep(2)
      metrics={'accuracy':0.92,'loss':0.15}
      job['cloud_url']='https://api.replicate.com/v1/predictions/example'
@@ -224,7 +233,7 @@ def start_finetune(job_id):
     job['metrics']=metrics
     job['completed']=time.time()
     logger.info(f"Finetuning job {job_id} completed")
-   except Exception as e:logger.error(f"Finetuning job {job_id} failed: {e}");job['status']='failed';job['error']=str(e)
+   except Exception as e:logger.error(f"Finetuning job {job_id} failed: {e}",exc_info=True);job['status']='failed';job['error']=str(e)
   thread=threading.Thread(target=run_finetuning)
   thread.start()
   return jsonify({'success':True,'message':'Finetuning started','job_id':job_id})
@@ -259,44 +268,17 @@ def list_finetune_jobs():
 @app.route('/api/cloud/list',methods=['POST'])
 def list_cloud_files():
  try:
+  logger.warning("⚠️  Cloud storage integration is a PLACEHOLDER - requires actual API implementation")
   data=request.get_json()
   provider=data.get('provider')
   credentials=data.get('credentials',{})
   path=data.get('path','/')
-  if provider=='google_drive':
-   logger.info("Google Drive integration - would list files from Google Drive API")
-   files=[{'name':'receipt1.jpg','path':'/receipts/receipt1.jpg','size':125000,'type':'image/jpeg'},{'name':'receipt2.png','path':'/receipts/receipt2.png','size':98000,'type':'image/png'}]
-  elif provider=='dropbox':
-   logger.info("Dropbox integration - would list files from Dropbox API")
-   files=[{'name':'scan1.jpg','path':'/scans/scan1.jpg','size':110000,'type':'image/jpeg'}]
-  elif provider=='s3':
-   logger.info("AWS S3 integration - would list files from S3 bucket")
-   bucket=credentials.get('bucket','receipts-bucket')
-   files=[{'name':'receipt_001.jpg','path':f'{bucket}/receipts/receipt_001.jpg','size':145000,'type':'image/jpeg'}]
-  else:
-   return jsonify({'success':False,'error':'Unsupported provider'}),400
-  return jsonify({'success':True,'provider':provider,'files':files,'path':path})
+  return jsonify({'success':False,'error':'Cloud storage not implemented. This is a placeholder feature. To use cloud storage, implement actual API integration for Google Drive, Dropbox, or S3.','is_placeholder':True}),501
  except Exception as e:logger.error(f"Error listing cloud files: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/cloud/download',methods=['POST'])
 def download_cloud_file():
  try:
-  data=request.get_json()
-  provider=data.get('provider')
-  file_path=data.get('file_path')
-  credentials=data.get('credentials',{})
-  if not provider or not file_path:return jsonify({'success':False,'error':'provider and file_path required'}),400
-  temp_dir=Path(tempfile.gettempdir())/'cloud_downloads'
-  temp_dir.mkdir(exist_ok=True)
-  filename=Path(file_path).name
-  local_path=temp_dir/filename
-  if provider=='google_drive':
-   logger.info(f"Would download {file_path} from Google Drive")
-  elif provider=='dropbox':
-   logger.info(f"Would download {file_path} from Dropbox")
-  elif provider=='s3':
-   logger.info(f"Would download {file_path} from AWS S3")
-  else:
-   return jsonify({'success':False,'error':'Unsupported provider'}),400
-  return jsonify({'success':True,'local_path':str(local_path),'filename':filename,'message':'File downloaded (simulated)'})
+  logger.warning("⚠️  Cloud storage download is a PLACEHOLDER - requires actual API implementation")
+  return jsonify({'success':False,'error':'Cloud storage download not implemented. This is a placeholder feature.','is_placeholder':True}),501
  except Exception as e:logger.error(f"Error downloading cloud file: {e}");return jsonify({'success':False,'error':str(e)}),500
 if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(model_manager.get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)

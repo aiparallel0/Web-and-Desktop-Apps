@@ -48,15 +48,15 @@ class ModelManager:
                 logger.info(f"   GPU: {gpu_name}")
                 logger.info(f"   VRAM: {gpu_memory:.1f} GB")
                 logger.info(f"   CUDA: {cuda_version}")
-                logger.info(f"   Models will run 10-15x faster!")
+                logger.info(f"   AI models will run 10-15x faster!")
             else:
-                logger.warning("⚠️  GPU NOT AVAILABLE - Running on CPU")
-                logger.warning("   Models will be slower (10-60 seconds per receipt)")
-                logger.warning("   To enable GPU acceleration:")
-                logger.warning("   1. Install CUDA Toolkit: https://developer.nvidia.com/cuda-downloads")
-                logger.warning("   2. Install GPU PyTorch: pip install torch --index-url https://download.pytorch.org/whl/cu121")
-                logger.warning("   3. See CUDA_GPU_SETUP.md for detailed instructions")
-        except ImportError:logger.warning("PyTorch not available - cannot check GPU status")
+                logger.info("ℹ️  GPU NOT AVAILABLE - Running on CPU")
+                logger.info("   AI models will be slower (10-60 seconds per receipt)")
+                logger.info("   OCR engines (EasyOCR, Tesseract, PaddleOCR) still work fine on CPU")
+        except ImportError:
+            logger.info("ℹ️  PyTorch not installed - advanced AI models disabled")
+            logger.info("   Basic OCR models (EasyOCR, Tesseract, PaddleOCR) are available")
+            logger.info("   For AI models and finetuning: pip install torch transformers accelerate sentencepiece")
         except Exception as e:logger.debug(f"GPU check failed: {e}")
     def _validate_model_config(self,model_id:str,model_config:dict):
         required_fields=['id','name','type','description']
@@ -104,11 +104,17 @@ class ModelManager:
             logger.info(f"Loading processor for {model_id} (type: {model_type})")
             try:
                 if model_type=='donut':
-                    from .donut_processor import DonutProcessor
-                    processor=DonutProcessor(model_config)
+                    try:
+                        from .donut_processor import DonutProcessor
+                        processor=DonutProcessor(model_config)
+                    except ImportError as e:
+                        raise ImportError(f"Donut models require PyTorch and Transformers. Install with: pip install torch transformers accelerate sentencepiece. Error: {e}")
                 elif model_type=='florence':
-                    from .donut_processor import FlorenceProcessor
-                    processor=FlorenceProcessor(model_config)
+                    try:
+                        from .donut_processor import FlorenceProcessor
+                        processor=FlorenceProcessor(model_config)
+                    except ImportError as e:
+                        raise ImportError(f"Florence models require PyTorch and Transformers. Install with: pip install torch transformers accelerate sentencepiece. Error: {e}")
                 elif model_type=='ocr':
                     from .ocr_processor import OCRProcessor
                     processor=OCRProcessor(model_config)
@@ -121,10 +127,13 @@ class ModelManager:
                 else:raise ValueError(f"Unknown model type: {model_type}")
                 self.loaded_processors[model_id]=processor
                 self.model_last_used[model_id],self.model_load_times[model_id]=datetime.now(),datetime.now()
-                logger.info(f"Loaded and cached processor for {model_id}")
+                logger.info(f"✓ Loaded and cached processor for {model_id}")
                 return processor
+            except ImportError as e:
+                logger.error(f"❌ Failed to load processor {model_id}: {e}")
+                raise
             except Exception as e:
-                logger.error(f"Failed to load processor {model_id}: {e}")
+                logger.error(f"❌ Failed to load processor {model_id}: {e}")
                 raise
     def _evict_least_recently_used(self):
         if not self.model_last_used:return
