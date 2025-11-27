@@ -32,10 +32,19 @@ def main():
     # Quick dependency check
     if not check_basic_imports():
         print("\n⚠️  Core dependencies not found!")
-        print("\nRunning dependency checker...")
+        print("\nRunning dependency checker with auto-install...")
         try:
-            subprocess.check_call([sys.executable, "check_dependencies.py"])
-        except:
+            # Run with --auto-install flag to avoid blocking on user input
+            subprocess.check_call([sys.executable, "check_dependencies.py", "--auto-install"])
+        except subprocess.CalledProcessError:
+            print("\n⚠️  Automatic installation failed.")
+            print("\nPlease install dependencies manually:")
+            print("  pip install -r web-app/backend/requirements.txt")
+            print("\nOr run the dependency checker interactively:")
+            print("  python3 check_dependencies.py")
+            return 1
+        except Exception as e:
+            print(f"\n⚠️  Error running dependency checker: {e}")
             print("\nPlease install dependencies manually:")
             print("  pip install -r web-app/backend/requirements.txt")
             return 1
@@ -66,10 +75,22 @@ def main():
     if not has_ocr:
         print("\n[WARNING] No OCR engines installed!")
         print("The application needs at least one OCR engine to work.")
-        print("\nRecommended: pip install easyocr")
-        response = input("\nContinue anyway? (y/n): ")
-        if response.lower() != 'y':
-            return 1
+        print("\nAttempting to install EasyOCR...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "easyocr", "-q"])
+            print("[OK] EasyOCR installed successfully")
+        except:
+            print("\n[FAILED] Could not install EasyOCR automatically.")
+            print("\nRecommended: pip install easyocr")
+            print("\nYou can still start the server, but extraction will not work without an OCR engine.")
+            import sys
+            # Check if running interactively
+            if sys.stdin.isatty():
+                response = input("\nContinue anyway? (y/n): ")
+                if response.lower() != 'y':
+                    return 1
+            else:
+                print("Running in non-interactive mode, continuing anyway...")
 
     # Start the backend
     print("\n" + "=" * 60)

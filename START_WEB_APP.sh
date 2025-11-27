@@ -19,12 +19,20 @@ fi
 
 # Check if dependencies are installed
 echo "Checking dependencies..."
-$PYTHON_CMD -c "import flask; import easyocr; import cv2; import PIL" 2>/dev/null
+$PYTHON_CMD -c "import flask; import cv2; import PIL" 2>/dev/null
 if [ $? -ne 0 ]; then
-    echo "⚠️  Missing dependencies detected!"
+    echo "⚠️  Missing core dependencies detected!"
     echo ""
-    echo "Installing required packages..."
-    pip install flask flask-cors pillow opencv-python numpy easyocr
+    echo "Running dependency installer..."
+    $PYTHON_CMD check_dependencies.py --auto-install
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "❌ Dependency installation failed!"
+        echo ""
+        echo "Please install dependencies manually:"
+        echo "  pip install -r web-app/backend/requirements.txt"
+        exit 1
+    fi
     echo ""
 fi
 

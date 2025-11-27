@@ -241,9 +241,9 @@ run_dependency_check() {
     print_section "Dependency Analysis"
 
     if [ -f "check_dependencies.py" ]; then
-        print_info "Running interactive dependency checker..."
+        print_info "Running dependency checker with auto-install..."
         echo ""
-        python3 check_dependencies.py
+        python3 check_dependencies.py --auto-install
         local exit_code=$?
 
         if [ $exit_code -eq 0 ]; then
@@ -252,6 +252,10 @@ run_dependency_check() {
             return 0
         else
             print_warning "Some dependencies may be missing"
+            echo ""
+            echo "You can:"
+            echo "  1. Run 'python3 check_dependencies.py' interactively for more control"
+            echo "  2. Install manually: pip install -r web-app/backend/requirements.txt"
             return 1
         fi
     else
