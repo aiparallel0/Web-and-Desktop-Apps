@@ -212,6 +212,9 @@ function displayBatchResults(data){
 }
 
 async function loadCloudFiles(provider){
+ showError('Cloud storage integration is not yet implemented. This feature requires API integration with Google Drive, Dropbox, or AWS S3. See README for setup instructions.');
+ return;
+
  showLoading(true,`Loading files from ${provider}...`);
  try{
   const response=await fetch(`${API_BASE_URL}/cloud/list`,{
@@ -225,7 +228,11 @@ async function loadCloudFiles(provider){
    displayCloudFiles(data.files,provider);
    showSuccess(`Found ${data.files.length} files in ${provider}`);
   }else{
-   showError(data.error||'Failed to load cloud files');
+   if(data.is_placeholder){
+    showError('Cloud storage not implemented. Please use local file upload.');
+   }else{
+    showError(data.error||'Failed to load cloud files');
+   }
   }
  }catch(error){
   console.error('Cloud files error:',error);
@@ -257,6 +264,12 @@ async function startFinetuning(){
  if(!selectedModel){showError('Please select a model to finetune');return;}
 
  const mode=document.querySelector('input[name="ftMode"]:checked').value;
+
+ if(mode==='cloud'){
+  showError('Cloud-based training is not yet implemented. Please use Local Computer mode or integrate with HuggingFace/Replicate APIs.');
+  return;
+ }
+
  const epochs=parseInt(document.getElementById('ftEpochs').value);
  const batchSize=parseInt(document.getElementById('ftBatchSize').value);
  const learningRate=parseFloat(document.getElementById('ftLearningRate').value);

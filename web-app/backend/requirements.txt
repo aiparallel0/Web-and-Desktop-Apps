@@ -3,20 +3,15 @@ Flask==3.0.0
 Flask-CORS==4.0.0
 Werkzeug==3.0.1
 
-# Machine Learning & Model Finetuning
-torch==2.2.0
-transformers==4.37.2
-accelerate==0.27.2
-huggingface-hub==0.20.3
-sentencepiece==0.1.99
-
 # Image Processing
 Pillow==10.2.0
 opencv-python==4.9.0.80
 
-# OCR Engines
-pytesseract==0.3.10
+# Core OCR Engines (Lightweight - No external dependencies)
 easyocr==1.7.0
+
+# Additional OCR Engines (Optional - choose based on needs)
+pytesseract==0.3.10  # Requires tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki
 paddlepaddle==2.6.0
 paddleocr==2.7.0
 
@@ -25,7 +20,19 @@ numpy==1.26.3
 psutil==5.9.8
 requests==2.31.0
 
-# Cloud Storage (Optional - for full cloud integration)
+# Advanced AI Models (OPTIONAL - Install separately for finetuning features)
+# These require C++ build tools on Windows. See INSTALLATION_GUIDE.md for details.
+# On Windows: Install Visual Studio Build Tools first
+# https://visualstudio.microsoft.com/visual-cpp-build-tools/
+#
+# torch>=2.2.0
+# transformers>=4.37.0
+# accelerate>=0.27.0
+# huggingface-hub>=0.20.0
+# sentencepiece>=0.1.99  # Requires C++ compiler on Windows
+# protobuf>=3.20.0
+
+# Cloud Storage (Optional - for cloud integration)
 # google-auth==2.27.0
 # google-auth-oauthlib==1.2.0
 # google-cloud-storage==2.14.0
@@ -35,3 +42,19 @@ requests==2.31.0
 # Development
 # pytest==8.0.0
 # black==24.1.1
+
+# INSTALLATION NOTES:
+#
+# For basic usage (OCR only):
+#   pip install -r requirements.txt
+#
+# For advanced AI models + finetuning (requires C++ build tools):
+#   pip install torch transformers accelerate huggingface-hub sentencepiece protobuf
+#
+# On Windows (to avoid sentencepiece build errors):
+#   1. Install Visual Studio Build Tools: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+#   2. Or use pre-built wheels: pip install torch transformers accelerate --index-url https://download.pytorch.org/whl/cpu
+#   3. Then: pip install sentencepiece --only-binary :all:
+#
+# For GPU support (recommended for finetuning):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
