@@ -6,7 +6,10 @@ logger=logging.getLogger(__name__)
 class ModelManager:
     def __init__(self,config_path:Optional[str]=None,max_loaded_models:int=3):
         if config_path is None:config_path=Path(__file__).parent.parent/"config"/"models_config.json"
-        self.config_path,self.models_config,self.current_model,self.loaded_processors=config_path,self._load_config(),None,{}
+        self.config_path=config_path
+        self.models_config=self._load_config()
+        self.current_model=None
+        self.loaded_processors={}
         self._lock=threading.RLock()
         self.max_loaded_models,self.model_last_used,self.model_load_times=max_loaded_models,{},{}
         self._check_gpu_availability()
