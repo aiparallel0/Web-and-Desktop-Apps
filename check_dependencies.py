@@ -68,67 +68,67 @@ def check_and_install():
     print("\n1. Checking CORE dependencies...")
     for import_name, package_name in core_deps:
         if check_package(import_name):
-            print(f"  ✓ {package_name}")
+            print(f"  [OK] {package_name}")
         else:
-            print(f"  ✗ {package_name} - MISSING")
+            print(f"  [MISSING] {package_name}")
             missing_core.append(package_name)
 
     print("\n2. Checking OCR engines...")
     for import_name, package_name in ocr_deps:
         if check_package(import_name):
-            print(f"  ✓ {package_name}")
+            print(f"  [OK] {package_name}")
         else:
-            print(f"  ✗ {package_name} - MISSING")
+            print(f"  [MISSING] {package_name}")
             missing_ocr.append(package_name)
 
     print("\n3. Checking AI models (optional)...")
     for import_name, package_name in ai_deps:
         if check_package(import_name):
-            print(f"  ✓ {package_name}")
+            print(f"  [OK] {package_name}")
         else:
-            print(f"  ✗ {package_name} - MISSING (optional)")
+            print(f"  [MISSING] {package_name} (optional)")
             missing_ai.append(package_name)
 
     # Install missing packages
     if missing_core:
-        print(f"\n⚠️  CRITICAL: {len(missing_core)} core packages missing!")
+        print(f"\nWARNING: {len(missing_core)} core packages missing!")
         print("These packages are required for basic functionality.")
         response = input("Install missing core packages now? (y/n): ")
         if response.lower() == 'y':
             print("\nInstalling core packages...")
             for package in missing_core:
                 if install_package(package):
-                    print(f"  ✓ Installed {package}")
+                    print(f"  [OK] Installed {package}")
                 else:
-                    print(f"  ✗ Failed to install {package}")
+                    print(f"  [FAIL] Failed to install {package}")
 
     if missing_ocr:
-        print(f"\n⚠️  {len(missing_ocr)} OCR packages missing.")
+        print(f"\nWARNING: {len(missing_ocr)} OCR packages missing.")
         print("At least one OCR engine is recommended (EasyOCR suggested).")
         if 'easyocr' in missing_ocr:
             response = input("Install EasyOCR (recommended)? (y/n): ")
             if response.lower() == 'y':
                 if install_package('easyocr'):
-                    print("  ✓ Installed easyocr")
+                    print("  [OK] Installed easyocr")
                     missing_ocr.remove('easyocr')
                 else:
-                    print("  ✗ Failed to install easyocr")
+                    print("  [FAIL] Failed to install easyocr")
 
         if 'paddleocr' in missing_ocr and 'paddlepaddle' in missing_ocr:
             response = input("Install PaddleOCR? (y/n): ")
             if response.lower() == 'y':
                 if install_package('paddlepaddle'):
-                    print("  ✓ Installed paddlepaddle")
+                    print("  [OK] Installed paddlepaddle")
                 if install_package('paddleocr'):
-                    print("  ✓ Installed paddleocr")
+                    print("  [OK] Installed paddleocr")
 
     if missing_ai:
-        print(f"\n⚠️  {len(missing_ai)} AI packages missing (optional).")
+        print(f"\nNOTE: {len(missing_ai)} AI packages missing (optional).")
         print("These are needed for Donut/Florence-2 models and finetuning.")
         print("Note: On Windows, this requires Visual Studio Build Tools.")
         response = input("Install AI packages? (y/n): ")
         if response.lower() == 'y':
-            print("\n⚠️  This may take several minutes and requires 2-3 GB download.")
+            print("\nNOTE: This may take several minutes and requires 2-3 GB download.")
             response2 = input("Continue? (y/n): ")
             if response2.lower() == 'y':
                 print("\nInstalling AI packages...")
@@ -141,19 +141,26 @@ def check_and_install():
                             "torch", "--index-url",
                             "https://download.pytorch.org/whl/cpu"
                         ])
-                        print("  ✓ Installed torch")
+                        print("  [OK] Installed torch")
                     except:
-                        print("  ✗ Failed to install torch")
+                        print("  [FAIL] Failed to install torch")
 
                 # Install transformers
                 if 'transformers' in missing_ai:
                     if install_package('transformers'):
-                        print("  ✓ Installed transformers")
+                        print("  [OK] Installed transformers")
 
-                # Install accelerate
+                # Install accelerate with specific version
                 if 'accelerate' in missing_ai:
-                    if install_package('accelerate'):
-                        print("  ✓ Installed accelerate")
+                    print("  Installing accelerate>=0.26.0...")
+                    try:
+                        subprocess.check_call([
+                            sys.executable, "-m", "pip", "install",
+                            "accelerate>=0.26.0"
+                        ])
+                        print("  [OK] Installed accelerate")
+                    except:
+                        print("  [FAIL] Failed to install accelerate")
 
                 # Install sentencepiece (may fail on Windows)
                 if 'sentencepiece' in missing_ai:
@@ -163,9 +170,9 @@ def check_and_install():
                             sys.executable, "-m", "pip", "install",
                             "sentencepiece", "--only-binary", ":all:"
                         ])
-                        print("  ✓ Installed sentencepiece")
+                        print("  [OK] Installed sentencepiece")
                     except:
-                        print("  ✗ Failed to install sentencepiece")
+                        print("  [FAIL] Failed to install sentencepiece")
                         print("     This may require Visual Studio Build Tools on Windows.")
                         print("     See WINDOWS_INSTALLATION.md for details.")
 
@@ -179,19 +186,19 @@ def check_and_install():
     ocr_ok = any(check_package(pkg[0]) for pkg in ocr_deps)
 
     if core_ok and ocr_ok:
-        print("✓ All required dependencies are installed!")
+        print("[SUCCESS] All required dependencies are installed!")
         print("\nYou can now run the application:")
         print("  cd web-app/backend")
         print("  python app.py")
         return True
     elif core_ok:
-        print("✓ Core dependencies installed")
-        print("⚠️  No OCR engines installed")
+        print("[OK] Core dependencies installed")
+        print("[WARNING] No OCR engines installed")
         print("\nPlease install at least one OCR engine:")
         print("  pip install easyocr")
         return False
     else:
-        print("✗ Some core dependencies are still missing")
+        print("[ERROR] Some core dependencies are still missing")
         print("\nPlease install manually:")
         print("  pip install -r web-app/backend/requirements.txt")
         return False
