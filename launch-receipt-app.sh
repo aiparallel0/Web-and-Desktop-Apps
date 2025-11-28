@@ -343,6 +343,66 @@ run_tests() {
         ((test_count++))
     fi
 
+    # Run base processor tests (NEW - comprehensive coverage)
+    if [ -f "tests/shared/test_base_processor.py" ]; then
+        echo ""
+        print_info "Running base processor tests..."
+        python3 -m pytest tests/shared/test_base_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/base_processor.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Base processor tests passed"
+            ((passed_count++))
+        else
+            print_warning "Base processor tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run EasyOCR processor tests (NEW - requires mocking)
+    if [ -f "tests/shared/test_easyocr_processor.py" ]; then
+        echo ""
+        print_info "Running EasyOCR processor tests..."
+        python3 -m pytest tests/shared/test_easyocr_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/easyocr_processor.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "EasyOCR processor tests passed"
+            ((passed_count++))
+        else
+            print_warning "EasyOCR processor tests failed (may require dependencies)"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run Paddle processor tests (NEW - requires mocking)
+    if [ -f "tests/shared/test_paddle_processor.py" ]; then
+        echo ""
+        print_info "Running Paddle processor tests..."
+        python3 -m pytest tests/shared/test_paddle_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/paddle_processor.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Paddle processor tests passed"
+            ((passed_count++))
+        else
+            print_warning "Paddle processor tests failed (may require dependencies)"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run Donut processor tests (NEW - requires mocking)
+    if [ -f "tests/shared/test_donut_processor.py" ]; then
+        echo ""
+        print_info "Running Donut processor tests..."
+        python3 -m pytest tests/shared/test_donut_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/donut_processor.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Donut processor tests passed"
+            ((passed_count++))
+        else
+            print_warning "Donut processor tests failed (may require dependencies)"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
     # Run API tests
     if [ -f "tests/web/test_api.py" ]; then
         echo ""
