@@ -2,10 +2,17 @@
 """
 Comprehensive Test Runner for Receipt Extractor
 Runs all test suites with detailed reporting and coverage analysis
+
+Features:
+- Automatic cache cleanup before tests
+- Detailed error reporting
+- Coverage analysis
+- Test result logging
 """
 import subprocess
 import sys
 import os
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -45,6 +52,106 @@ def print_warning(message):
 def print_info(message):
     """Print info message"""
     print(f"{Colors.CYAN}[INFO]{Colors.NC} {message}")
+
+
+def clear_python_cache(root_dir='.'):
+    """
+    Clear Python bytecode cache and pytest cache
+
+    Args:
+        root_dir: Root directory to start cleaning from
+
+    Returns:
+        tuple: (num_pycache_removed, num_pyc_removed, num_pytest_cache_removed)
+    """
+    pycache_count = 0
+    pyc_count = 0
+    pytest_cache_count = 0
+
+    root_path = Path(root_dir)
+
+    # Remove __pycache__ directories
+    for pycache_dir in root_path.rglob('__pycache__'):
+        try:
+            shutil.rmtree(pycache_dir)
+            pycache_count += 1
+        except Exception as e:
+            print_warning(f"Could not remove {pycache_dir}: {e}")
+
+    # Remove .pyc files
+    for pyc_file in root_path.rglob('*.pyc'):
+        try:
+            pyc_file.unlink()
+            pyc_count += 1
+        except Exception as e:
+            print_warning(f"Could not remove {pyc_file}: {e}")
+
+    # Remove pytest cache
+    pytest_cache = root_path / '.pytest_cache'
+    if pytest_cache.exists():
+        try:
+            shutil.rmtree(pytest_cache)
+            pytest_cache_count = 1
+        except Exception as e:
+            print_warning(f"Could not remove .pytest_cache: {e}")
+
+    # Remove coverage cache
+    coverage_cache = root_path / '.coverage'
+    if coverage_cache.exists():
+        try:
+            coverage_cache.unlink()
+        except Exception as e:
+            print_warning(f"Could not remove .coverage: {e}")
+
+    return pycache_count, pyc_count, pytest_cache_count
+
+
+def verify_environment():
+    """
+    Verify the test environment is properly set up
+
+    Returns:
+        bool: True if environment is valid
+    """
+    issues = []
+
+    # Check if pytest is installed
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'pytest', '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode != 0:
+            issues.append("pytest is not properly installed")
+    except Exception as e:
+        issues.append(f"pytest check failed: {e}")
+
+    # Check if we're in the project root
+    if not Path('tests').exists():
+        issues.append("Not in project root directory (tests/ not found)")
+
+    if not Path('shared').exists():
+        issues.append("Not in project root directory (shared/ not found)")
+
+    # Check if critical test files exist
+    critical_tests = [
+        'tests/test_system_health.py',
+        'tests/shared/test_donut_processor.py'
+    ]
+
+    for test_file in critical_tests:
+        if not Path(test_file).exists():
+            issues.append(f"Critical test file missing: {test_file}")
+
+    if issues:
+        print_error("Environment validation failed:")
+        for issue in issues:
+            print(f"  - {issue}")
+        return False
+
+    return True
 
 
 def run_test_file(test_path, description, log_dir=None):
@@ -160,6 +267,23 @@ def main():
     # Ensure we're in the right directory
     script_dir = Path(__file__).parent
     os.chdir(script_dir)
+
+    # Verify environment before running tests
+    print_section("Environment Verification")
+    if not verify_environment():
+        print_error("Environment verification failed. Please fix issues before running tests.")
+        return 1
+    print_success("Environment is properly configured")
+
+    # Clear caches for clean test run
+    print_section("Cache Cleanup")
+    print_info("Clearing Python bytecode cache and pytest cache...")
+    pycache_count, pyc_count, pytest_cache_count = clear_python_cache()
+    print_success(f"Removed {pycache_count} __pycache__ directories")
+    print_success(f"Removed {pyc_count} .pyc files")
+    if pytest_cache_count:
+        print_success("Removed .pytest_cache directory")
+    print_info("Cache cleanup complete - tests will use fresh code")
 
     log_dir = script_dir / 'logs' / 'test-reports'
 
