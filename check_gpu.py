@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import sys
+import os
+
+# Fix encoding issues on Windows
+if sys.platform == 'win32':
+    try:
+        # Try to set UTF-8 encoding for stdout
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8')
+        else:
+            # Fallback for older Python versions
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    except (AttributeError, OSError):
+        pass  # If reconfiguration fails, continue with default encoding
+
 def check_python_version():
  print("="*60);print("1. Python Version Check");print("="*60)
  version=sys.version
@@ -61,7 +77,7 @@ def check_ai_libraries():
   except ImportError:print(f"✗ {display_name}: Not installed")
  print()
 def main():
- print();print("╔"+"="*58+"╗");print("║"+" "*12+"GPU SETUP VERIFICATION"+" "*23+"║");print("╚"+"="*58+"╝");print()
+ print();print("+"+"="*58+"+");print("|"+" "*12+"GPU SETUP VERIFICATION"+" "*23+"|");print("+"+"="*58+"+");print()
  check_python_version()
  torch_module=check_torch()
  cuda_available=check_cuda(torch_module)
