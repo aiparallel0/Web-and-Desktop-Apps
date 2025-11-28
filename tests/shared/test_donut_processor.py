@@ -42,6 +42,9 @@ def test_donut_processor_initialization(mock_enhance, mock_load, mock_model_cls,
 
     mock_torch.cuda.is_available.return_value = False
     mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
+    mock_processor.tokenizer = mock_tokenizer
     mock_model = Mock()
     mock_proc_cls.from_pretrained.return_value = mock_processor
     mock_model_cls.from_pretrained.return_value = mock_model
@@ -67,6 +70,9 @@ def test_donut_processor_gpu_detection(mock_model_cls, mock_proc_cls, mock_torch
 
     mock_torch.cuda.is_available.return_value = True
     mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
+    mock_processor.tokenizer = mock_tokenizer
     mock_model = Mock()
     mock_proc_cls.from_pretrained.return_value = mock_processor
     mock_model_cls.from_pretrained.return_value = mock_model
@@ -88,13 +94,19 @@ def test_donut_processor_load_retry(mock_model_cls, mock_proc_cls, mock_torch, d
     mock_torch.cuda.is_available.return_value = False
 
     # First attempt fails, second succeeds
+    mock_model = Mock()
+    mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
+    mock_processor.tokenizer = mock_tokenizer
+
     mock_model_cls.from_pretrained.side_effect = [
         RuntimeError("Download failed"),
-        Mock()
+        mock_model
     ]
     mock_proc_cls.from_pretrained.side_effect = [
         RuntimeError("Download failed"),
-        Mock()
+        mock_processor
     ]
 
     with patch('time.sleep'):  # Don't actually sleep in tests
@@ -208,6 +220,7 @@ def test_donut_extract_success(mock_enhance, mock_load, mock_model_cls, mock_pro
 
     # Mock tokenizer
     mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
     mock_tokenizer.pad_token_id = 0
     mock_tokenizer.eos_token_id = 2
     mock_tokenizer.eos_token = '</s>'
@@ -277,6 +290,7 @@ def test_donut_extract_fallback_text(mock_enhance, mock_load, mock_model_cls, mo
     mock_model_cls.from_pretrained.return_value = mock_model
 
     mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
     mock_tokenizer.pad_token_id = 0
     mock_tokenizer.eos_token_id = 2
     mock_tokenizer.eos_token = '</s>'
@@ -321,6 +335,9 @@ def test_donut_extract_exception(mock_load, mock_model_cls, mock_proc_cls, mock_
 
     mock_torch.cuda.is_available.return_value = False
     mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
+    mock_processor.tokenizer = mock_tokenizer
     mock_model = Mock()
     mock_proc_cls.from_pretrained.return_value = mock_processor
     mock_model_cls.from_pretrained.return_value = mock_model
@@ -338,13 +355,12 @@ def test_donut_extract_exception(mock_load, mock_model_cls, mock_proc_cls, mock_
 def test_safe_extract_string():
     """Test safe string extraction from various data types"""
     from shared.models.donut_processor import DonutProcessor
-    from shared.models.donut_processor import BaseDonutProcessor
     from unittest.mock import MagicMock
 
     # Create a mock processor instance just for testing the method
-    processor = MagicMock(spec=BaseDonutProcessor)
+    processor = MagicMock(spec=DonutProcessor)
     # Bind the actual method to the mock
-    processor._safe_extract_string = BaseDonutProcessor._safe_extract_string.__get__(processor)
+    processor._safe_extract_string = DonutProcessor._safe_extract_string.__get__(processor)
 
     # Test cases
     assert processor._safe_extract_string(None) is None
@@ -481,15 +497,31 @@ def test_florence_processor_load_failure(mock_sleep, mock_model_cls, mock_proc_c
 
 
 @pytest.mark.unit
-def test_build_receipt_data():
+@patch('shared.models.donut_processor.torch')
+@patch('shared.models.donut_processor.TransformersDonutProcessor')
+@patch('shared.models.donut_processor.VisionEncoderDecoderModel')
+def test_build_receipt_data(mock_model_cls, mock_proc_cls, mock_torch):
     """Test building receipt data from parsed JSON"""
     from shared.models.donut_processor import DonutProcessor
-    from unittest.mock import MagicMock
 
-    processor = MagicMock()
-    processor.normalize_price = DonutProcessor.normalize_price
-    processor._safe_extract_string = DonutProcessor._safe_extract_string
-    processor._build_receipt_data = DonutProcessor._build_receipt_data.__get__(processor)
+    mock_torch.cuda.is_available.return_value = False
+    mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)
+    mock_processor.tokenizer = mock_tokenizer
+    mock_model = Mock()
+    mock_proc_cls.from_pretrained.return_value = mock_processor
+    mock_model_cls.from_pretrained.return_value = mock_model
+
+    donut_config = {
+        'id': 'donut_sroie',
+        'name': 'Donut SROIE',
+        'type': 'donut',
+        'huggingface_id': 'naver-clova-ix/donut-base-finetuned-cord-v2',
+        'task_prompt': '<s_cord-v2>'
+    }
+
+    processor = DonutProcessor(donut_config)
 
     parsed_data = {
         'company': 'Test Store',
@@ -514,15 +546,31 @@ def test_build_receipt_data():
 
 
 @pytest.mark.unit
-def test_build_receipt_data_complex_total():
+@patch('shared.models.donut_processor.torch')
+@patch('shared.models.donut_processor.TransformersDonutProcessor')
+@patch('shared.models.donut_processor.VisionEncoderDecoderModel')
+def test_build_receipt_data_complex_total(mock_model_cls, mock_proc_cls, mock_torch):
     """Test building receipt data with complex total structure"""
     from shared.models.donut_processor import DonutProcessor
-    from unittest.mock import MagicMock
 
-    processor = MagicMock()
-    processor.normalize_price = DonutProcessor.normalize_price
-    processor._safe_extract_string = DonutProcessor._safe_extract_string
-    processor._build_receipt_data = DonutProcessor._build_receipt_data.__get__(processor)
+    mock_torch.cuda.is_available.return_value = False
+    mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)
+    mock_processor.tokenizer = mock_tokenizer
+    mock_model = Mock()
+    mock_proc_cls.from_pretrained.return_value = mock_processor
+    mock_model_cls.from_pretrained.return_value = mock_model
+
+    donut_config = {
+        'id': 'donut_sroie',
+        'name': 'Donut SROIE',
+        'type': 'donut',
+        'huggingface_id': 'naver-clova-ix/donut-base-finetuned-cord-v2',
+        'task_prompt': '<s_cord-v2>'
+    }
+
+    processor = DonutProcessor(donut_config)
 
     parsed_data = {
         'company': 'Test Store',
@@ -545,15 +593,31 @@ def test_build_receipt_data_complex_total():
 
 
 @pytest.mark.unit
-def test_build_receipt_data_alternate_fields():
+@patch('shared.models.donut_processor.torch')
+@patch('shared.models.donut_processor.TransformersDonutProcessor')
+@patch('shared.models.donut_processor.VisionEncoderDecoderModel')
+def test_build_receipt_data_alternate_fields(mock_model_cls, mock_proc_cls, mock_torch):
     """Test building receipt data with alternate field names"""
     from shared.models.donut_processor import DonutProcessor
-    from unittest.mock import MagicMock
 
-    processor = MagicMock()
-    processor.normalize_price = DonutProcessor.normalize_price
-    processor._safe_extract_string = DonutProcessor._safe_extract_string
-    processor._build_receipt_data = DonutProcessor._build_receipt_data.__get__(processor)
+    mock_torch.cuda.is_available.return_value = False
+    mock_processor = Mock()
+    mock_tokenizer = Mock()
+    mock_tokenizer.__len__ = Mock(return_value=30000)
+    mock_processor.tokenizer = mock_tokenizer
+    mock_model = Mock()
+    mock_proc_cls.from_pretrained.return_value = mock_processor
+    mock_model_cls.from_pretrained.return_value = mock_model
+
+    donut_config = {
+        'id': 'donut_sroie',
+        'name': 'Donut SROIE',
+        'type': 'donut',
+        'huggingface_id': 'naver-clova-ix/donut-base-finetuned-cord-v2',
+        'task_prompt': '<s_cord-v2>'
+    }
+
+    processor = DonutProcessor(donut_config)
 
     parsed_data = {
         'store_name': 'Alternate Store',  # Using store_name instead of company
