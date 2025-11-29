@@ -82,3 +82,74 @@ def test_resize_if_needed():
 def test_brightness_and_contrast_thresholds():
     assert BRIGHTNESS_THRESHOLD > 0
     assert CONTRAST_THRESHOLD > 0
+
+@pytest.mark.unit
+def test_load_and_validate_image_not_found():
+    """Test loading non-existent image raises FileNotFoundError"""
+    with pytest.raises(FileNotFoundError):
+        load_and_validate_image('/nonexistent/path/image.png')
+
+@pytest.mark.unit
+def test_load_and_validate_image_rgba():
+    """Test loading RGBA image converts to RGB"""
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+        img = Image.new('RGBA', (100, 100), color=(255, 0, 0, 128))
+        img.save(tmp_file.name)
+        tmp_path = tmp_file.name
+    loaded_img = load_and_validate_image(tmp_path)
+    assert loaded_img.mode == 'RGB'
+    loaded_img.close()
+    import os
+    os.unlink(tmp_path)
+
+@pytest.mark.unit
+def test_load_and_validate_image_grayscale():
+    """Test loading grayscale image (L mode)"""
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+        img = Image.new('L', (100, 100), color=128)
+        img.save(tmp_file.name)
+        tmp_path = tmp_file.name
+    loaded_img = load_and_validate_image(tmp_path)
+    assert loaded_img.mode in ('L', 'RGB')
+    loaded_img.close()
+    import os
+    os.unlink(tmp_path)
+
+@pytest.mark.unit
+def test_enhance_image_no_changes():
+    """Test enhance_image with all options disabled"""
+    img = Image.new('RGB', (100, 100), color='gray')
+    enhanced = enhance_image(img, enhance_contrast=False, enhance_brightness=False, sharpen=False)
+    assert enhanced.size == img.size
+
+@pytest.mark.unit
+def test_assess_image_quality_dark_image():
+    """Test quality assessment for dark image"""
+    img = Image.new('RGB', (100, 100), color='black')
+    quality = assess_image_quality(img)
+    assert quality['brightness'] < BRIGHTNESS_THRESHOLD
+    assert quality['is_bright_enough'] == False
+
+@pytest.mark.unit
+def test_assess_image_quality_low_contrast():
+    """Test quality assessment for low contrast image"""
+    img = Image.new('RGB', (100, 100), color=(128, 128, 128))
+    quality = assess_image_quality(img)
+    assert quality['contrast'] < CONTRAST_THRESHOLD
+    assert quality['has_good_contrast'] == False
+
+@pytest.mark.unit
+def test_resize_if_needed_width_larger():
+    """Test resize when width is larger dimension"""
+    large_img = Image.new('RGB', (4000, 2000), color='blue')
+    resized = resize_if_needed(large_img, max_size=2048)
+    assert resized.size[0] == 2048
+    assert resized.size[1] == 1024
+
+@pytest.mark.unit
+def test_resize_if_needed_height_larger():
+    """Test resize when height is larger dimension"""
+    large_img = Image.new('RGB', (2000, 4000), color='blue')
+    resized = resize_if_needed(large_img, max_size=2048)
+    assert resized.size[0] == 1024
+    assert resized.size[1] == 2048

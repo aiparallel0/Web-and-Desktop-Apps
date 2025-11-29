@@ -13,6 +13,23 @@ logger = logging.getLogger(__name__)
 # In-memory rate limit storage (use Redis in production)
 _rate_limit_storage = {}
 
+# Import database connection at module level for better testability
+_get_db_context = None
+
+
+def _lazy_get_db_context():
+    """Lazy import of get_db_context for better testability."""
+    global _get_db_context
+    if _get_db_context is None:
+        from database.connection import get_db_context
+        _get_db_context = get_db_context
+    return _get_db_context
+
+
+def get_db_context():
+    """Get database context - wrapper for testing."""
+    return _lazy_get_db_context()()
+
 
 def require_auth(f: Callable) -> Callable:
     """
@@ -28,7 +45,6 @@ def require_auth(f: Callable) -> Callable:
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from .jwt_handler import verify_access_token
-        from database.connection import get_db_context
         from database.models import User
 
         # Get token from Authorization header
@@ -225,7 +241,6 @@ def check_usage_limit(f: Callable) -> Callable:
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        from database.connection import get_db_context
         from database.models import User
 
         user_id = g.user_id

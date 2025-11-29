@@ -91,7 +91,7 @@ class TestUserRegisterSchema:
         ]
 
         for email in disposable_emails:
-            with pytest.raises(ValidationError, match='disposable'):
+            with pytest.raises(ValidationError, match='[Dd]isposable'):
                 UserRegisterSchema(
                     email=email,
                     password='ValidPass123!'

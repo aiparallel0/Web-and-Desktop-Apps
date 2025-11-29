@@ -18,27 +18,73 @@ DATABASE_URL = os.getenv(
     'postgresql://receipt_user:receipt_pass@localhost:5432/receipt_extractor'
 )
 
-# For development, you can override with SQLite
-if os.getenv('USE_SQLITE', 'false').lower() == 'true':
-    DATABASE_URL = 'sqlite:///./receipt_extractor.db'
-    logger.warning("Using SQLite database for development. Not recommended for production!")
+# For development/testing, you can override with SQLite
+if os.getenv('USE_SQLITE', 'false').lower() == 'true' or os.getenv('TESTING', 'false').lower() == 'true':
+    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./receipt_extractor.db')
+    if not DATABASE_URL.startswith('sqlite'):
+        DATABASE_URL = 'sqlite:///./receipt_extractor.db'
+    logger.warning("Using SQLite database for development/testing. Not recommended for production!")
 
-# Create engine
-# Use NullPool for serverless/Lambda environments
-poolclass = NullPool if os.getenv('SERVERLESS', 'false').lower() == 'true' else None
+# Create engine lazily to support testing
+_engine = None
 
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=poolclass,
-    pool_pre_ping=True,  # Verify connections before using
-    echo=os.getenv('SQL_ECHO', 'false').lower() == 'true'  # Log SQL queries if SQL_ECHO=true
-)
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_engine():
+    """Get or create the database engine."""
+    global _engine
+    if _engine is None:
+        # Use NullPool for serverless/Lambda environments
+        poolclass = NullPool if os.getenv('SERVERLESS', 'false').lower() == 'true' else None
+        
+        engine_kwargs = {
+            'pool_pre_ping': True,  # Verify connections before using
+            'echo': os.getenv('SQL_ECHO', 'false').lower() == 'true'  # Log SQL queries if SQL_ECHO=true
+        }
+        
+        # Only add poolclass for non-SQLite databases
+        if poolclass and not DATABASE_URL.startswith('sqlite'):
+            engine_kwargs['poolclass'] = poolclass
+        
+        _engine = create_engine(DATABASE_URL, **engine_kwargs)
+    return _engine
+
+
+# Lazy property for backwards compatibility
+class EngineProxy:
+    """Proxy object for lazy engine initialization."""
+    def __getattr__(self, name):
+        return getattr(get_engine(), name)
+
+
+engine = EngineProxy()
+
+# Create session factory lazily
+_SessionLocal = None
+
+
+def get_session_factory():
+    """Get or create the session factory."""
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _SessionLocal
+
+
+# Module-level SessionLocal that creates session factory on first access
+class SessionLocalProxy:
+    """Proxy class that lazily creates the session factory."""
+    def __call__(self):
+        return get_session_factory()()
+    
+    def __getattr__(self, name):
+        return getattr(get_session_factory(), name)
+
+
+SessionLocal = SessionLocalProxy()
+
 
 # Create scoped session for thread safety
-db_session = scoped_session(SessionLocal)
+db_session = scoped_session(lambda: get_session_factory()())
 
 
 def init_db():
@@ -49,7 +95,7 @@ def init_db():
     For production, use proper migrations (Alembic).
     """
     logger.info("Initializing database schema...")
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=get_engine())
     logger.info("Database schema initialized successfully")
 
 
@@ -60,7 +106,7 @@ def drop_all():
     WARNING: This will delete all data! Use only for development/testing.
     """
     logger.warning("Dropping all database tables...")
-    Base.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=get_engine())
     logger.warning("All tables dropped")
 
 
@@ -81,7 +127,7 @@ def get_db():
             users = db.query(User).all()
             return users
     """
-    db = SessionLocal()
+    db = get_session_factory()()
     try:
         yield db
     finally:
@@ -98,7 +144,7 @@ def get_db_context():
             user = db.query(User).filter(User.email == email).first()
             # ... do work ...
     """
-    db = SessionLocal()
+    db = get_session_factory()()
     try:
         yield db
         db.commit()

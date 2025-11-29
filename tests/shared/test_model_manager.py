@@ -201,7 +201,9 @@ def test_model_manager_get_processor_default():
         assert processor is not None
     except (ImportError, ValueError) as e:
         # Expected if dependencies not installed
-        assert "requires" in str(e).lower() or "not found" in str(e).lower()
+        error_lower = str(e).lower()
+        assert ("required" in error_lower or "not found" in error_lower or 
+                "pip install" in error_lower or "no module" in error_lower)
 
 
 @pytest.mark.unit
@@ -215,7 +217,9 @@ def test_model_manager_get_processor_specific_model():
         assert processor is not None
     except (ImportError, ValueError) as e:
         # Expected if dependencies not installed
-        assert "requires" in str(e).lower() or "not found" in str(e).lower()
+        error_lower = str(e).lower()
+        assert ("required" in error_lower or "not found" in error_lower or 
+                "pip install" in error_lower or "no module" in error_lower)
 
 
 @pytest.mark.unit

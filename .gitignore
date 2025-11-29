@@ -82,3 +82,4 @@ htmlcov/
 test_receipts/
 temp/
 tmp/
+receipt_extractor.db

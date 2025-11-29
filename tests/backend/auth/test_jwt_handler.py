@@ -94,7 +94,7 @@ class TestCreateAccessToken:
         import time
 
         token1 = create_access_token("user-1", "user1@example.com")
-        time.sleep(0.01)  # Small delay to ensure different timestamp
+        time.sleep(1.1)  # Ensure timestamp difference (JWT iat is in seconds)
         token2 = create_access_token("user-1", "user1@example.com")
 
         assert token1 != token2
