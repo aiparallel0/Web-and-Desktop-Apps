@@ -10,7 +10,7 @@ from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
     should_skip_line, should_skip_item_name, extract_store_name, 
-    LINE_ITEM_PATTERNS
+    LINE_ITEM_PATTERNS, clean_item_name
 )
 try:
     import pytesseract
@@ -154,6 +154,8 @@ class OCRProcessor:
                 m=pattern.search(line.strip())
                 if m:
                     name=m.group(1).strip()
+                    # Apply item name cleaning for OCR corrections
+                    name=clean_item_name(name)
                     price_str=m.group(2)
                     if len(name)<3 or name in seen:
                         continue
