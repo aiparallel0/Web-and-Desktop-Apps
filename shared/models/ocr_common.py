@@ -38,10 +38,10 @@ DATE_PATTERNS = [
 ]
 
 TOTAL_PATTERNS = [
-    re.compile(r'total[:\s]*\$?\s*(\d+[.,]\d{2})', re.IGNORECASE),
-    re.compile(r'amount[:\s]*\$?\s*(\d+[.,]\d{2})', re.IGNORECASE),
-    re.compile(r'balance[:\s]*\$?\s*(\d+[.,]\d{2})', re.IGNORECASE),
-    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+[.,]\d{2})', re.IGNORECASE),
+    re.compile(r'total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
 ]
 
 PHONE_PATTERNS = [
@@ -87,16 +87,23 @@ def normalize_price(value) -> Optional[Decimal]:
         # If string has format like "1,234.56" - comma is thousands separator
         # If string has format like "12,50" - comma is decimal separator
         if ',' in price_str and '.' in price_str:
-            # Both present: assume comma is thousands separator
+            # Both present: assume comma is thousands separator, remove all commas
             price_str = price_str.replace(',', '')
         elif ',' in price_str:
             # Only comma: could be thousands or decimal separator
-            # If exactly 2 digits after comma, treat as decimal
+            comma_count = price_str.count(',')
             parts = price_str.split(',')
-            if len(parts) == 2 and len(parts[1]) == 2:
+            # If multiple commas, treat as thousands separators (e.g., "1,234,567")
+            if comma_count > 1:
+                price_str = price_str.replace(',', '')
+            # If single comma with exactly 2 digits after, treat as decimal (e.g., "12,50")
+            elif len(parts) == 2 and len(parts[1]) == 2:
                 price_str = price_str.replace(',', '.')
+            # If single comma with 3 digits after, treat as thousands separator (e.g., "1,234")
+            elif len(parts) == 2 and len(parts[1]) == 3:
+                price_str = price_str.replace(',', '')
             else:
-                # Otherwise treat comma as thousands separator
+                # Default: remove comma as thousands separator
                 price_str = price_str.replace(',', '')
         val = Decimal(price_str)
         return val if PRICE_MIN <= val <= PRICE_MAX else None

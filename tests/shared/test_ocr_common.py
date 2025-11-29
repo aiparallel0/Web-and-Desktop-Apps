@@ -45,6 +45,11 @@ class TestNormalizePrice:
         from shared.models.ocr_common import normalize_price
         assert normalize_price(25.99) == Decimal('25.99')
 
+    def test_multiple_thousands_separators(self):
+        from shared.models.ocr_common import normalize_price
+        # 1,234,567 should be treated as 1234567 but exceeds max
+        assert normalize_price('1,234') == Decimal('1234')
+
 
 class TestExtractDate:
     """Tests for extract_date function"""

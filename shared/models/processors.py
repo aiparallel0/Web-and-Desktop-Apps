@@ -1,11 +1,27 @@
-import logging,time
-from typing import Dict,Optional
+import os,sys,re,logging,time
+from decimal import Decimal
+from typing import Dict,List,Optional
 from abc import ABC,abstractmethod
+sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
+from utils.data_structures import LineItem,ReceiptData,ExtractionResult
+from .ocr_common import (
+    SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
+    extract_date, extract_total, extract_phone, extract_address,
+    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS
+)
+try:
+    import easyocr
+except ImportError:
+    easyocr=None
+
 logger=logging.getLogger(__name__)
+
 class ProcessorInitializationError(Exception):
     pass
+
 class ProcessorHealthCheckError(Exception):
     pass
+
 class BaseProcessor(ABC):
     def __init__(self,model_config:Dict):
         self.model_config,self.model_name,self.model_id=model_config,model_config.get('name','unknown'),model_config.get('id','unknown')
@@ -44,21 +60,6 @@ class BaseProcessor(ABC):
         self.last_health_check=time.time()
     def get_status(self)->Dict:
         return{'model_name':self.model_name,'model_id':self.model_id,'initialized':self.initialized,'initialization_error':self.initialization_error,'last_health_check':self.last_health_check,'healthy':self._health_check()if self.initialized else False}
-import os,sys,re,logging,time
-from decimal import Decimal
-from typing import Dict,List,Optional
-sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
-from utils.data_structures import LineItem,ReceiptData,ExtractionResult
-from .ocr_common import (
-    SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
-    extract_date, extract_total, extract_phone, extract_address,
-    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS
-)
-try:
-    import easyocr
-except ImportError:
-    easyocr=None
-logger=logging.getLogger(__name__)
 
 class EasyOCRProcessor:
 

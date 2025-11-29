@@ -8,9 +8,9 @@ from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,preprocess_for_ocr
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
-    extract_date, extract_phone, extract_address,
+    extract_date, extract_total, extract_phone, extract_address,
     should_skip_line, should_skip_item_name, extract_store_name, 
-    LINE_ITEM_PATTERNS, TOTAL_PATTERNS
+    LINE_ITEM_PATTERNS
 )
 try:
     import pytesseract
@@ -139,16 +139,7 @@ class OCRProcessor:
         if not lines:return receipt
         receipt.store_name=extract_store_name(lines)
         receipt.transaction_date=extract_date(lines)
-        # Use TOTAL_PATTERNS for extraction
-        for pattern in TOTAL_PATTERNS:
-            for line in lines:
-                m=pattern.search(line)
-                if m:
-                    price=normalize_price(m.group(1))
-                    if price and price>0:
-                        receipt.total=price
-                        break
-            if receipt.total:break
+        receipt.total=extract_total(lines)
         receipt.items=self._extract_line_items(lines)
         receipt.store_address=extract_address(lines)
         receipt.store_phone=extract_phone(lines)
