@@ -7,16 +7,28 @@ Comprehensive test suite for the Receipt Extractor application using pytest.
 ```
 tests/
 ├── __init__.py
-├── conftest.py           # Shared fixtures and configuration
-├── shared/               # Tests for shared modules
-│   ├── test_model_manager.py
-│   ├── test_image_processing.py
-│   └── test_ocr_processor.py
-├── web/                  # Tests for web application
+├── conftest.py                    # Shared fixtures and configuration
+├── test_system_health.py          # System health and dependency checks
+├── shared/                        # Tests for shared modules
+│   ├── test_centralized_logging.py  # Tests for logging utilities
+│   ├── test_config.py              # Tests for configuration
+│   ├── test_errors.py              # Tests for error handling
+│   ├── test_florence_processor.py   # Tests for Florence-2 processor
+│   ├── test_ocr_common.py          # Tests for OCR common utilities
+│   ├── test_processors.py          # Tests for OCR processors (EasyOCR, Paddle, Donut)
+│   └── test_shared.py              # General shared module tests
+├── backend/                       # Tests for web backend
+│   ├── test_api_db.py              # Database API tests
+│   ├── test_app.py                 # Flask app tests
+│   └── test_auth_validation.py     # Authentication tests
+├── web/                           # Tests for web API endpoints
 │   └── test_api.py
-├── desktop/              # Tests for desktop application
-│   └── (future tests)
-└── README.md            # This file
+├── circular_exchange/             # Tests for circular exchange module
+│   ├── test_change_notifier.py
+│   ├── test_circular_exchange.py
+│   ├── test_dependency_registry.py
+│   └── test_variable_package.py
+└── README.md                      # This file
 ```
 
 ## Installation
@@ -252,22 +264,30 @@ See [test_data/README.md](../test_data/README.md) for details.
 
 - ✅ Test infrastructure set up
 - ✅ Basic configuration tests
-- ⬜ Model manager tests (placeholder)
-- ⬜ Image processing tests (placeholder)
-- ⬜ OCR processor tests (placeholder)
-- ⬜ API endpoint tests (placeholder)
+- ✅ OCR common utilities tests
+- ✅ Processor tests (EasyOCR, Paddle, Donut)
+- ✅ Florence-2 processor tests
+- ✅ Error handling tests
+- ✅ Centralized logging tests
+- ✅ Circular exchange module tests
+- ✅ Web API tests
+- ✅ Backend app and auth tests
+- ⬜ Image processing utilities tests
+- ⬜ Data structures tests
+- ⬜ Logger tests
 - ⬜ Desktop app tests (placeholder)
 
 ## Next Steps
 
 1. ✅ Set up pytest infrastructure
-2. ⬜ Implement model manager tests
-3. ⬜ Implement image processing tests
-4. ⬜ Implement OCR processor tests
-5. ⬜ Implement API tests
-6. ⬜ Add integration tests with sample data
-7. ⬜ Set up CI/CD pipeline
-8. ⬜ Achieve 75%+ code coverage
+2. ✅ Implement OCR processor tests
+3. ✅ Implement API tests
+4. ⬜ Add image processing utility tests
+5. ⬜ Add data structures tests
+6. ⬜ Add logger tests
+7. ⬜ Add integration tests with sample data
+8. ⬜ Set up CI/CD pipeline
+9. ⬜ Achieve 75%+ code coverage
 
 ## Resources
 
