@@ -23,6 +23,12 @@ def __getattr__(name):
     elif name == 'OCRProcessor':
         from .ocr_processor import OCRProcessor
         return OCRProcessor
+    elif name == 'normalize_price':
+        from .ocr_common import normalize_price
+        return normalize_price
+    elif name == 'SKIP_KEYWORDS':
+        from .ocr_common import SKIP_KEYWORDS
+        return SKIP_KEYWORDS
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -31,5 +37,7 @@ __all__ = [
     'PaddleProcessor',
     'DonutProcessor',
     'ModelManager',
-    'OCRProcessor'
+    'OCRProcessor',
+    'normalize_price',
+    'SKIP_KEYWORDS'
 ]

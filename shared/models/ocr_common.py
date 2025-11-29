@@ -1,0 +1,454 @@
+"""
+Common OCR processing utilities shared across all OCR processors.
+
+This module provides:
+- Pre-compiled regex patterns for efficient matching
+- Shared constants like SKIP_KEYWORDS
+- Common price normalization function
+- Reusable text extraction utilities
+- Text post-processing and cleaning utilities
+"""
+import re
+from decimal import Decimal
+from typing import Optional, List, Tuple
+
+# Price validation constants
+PRICE_MIN = Decimal('0')
+PRICE_MAX = Decimal('9999')
+
+# Keywords to skip when extracting line items
+SKIP_KEYWORDS = frozenset({
+    'subtotal', 'total', 'cash', 'change', 'tax', 'payment', 'balance',
+    'thank', 'visit', 'welcome', 'receipt', 'cashier', 'card', 'debit',
+    'credit', 'approved', 'transaction', 'visa', 'mastercard', 'amex'
+})
+
+# Additional keywords to skip in item names (store info, hours, etc.)
+ITEM_SKIP_PATTERNS = frozenset({
+    'store', 'thank', 'visit', 'phone', 'fax', 'email', 
+    'open', 'hours', 'daily', 'am', 'pm'
+})
+
+# Pre-compiled regex patterns for performance
+# Order matters - more specific patterns first
+DATE_PATTERNS = [
+    re.compile(r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})'),  # ISO format: 2024-01-15
+    re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{4})'),  # US format with 4-digit year: 12/25/2024
+    re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2})'),  # US format with 2-digit year: 12/25/24
+    re.compile(r'(\w{3}\s+\d{1,2},?\s+\d{4})'),    # Month format: Jan 15, 2024
+]
+
+TOTAL_PATTERNS = [
+    re.compile(r'total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+]
+
+PHONE_PATTERNS = [
+    re.compile(r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'),
+    re.compile(r'(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})'),
+]
+
+LINE_ITEM_PATTERNS = [
+    re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*$'),
+    re.compile(r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$'),
+]
+
+# Address keywords for detection
+ADDRESS_KEYWORDS = frozenset({
+    'st', 'ave', 'rd', 'blvd', 'lane', 'drive', 'street',
+    'avenue', 'way', 'plaza', 'court', 'circle'
+})
+
+# Common OCR error corrections (character substitutions)
+OCR_CORRECTIONS = {
+    '0': 'O',  # Zero vs letter O
+    'O': '0',
+    '1': 'I',  # One vs letter I
+    'I': '1',
+    'l': '1',  # lowercase L vs one
+    '5': 'S',  # Five vs letter S
+    'S': '5',
+    '8': 'B',  # Eight vs letter B
+    'B': '8',
+}
+
+# Common word corrections for OCR errors
+WORD_CORRECTIONS = {
+    'tota1': 'total',
+    't0tal': 'total',
+    'subt0tal': 'subtotal',
+    'subtota1': 'subtotal',
+    'ca5h': 'cash',
+    'chang3': 'change',
+    'rec3ipt': 'receipt',
+    'reciept': 'receipt',
+    'receiept': 'receipt',
+}
+
+
+def normalize_price(value) -> Optional[Decimal]:
+    """
+    Normalize a price value to a Decimal.
+    
+    Handles various price formats:
+    - $25.99
+    - 1,234.56 (US format with comma as thousand separator)
+    - 12,50 (European format with comma as decimal separator)
+    
+    Args:
+        value: Price value (string, number, or None)
+        
+    Returns:
+        Decimal price or None if invalid
+    """
+    if value is None:
+        return None
+    try:
+        price_str = str(value).replace('$', '').replace(' ', '').strip()
+        if not price_str or price_str.startswith('-'):
+            return None
+        # Handle thousands separator vs decimal separator
+        # If string has format like "1,234.56" - comma is thousands separator
+        # If string has format like "12,50" - comma is decimal separator (European)
+        if ',' in price_str and '.' in price_str:
+            # Both present: assume comma is thousands separator, remove all commas
+            price_str = price_str.replace(',', '')
+        elif ',' in price_str:
+            # Only comma: could be thousands or decimal separator
+            comma_count = price_str.count(',')
+            parts = price_str.split(',')
+            
+            # Validate proper thousands separator format (groups of 3)
+            if comma_count > 1:
+                # Multiple commas: validate each segment has 3 digits
+                # e.g., "1,234,567" -> valid, "1,23,4" -> invalid
+                is_valid_thousands = (
+                    len(parts[0]) >= 1 and 
+                    all(len(p) == 3 for p in parts[1:])
+                )
+                if is_valid_thousands:
+                    price_str = price_str.replace(',', '')
+                else:
+                    return None  # Invalid format
+            # If single comma with exactly 2 digits after, treat as decimal (e.g., "12,50")
+            elif len(parts) == 2 and len(parts[1]) == 2:
+                price_str = price_str.replace(',', '.')
+            # If single comma with exactly 3 digits after, treat as thousands separator (e.g., "1,234")
+            elif len(parts) == 2 and len(parts[1]) == 3:
+                price_str = price_str.replace(',', '')
+            else:
+                # Ambiguous format - could be European decimal or invalid thousands
+                # Default: treat as invalid to avoid incorrect conversions
+                return None
+        val = Decimal(price_str)
+        return val if PRICE_MIN <= val <= PRICE_MAX else None
+    except (ValueError, ArithmeticError):
+        return None
+
+
+def extract_date(lines: list) -> Optional[str]:
+    """
+    Extract date from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Date string or None
+    """
+    for line in lines:
+        for pattern in DATE_PATTERNS:
+            match = pattern.search(line)
+            if match:
+                return match.group(1)
+    return None
+
+
+def extract_total(lines: list) -> Optional[Decimal]:
+    """
+    Extract total amount from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Decimal total or None
+    """
+    for pattern in TOTAL_PATTERNS:
+        for line in lines:
+            match = pattern.search(line)
+            if match:
+                total_str = match.group(1).replace(',', '.')
+                total_val = normalize_price(total_str)
+                if total_val:
+                    return total_val
+    return None
+
+
+def extract_phone(lines: list) -> Optional[str]:
+    """
+    Extract phone number from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Phone number string or None
+    """
+    for line in lines:
+        for pattern in PHONE_PATTERNS:
+            match = pattern.search(line)
+            if match:
+                return match.group(1)
+    return None
+
+
+def extract_address(lines: list, start_index: int = 1, end_index: int = 8) -> Optional[str]:
+    """
+    Extract address from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        start_index: Start index to search from
+        end_index: End index to search until
+        
+    Returns:
+        Address string or None
+    """
+    for line in lines[start_index:end_index]:
+        line_lower = line.lower()
+        if any(kw in line_lower for kw in ADDRESS_KEYWORDS) and any(c.isdigit() for c in line):
+            return line
+    return None
+
+
+def should_skip_line(line: str) -> bool:
+    """
+    Check if a line should be skipped when extracting items.
+    
+    Args:
+        line: Text line to check
+        
+    Returns:
+        True if line should be skipped
+    """
+    line_lower = line.lower()
+    return any(kw in line_lower for kw in SKIP_KEYWORDS)
+
+
+def should_skip_item_name(name: str) -> bool:
+    """
+    Check if an item name contains patterns that indicate it's not a product.
+    
+    Args:
+        name: Item name to check
+        
+    Returns:
+        True if name should be skipped
+    """
+    name_lower = name.lower()
+    return any(pattern in name_lower for pattern in ITEM_SKIP_PATTERNS)
+
+
+def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
+    """
+    Extract store name from the first few lines.
+    
+    Args:
+        lines: List of text lines
+        max_lines: Maximum lines to search
+        
+    Returns:
+        Store name or None
+    """
+    for line in lines[:max_lines]:
+        line = line.strip()
+        if len(line) >= 2 and not line.isdigit():
+            return line
+    return lines[0] if lines else None
+
+
+def clean_ocr_text(text: str) -> str:
+    """
+    Clean and correct common OCR errors in text.
+    
+    Args:
+        text: Raw OCR text
+        
+    Returns:
+        Cleaned text with common errors corrected
+    """
+    if not text:
+        return text
+    
+    # Apply word-level corrections
+    cleaned = text
+    for wrong, correct in WORD_CORRECTIONS.items():
+        cleaned = re.sub(rf'\b{wrong}\b', correct, cleaned, flags=re.IGNORECASE)
+    
+    # Remove excessive whitespace
+    cleaned = ' '.join(cleaned.split())
+    
+    # Fix common punctuation issues
+    cleaned = re.sub(r'\s+([.,;:!?])', r'\1', cleaned)  # Remove space before punctuation
+    cleaned = re.sub(r'([.,;:!?])(?=[^\s\d])', r'\1 ', cleaned)  # Add space after punctuation
+    
+    return cleaned.strip()
+
+
+def merge_text_lines(lines: List[str], threshold: float = 0.8) -> List[str]:
+    """
+    Merge text lines that likely belong together.
+    
+    Uses heuristics to combine lines that were split incorrectly by OCR.
+    
+    Args:
+        lines: List of text lines
+        threshold: Similarity threshold for merging
+        
+    Returns:
+        Merged list of text lines
+    """
+    if not lines or len(lines) < 2:
+        return lines
+    
+    merged = []
+    current_line = lines[0]
+    
+    for next_line in lines[1:]:
+        # Check if lines should be merged
+        should_merge = False
+        
+        # Case 1: Current line ends without sentence-ending punctuation
+        # and next line starts with lowercase
+        if (current_line and not current_line.rstrip()[-1:] in '.!?:' 
+            and next_line and next_line[0].islower()):
+            should_merge = True
+        
+        # Case 2: Current line is very short (likely partial)
+        if len(current_line.strip()) < 10 and not current_line.rstrip()[-1:] in '.!?:':
+            should_merge = True
+        
+        if should_merge:
+            current_line = current_line.rstrip() + ' ' + next_line.lstrip()
+        else:
+            merged.append(current_line)
+            current_line = next_line
+    
+    merged.append(current_line)
+    return merged
+
+
+def calculate_text_confidence(text: str, raw_confidence: float = 1.0) -> float:
+    """
+    Calculate adjusted confidence score for extracted text.
+    
+    Considers factors like:
+    - Raw OCR confidence
+    - Text coherence (word patterns)
+    - Character validity
+    
+    Args:
+        text: Extracted text
+        raw_confidence: Raw confidence from OCR engine
+        
+    Returns:
+        Adjusted confidence score (0.0 to 1.0)
+    """
+    if not text:
+        return 0.0
+    
+    confidence = raw_confidence
+    
+    # Penalize for excessive special characters
+    special_ratio = sum(1 for c in text if not c.isalnum() and not c.isspace()) / max(len(text), 1)
+    if special_ratio > 0.3:
+        confidence *= 0.7
+    
+    # Penalize for very short text
+    if len(text) < 3:
+        confidence *= 0.5
+    
+    # Boost for recognizable word patterns
+    word_count = len(text.split())
+    if word_count >= 2:
+        confidence *= 1.1
+    
+    # Cap at 1.0
+    return min(confidence, 1.0)
+
+
+def extract_email(lines: list) -> Optional[str]:
+    """
+    Extract email address from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Email address or None
+    """
+    email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+    for line in lines:
+        match = email_pattern.search(line)
+        if match:
+            return match.group(0)
+    return None
+
+
+def extract_url(lines: list) -> Optional[str]:
+    """
+    Extract URL from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        URL or None
+    """
+    url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')
+    for line in lines:
+        match = url_pattern.search(line)
+        if match:
+            return match.group(0)
+    return None
+
+
+def detect_language_hint(text: str) -> str:
+    """
+    Detect language hint from text content.
+    
+    Simple heuristic-based detection for common languages.
+    
+    Args:
+        text: Text to analyze
+        
+    Returns:
+        Language code hint (e.g., 'en', 'es', 'fr')
+    """
+    text_lower = text.lower()
+    
+    # Spanish indicators
+    spanish_words = {'el', 'la', 'de', 'que', 'en', 'un', 'es', 'por', 'con', 'para'}
+    # French indicators
+    french_words = {'le', 'la', 'de', 'et', 'en', 'un', 'est', 'que', 'pour', 'dans'}
+    # German indicators
+    german_words = {'der', 'die', 'und', 'ist', 'von', 'ein', 'mit', 'auf', 'für'}
+    
+    words = set(text_lower.split())
+    
+    spanish_count = len(words & spanish_words)
+    french_count = len(words & french_words)
+    german_count = len(words & german_words)
+    
+    if spanish_count > french_count and spanish_count > german_count and spanish_count >= 2:
+        return 'es'
+    if french_count > spanish_count and french_count > german_count and french_count >= 2:
+        return 'fr'
+    if german_count > spanish_count and german_count > french_count and german_count >= 2:
+        return 'de'
+    
+    return 'en'  # Default to English

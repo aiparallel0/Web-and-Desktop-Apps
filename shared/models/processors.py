@@ -1,11 +1,27 @@
-import logging,time
-from typing import Dict,Optional
+import os,sys,re,logging,time
+from decimal import Decimal
+from typing import Dict,List,Optional
 from abc import ABC,abstractmethod
+sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
+from utils.data_structures import LineItem,ReceiptData,ExtractionResult
+from .ocr_common import (
+    SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
+    extract_date, extract_total, extract_phone, extract_address,
+    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS
+)
+try:
+    import easyocr
+except ImportError:
+    easyocr=None
+
 logger=logging.getLogger(__name__)
+
 class ProcessorInitializationError(Exception):
     pass
+
 class ProcessorHealthCheckError(Exception):
     pass
+
 class BaseProcessor(ABC):
     def __init__(self,model_config:Dict):
         self.model_config,self.model_name,self.model_id=model_config,model_config.get('name','unknown'),model_config.get('id','unknown')
@@ -44,20 +60,8 @@ class BaseProcessor(ABC):
         self.last_health_check=time.time()
     def get_status(self)->Dict:
         return{'model_name':self.model_name,'model_id':self.model_id,'initialized':self.initialized,'initialization_error':self.initialization_error,'last_health_check':self.last_health_check,'healthy':self._health_check()if self.initialized else False}
-import os,sys,re,logging,time
-from decimal import Decimal
-from typing import Dict,List,Optional
-sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
-from utils.data_structures import LineItem,ReceiptData,ExtractionResult
-try:
-    import easyocr
-except ImportError:
-    easyocr=None
-logger=logging.getLogger(__name__)
-PRICE_MIN,PRICE_MAX=0,9999
 
 class EasyOCRProcessor:
-    SKIP_KEYWORDS={'subtotal','total','cash','change','tax','payment','balance','thank','visit','welcome','receipt','cashier','card','debit','credit','approved','transaction'}
 
     def __init__(self,model_config:Dict):
         self.model_config=model_config
@@ -103,84 +107,37 @@ class EasyOCRProcessor:
         if not text_lines:
             receipt.extraction_notes.append("No text")
             return receipt
-        receipt.store_name=None
-        for line in text_lines[:5]:
-            line=line.strip()
-            if len(line)>=2 and not line.isdigit():
-                receipt.store_name=line
-                break
-        if not receipt.store_name and text_lines:
-            receipt.store_name=text_lines[0]
-        date_pattern=r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-        for line in text_lines:
-            m=re.search(date_pattern,line)
-            if m:
-                receipt.transaction_date=m.group(1)
-                break
-        total_patterns=[r'total[:\s]*\$?\s*(\d+\.?\d{0,2})',r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})',r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})',r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})']
-        for line in text_lines:
-            for pattern in total_patterns:
-                m=re.search(pattern,line,re.IGNORECASE)
-                if m:
-                    price_str=m.group(1)
-                    price=self._normalize_price(price_str)
-                    if price and price>0:
-                        receipt.total=price
-                        break
-            if receipt.total:break
+        receipt.store_name=extract_store_name(text_lines)
+        receipt.transaction_date=extract_date(text_lines)
+        receipt.total=extract_total(text_lines)
         receipt.items=self._extract_line_items(text_lines)
-        addr_kw=['st','ave','rd','blvd','lane','drive','street','avenue']
-        for line in text_lines[1:8]:
-            ll=line.lower()
-            if any(kw in ll for kw in addr_kw) and any(c.isdigit() for c in line):
-                receipt.store_address=line
-                break
-        phone_pattern=r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
-        for line in text_lines:
-            m=re.search(phone_pattern,line)
-            if m:
-                receipt.store_phone=m.group(1)
-                break
+        receipt.store_address=extract_address(text_lines)
+        receipt.store_phone=extract_phone(text_lines)
         return receipt
 
     def _extract_line_items(self,lines:List[str])->List[LineItem]:
         items,seen=[],set()
-        patterns=[r'^(.+?)\s+\$?\s*(\d+\.?\d{0,2})$',r'^(.+?)\s+(\d+\.?\d{0,2})\s*$']
         for line in lines:
-            ll=line.lower()
-            if any(kw in ll for kw in self.SKIP_KEYWORDS):continue
-            for pattern in patterns:
-                m=re.search(pattern,line.strip())
+            if should_skip_line(line):
+                continue
+            for pattern in LINE_ITEM_PATTERNS:
+                m=pattern.search(line.strip())
                 if m:
                     name=m.group(1).strip()
                     price_str=m.group(2)
-                    if len(name)<2 or name in seen:continue
-                    price=self._normalize_price(price_str)
-                    if not price or price<=0:continue
+                    if len(name)<2 or name in seen:
+                        continue
+                    price=normalize_price(price_str)
+                    if not price or price<=0:
+                        continue
                     items.append(LineItem(name=name,total_price=price,quantity=1))
                     seen.add(name)
                     break
         return items
 
-    @staticmethod
-    def _normalize_price(value)->Optional[Decimal]:
-        if value is None:return None
-        try:
-            price_str=str(value).replace('$','').replace(',','').strip()
-            if not price_str or price_str.startswith('-'):return None
-            val=Decimal(price_str)
-            return val if PRICE_MIN<=val<=PRICE_MAX else None
-        except (ValueError,ArithmeticError):return None
-import os,sys,re,logging,time
-from decimal import Decimal
-from typing import Dict,List,Optional
-from PIL import Image
 import numpy as np
-sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
-from utils.data_structures import LineItem,ReceiptData,ExtractionResult
+from PIL import Image
 from utils.image_processing import load_and_validate_image,preprocess_for_ocr
-
-logger=logging.getLogger(__name__)
 
 # Lazy import to allow mocking in tests
 PaddleOCR = None
@@ -195,10 +152,7 @@ def _get_paddleocr():
             raise ImportError("paddleocr required: pip install paddleocr")
     return PaddleOCR
 
-PRICE_MIN,PRICE_MAX=0,9999
-
 class PaddleProcessor:
-    SKIP_KEYWORDS={'subtotal','total','cash','change','tax','payment','balance','thank','visit','welcome','receipt','cashier','card','debit','credit','approved','transaction','visa','mastercard','amex'}
 
     def __init__(self,model_config:Dict):
         self.model_config=model_config
@@ -276,72 +230,43 @@ class PaddleProcessor:
             receipt.extraction_notes.append("No text")
             return receipt
         lines=[l['text'].strip() for l in text_lines]
-        receipt.store_name=None
-        for i,line in enumerate(lines[:5]):
-            if len(line)>=2 and not line.isdigit():
-                receipt.store_name=line
-                logger.info(f"Store: {line}")
-                break
-        if not receipt.store_name and lines:
-            receipt.store_name=lines[0]
-            if len(receipt.store_name)<2:receipt.extraction_notes.append(f"Short name: '{receipt.store_name}'")
-        date_patterns=[r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',r'(\w{3}\s+\d{1,2},?\s+\d{4})']
-        for line in lines:
-            for pattern in date_patterns:
-                dm=re.search(pattern,line)
-                if dm:
-                    receipt.transaction_date=dm.group(1)
-                    logger.info(f"Date: {receipt.transaction_date}")
-                    break
-            if receipt.transaction_date:break
-        total_patterns=[r'total[:\s]*\$?\s*(\d+[.,]\d{2})',r'amount[:\s]*\$?\s*(\d+[.,]\d{2})',r'balance[:\s]*\$?\s*(\d+[.,]\d{2})',r'grand\s*total[:\s]*\$?\s*(\d+[.,]\d{2})']
-        for pattern in total_patterns:
-            for line in lines:
-                m=re.search(pattern,line,re.IGNORECASE)
-                if m:
-                    total_str=m.group(1).replace(',','.')
-                    total_val=self._normalize_price(total_str)
-                    if total_val:
-                        receipt.total=total_val
-                        logger.info(f"Total: {receipt.total}")
-                        break
-            if receipt.total:break
+        receipt.store_name=extract_store_name(lines)
+        if receipt.store_name and len(receipt.store_name)<2:
+            receipt.extraction_notes.append(f"Short name: '{receipt.store_name}'")
+        receipt.transaction_date=extract_date(lines)
+        if receipt.transaction_date:
+            logger.info(f"Date: {receipt.transaction_date}")
+        receipt.total=extract_total(lines)
+        if receipt.total:
+            logger.info(f"Total: {receipt.total}")
         receipt.items=self._extract_line_items(lines,text_lines)
-        addr_kw=['st','ave','rd','blvd','lane','drive','street','avenue','way','plaza']
-        for line in lines[1:8]:
-            ll=line.lower()
-            if any(kw in ll for kw in addr_kw) and any(c.isdigit() for c in line):
-                receipt.store_address=line
-                logger.info(f"Address: {line}")
-                break
-        phone_patterns=[r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})',r'(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})']
-        for line in lines:
-            for pattern in phone_patterns:
-                pm=re.search(pattern,line)
-                if pm:
-                    receipt.store_phone=pm.group(1)
-                    logger.info(f"Phone: {receipt.store_phone}")
-                    break
-            if receipt.store_phone:break
+        receipt.store_address=extract_address(lines)
+        if receipt.store_address:
+            logger.info(f"Address: {receipt.store_address}")
+        receipt.store_phone=extract_phone(lines)
+        if receipt.store_phone:
+            logger.info(f"Phone: {receipt.store_phone}")
         return receipt
 
     def _extract_line_items(self,lines:List[str],text_lines:List[Dict])->List[LineItem]:
         items,seen=[],set()
-        patterns=[r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$',r'^(.+?)\s+(\d+[.,]\d{2})\s*$',r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$']
         for i,line in enumerate(lines):
-            ll=line.lower()
-            if any(kw in ll for kw in self.SKIP_KEYWORDS):continue
+            if should_skip_line(line):
+                continue
             matched=False
-            for pattern in patterns:
-                m=re.search(pattern,line.strip())
+            for pattern in LINE_ITEM_PATTERNS:
+                m=pattern.search(line.strip())
                 if m:
                     name=m.group(1).strip()
                     price_str=m.group(2).replace(',','.')
-                    if len(name)<2 or name in seen or name.replace(' ','').isdigit():continue
-                    price=self._normalize_price(price_str)
-                    if not price:continue
+                    if len(name)<2 or name in seen or name.replace(' ','').isdigit():
+                        continue
+                    price=normalize_price(price_str)
+                    if not price:
+                        continue
                     conf=text_lines[i].get('confidence') if i<len(text_lines) else None
-                    if conf and conf<0.4:continue
+                    if conf and conf<0.4:
+                        continue
                     items.append(LineItem(name=name,total_price=price))
                     seen.add(name)
                     matched=True
@@ -350,23 +275,13 @@ class PaddleProcessor:
                 pm=re.search(r'\$?\s*(\d+[.,]\d{2})(?!\d)',line)
                 if pm:
                     price_str=pm.group(1).replace(',','.')
-                    price=self._normalize_price(price_str)
+                    price=normalize_price(price_str)
                     if price:
                         name_part=line[:pm.start()].strip()
                         name_part=re.sub(r'^\d+\s*[x*]\s*','',name_part).strip()
                         if len(name_part)>=2 and name_part not in seen:
-                            if not any(kw in name_part.lower() for kw in self.SKIP_KEYWORDS):
+                            if not should_skip_line(name_part):
                                 items.append(LineItem(name=name_part,total_price=price))
                                 seen.add(name_part)
         logger.info(f"Extracted {len(items)} items")
         return items
-
-    @staticmethod
-    def _normalize_price(value)->Optional[Decimal]:
-        if value is None:return None
-        try:
-            price_str=str(value).replace('$','').replace(',','.').replace(' ','').strip()
-            if price_str.startswith('-'):return None
-            val=Decimal(price_str)
-            return val if PRICE_MIN<=val<=PRICE_MAX else None
-        except (ValueError,ArithmeticError):return None
