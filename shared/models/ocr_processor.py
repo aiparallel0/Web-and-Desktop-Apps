@@ -6,15 +6,18 @@ import cv2,numpy as np
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,preprocess_for_ocr
+from .ocr_common import (
+    SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
+    extract_date, extract_phone, extract_address,
+    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, TOTAL_PATTERNS
+)
 try:
     import pytesseract
 except ImportError:
     raise ImportError("pytesseract required: pip install pytesseract")
 logger=logging.getLogger(__name__)
-PRICE_MIN,PRICE_MAX=0,9999
 
 class OCRProcessor:
-    SKIP_KEYWORDS={'subtotal','total','cash','change','tax','payment','balance','thank','visit','welcome','receipt','cashier','card','debit','credit','approved','transaction'}
 
     def __init__(self,model_config:Dict):
         self.model_config=model_config
@@ -133,72 +136,48 @@ class OCRProcessor:
         receipt=ReceiptData()
         lines=[line.strip() for line in text.split('\n') if line.strip()]
         if not lines:return receipt
-        for line in lines[:5]:
-            if len(line)>=3 and not line.isdigit():
-                receipt.store_name=line
-                break
-        date_pattern=r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-        for line in lines:
-            m=re.search(date_pattern,line)
-            if m:
-                receipt.transaction_date=m.group(1)
-                break
-        total_patterns=[r'total[:\s]*\$?\s*(\d+\.?\d{0,2})',r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})',r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})',r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})']
-        for line in lines:
-            for pattern in total_patterns:
-                m=re.search(pattern,line,re.IGNORECASE)
+        receipt.store_name=extract_store_name(lines)
+        receipt.transaction_date=extract_date(lines)
+        # Use TOTAL_PATTERNS for extraction
+        for pattern in TOTAL_PATTERNS:
+            for line in lines:
+                m=pattern.search(line)
                 if m:
-                    price=self._normalize_price(m.group(1))
+                    price=normalize_price(m.group(1))
                     if price and price>0:
                         receipt.total=price
                         break
             if receipt.total:break
         receipt.items=self._extract_line_items(lines)
-        addr_kw=['st','ave','rd','blvd','lane','drive','street','avenue']
-        for line in lines[1:8]:
-            ll=line.lower()
-            if any(kw in ll for kw in addr_kw) and any(c.isdigit() for c in line):
-                receipt.store_address=line
-                break
-        phone_pattern=r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})'
-        for line in lines:
-            m=re.search(phone_pattern,line)
-            if m:
-                receipt.store_phone=m.group(1)
-                break
+        receipt.store_address=extract_address(lines)
+        receipt.store_phone=extract_phone(lines)
         return receipt
 
     def _extract_line_items(self,lines:List[str])->List[LineItem]:
         items,seen=[],set()
-        patterns=[r'^(.+?)\s+\$?\s*(\d+\.?\d{0,2})$',r'^(.+?)\s+(\d+\.?\d{0,2})\s*$']
+        skip_patterns=['store','thank','visit','phone','fax','email','open','hours','daily','am','pm']
         for line in lines:
-            ll=line.lower()
-            if any(kw in ll for kw in self.SKIP_KEYWORDS):continue
-            for pattern in patterns:
-                m=re.search(pattern,line.strip())
+            if should_skip_line(line):
+                continue
+            for pattern in LINE_ITEM_PATTERNS:
+                m=pattern.search(line.strip())
                 if m:
                     name=m.group(1).strip()
                     price_str=m.group(2)
-                    if len(name)<3 or name in seen:continue
+                    if len(name)<3 or name in seen:
+                        continue
                     alphas=sum(1 for c in name if c.isalpha())
                     digits=sum(1 for c in name if c.isdigit())
-                    if digits>alphas:continue
-                    if len(name)<5 and not name.replace(' ','').isalpha():continue
-                    price=self._normalize_price(price_str)
-                    if not price or price<=0 or price>1000:continue
-                    skip_patterns=['store','thank','visit','phone','fax','email','open','hours','daily','am','pm']
-                    if any(skip in name.lower() for skip in skip_patterns):continue
+                    if digits>alphas:
+                        continue
+                    if len(name)<5 and not name.replace(' ','').isalpha():
+                        continue
+                    price=normalize_price(price_str)
+                    if not price or price<=0 or price>1000:
+                        continue
+                    if any(skip in name.lower() for skip in skip_patterns):
+                        continue
                     items.append(LineItem(name=name,total_price=price,quantity=1))
                     seen.add(name)
                     break
         return items
-
-    @staticmethod
-    def _normalize_price(value)->Optional[Decimal]:
-        if value is None:return None
-        try:
-            price_str=str(value).replace('$','').replace(',','').strip()
-            if not price_str or price_str.startswith('-'):return None
-            val=Decimal(price_str)
-            return val if PRICE_MIN<=val<=PRICE_MAX else None
-        except (ValueError,ArithmeticError):return None
