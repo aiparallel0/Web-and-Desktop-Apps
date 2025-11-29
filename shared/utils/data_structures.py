@@ -40,7 +40,7 @@ from __future__ import annotations
 from typing import List, Dict, Optional, Any, Callable
 from dataclasses import dataclass, field, asdict
 from decimal import Decimal, InvalidOperation
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 import logging
@@ -238,7 +238,7 @@ class ReceiptData:
     processing_time: float = 0.0
     
     # Audit Trail
-    extracted_at: Optional[str] = field(default_factory=lambda: datetime.utcnow().isoformat())
+    extracted_at: Optional[str] = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     raw_text: Optional[str] = None
     
     def add_item(self, item: LineItem) -> None:
