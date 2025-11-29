@@ -56,7 +56,7 @@ class ExtractionStatus(Enum):
     PENDING = "pending"
 
 
-@dataclass(frozen=False)
+@dataclass
 class LineItem:
     """
     Value Object representing a single line item on a receipt.
@@ -86,16 +86,16 @@ class LineItem:
         # Ensure total_price is Decimal
         if not isinstance(self.total_price, Decimal):
             try:
-                object.__setattr__(self, 'total_price', Decimal(str(self.total_price)))
+                self.total_price = Decimal(str(self.total_price))
             except (InvalidOperation, TypeError):
-                object.__setattr__(self, 'total_price', Decimal('0'))
+                self.total_price = Decimal('0')
         
         # Ensure unit_price is Decimal if provided
         if self.unit_price is not None and not isinstance(self.unit_price, Decimal):
             try:
-                object.__setattr__(self, 'unit_price', Decimal(str(self.unit_price)))
+                self.unit_price = Decimal(str(self.unit_price))
             except (InvalidOperation, TypeError):
-                object.__setattr__(self, 'unit_price', None)
+                self.unit_price = None
     
     def calculate_total(self) -> Decimal:
         """Calculate total from quantity and unit price if available."""

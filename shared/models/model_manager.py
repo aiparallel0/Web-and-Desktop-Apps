@@ -337,18 +337,25 @@ class ProcessorFactory:
         """Create a Donut processor."""
         try:
             from .ai_models import DonutProcessor
-            if DonutProcessor is None:
-                raise ImportError("DonutProcessor not available")
-            processor = DonutProcessor(config)
-            if processor is None:
-                raise ImportError("DonutProcessor initialization returned None")
-            return processor
+            # Handle case where import succeeds but class is None due to lazy loading
+            if not callable(DonutProcessor):
+                raise ImportError("DonutProcessor is not available")
+            return DonutProcessor(config)
         except ImportError as e:
             raise ImportError(
                 "Donut models require PyTorch and Transformers. "
                 "Install with: pip install torch transformers accelerate sentencepiece. "
                 f"Error: {e}"
             )
+        except TypeError as e:
+            # Handle case where processor class is None or not callable
+            if 'NoneType' in str(e) or 'not callable' in str(e):
+                raise ImportError(
+                    "Donut models require PyTorch and Transformers. "
+                    "Install with: pip install torch transformers accelerate sentencepiece. "
+                    f"Error: {e}"
+                )
+            raise
         except Exception as e:
             # Catch any other initialization errors that indicate missing dependencies
             error_msg = str(e).lower()
@@ -365,18 +372,25 @@ class ProcessorFactory:
         """Create a Florence processor."""
         try:
             from .ai_models import FlorenceProcessor
-            if FlorenceProcessor is None:
-                raise ImportError("FlorenceProcessor not available")
-            processor = FlorenceProcessor(config)
-            if processor is None:
-                raise ImportError("FlorenceProcessor initialization returned None")
-            return processor
+            # Handle case where import succeeds but class is None due to lazy loading
+            if not callable(FlorenceProcessor):
+                raise ImportError("FlorenceProcessor is not available")
+            return FlorenceProcessor(config)
         except ImportError as e:
             raise ImportError(
                 "Florence models require PyTorch and Transformers. "
                 "Install with: pip install torch transformers accelerate sentencepiece. "
                 f"Error: {e}"
             )
+        except TypeError as e:
+            # Handle case where processor class is None or not callable
+            if 'NoneType' in str(e) or 'not callable' in str(e):
+                raise ImportError(
+                    "Florence models require PyTorch and Transformers. "
+                    "Install with: pip install torch transformers accelerate sentencepiece. "
+                    f"Error: {e}"
+                )
+            raise
         except Exception as e:
             # Catch any other initialization errors that indicate missing dependencies
             error_msg = str(e).lower()
