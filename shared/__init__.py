@@ -29,6 +29,13 @@ Integration Pattern:
     # Automatic dependency propagation
     exchange.register_module('my_module', __file__)
 
+Usage for centralized logging:
+    from shared.utils import get_module_logger, log_errors
+    logger = get_module_logger()
+    
+    @log_errors
+    def my_function():
+        logger.info("Processing...")
 """
 
 from typing import TYPE_CHECKING
@@ -56,6 +63,12 @@ _UTIL_IMPORTS = {
     'ExtractionResult': 'utils.data_structures',
     'setup_logger': 'utils.logger',
     'get_logger': 'utils.logger',
+    'get_module_logger': 'utils.centralized_logging',
+    'log_errors': 'utils.centralized_logging',
+    'logging_context': 'utils.centralized_logging',
+    'set_context': 'utils.centralized_logging',
+    'clear_context': 'utils.centralized_logging',
+    'ErrorHandler': 'utils.centralized_logging',
 }
 
 
@@ -101,34 +114,7 @@ __all__ = [
     # Utilities
     'setup_logger',
     'get_logger',
-]
-
-__version__ = '2.0.0'
-__author__ = 'Enterprise Architecture Team'
-# Shared modules for receipt extraction
-#
-# This module automatically initializes centralized logging when imported.
-# New files that import from 'shared' will automatically get logging configured.
-#
-# Usage:
-#   from shared.utils import get_module_logger, log_errors
-#   logger = get_module_logger()
-#   
-#   @log_errors
-#   def my_function():
-#       logger.info("Processing...")
-
-# Auto-initialize centralized logging on import
-from shared.utils.centralized_logging import (
-    get_module_logger,
-    log_errors,
-    logging_context,
-    set_context,
-    clear_context,
-    ErrorHandler,
-)
-
-__all__ = [
+    # Centralized logging
     'get_module_logger',
     'log_errors',
     'logging_context',
@@ -136,3 +122,6 @@ __all__ = [
     'clear_context',
     'ErrorHandler',
 ]
+
+__version__ = '2.0.0'
+__author__ = 'Enterprise Architecture Team'

@@ -7,9 +7,11 @@ This package provides enterprise-grade utilities and cross-cutting concerns
 for the Receipt Extraction System.
 
 Modules:
-├── data_structures.py  - Domain models (LineItem, ReceiptData, ExtractionResult)
-├── image_processing.py - Image manipulation and enhancement
-└── logger.py           - Enterprise logging framework
+├── data_structures.py      - Domain models (LineItem, ReceiptData, ExtractionResult)
+├── image_processing.py     - Image manipulation and enhancement
+├── logger.py               - Enterprise logging framework
+├── centralized_logging.py  - Centralized logging with context support
+├── errors.py               - Custom error types and error handling
 
 Design Principles:
 - Single Responsibility: Each utility serves one purpose
@@ -20,6 +22,7 @@ Design Principles:
 =============================================================================
 """
 
+# Data structures
 from .data_structures import (
     LineItem,
     ReceiptData,
@@ -28,6 +31,8 @@ from .data_structures import (
     TransactionTotals,
     ExtractionStatus
 )
+
+# Image processing
 from .image_processing import (
     load_and_validate_image,
     enhance_image,
@@ -37,6 +42,8 @@ from .image_processing import (
     detect_text_regions,
     preprocess_multi_pass
 )
+
+# Logging
 from .logger import (
     setup_logger,
     get_logger,
@@ -49,15 +56,7 @@ from .logger import (
     get_default_logger
 )
 
-__all__ = [
-    # Data Structures
-    'LineItem',
-    'ReceiptData',
-    'ExtractionResult',
-    'StoreInfo',
-    'TransactionTotals',
-    'ExtractionStatus',
-    # Image Processing
+# Centralized logging
 from .centralized_logging import (
     get_module_logger,
     set_context,
@@ -65,9 +64,10 @@ from .centralized_logging import (
     clear_context,
     logging_context,
     log_errors,
-    log_with_context,
     ErrorHandler,
 )
+
+# Error handling
 from .errors import (
     ReceiptExtractorError,
     ValidationError,
@@ -83,19 +83,23 @@ from .errors import (
     handle_exception,
     register_error_handlers
 )
-from .logger import setup_logger, get_logger, log_with_context
 
 __all__ = [
     # Data structures
     'LineItem',
     'ReceiptData',
     'ExtractionResult',
+    'StoreInfo',
+    'TransactionTotals',
+    'ExtractionStatus',
     # Image processing
     'load_and_validate_image',
     'enhance_image',
     'assess_image_quality',
     'preprocess_for_ocr',
     'resize_if_needed',
+    'detect_text_regions',
+    'preprocess_multi_pass',
     # Logging
     'setup_logger',
     'get_logger',
@@ -105,18 +109,15 @@ __all__ = [
     'LogContext',
     'LogLevel',
     'generate_correlation_id',
-    'get_default_logger'
-    # Centralized logging - automatically available when importing from shared.utils
+    'get_default_logger',
+    # Centralized logging
     'get_module_logger',
     'set_context',
     'get_context',
     'clear_context',
     'logging_context',
     'log_errors',
-    'log_with_context',
     'ErrorHandler',
-    'detect_text_regions',
-    'preprocess_multi_pass',
     # Error handling
     'ReceiptExtractorError',
     'ValidationError',
@@ -131,8 +132,4 @@ __all__ = [
     'create_error_response',
     'handle_exception',
     'register_error_handlers',
-    # Logging
-    'setup_logger',
-    'get_logger',
-    'log_with_context'
 ]
