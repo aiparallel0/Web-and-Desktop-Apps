@@ -83,3 +83,9 @@ test_receipts/
 temp/
 tmp/
 receipt_extractor.db
+
+# Logs directory
+logs/
+
+# AI analysis reports (generated)
+ai-analysis-report_*.md

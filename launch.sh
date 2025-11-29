@@ -1,17 +1,24 @@
 #!/bin/bash
-
 ###############################################################################
-# Receipt Extractor - Sophisticated Launcher with Professional UI
+# Receipt Extractor - Unified Launcher Script
+# 
+# This script combines all launcher functionality into one coherent script with:
+# - Automatic cache cleaning (Python bytecode, pytest cache)
+# - Dependency checking and installation
+# - Backend and Frontend server management
+# - GPU detection
+# - Test execution
+# - Health monitoring
+# - AI Analysis Report generation
 #
-# Features:
-# - Interactive menu-driven interface
-# - Automated testing and validation
-# - Dependency checks and installation
-# - GPU detection and configuration
-# - Health monitoring and diagnostics
-# - Professional error handling
-# - Detailed logging and reporting
+# Usage: ./launch.sh [option]
+#   No option: Interactive menu
+#   --quick: Quick launch (skip tests)
+#   --test:  Run tests only
+#   --clean: Clean cache only
 ###############################################################################
+
+set -e
 
 # Colors and formatting
 GREEN='\033[0;32m'
@@ -24,22 +31,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m' # No Color
 
-# Unicode symbols (fallback to ASCII if not supported)
-CHECK_MARK="[OK]"
-CROSS_MARK="[FAIL]"
-WARNING_MARK="[WARN]"
-INFO_MARK="[INFO]"
-ROCKET="[LAUNCH]"
-WRENCH="[TOOL]"
-TEST_TUBE="[TEST]"
-
 # Configuration
 BACKEND_PORT=5000
 FRONTEND_PORT=3000
 BACKEND_DIR="web-app/backend"
 FRONTEND_DIR="web-app/frontend"
 LOG_DIR="logs"
-TEST_DIR="tests"
 
 # Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -55,7 +52,6 @@ FRONTEND_PID=""
 TESTS_PASSED=false
 DEPS_CHECKED=false
 GPU_AVAILABLE=false
-HEALTH_STATUS="unknown"
 
 ###############################################################################
 # UI Functions
@@ -66,7 +62,7 @@ print_banner() {
     echo -e "${CYAN}${BOLD}"
     echo "╔════════════════════════════════════════════════════════════════╗"
     echo "║                                                                ║"
-    echo "║        Receipt Extractor - Professional Launcher v2.0          ║"
+    echo "║        Receipt Extractor - Unified Launcher v3.0               ║"
     echo "║                                                                ║"
     echo "║    AI-Powered Receipt Processing with Advanced OCR Models      ║"
     echo "║                                                                ║"
@@ -85,38 +81,80 @@ print_section() {
 }
 
 print_success() {
-    echo -e "${GREEN}${CHECK_MARK}${NC} $1"
+    echo -e "${GREEN}[OK]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}${CROSS_MARK}${NC} $1"
+    echo -e "${RED}[FAIL]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}${WARNING_MARK}${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 print_info() {
-    echo -e "${CYAN}${INFO_MARK}${NC} $1"
+    echo -e "${CYAN}[INFO]${NC} $1"
 }
 
 show_menu() {
     print_banner
     echo -e "${BOLD}Main Menu:${NC}"
     echo ""
-    echo -e "  ${GREEN}1)${NC} ${ROCKET} Quick Launch (Skip Tests)"
-    echo -e "  ${GREEN}2)${NC} ${ROCKET} Full Launch (With Tests & Validation)"
-    echo -e "  ${GREEN}3)${NC} ${TEST_TUBE} Run Tests Only"
-    echo -e "  ${GREEN}4)${NC} ${WRENCH} Check & Install Dependencies"
-    echo -e "  ${GREEN}5)${NC} ${WRENCH} Check GPU Status"
-    echo -e "  ${GREEN}6)${NC} ${INFO_MARK} System Health Report"
-    echo -e "  ${GREEN}7)${NC} ${INFO_MARK} View Logs"
-    echo -e "  ${GREEN}8)${NC} ${WRENCH} Developer Mode (Debug Logging)"
-    echo -e "  ${GREEN}9)${NC} ${INFO_MARK} Help & Documentation"
-    echo -e "  ${CYAN}E)${NC} ${INFO_MARK} Export System Report for AI Analysis"
+    echo -e "  ${GREEN}1)${NC} Quick Launch (Skip Tests)"
+    echo -e "  ${GREEN}2)${NC} Full Launch (With Tests & Validation)"
+    echo -e "  ${GREEN}3)${NC} Run Tests Only"
+    echo -e "  ${GREEN}4)${NC} Check & Install Dependencies"
+    echo -e "  ${GREEN}5)${NC} Check GPU Status"
+    echo -e "  ${GREEN}6)${NC} System Health Report"
+    echo -e "  ${GREEN}7)${NC} Clean Cache (Python bytecode & pytest)"
+    echo -e "  ${GREEN}8)${NC} View Logs"
+    echo -e "  ${GREEN}9)${NC} Help & Documentation"
+    echo -e "  ${CYAN}E)${NC} Export System Report for AI Analysis"
     echo -e "  ${RED}0)${NC} Exit"
     echo ""
     echo -ne "${BOLD}Select an option [0-9/E]:${NC} "
+}
+
+###############################################################################
+# Cache Cleaning Functions
+###############################################################################
+
+clean_python_cache() {
+    print_section "Cleaning Python Cache"
+    
+    local pycache_count=0
+    local pyc_count=0
+    
+    # Remove __pycache__ directories
+    while IFS= read -r -d '' dir; do
+        rm -rf "$dir" 2>/dev/null && ((pycache_count++)) || true
+    done < <(find . -type d -name "__pycache__" -print0 2>/dev/null)
+    
+    # Remove .pyc files
+    while IFS= read -r -d '' file; do
+        rm -f "$file" 2>/dev/null && ((pyc_count++)) || true
+    done < <(find . -type f -name "*.pyc" -print0 2>/dev/null)
+    
+    # Remove pytest cache
+    if [ -d ".pytest_cache" ]; then
+        rm -rf .pytest_cache
+        print_success "Removed .pytest_cache directory"
+    fi
+    
+    # Remove coverage cache
+    if [ -f ".coverage" ]; then
+        rm -f .coverage
+        print_success "Removed .coverage file"
+    fi
+    
+    if [ -d "htmlcov" ]; then
+        rm -rf htmlcov
+        print_success "Removed htmlcov directory"
+    fi
+    
+    print_success "Removed $pycache_count __pycache__ directories"
+    print_success "Removed $pyc_count .pyc files"
+    print_info "Cache cleanup complete - tests will use fresh code"
 }
 
 ###############################################################################
@@ -128,14 +166,14 @@ cleanup() {
     print_section "Shutting Down"
 
     # Kill backend
-    if [ ! -z "$BACKEND_PID" ]; then
+    if [ -n "$BACKEND_PID" ]; then
         kill $BACKEND_PID 2>/dev/null
         wait $BACKEND_PID 2>/dev/null
         print_success "Backend server stopped"
     fi
 
     # Kill frontend
-    if [ ! -z "$FRONTEND_PID" ]; then
+    if [ -n "$FRONTEND_PID" ]; then
         kill $FRONTEND_PID 2>/dev/null
         wait $FRONTEND_PID 2>/dev/null
         print_success "Frontend server stopped"
@@ -157,20 +195,30 @@ check_python() {
     print_section "Python Environment Check"
 
     if ! command -v python3 &> /dev/null; then
-        print_error "Python 3 is not installed"
-        echo "Please install Python 3.8 or higher"
-        return 1
+        if ! command -v python &> /dev/null; then
+            print_error "Python 3 is not installed"
+            echo "Please install Python 3.8 or higher"
+            return 1
+        fi
     fi
 
-    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+
+    local PYTHON_VERSION
+    PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
     print_success "Python $PYTHON_VERSION detected"
 
-    if ! command -v pip3 &> /dev/null; then
-        print_error "pip3 is not installed"
+    if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
+        print_error "pip is not installed"
         return 1
     fi
 
-    print_success "pip3 available"
+    print_success "pip available"
     return 0
 }
 
@@ -212,18 +260,22 @@ check_ports() {
 
     local ports_ok=true
 
-    if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-        print_error "Port $BACKEND_PORT is already in use"
-        ports_ok=false
-    else
-        print_success "Port $BACKEND_PORT is available"
-    fi
+    if command -v lsof &> /dev/null; then
+        if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+            print_error "Port $BACKEND_PORT is already in use"
+            ports_ok=false
+        else
+            print_success "Port $BACKEND_PORT is available"
+        fi
 
-    if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-        print_error "Port $FRONTEND_PORT is already in use"
-        ports_ok=false
+        if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+            print_error "Port $FRONTEND_PORT is already in use"
+            ports_ok=false
+        else
+            print_success "Port $FRONTEND_PORT is available"
+        fi
     else
-        print_success "Port $FRONTEND_PORT is available"
+        print_warning "lsof not available, skipping port check"
     fi
 
     if $ports_ok; then
@@ -240,10 +292,17 @@ check_ports() {
 run_dependency_check() {
     print_section "Dependency Analysis"
 
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+
     if [ -f "check_dependencies.py" ]; then
         print_info "Running dependency checker with auto-install..."
         echo ""
-        python3 check_dependencies.py --auto-install
+        $PYTHON_CMD check_dependencies.py --auto-install
         local exit_code=$?
 
         if [ $exit_code -eq 0 ]; then
@@ -271,8 +330,15 @@ run_dependency_check() {
 check_gpu_status() {
     print_section "GPU Detection & Configuration"
 
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+
     if [ -f "check_gpu.py" ]; then
-        python3 check_gpu.py 2>&1 | tee "$LOG_DIR/gpu-check.log"
+        $PYTHON_CMD check_gpu.py 2>&1 | tee "$LOG_DIR/gpu-check.log"
 
         if grep -q "CUDA available: True" "$LOG_DIR/gpu-check.log" 2>/dev/null; then
             GPU_AVAILABLE=true
@@ -288,286 +354,75 @@ check_gpu_status() {
 
     echo ""
     echo -ne "Press Enter to continue..."
-    read
+    read -r
 }
 
 run_tests() {
     print_section "Running Test Suite"
+    
+    # Clean cache before running tests
+    clean_python_cache
+
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
 
     local test_failed=false
     local test_count=0
     local passed_count=0
 
-    # Run system health test
-    if [ -f "tests/test_system_health.py" ]; then
-        echo ""
-        print_info "Running system health tests..."
-        python3 -m pytest tests/test_system_health.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/health.log"
+    # Run comprehensive test suite via python runner
+    if [ -f "run_all_tests.py" ]; then
+        print_info "Running comprehensive test suite..."
+        $PYTHON_CMD run_all_tests.py 2>&1 | tee "$LOG_DIR/test-reports/full-suite.log"
         if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "System health tests passed"
-            ((passed_count++))
+            print_success "Comprehensive test suite passed"
+            TESTS_PASSED=true
+            return 0
         else
-            print_error "System health tests failed"
+            print_warning "Some tests failed"
             test_failed=true
         fi
-        ((test_count++))
-    fi
-
-    # Run image processing tests
-    if [ -f "tests/shared/test_image_processing.py" ]; then
-        echo ""
-        print_info "Running image processing tests..."
-        python3 -m pytest tests/shared/test_image_processing.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/image.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Image processing tests passed"
-            ((passed_count++))
-        else
-            print_error "Image processing tests failed"
-            test_failed=true
+    else
+        # Fall back to individual test files
+        # Run system health test
+        if [ -f "tests/test_system_health.py" ]; then
+            echo ""
+            print_info "Running system health tests..."
+            $PYTHON_CMD -m pytest tests/test_system_health.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/health.log"
+            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                print_success "System health tests passed"
+                ((passed_count++))
+            else
+                print_error "System health tests failed"
+                test_failed=true
+            fi
+            ((test_count++))
         fi
-        ((test_count++))
-    fi
 
-    # Run model manager tests
-    if [ -f "tests/shared/test_model_manager.py" ]; then
-        echo ""
-        print_info "Running model manager tests..."
-        python3 -m pytest tests/shared/test_model_manager.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/models.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Model manager tests passed"
-            ((passed_count++))
-        else
-            print_warning "Model manager tests failed (may require AI models)"
-            test_failed=true
+        # Run API tests
+        if [ -f "tests/web/test_api.py" ]; then
+            echo ""
+            print_info "Running API tests..."
+            $PYTHON_CMD -m pytest tests/web/test_api.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/api.log"
+            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                print_success "API tests passed"
+                ((passed_count++))
+            else
+                print_error "API tests failed"
+                test_failed=true
+            fi
+            ((test_count++))
         fi
-        ((test_count++))
-    fi
-
-    # Run base processor tests (NEW - comprehensive coverage)
-    if [ -f "tests/shared/test_base_processor.py" ]; then
-        echo ""
-        print_info "Running base processor tests..."
-        python3 -m pytest tests/shared/test_base_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/base_processor.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Base processor tests passed"
-            ((passed_count++))
-        else
-            print_warning "Base processor tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run EasyOCR processor tests (NEW - requires mocking)
-    if [ -f "tests/shared/test_easyocr_processor.py" ]; then
-        echo ""
-        print_info "Running EasyOCR processor tests..."
-        python3 -m pytest tests/shared/test_easyocr_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/easyocr_processor.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "EasyOCR processor tests passed"
-            ((passed_count++))
-        else
-            print_warning "EasyOCR processor tests failed (may require dependencies)"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run Paddle processor tests (NEW - requires mocking)
-    if [ -f "tests/shared/test_paddle_processor.py" ]; then
-        echo ""
-        print_info "Running Paddle processor tests..."
-        python3 -m pytest tests/shared/test_paddle_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/paddle_processor.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Paddle processor tests passed"
-            ((passed_count++))
-        else
-            print_warning "Paddle processor tests failed (may require dependencies)"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run Donut processor tests (NEW - requires mocking)
-    if [ -f "tests/shared/test_donut_processor.py" ]; then
-        echo ""
-        print_info "Running Donut processor tests..."
-        python3 -m pytest tests/shared/test_donut_processor.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/donut_processor.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Donut processor tests passed"
-            ((passed_count++))
-        else
-            print_warning "Donut processor tests failed (may require dependencies)"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run API tests
-    if [ -f "tests/web/test_api.py" ]; then
-        echo ""
-        print_info "Running API tests..."
-        python3 -m pytest tests/web/test_api.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/api.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "API tests passed"
-            ((passed_count++))
-        else
-            print_error "API tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run simple OCR test
-    if [ -f "test_ocr_simple.py" ]; then
-        echo ""
-        print_info "Running OCR validation test..."
-        python3 test_ocr_simple.py 2>&1 | tee "$LOG_DIR/test-reports/ocr.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "OCR validation passed"
-            ((passed_count++))
-        else
-            print_warning "OCR validation failed (may need Tesseract)"
-        fi
-        ((test_count++))
-    fi
-
-    # Run backend authentication tests (NEW - comprehensive security coverage)
-    if [ -f "tests/backend/auth/test_jwt_handler.py" ]; then
-        echo ""
-        print_info "Running JWT authentication tests..."
-        python3 -m pytest tests/backend/auth/test_jwt_handler.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/jwt_auth.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "JWT authentication tests passed"
-            ((passed_count++))
-        else
-            print_warning "JWT authentication tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    if [ -f "tests/backend/auth/test_password.py" ]; then
-        echo ""
-        print_info "Running password security tests..."
-        python3 -m pytest tests/backend/auth/test_password.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/password_security.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Password security tests passed"
-            ((passed_count++))
-        else
-            print_warning "Password security tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    if [ -f "tests/backend/auth/test_decorators.py" ]; then
-        echo ""
-        print_info "Running auth decorator tests..."
-        python3 -m pytest tests/backend/auth/test_decorators.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/auth_decorators.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Auth decorator tests passed"
-            ((passed_count++))
-        else
-            print_warning "Auth decorator tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run database tests (NEW - data integrity coverage)
-    if [ -f "tests/backend/database/test_models.py" ]; then
-        echo ""
-        print_info "Running database model tests..."
-        python3 -m pytest tests/backend/database/test_models.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/db_models.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Database model tests passed"
-            ((passed_count++))
-        else
-            print_warning "Database model tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    if [ -f "tests/backend/database/test_connection.py" ]; then
-        echo ""
-        print_info "Running database connection tests..."
-        python3 -m pytest tests/backend/database/test_connection.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/db_connection.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Database connection tests passed"
-            ((passed_count++))
-        else
-            print_warning "Database connection tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run validation tests (NEW - input security coverage)
-    if [ -f "tests/backend/validation/test_schemas.py" ]; then
-        echo ""
-        print_info "Running input validation tests..."
-        python3 -m pytest tests/backend/validation/test_schemas.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/validation_schemas.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Input validation tests passed"
-            ((passed_count++))
-        else
-            print_warning "Input validation tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run Flask app tests (NEW - endpoint coverage)
-    if [ -f "tests/backend/test_app.py" ]; then
-        echo ""
-        print_info "Running Flask application tests..."
-        python3 -m pytest tests/backend/test_app.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/flask_app.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Flask application tests passed"
-            ((passed_count++))
-        else
-            print_warning "Flask application tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run ML model tests (NEW - finetuning coverage)
-    if [ -f "tests/shared/models/test_donut_finetuner.py" ]; then
-        echo ""
-        print_info "Running Donut finetuner tests..."
-        python3 -m pytest tests/shared/models/test_donut_finetuner.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/donut_finetuner.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Donut finetuner tests passed"
-            ((passed_count++))
-        else
-            print_warning "Donut finetuner tests failed (may require dependencies)"
-            test_failed=true
-        fi
-        ((test_count++))
-    fi
-
-    # Run logger tests (NEW - utility coverage)
-    if [ -f "tests/shared/utils/test_logger.py" ]; then
-        echo ""
-        print_info "Running logger utility tests..."
-        python3 -m pytest tests/shared/utils/test_logger.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/logger_utils.log"
-        if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            print_success "Logger utility tests passed"
-            ((passed_count++))
-        else
-            print_warning "Logger utility tests failed"
-            test_failed=true
-        fi
-        ((test_count++))
     fi
 
     echo ""
     print_separator
     echo -e "${BOLD}Test Summary:${NC}"
-    echo -e "  Total Tests: ${test_count}"
+    echo -e "  Total Suites: ${test_count}"
     echo -e "  Passed: ${GREEN}${passed_count}${NC}"
     echo -e "  Failed: ${RED}$((test_count - passed_count))${NC}"
 
@@ -575,7 +430,7 @@ run_tests() {
         echo ""
         print_warning "Some tests failed, but app may still work"
         echo -ne "Continue anyway? [y/N]: "
-        read continue_choice
+        read -r continue_choice
         if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
             return 1
         fi
@@ -588,9 +443,16 @@ run_tests() {
 system_health_report() {
     print_section "System Health Report"
 
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+
     echo ""
     echo -e "${BOLD}Environment:${NC}"
-    echo "  Python: $(python3 --version 2>&1)"
+    echo "  Python: $($PYTHON_CMD --version 2>&1)"
     echo "  Working Directory: $SCRIPT_DIR"
     echo "  Log Directory: $LOG_DIR"
 
@@ -625,7 +487,7 @@ system_health_report() {
 
     echo ""
     echo -e "${BOLD}Services:${NC}"
-    if [ ! -z "$BACKEND_PID" ]; then
+    if [ -n "$BACKEND_PID" ]; then
         if kill -0 $BACKEND_PID 2>/dev/null; then
             echo -e "  Backend: ${GREEN}Running${NC} (PID: $BACKEND_PID)"
         else
@@ -635,7 +497,7 @@ system_health_report() {
         echo -e "  Backend: ${YELLOW}Not Started${NC}"
     fi
 
-    if [ ! -z "$FRONTEND_PID" ]; then
+    if [ -n "$FRONTEND_PID" ]; then
         if kill -0 $FRONTEND_PID 2>/dev/null; then
             echo -e "  Frontend: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
         else
@@ -647,7 +509,7 @@ system_health_report() {
 
     echo ""
     echo -ne "Press Enter to continue..."
-    read
+    read -r
 }
 
 view_logs() {
@@ -662,7 +524,7 @@ view_logs() {
     echo "  5) Back to main menu"
     echo ""
     echo -ne "Select log to view [1-5]: "
-    read log_choice
+    read -r log_choice
 
     case $log_choice in
         1)
@@ -686,7 +548,7 @@ view_logs() {
                 ls -1 "$LOG_DIR/test-reports"
                 echo ""
                 echo -ne "Enter log filename to view: "
-                read test_log
+                read -r test_log
                 if [ -f "$LOG_DIR/test-reports/$test_log" ]; then
                     less "$LOG_DIR/test-reports/$test_log"
                 fi
@@ -715,6 +577,12 @@ show_help() {
     echo "  2. This will check dependencies, run tests, and start the app"
     echo "  3. Your browser will open automatically to the app"
     echo ""
+    echo -e "${BOLD}Command Line Options:${NC}"
+    echo "  ./launch.sh          Interactive menu (default)"
+    echo "  ./launch.sh --quick  Quick launch (skip tests)"
+    echo "  ./launch.sh --test   Run tests only"
+    echo "  ./launch.sh --clean  Clean cache only"
+    echo ""
     echo -e "${BOLD}Menu Options:${NC}"
     echo "  ${GREEN}Quick Launch:${NC} Start app immediately without tests"
     echo "  ${GREEN}Full Launch:${NC} Run all checks and tests before starting"
@@ -722,18 +590,13 @@ show_help() {
     echo "  ${GREEN}Check Dependencies:${NC} Verify and install required packages"
     echo "  ${GREEN}Check GPU:${NC} Detect GPU availability for acceleration"
     echo "  ${GREEN}Health Report:${NC} View system status and diagnostics"
-    echo ""
-    echo -e "${BOLD}Documentation:${NC}"
-    echo "  - README.md: Main documentation"
-    echo "  - SETUP.md: Installation guide"
-    echo "  - WINDOWS_INSTALLATION.md: Windows-specific setup"
-    echo "  - web-app/README.md: Web app documentation"
+    echo "  ${GREEN}Clean Cache:${NC} Remove Python bytecode and test cache"
     echo ""
     echo -e "${BOLD}Logs Location:${NC}"
     echo "  All logs are stored in: $LOG_DIR/"
     echo ""
     echo -ne "Press Enter to continue..."
-    read
+    read -r
 }
 
 ###############################################################################
@@ -742,6 +605,13 @@ show_help() {
 
 start_servers() {
     local skip_checks=$1
+
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
 
     if [ "$skip_checks" != "true" ]; then
         # Run all checks
@@ -761,7 +631,7 @@ start_servers() {
     # Start backend
     print_info "Starting backend API server..."
     cd "$BACKEND_DIR"
-    python3 app.py > "$SCRIPT_DIR/$LOG_DIR/backend.log" 2>&1 &
+    $PYTHON_CMD app.py > "$SCRIPT_DIR/$LOG_DIR/backend.log" 2>&1 &
     BACKEND_PID=$!
     cd "$SCRIPT_DIR"
 
@@ -779,7 +649,7 @@ start_servers() {
     # Start frontend
     print_info "Starting frontend web server..."
     cd "$FRONTEND_DIR"
-    python3 -m http.server $FRONTEND_PORT > "$SCRIPT_DIR/$LOG_DIR/frontend.log" 2>&1 &
+    $PYTHON_CMD -m http.server $FRONTEND_PORT > "$SCRIPT_DIR/$LOG_DIR/frontend.log" 2>&1 &
     FRONTEND_PID=$!
     cd "$SCRIPT_DIR"
 
@@ -810,7 +680,7 @@ start_servers() {
     echo ""
     echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
-    echo -e "${GREEN}${BOLD}║        Receipt Extractor is now running!                      ║${NC}"
+    echo -e "${GREEN}${BOLD}║        Receipt Extractor is now running!                       ║${NC}"
     echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
     echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -867,19 +737,19 @@ full_launch() {
 
     echo ""
     echo -ne "Run GPU check? [y/N]: "
-    read gpu_choice
+    read -r gpu_choice
     if [[ "$gpu_choice" =~ ^[Yy]$ ]]; then
         check_gpu_status
     fi
 
     echo ""
     echo -ne "Run test suite? [Y/n]: "
-    read test_choice
+    read -r test_choice
     if [[ ! "$test_choice" =~ ^[Nn]$ ]]; then
         run_tests || {
             print_error "Tests failed - aborting launch"
             echo -ne "Press Enter to return to menu..."
-            read
+            read -r
             return 1
         }
     fi
@@ -889,7 +759,7 @@ full_launch() {
 
     echo ""
     echo -ne "Ready to launch. Press Enter to continue..."
-    read
+    read -r
 
     start_servers "true"
 }
@@ -897,8 +767,15 @@ full_launch() {
 export_system_report() {
     print_section "Exporting System Report for AI Analysis"
 
+    local PYTHON_CMD
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+
     local timestamp=$(date +"%Y%m%d_%H%M%S")
-    local report_file="$LOG_DIR/ai-analysis-report_${timestamp}.md"
+    local report_file="ai-analysis-report_${timestamp}.md"
 
     print_info "Generating comprehensive system report..."
     print_info "Format: Markdown (optimized for Claude Code/AI agents)"
@@ -925,7 +802,7 @@ export_system_report() {
         echo "- **OS:** $(uname -s)"
         echo "- **Kernel:** $(uname -r)"
         echo "- **Architecture:** $(uname -m)"
-        echo "- **Python Version:** $(python3 --version 2>&1)"
+        echo "- **Python Version:** $($PYTHON_CMD --version 2>&1)"
         echo "- **Working Directory:** $SCRIPT_DIR"
         echo ""
 
@@ -938,109 +815,12 @@ export_system_report() {
         fi
         echo ""
 
-        echo "## Dependency Status"
-        echo ""
-        if [ -f "$LOG_DIR/pip-install.log" ]; then
-            echo "### Last Dependency Install Log"
-            echo "\`\`\`"
-            tail -50 "$LOG_DIR/pip-install.log" 2>/dev/null
-            echo "\`\`\`"
-            echo ""
-        fi
-
-        echo "### Python Packages"
-        echo "\`\`\`"
-        python3 -m pip list 2>&1 | grep -E "(flask|torch|transformers|paddleocr|easyocr|opencv|pillow)" || echo "Package list unavailable"
-        echo "\`\`\`"
-        echo ""
-
-        echo "## GPU Configuration"
-        echo ""
-        if [ -f "$LOG_DIR/gpu-check.log" ]; then
-            echo "### GPU Detection Results"
-            echo "\`\`\`"
-            cat "$LOG_DIR/gpu-check.log" 2>/dev/null
-            echo "\`\`\`"
-        else
-            echo "GPU check not run. Status: ${GPU_AVAILABLE}"
-        fi
-        echo ""
-
         echo "## Test Results"
         echo ""
         if [ "$TESTS_PASSED" = true ]; then
             echo "**Overall Status:** [PASSED]"
         else
             echo "**Overall Status:** [NOT RUN OR FAILED]"
-        fi
-        echo ""
-
-        if [ -d "$LOG_DIR/test-reports" ] && [ "$(ls -A $LOG_DIR/test-reports 2>/dev/null)" ]; then
-            for test_log in "$LOG_DIR/test-reports"/*.log; do
-                if [ -f "$test_log" ]; then
-                    echo "### Test: $(basename "$test_log" .log)"
-                    echo "\`\`\`"
-                    cat "$test_log"
-                    echo "\`\`\`"
-                    echo ""
-                fi
-            done
-        else
-            echo "No test results available. Run option 3 to execute tests."
-        fi
-
-        echo "## Application Logs"
-        echo ""
-
-        if [ -f "$LOG_DIR/backend.log" ]; then
-            echo "### Backend Log (Last 100 lines)"
-            echo "\`\`\`"
-            tail -100 "$LOG_DIR/backend.log" 2>/dev/null
-            echo "\`\`\`"
-            echo ""
-        else
-            echo "Backend log not available (app not started)"
-            echo ""
-        fi
-
-        if [ -f "$LOG_DIR/frontend.log" ]; then
-            echo "### Frontend Log (Last 50 lines)"
-            echo "\`\`\`"
-            tail -50 "$LOG_DIR/frontend.log" 2>/dev/null
-            echo "\`\`\`"
-            echo ""
-        else
-            echo "Frontend log not available (app not started)"
-            echo ""
-        fi
-
-        echo "## Configuration Files"
-        echo ""
-
-        if [ -f "shared/config/models_config.json" ]; then
-            echo "### Models Configuration"
-            echo "\`\`\`json"
-            cat "shared/config/models_config.json" 2>/dev/null
-            echo "\`\`\`"
-            echo ""
-        fi
-
-        echo "## File Structure"
-        echo ""
-        echo "\`\`\`"
-        tree -L 3 -I '__pycache__|*.pyc|node_modules' . 2>/dev/null || find . -maxdepth 3 -type f -name "*.py" | head -50
-        echo "\`\`\`"
-        echo ""
-
-        echo "## Current Issues & Errors"
-        echo ""
-        echo "### Recent Errors from Logs"
-        if [ -f "$LOG_DIR/backend.log" ]; then
-            echo "\`\`\`"
-            grep -i "error\|exception\|fail" "$LOG_DIR/backend.log" | tail -20 2>/dev/null || echo "No errors found"
-            echo "\`\`\`"
-        else
-            echo "No backend log available"
         fi
         echo ""
 
@@ -1052,21 +832,6 @@ export_system_report() {
         echo "3. Verify all dependencies are installed correctly"
         echo "4. Ensure GPU is configured if AI models are needed"
         echo "5. Review configuration files for correct settings"
-        echo ""
-
-        echo "### Common Development Tasks"
-        echo "- **Add new model:** Update \`shared/config/models_config.json\`"
-        echo "- **Fix test failures:** Check \`tests/\` directory"
-        echo "- **Debug backend:** Review \`logs/backend.log\`"
-        echo "- **Update dependencies:** Modify \`web-app/backend/requirements.txt\`"
-        echo ""
-
-        echo "### Files to Focus On"
-        echo "- \`web-app/backend/app.py\` - Main API server"
-        echo "- \`shared/models/model_manager.py\` - Model loading logic"
-        echo "- \`shared/models/donut_processor.py\` - Donut model processing"
-        echo "- \`shared/models/paddle_processor.py\` - PaddleOCR processing"
-        echo "- \`tests/\` - Test suite"
         echo ""
 
         echo "---"
@@ -1090,20 +855,15 @@ export_system_report() {
     echo "  2. Ask it to analyze issues and suggest fixes"
     echo "  3. Request specific improvements or debugging help"
     echo ""
-    echo -e "${BOLD}Example prompts:${NC}"
-    echo '  - "Analyze this system report and identify all errors"'
-    echo '  - "Based on this report, fix the failing tests"'
-    echo '  - "Review the configuration and suggest optimizations"'
-    echo ""
     echo -ne "Open report now? [y/N]: "
-    read view_choice
+    read -r view_choice
     if [[ "$view_choice" =~ ^[Yy]$ ]]; then
         less "$report_file"
     fi
 
     echo ""
     echo -ne "Press Enter to continue..."
-    read
+    read -r
 }
 
 ###############################################################################
@@ -1111,9 +871,36 @@ export_system_report() {
 ###############################################################################
 
 main() {
+    # Handle command line arguments
+    case "${1:-}" in
+        --quick)
+            quick_launch
+            exit $?
+            ;;
+        --test)
+            print_banner
+            run_tests
+            exit $?
+            ;;
+        --clean)
+            print_banner
+            clean_python_cache
+            echo ""
+            echo -ne "Press Enter to continue..."
+            read -r
+            exit 0
+            ;;
+        --help|-h)
+            print_banner
+            show_help
+            exit 0
+            ;;
+    esac
+
+    # Interactive menu
     while true; do
         show_menu
-        read choice
+        read -r choice
 
         case $choice in
             1)
@@ -1127,14 +914,14 @@ main() {
                 run_tests
                 echo ""
                 echo -ne "Press Enter to continue..."
-                read
+                read -r
                 ;;
             4)
                 print_banner
                 run_dependency_check
                 echo ""
                 echo -ne "Press Enter to continue..."
-                read
+                read -r
                 ;;
             5)
                 print_banner
@@ -1145,15 +932,14 @@ main() {
                 system_health_report
                 ;;
             7)
-                view_logs
+                print_banner
+                clean_python_cache
+                echo ""
+                echo -ne "Press Enter to continue..."
+                read -r
                 ;;
             8)
-                print_banner
-                print_section "Developer Mode"
-                print_info "Starting with debug logging enabled..."
-                export FLASK_DEBUG=1
-                export FLASK_ENV=development
-                start_servers "false"
+                view_logs
                 ;;
             9)
                 print_banner
@@ -1178,11 +964,11 @@ main() {
 if [ "$EUID" -eq 0 ]; then
     print_warning "Running as root is not recommended"
     echo -ne "Continue anyway? [y/N]: "
-    read sudo_choice
+    read -r sudo_choice
     if [[ ! "$sudo_choice" =~ ^[Yy]$ ]]; then
         exit 1
     fi
 fi
 
 # Start main program
-main
+main "$@"
