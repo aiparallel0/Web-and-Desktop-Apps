@@ -400,3 +400,29 @@ class TestVariablePackageThreadSafety:
         
         # Should complete without errors
         assert True
+
+
+class TestVariablePackageSubscriberErrors:
+    """Tests for error handling in subscriber notifications."""
+
+    def test_subscriber_error_handling(self):
+        """Test that errors in subscribers are caught and logged."""
+        pkg = VariablePackage(name='test', initial_value=0)
+        
+        results = []
+        
+        def failing_subscriber(change):
+            raise RuntimeError("Subscriber error")
+        
+        def working_subscriber(change):
+            results.append(change.new_value)
+        
+        # Add both subscribers
+        pkg.subscribe(failing_subscriber)
+        pkg.subscribe(working_subscriber)
+        
+        # Should not raise, error is logged but other subscribers still called
+        pkg.set(42)
+        
+        # Working subscriber should still receive the change
+        assert 42 in results

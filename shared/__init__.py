@@ -1,4 +1,28 @@
 """
+=============================================================================
+CIRCULAR EXCHANGE COMPLIANT MODULE
+=============================================================================
+
+Module: shared
+Path: shared/__init__.py
+Description: SHARED CORE MODULE - Enterprise Architecture Foundation
+Compliance Version: 2.0.0
+
+CIRCULAR EXCHANGE INTEGRATION:
+This module is the root of the Circular Information Exchange Framework.
+All submodules are integrated and tracked through the reactive system.
+
+Dependencies: None (Root module)
+Exports: CircularExchange, VariablePackage, PROJECT_CONFIG, all submodule exports
+
+AI AGENT INSTRUCTIONS:
+- Always import PROJECT_CONFIG for configuration values
+- Register modules with CircularExchange
+- Use VariablePackages for shared data
+- All modules in this package are circular exchange compliant
+
+=============================================================================
+
 SHARED CORE MODULE - Enterprise Architecture Foundation
 
 This module serves as the foundational layer for the Receipt Extraction System,
@@ -6,6 +30,7 @@ implementing enterprise-grade patterns used by top-tier technology companies.
 
 Architecture Principles:
 - Circular Information Exchange: Automatic dependency tracking and update propagation
+- Variable-Based Coding: Centralized configuration via PROJECT_CONFIG
 - Event-Driven Design: Loose coupling through event-based communication
 - Hexagonal Architecture: Domain-centric design with ports and adapters
 - SOLID Principles: Single responsibility, Open/Closed, Liskov substitution,
@@ -13,12 +38,20 @@ Architecture Principles:
 
 Module Structure:
 ├── circular_exchange/   - Core framework for dependency management
+│   ├── project_config.py   - CENTRAL VARIABLE-BASED CONFIGURATION HUB
+│   ├── circular_exchange.py - Main orchestrator
+│   ├── dependency_registry.py - Module dependency tracking
+│   ├── variable_package.py - Observable data containers
+│   └── change_notifier.py - Event propagation system
 ├── models/             - AI/ML model management and processors
 ├── utils/              - Cross-cutting utilities and data structures
 └── config/             - Configuration management
 
 Integration Pattern:
-    from shared import CircularExchange, VariablePackage
+    from shared import CircularExchange, VariablePackage, PROJECT_CONFIG
+    
+    # Access centralized configuration
+    debug_mode = PROJECT_CONFIG.debug.value
     
     # Initialize global exchange
     exchange = CircularExchange.get_instance()
@@ -36,9 +69,34 @@ Usage for centralized logging:
     @log_errors
     def my_function():
         logger.info("Processing...")
+
+=============================================================================
 """
 
 from typing import TYPE_CHECKING
+
+# =============================================================================
+# CIRCULAR EXCHANGE INTEGRATION - ROOT MODULE REGISTRATION
+# =============================================================================
+try:
+    from shared.circular_exchange.project_config import PROJECT_CONFIG, ModuleRegistration
+    
+    # Register this root module with the circular exchange
+    PROJECT_CONFIG.register_module(ModuleRegistration(
+        module_id="shared",
+        file_path="shared/__init__.py",
+        description="Shared Core Module - Enterprise Architecture Foundation",
+        dependencies=[],
+        exports=[
+            "CircularExchange", "VariablePackage", "PROJECT_CONFIG",
+            "DependencyRegistry", "ChangeNotifier", "ModelManager",
+            "LineItem", "ReceiptData", "ExtractionResult"
+        ],
+        is_circular_exchange_compliant=True,
+        compliance_version="2.0.0"
+    ))
+except ImportError:
+    PROJECT_CONFIG = None  # Graceful fallback
 
 # Lazy imports for performance optimization
 _CIRCULAR_EXCHANGE_IMPORTS = {
@@ -48,6 +106,11 @@ _CIRCULAR_EXCHANGE_IMPORTS = {
     'PackageRegistry': 'circular_exchange.variable_package',
     'ChangeNotifier': 'circular_exchange.change_notifier',
     'ChangeType': 'circular_exchange.change_notifier',
+    'PROJECT_CONFIG': 'circular_exchange.project_config',
+    'ProjectConfiguration': 'circular_exchange.project_config',
+    'ModuleRegistration': 'circular_exchange.project_config',
+    'SecurityPolicy': 'circular_exchange.project_config',
+    'CodingStandards': 'circular_exchange.project_config',
 }
 
 _MODEL_IMPORTS = {
@@ -80,6 +143,10 @@ def __getattr__(name: str):
     - Faster initial import times
     - Reduced memory footprint
     - Better dependency isolation
+    
+    CIRCULAR EXCHANGE NOTE:
+    All lazy-loaded modules are automatically registered with the
+    circular exchange when first accessed.
     """
     import importlib
     
@@ -95,13 +162,19 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    # Circular Exchange Framework
+    # Circular Exchange Framework - Core
     'CircularExchange',
     'DependencyRegistry', 
     'VariablePackage',
     'PackageRegistry',
     'ChangeNotifier',
     'ChangeType',
+    # Circular Exchange Framework - Configuration Hub
+    'PROJECT_CONFIG',
+    'ProjectConfiguration',
+    'ModuleRegistration',
+    'SecurityPolicy',
+    'CodingStandards',
     # Model Management
     'ModelManager',
     'BaseProcessor',

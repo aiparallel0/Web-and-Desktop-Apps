@@ -437,3 +437,174 @@ def process():
         
         assert len(received_values) == 1
         assert received_values[0]['debug'] is True
+
+
+class TestCircularExchangeAutoAnalyze:
+    """Tests for auto-analyze functionality."""
+
+    @pytest.fixture
+    def auto_analyze_exchange(self, tmp_path):
+        """Create exchange with auto_analyze enabled."""
+        CircularExchange._instance = None
+        
+        # Create some Python files
+        (tmp_path / 'module_a.py').write_text('VAR_A = 1')
+        (tmp_path / 'module_b.py').write_text('from module_a import VAR_A')
+        
+        # Create __pycache__ directory with .pyc file (should be skipped)
+        pycache = tmp_path / '__pycache__'
+        pycache.mkdir()
+        (pycache / 'module_a.cpython-312.pyc').write_text('')
+        
+        exchange = CircularExchange(
+            project_root=str(tmp_path),
+            auto_analyze=True
+        )
+        
+        yield exchange, tmp_path
+        
+        exchange.reset()
+        CircularExchange._instance = None
+
+    def test_auto_analyze_on_init(self, auto_analyze_exchange):
+        """Test that auto_analyze runs on initialization."""
+        exchange, tmp_path = auto_analyze_exchange
+        
+        # Modules should be registered automatically
+        modules = exchange.dependency_registry.get_all_modules()
+        assert len(modules) >= 1
+
+    def test_auto_analyze_skips_pycache(self, auto_analyze_exchange):
+        """Test that auto_analyze skips __pycache__ directories."""
+        exchange, tmp_path = auto_analyze_exchange
+        
+        # Verify __pycache__ files are not registered as modules
+        modules = exchange.dependency_registry.get_all_modules()
+        module_ids = [m.module_id for m in modules]
+        
+        # No module should have __pycache__ in its ID
+        assert not any('__pycache__' in mid for mid in module_ids)
+
+
+class TestCircularExchangeWatchCallbacks:
+    """Tests for watch callback functionality."""
+
+    @pytest.fixture
+    def exchange_with_modules(self, tmp_path):
+        """Create exchange with registered modules."""
+        CircularExchange._instance = None
+        
+        (tmp_path / 'test.py').write_text('TEST = 1')
+        
+        exchange = CircularExchange(project_root=str(tmp_path))
+        exchange.register_module('test', 'test.py')
+        
+        yield exchange, tmp_path
+        
+        exchange.reset()
+        CircularExchange._instance = None
+
+    def test_watch_callback_error_handling(self, exchange_with_modules):
+        """Test that watch callback errors are caught."""
+        exchange, tmp_path = exchange_with_modules
+        
+        def failing_callback(fp, mid):
+            raise RuntimeError("Callback failed")
+        
+        exchange.on_file_change(failing_callback)
+        
+        # Should not raise, error is logged
+        exchange.notify_file_changed('test.py')
+
+    def test_notify_file_not_registered(self, exchange_with_modules):
+        """Test notifying about unregistered file."""
+        exchange, tmp_path = exchange_with_modules
+        
+        # Should not raise, just log debug
+        exchange.notify_file_changed('nonexistent.py')
+
+
+class TestCircularExchangeModulePaths:
+    """Tests for module path resolution."""
+
+    @pytest.fixture
+    def exchange(self, tmp_path):
+        """Create a fresh exchange."""
+        CircularExchange._instance = None
+        exchange = CircularExchange(project_root=str(tmp_path))
+        yield exchange, tmp_path
+        exchange.reset()
+        CircularExchange._instance = None
+
+    def test_resolve_import_with_prefix(self, exchange):
+        """Test resolving import with common prefixes."""
+        ex, tmp_path = exchange
+        
+        # Register a module with a prefix path
+        (tmp_path / 'shared' / 'utils').mkdir(parents=True)
+        (tmp_path / 'shared' / 'utils' / 'helper.py').write_text('HELPER = 1')
+        
+        ex.register_module('shared.utils.helper', 'shared/utils/helper.py')
+        
+        # Now the module should be resolvable
+        modules = ex.dependency_registry.get_all_modules()
+        module_ids = [m.module_id for m in modules]
+        assert 'shared.utils.helper' in module_ids
+
+    def test_resolve_import_to_module_with_prefix(self, exchange):
+        """Test _resolve_import_to_module with shared prefix."""
+        ex, tmp_path = exchange
+        
+        # Register a module with 'shared.' prefix
+        ex.register_module('shared.mymodule', 'shared/mymodule.py')
+        
+        # Test direct resolution
+        result = ex._resolve_import_to_module('shared.mymodule')
+        assert result == 'shared.mymodule'
+        
+        # Test prefix-based resolution (should find with 'shared.' prefix)
+        result = ex._resolve_import_to_module('mymodule')
+        assert result == 'shared.mymodule'
+
+    def test_get_module_id_from_absolute_path(self, exchange):
+        """Test getting module ID from path outside project."""
+        ex, tmp_path = exchange
+        
+        # Using a path not relative to project root
+        module_id = ex._get_module_id_from_path('/some/other/path/module.py')
+        
+        # Should still work, returning path-based ID
+        assert module_id is not None
+
+
+class TestCircularExchangeUnregisterWithPackages:
+    """Tests for unregistering modules with packages."""
+
+    @pytest.fixture
+    def exchange_with_package(self, tmp_path):
+        """Create exchange with module and package."""
+        CircularExchange._instance = None
+        
+        (tmp_path / 'test.py').write_text('VAR = 1')
+        
+        exchange = CircularExchange(project_root=str(tmp_path))
+        exchange.register_module('test', 'test.py')
+        exchange.create_package('test_pkg', initial_value=42, module_id='test')
+        
+        yield exchange, tmp_path
+        
+        exchange.reset()
+        CircularExchange._instance = None
+
+    def test_unregister_removes_packages(self, exchange_with_package):
+        """Test that unregistering module removes its packages."""
+        exchange, _ = exchange_with_package
+        
+        # Verify package exists
+        assert exchange.get_package('test_pkg') is not None
+        
+        # Unregister module
+        exchange.unregister_module('test')
+        
+        # Package should be removed
+        assert exchange.get_package('test_pkg') is None

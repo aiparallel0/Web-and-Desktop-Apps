@@ -319,3 +319,123 @@ class TestDependencyRegistryThreadSafety:
         
         assert len(results) == 10
         assert len(registry.get_all_modules()) == 10
+
+
+class TestDependencyRegistryEdgeCases:
+    """Tests for edge cases in DependencyRegistry."""
+
+    @pytest.fixture
+    def registry(self):
+        """Create a fresh DependencyRegistry for each test."""
+        return DependencyRegistry()
+
+    def test_unregister_module_with_dependencies(self, registry):
+        """Test unregistering a module that has dependencies."""
+        registry.register_module('a', 'a.py')
+        registry.register_module('b', 'b.py')
+        registry.register_module('c', 'c.py')
+        registry.add_dependency('a', 'b')  # a depends on b
+        registry.add_dependency('c', 'a')  # c depends on a
+        
+        # Unregister a, which has both dependencies and dependents
+        result = registry.unregister_module('a')
+        
+        assert result is True
+        assert 'a' not in registry._modules
+        # b should no longer have a as dependent
+        assert 'a' not in registry.get_dependents('b')
+
+    def test_add_dependency_missing_source_module(self, registry):
+        """Test adding dependency when source module doesn't exist."""
+        registry.register_module('b', 'b.py')
+        
+        result = registry.add_dependency('nonexistent', 'b')
+        
+        assert result is False
+
+    def test_remove_dependency_from_nonexistent_module(self, registry):
+        """Test removing dependency from module not in graph."""
+        result = registry.remove_dependency('nonexistent', 'other')
+        
+        assert result is False
+
+    def test_get_all_dependents_with_cycle(self, registry):
+        """Test get_all_dependents handles cycles without infinite loop."""
+        registry.register_module('a', 'a.py')
+        registry.register_module('b', 'b.py')
+        registry.register_module('c', 'c.py')
+        
+        registry.add_dependency('b', 'a')
+        registry.add_dependency('c', 'b')
+        registry.add_dependency('a', 'c')  # Creates cycle
+        
+        # Should not hang, should return all dependents
+        dependents = registry.get_all_dependents('a')
+        assert isinstance(dependents, set)
+
+    def test_get_all_dependents_visited_node_returns_empty(self, registry):
+        """Test that get_all_dependents returns empty set for visited nodes."""
+        registry.register_module('a', 'a.py')
+        registry.register_module('b', 'b.py')
+        
+        registry.add_dependency('b', 'a')
+        
+        # Call with a pre-populated visited set containing 'a'
+        visited = {'a'}
+        result = registry.get_all_dependents('a', visited)
+        
+        # Should return empty set since 'a' is already visited
+        assert result == set()
+
+    def test_would_create_cycle_already_visited(self, registry):
+        """Test cycle detection with already visited nodes."""
+        registry.register_module('a', 'a.py')
+        registry.register_module('b', 'b.py')
+        registry.register_module('c', 'c.py')
+        
+        registry.add_dependency('a', 'b')
+        registry.add_dependency('b', 'c')
+        
+        # Would create cycle a -> b -> c -> a
+        result = registry._would_create_cycle('c', 'a')
+        assert result is True
+
+    def test_would_create_cycle_with_diamond_dependency(self, registry):
+        """Test cycle detection with diamond dependency pattern."""
+        # Diamond: a -> b, a -> c, b -> d, c -> d
+        registry.register_module('a', 'a.py')
+        registry.register_module('b', 'b.py')
+        registry.register_module('c', 'c.py')
+        registry.register_module('d', 'd.py')
+        
+        registry.add_dependency('a', 'b')
+        registry.add_dependency('a', 'c')
+        registry.add_dependency('b', 'd')
+        registry.add_dependency('c', 'd')
+        
+        # d -> a would create cycle through both b and c
+        result = registry._would_create_cycle('d', 'a')
+        # This tests the 'continue' branch when a node is already visited
+        assert result is True
+
+    def test_change_callback_error_handling(self, registry):
+        """Test that errors in change callbacks are caught."""
+        def failing_callback(module_id):
+            raise RuntimeError("Callback error")
+        
+        registry.on_change(failing_callback)
+        registry.register_module('test', 'test.py')
+        
+        # Should not raise, error is logged
+        registry.notify_change('test')
+
+    def test_notify_change_updates_last_modified(self, registry):
+        """Test that notify_change updates module's last_modified."""
+        registry.register_module('test', 'test.py')
+        original_time = registry.get_module_info('test').last_modified
+        
+        registry.notify_change('test')
+        
+        new_time = registry.get_module_info('test').last_modified
+        # The timestamp should be updated (equal or later)
+        assert new_time >= original_time

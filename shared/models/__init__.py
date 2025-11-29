@@ -1,7 +1,29 @@
 """
 =============================================================================
-OCR MODELS PACKAGE - AI/ML Model Management Infrastructure
+CIRCULAR EXCHANGE COMPLIANT MODULE
 =============================================================================
+
+Module: shared.models
+Path: shared/models/__init__.py
+Description: OCR MODELS PACKAGE - AI/ML Model Management Infrastructure
+Compliance Version: 2.0.0
+
+CIRCULAR EXCHANGE INTEGRATION:
+This module is integrated with the Circular Information Exchange Framework.
+All changes are tracked and propagated through the reactive system.
+
+Dependencies: shared.circular_exchange
+Exports: BaseProcessor, ModelManager, OCRProcessor, DonutProcessor, FlorenceProcessor
+
+AI AGENT INSTRUCTIONS:
+- Use PROJECT_CONFIG for all configuration values
+- Register this module with CircularExchange on import
+- Use VariablePackages for shared data
+- Subscribe to relevant change notifications
+
+=============================================================================
+
+OCR MODELS PACKAGE - AI/ML Model Management Infrastructure
 
 This package implements enterprise-grade AI/ML model management following
 patterns from production machine learning systems at scale.
@@ -39,7 +61,7 @@ Features:
 - Retry Logic: Resilient model loading
 
 Integration with Circular Exchange:
-    from shared.circular_exchange import CircularExchange
+    from shared.circular_exchange import CircularExchange, PROJECT_CONFIG
     from shared.models import ModelManager
     
     exchange = CircularExchange.get_instance()
@@ -55,6 +77,30 @@ Integration with Circular Exchange:
 """
 
 from typing import TYPE_CHECKING
+
+# =============================================================================
+# CIRCULAR EXCHANGE INTEGRATION
+# =============================================================================
+try:
+    from shared.circular_exchange.project_config import PROJECT_CONFIG, ModuleRegistration
+    
+    # Register this module with the circular exchange
+    PROJECT_CONFIG.register_module(ModuleRegistration(
+        module_id="shared.models",
+        file_path="shared/models/__init__.py",
+        description="AI/ML Model Management Infrastructure",
+        dependencies=["shared.circular_exchange"],
+        exports=[
+            "BaseProcessor", "EasyOCRProcessor", "PaddleProcessor",
+            "DonutProcessor", "FlorenceProcessor", "ModelManager",
+            "OCRProcessor", "normalize_price", "clean_item_name"
+        ],
+        is_circular_exchange_compliant=True,
+        compliance_version="2.0.0"
+    ))
+except ImportError:
+    # Graceful fallback if circular exchange not available
+    pass
 
 # Lazy imports to avoid import errors when optional dependencies not installed
 _LAZY_IMPORTS = {
@@ -86,6 +132,10 @@ def __getattr__(name: str):
     - Fast initial imports
     - Graceful handling of missing optional dependencies
     - Reduced memory footprint until models are needed
+    
+    CIRCULAR EXCHANGE NOTE:
+    This lazy loading integrates with the circular exchange by deferring
+    module registration until actual use, reducing startup overhead.
     """
     if name in _LAZY_IMPORTS:
         module_name, class_name = _LAZY_IMPORTS[name]

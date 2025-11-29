@@ -300,6 +300,44 @@ class TestChangeNotifier:
         # a should be notified first
         assert notification_order[0] == 'a'
 
+    def test_unsubscribe_module_handler(self, notifier_with_registry):
+        """Test unsubscribing from module change notifications."""
+        notifier, _ = notifier_with_registry
+        events = []
+        
+        unsub = notifier.on_module_change('b', lambda e: events.append(e))
+        notifier.notify_change('a', ChangeType.FILE_MODIFIED)
+        assert len(events) == 1  # First event received
+        
+        unsub()  # Unsubscribe
+        notifier.notify_change('a', ChangeType.FILE_MODIFIED)
+        assert len(events) == 1  # No new events after unsubscribe
+
+    def test_event_history_max_limit(self):
+        """Test that event history respects max limit."""
+        notifier = ChangeNotifier(max_history=5)
+        
+        for i in range(10):
+            notifier.notify_change(f'mod{i}', ChangeType.FILE_MODIFIED)
+        
+        history = notifier.get_history()
+        assert len(history) == 5  # Only last 5 events kept
+
+    def test_module_handler_error_handling(self, notifier_with_registry):
+        """Test that module handler errors are caught and reported."""
+        notifier, _ = notifier_with_registry
+        
+        def failing_handler(e):
+            raise RuntimeError("Module handler failed")
+        
+        notifier.on_module_change('b', failing_handler)
+        results = notifier.notify_change('a', ChangeType.FILE_MODIFIED)
+        
+        # Should have failed result for module handler
+        failed_results = [r for r in results if not r.success]
+        assert len(failed_results) >= 1
+        assert any('Module handler failed' in r.error for r in failed_results)
+
 
 class TestChangeType:
     """Tests for ChangeType enum."""

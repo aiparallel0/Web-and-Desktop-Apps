@@ -1,7 +1,29 @@
 """
 =============================================================================
-UTILITIES PACKAGE - Cross-Cutting Concerns & Infrastructure
+CIRCULAR EXCHANGE COMPLIANT MODULE
 =============================================================================
+
+Module: shared.utils
+Path: shared/utils/__init__.py
+Description: UTILITIES PACKAGE - Cross-Cutting Concerns & Infrastructure
+Compliance Version: 2.0.0
+
+CIRCULAR EXCHANGE INTEGRATION:
+This module is integrated with the Circular Information Exchange Framework.
+All changes are tracked and propagated through the reactive system.
+
+Dependencies: shared.circular_exchange
+Exports: LineItem, ReceiptData, ExtractionResult, image processing, logging, errors
+
+AI AGENT INSTRUCTIONS:
+- Use PROJECT_CONFIG for all configuration values
+- Register this module with CircularExchange on import
+- Use VariablePackages for shared data
+- Subscribe to relevant change notifications
+
+=============================================================================
+
+UTILITIES PACKAGE - Cross-Cutting Concerns & Infrastructure
 
 This package provides enterprise-grade utilities and cross-cutting concerns
 for the Receipt Extraction System.
@@ -18,9 +40,34 @@ Design Principles:
 - Dependency Injection: Utilities can be injected for testability
 - Thread Safety: All utilities are thread-safe
 - Performance: Optimized for high-throughput processing
+- Variable-Based Configuration: All settings from PROJECT_CONFIG
 
 =============================================================================
 """
+
+# =============================================================================
+# CIRCULAR EXCHANGE INTEGRATION
+# =============================================================================
+try:
+    from shared.circular_exchange.project_config import PROJECT_CONFIG, ModuleRegistration
+    
+    # Register this module with the circular exchange
+    PROJECT_CONFIG.register_module(ModuleRegistration(
+        module_id="shared.utils",
+        file_path="shared/utils/__init__.py",
+        description="Cross-Cutting Concerns & Infrastructure Utilities",
+        dependencies=["shared.circular_exchange"],
+        exports=[
+            "LineItem", "ReceiptData", "ExtractionResult", "StoreInfo",
+            "load_and_validate_image", "enhance_image", "setup_logger",
+            "get_logger", "ReceiptExtractorError", "ValidationError"
+        ],
+        is_circular_exchange_compliant=True,
+        compliance_version="2.0.0"
+    ))
+except ImportError:
+    # Graceful fallback if circular exchange not available
+    pass
 
 # Data structures
 from .data_structures import (
@@ -133,3 +180,5 @@ __all__ = [
     'handle_exception',
     'register_error_handlers',
 ]
+
+__version__ = '2.0.0'
