@@ -434,10 +434,8 @@ class TestDependencyRegistryEdgeCases:
         registry.register_module('test', 'test.py')
         original_time = registry.get_module_info('test').last_modified
         
-        import time
-        time.sleep(0.01)  # Small delay to ensure time difference
-        
         registry.notify_change('test')
         
         new_time = registry.get_module_info('test').last_modified
+        # The timestamp should be updated (equal or later)
         assert new_time >= original_time
