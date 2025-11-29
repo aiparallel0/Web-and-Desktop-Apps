@@ -295,6 +295,32 @@ class DonutProcessor(BaseDonutProcessor):
         if receipt.transaction_date:score+=5
         return min(100.0,score)
 class FlorenceProcessor(BaseDonutProcessor):
+    """Enhanced Florence-2 processor with advanced text detection capabilities.
+    
+    Florence-2 supports multiple task prompts for different vision-language tasks:
+    - <OCR>: Basic OCR text extraction
+    - <OCR_WITH_REGION>: OCR with bounding box regions
+    - <CAPTION>: Image captioning
+    - <DETAILED_CAPTION>: Detailed image description
+    - <MORE_DETAILED_CAPTION>: Very detailed description
+    - <REGION_TO_CATEGORY>: Classify regions
+    - <DENSE_REGION_CAPTION>: Dense captioning with regions
+    """
+    
+    # Florence-2 task prompts for receipt processing
+    TASK_OCR = "<OCR>"
+    TASK_OCR_WITH_REGION = "<OCR_WITH_REGION>"
+    TASK_DENSE_CAPTION = "<DENSE_REGION_CAPTION>"
+    
+    # Pre-compiled regex patterns for performance
+    _PRICE_PATTERN = re.compile(r'^[\$€£]?\d+[.,]\d{2}$')
+    _DATE_PATTERN = re.compile(r'^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$')
+    _ITEM_PATTERNS = [
+        re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+        re.compile(r'^(\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+        re.compile(r'^(.+?)\s+(\d+[.,]\d{2})(?:\s*[A-Z])?$'),
+    ]
+    
     def _load_model(self):
         logger.info(f"Loading Florence-2 model: {self.model_id}")
         _, _, _AutoProcessor, _AutoModelForCausalLM = _get_transformers()
@@ -317,58 +343,319 @@ class FlorenceProcessor(BaseDonutProcessor):
                     error_msg=(f"Failed to load Florence-2 ({self.model_id}) after {max_retries} attempts.\nThis could be due to:\n  - Network connection issues\n  - HuggingFace service unavailable\n  - Insufficient disk space (~750MB required)\n  - Missing dependencies (trust_remote_code requires transformers>=4.30)\nLast error: {e}")
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)from e
-    def extract(self,image_path:str)->ExtractionResult:
-        start_time=time.time()
+    
+    def _run_florence_task(self, image, task_prompt: str, max_tokens: int = 512) -> Dict:
+        """Run a Florence-2 task and return parsed output."""
+        inputs = self.processor(text=task_prompt, images=image, return_tensors="pt")
+        inputs = inputs.to(self.device)
+        
+        generated_ids = self.model.generate(
+            input_ids=inputs["input_ids"],
+            pixel_values=inputs["pixel_values"],
+            max_new_tokens=max_tokens,
+            num_beams=3,  # Use beam search for better quality
+            do_sample=False,
+            use_cache=True,
+            early_stopping=True,
+            pad_token_id=self.processor.tokenizer.pad_token_id,
+        )
+        
+        generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+        parsed_output = self.processor.post_process_generation(
+            generated_text, 
+            task=task_prompt, 
+            image_size=(image.width, image.height)
+        )
+        return parsed_output
+    
+    def extract(self, image_path: str) -> ExtractionResult:
+        start_time = time.time()
         try:
             logger.info("Florence-2: Loading image...")
-            image=load_and_validate_image(image_path)
-            if image is None:raise ValueError("Image is None after loading")
+            image = load_and_validate_image(image_path)
+            if image is None:
+                raise ValueError("Image is None after loading")
             logger.info(f"Florence-2: Image loaded successfully, size: {image.size}")
-            logger.info("Florence-2: Processing with model...")
-            try:
-                inputs=self.processor(text=self.task_prompt,images=image,return_tensors="pt")
-                if inputs is None:raise ValueError("Processor returned None")
-                logger.info(f"Florence-2: Inputs prepared, keys: {inputs.keys()}")
-                inputs=inputs.to(self.device)
-            except Exception as e:
-                logger.error(f"Florence-2: Failed during input processing: {e}",exc_info=True)
-                raise
-            logger.info("Florence-2: Generating output...")
-            try:
-                generated_ids=self.model.generate(input_ids=inputs["input_ids"],pixel_values=inputs["pixel_values"],max_new_tokens=256,num_beams=1,do_sample=False,use_cache=False,early_stopping=True,pad_token_id=self.processor.tokenizer.pad_token_id,)
-            except Exception as e:
-                logger.error(f"Florence-2: Failed during generation: {e}",exc_info=True)
-                raise
-            logger.info("Florence-2: Decoding output...")
-            generated_text=self.processor.batch_decode(generated_ids,skip_special_tokens=False)[0]
-            logger.info(f"Florence-2: Generated text length: {len(generated_text)}")
-            logger.info("Florence-2: Post-processing generation...")
-            try:
-                parsed_output=self.processor.post_process_generation(generated_text,task=self.task_prompt,image_size=(image.width,image.height))
-                logger.info(f"Florence-2: Parsed output keys: {parsed_output.keys()if parsed_output else'None'}")
-            except Exception as e:
-                logger.error(f"Florence-2: Failed during post-processing: {e}",exc_info=True)
-                raise
-            receipt=self._build_receipt_from_ocr(parsed_output)
-            receipt.processing_time,receipt.model_used=time.time()-start_time,self.model_name
-            return ExtractionResult(success=True,data=receipt)
+            
+            # Run primary OCR with regions for structured extraction
+            logger.info("Florence-2: Running OCR with region detection...")
+            ocr_output = self._run_florence_task(image, self.TASK_OCR_WITH_REGION, max_tokens=1024)
+            
+            # Also run basic OCR for full text
+            logger.info("Florence-2: Running basic OCR...")
+            basic_ocr = self._run_florence_task(image, self.TASK_OCR, max_tokens=512)
+            
+            # Build receipt from combined outputs
+            receipt = self._build_receipt_from_ocr_enhanced(ocr_output, basic_ocr, image)
+            receipt.processing_time = time.time() - start_time
+            receipt.model_used = self.model_name
+            
+            return ExtractionResult(success=True, data=receipt)
+            
         except Exception as e:
-            logger.error(f"Florence-2 extraction failed: {e}",exc_info=True)
-            return ExtractionResult(success=False,error=str(e))
-    def _build_receipt_from_ocr(self,parsed_output:Dict)->ReceiptData:
-        receipt=ReceiptData()
-        ocr_result=parsed_output.get(self.task_prompt,{})
-        texts=ocr_result.get('labels',[])
-        all_text=' '.join(texts)
-        total_pattern=r'total[:\s]*\$?(\d+\.\d{2})'
-        total_match=re.search(total_pattern,all_text,re.IGNORECASE)
-        if total_match:receipt.total=self.normalize_price(total_match.group(1))
-        date_pattern=r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-        date_match=re.search(date_pattern,all_text)
-        if date_match:receipt.transaction_date=date_match.group(1)
-        if texts:receipt.store_name=texts[0]
-        receipt.extraction_notes.append("Basic Florence-2 OCR extraction")
+            logger.error(f"Florence-2 extraction failed: {e}", exc_info=True)
+            return ExtractionResult(success=False, error=str(e))
+    
+    def _build_receipt_from_ocr_enhanced(self, ocr_output: Dict, basic_ocr: Dict, image) -> ReceiptData:
+        """Enhanced receipt building with region-aware parsing."""
+        receipt = ReceiptData()
+        
+        # Extract texts and bounding boxes from OCR_WITH_REGION
+        ocr_result = ocr_output.get(self.TASK_OCR_WITH_REGION, {})
+        texts = ocr_result.get('labels', [])
+        bboxes = ocr_result.get('quad_boxes', [])
+        
+        # Get full text from basic OCR
+        basic_result = basic_ocr.get(self.TASK_OCR, '')
+        full_text = basic_result if isinstance(basic_result, str) else ' '.join(texts)
+        
+        logger.info(f"Florence-2: Detected {len(texts)} text regions")
+        
+        # Create region-text pairs sorted by vertical position
+        text_regions = []
+        for i, text in enumerate(texts):
+            bbox = bboxes[i] if i < len(bboxes) else None
+            y_pos = bbox[1] if bbox and len(bbox) > 1 else i * 10  # Use bbox y or index
+            text_regions.append({
+                'text': text.strip(),
+                'bbox': bbox,
+                'y_pos': y_pos,
+                'index': i
+            })
+        
+        # Sort by vertical position (top to bottom)
+        text_regions.sort(key=lambda x: x['y_pos'])
+        
+        # Extract store name (typically at the top)
+        receipt.store_name = self._extract_store_name_from_regions(text_regions)
+        
+        # Extract address using region context
+        receipt.store_address = self._extract_address_from_regions(text_regions)
+        
+        # Extract phone number
+        receipt.store_phone = self._extract_phone_from_text(full_text)
+        
+        # Extract date
+        receipt.transaction_date = self._extract_date_from_text(full_text)
+        
+        # Extract totals with region awareness (totals usually at bottom)
+        receipt.total, receipt.subtotal = self._extract_totals_from_regions(text_regions, full_text)
+        
+        # Extract line items using region analysis
+        receipt.items = self._extract_items_from_regions(text_regions)
+        
+        # Calculate confidence based on extraction quality
+        receipt.confidence_score = self._calculate_extraction_confidence(receipt, text_regions)
+        
+        receipt.extraction_notes.append("Enhanced Florence-2 region-aware extraction")
+        
         return receipt
+    
+    def _extract_store_name_from_regions(self, regions: List[Dict]) -> Optional[str]:
+        """Extract store name from top regions of receipt."""
+        if not regions:
+            return None
+        
+        # Look at top 5 regions
+        for region in regions[:5]:
+            text = region['text']
+            # Skip if too short, only digits, or common header items
+            if len(text) < 3:
+                continue
+            if text.replace(' ', '').isdigit():
+                continue
+            # Skip common non-store-name patterns
+            skip_patterns = ['receipt', 'invoice', 'welcome', 'date:', 'time:', 'tel:', 'phone:']
+            if any(p in text.lower() for p in skip_patterns):
+                continue
+            # Skip prices and dates using pre-compiled patterns
+            if self._PRICE_PATTERN.match(text):
+                continue
+            if self._DATE_PATTERN.match(text):
+                continue
+            return text
+        
+        return regions[0]['text'] if regions else None
+    
+    def _extract_address_from_regions(self, regions: List[Dict]) -> Optional[str]:
+        """Extract address from regions using context."""
+        address_keywords = ['street', 'st', 'avenue', 'ave', 'road', 'rd', 'blvd', 
+                          'boulevard', 'drive', 'dr', 'lane', 'ln', 'way', 'plaza']
+        state_pattern = r'\b[A-Z]{2}\s+\d{5}(-\d{4})?\b'
+        
+        for region in regions:
+            text = region['text']
+            text_lower = text.lower()
+            
+            # Check for address keywords
+            if any(kw in text_lower for kw in address_keywords):
+                return text
+            
+            # Check for state + ZIP pattern
+            if re.search(state_pattern, text):
+                return text
+        
+        return None
+    
+    def _extract_phone_from_text(self, text: str) -> Optional[str]:
+        """Extract phone number from text."""
+        patterns = [
+            r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
+            r'\d{3}[-.\s]\d{3}[-.\s]\d{4}',
+            r'\+1[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return match.group(0)
+        return None
+    
+    def _extract_date_from_text(self, text: str) -> Optional[str]:
+        """Extract date from text with multiple format support."""
+        patterns = [
+            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+            r'(\w{3,9}\s+\d{1,2},?\s+\d{4})',
+            r'(\d{1,2}\s+\w{3,9}\s+\d{4})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        return None
+    
+    def _extract_totals_from_regions(self, regions: List[Dict], full_text: str) -> tuple:
+        """Extract total and subtotal from regions, focusing on bottom area."""
+        total = None
+        subtotal = None
+        
+        # Look at bottom half of regions for totals
+        bottom_regions = regions[len(regions)//2:] if len(regions) > 2 else regions
+        
+        total_patterns = [
+            r'(?:grand\s*)?total[:\s]*\$?\s*(\d+[.,]\d{2})',
+            r'(?:amount\s*due|balance)[:\s]*\$?\s*(\d+[.,]\d{2})',
+            r'\btotal\b[:\s]*\$?\s*(\d+[.,]\d{2})',
+        ]
+        
+        subtotal_patterns = [
+            r'sub\s*total[:\s]*\$?\s*(\d+[.,]\d{2})',
+            r'subtotal[:\s]*\$?\s*(\d+[.,]\d{2})',
+        ]
+        
+        # Search in bottom regions first
+        for region in reversed(bottom_regions):
+            text = region['text']
+            
+            # Look for total
+            if not total:
+                for pattern in total_patterns:
+                    match = re.search(pattern, text, re.IGNORECASE)
+                    if match:
+                        total = self.normalize_price(match.group(1))
+                        break
+            
+            # Look for subtotal
+            if not subtotal:
+                for pattern in subtotal_patterns:
+                    match = re.search(pattern, text, re.IGNORECASE)
+                    if match:
+                        subtotal = self.normalize_price(match.group(1))
+                        break
+        
+        # Fallback to full text search
+        if not total:
+            for pattern in total_patterns:
+                match = re.search(pattern, full_text, re.IGNORECASE)
+                if match:
+                    total = self.normalize_price(match.group(1))
+                    break
+        
+        return total, subtotal
+    
+    def _extract_items_from_regions(self, regions: List[Dict]) -> List[LineItem]:
+        """Extract line items using region analysis."""
+        items = []
+        seen_names = set()
+        
+        # Skip words that indicate non-item lines
+        skip_keywords = {'subtotal', 'total', 'tax', 'cash', 'change', 'card', 'visa', 
+                        'mastercard', 'amex', 'debit', 'credit', 'payment', 'balance',
+                        'discount', 'coupon', 'thank', 'receipt', 'welcome'}
+        
+        for region in regions:
+            text = region['text'].strip()
+            text_lower = text.lower()
+            
+            # Skip short texts and known keywords
+            if len(text) < 3:
+                continue
+            if any(kw in text_lower for kw in skip_keywords):
+                continue
+            
+            # Try to match item patterns using pre-compiled patterns
+            for pattern in self._ITEM_PATTERNS:
+                match = pattern.search(text)
+                if match:
+                    groups = match.groups()
+                    quantity = 1
+                    if len(groups) == 2:
+                        name, price_str = groups
+                    elif len(groups) == 3:
+                        qty_prefix, name, price_str = groups
+                        if qty_prefix:
+                            # Parse quantity prefix like "2 x" or "3*"
+                            qty_match = re.match(r'(\d+)', qty_prefix)
+                            quantity = int(qty_match.group(1)) if qty_match else 1
+                    else:
+                        continue
+                    
+                    name = name.strip()
+                    if len(name) < 2 or name in seen_names:
+                        continue
+                    
+                    price = self.normalize_price(price_str)
+                    if price and PRICE_MIN <= float(price) <= PRICE_MAX:
+                        items.append(LineItem(name=name, total_price=price, quantity=quantity))
+                        seen_names.add(name)
+                        break
+        
+        logger.info(f"Florence-2: Extracted {len(items)} line items")
+        return items
+    
+    def _calculate_extraction_confidence(self, receipt: ReceiptData, regions: List[Dict]) -> float:
+        """Calculate confidence score based on extraction quality."""
+        score = 0.0
+        
+        # Base score for having regions
+        if regions:
+            score += min(20, len(regions) * 2)  # Up to 20 points for text regions
+        
+        # Score for key fields
+        if receipt.store_name:
+            score += 15
+        if receipt.total:
+            score += 25
+        if receipt.transaction_date:
+            score += 10
+        if receipt.store_address:
+            score += 10
+        if receipt.items:
+            score += min(20, len(receipt.items) * 2)  # Up to 20 points for items
+            
+            # Bonus for item-total consistency
+            if receipt.total:
+                try:
+                    items_sum = sum(float(item.total_price) for item in receipt.items)
+                    coverage = (items_sum / float(receipt.total)) * 100
+                    if 90 <= coverage <= 110:
+                        score += 10
+                    elif 80 <= coverage <= 120:
+                        score += 5
+                except (ValueError, TypeError, ZeroDivisionError):
+                    pass
+        
+        return min(100.0, score)
 import os,logging
 from typing import List,Dict,Callable,Optional
 from pathlib import Path
