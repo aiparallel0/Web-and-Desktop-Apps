@@ -317,3 +317,442 @@ MIT License - See LICENSE.txt for details
 - **Donut Models:** Naver Clova, HuggingFace community
 - **Florence-2:** Microsoft Research
 - **Tesseract:** Google, open-source community
+# Receipt Extractor - Complete Documentation
+
+**Version:** 3.0  
+**Last Updated:** 2025-11-29
+
+This is the consolidated documentation for the Receipt Extractor application.
+
+## Table of Contents
+
+1. [Quick Start](#quick-start)
+2. [Installation](#installation)
+3. [Testing Guide](#testing-guide)
+4. [Web App Usage](#web-app-usage)
+5. [GPU Setup](#gpu-setup)
+6. [Architecture](#architecture)
+7. [API Reference](#api-reference)
+8. [Troubleshooting](#troubleshooting)
+9. [OCR Quality Guide](#ocr-quality-guide)
+10. [Development Guide](#development-guide)
+
+---
+
+## Quick Start
+
+### Using the Unified Launcher (Recommended)
+
+```bash
+# Linux/Mac
+./launch.sh
+
+# Or with options:
+./launch.sh --quick    # Quick launch without tests
+./launch.sh --test     # Run tests only
+./launch.sh --clean    # Clean Python cache only
+```
+
+### Windows
+
+```cmd
+# Run all tests
+run_tests.bat
+
+# Or use Python directly
+python run_all_tests.py
+```
+
+### Manual Start
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Start backend
+cd web-app/backend
+python app.py
+
+# 3. Start frontend (new terminal)
+cd web-app/frontend  
+python -m http.server 3000
+
+# 4. Open browser
+# Navigate to http://localhost:3000
+```
+
+---
+
+## Testing Guide
+
+### Automated Test Runner
+
+The unified launcher script (`launch.sh`) includes built-in test execution with automatic cache cleaning.
+
+```bash
+# Run full test suite with cache cleanup
+./launch.sh --test
+
+# Or using Python directly
+python run_all_tests.py
+```
+
+### Test Suites
+
+| Test File | Description | Status |
+|-----------|-------------|--------|
+| `test_system_health.py` | System validation | ✅ |
+| `test_image_processing.py` | Image utilities | ✅ |
+| `test_model_manager.py` | Model loading | ✅ |
+| `test_base_processor.py` | Base processor | ✅ |
+| `test_easyocr_processor.py` | EasyOCR tests | ✅ |
+| `test_paddle_processor.py` | PaddleOCR tests | ✅ |
+| `test_donut_processor.py` | Donut model tests | ✅ |
+| `test_api.py` | API endpoints | ✅ |
+
+### Cache Cleaning
+
+Cache is cleaned automatically before tests, but you can also do it manually:
+
+```bash
+# Using launcher
+./launch.sh --clean
+
+# Or manually
+rm -rf __pycache__ .pytest_cache .coverage htmlcov
+find . -name "*.pyc" -delete
+```
+
+### Coverage Reports
+
+```bash
+# Run tests with coverage
+pytest tests/ -v --cov=shared --cov=web-app/backend --cov-report=html
+
+# View HTML report
+open htmlcov/index.html  # Mac
+start htmlcov/index.html # Windows
+xdg-open htmlcov/index.html # Linux
+```
+
+---
+
+## Web App Usage
+
+### Starting the Application
+
+```bash
+./launch.sh   # Select option 1 (Quick Launch) or 2 (Full Launch)
+```
+
+### Access URLs
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Frontend** | http://localhost:3000 | Web interface |
+| **Backend** | http://localhost:5000 | API server |
+| **Health Check** | http://localhost:5000/api/health | System status |
+| **Models** | http://localhost:5000/api/models | Available models |
+
+### API Endpoints
+
+```bash
+# Get available models
+curl http://localhost:5000/api/models
+
+# Select a model
+curl -X POST http://localhost:5000/api/models/select \
+  -H "Content-Type: application/json" \
+  -d '{"model_id": "easyocr"}'
+
+# Extract receipt data
+curl -X POST http://localhost:5000/api/extract \
+  -F "image=@receipt.jpg" \
+  -F "model_id=easyocr"
+
+# Extract with ALL models
+curl -X POST http://localhost:5000/api/extract/batch \
+  -F "image=@receipt.jpg"
+```
+
+### Available OCR Models
+
+| Model | Speed | Accuracy | Setup |
+|-------|-------|----------|-------|
+| EasyOCR | ⚡⚡ | ⭐⭐⭐⭐ | Automatic (Recommended) |
+| Tesseract | ⚡⚡⚡ | ⭐⭐⭐ | Requires installation |
+| PaddleOCR | ⚡⚡ | ⭐⭐⭐⭐ | Requires installation |
+| Florence-2 | ⚡ | ⭐⭐⭐⭐⭐ | Requires PyTorch |
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Port already in use"
+```bash
+# Find and kill process on port 5000
+lsof -i :5000
+kill -9 <PID>
+
+# Or use different port
+python -m http.server 8080
+```
+
+#### "Module not found"
+```bash
+pip install -r requirements.txt
+pip install pytest pytest-cov pytest-mock
+```
+
+#### "Tesseract not found"
+- **Windows:** Download from https://github.com/UB-Mannheim/tesseract/wiki
+- **Mac:** `brew install tesseract`
+- **Linux:** `sudo apt-get install tesseract-ocr`
+
+#### EasyOCR First Run (Slow)
+Normal behavior - downloads models (~50MB) on first use.
+
+#### Memory Issues
+```bash
+# Unload models
+curl -X POST http://localhost:5000/api/models/unload
+```
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+export FLASK_DEBUG=1
+python app.py
+```
+
+---
+
+## Architecture Overview
+
+### Project Structure
+
+```
+├── launch.sh           # Unified launcher script
+├── shared/             # Shared processing modules
+│   ├── models/         # OCR processors
+│   ├── utils/          # Utilities
+│   └── config/         # Configuration
+├── web-app/            # Web application
+│   ├── backend/        # Flask API
+│   └── frontend/       # HTML/CSS/JS
+├── desktop-app/        # Electron desktop app
+├── tests/              # Test suites
+└── DOCS.md             # This documentation
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `launch.sh` | Unified launcher with cache cleaning |
+| `run_all_tests.py` | Test runner |
+| `shared/models/model_manager.py` | Model management |
+| `web-app/backend/app.py` | Flask API |
+| `shared/config/models_config.json` | Model configuration |
+
+### Security Features
+
+- JWT token authentication
+- Password hashing with bcrypt
+- Input validation with Pydantic
+- Rate limiting decorators
+- SQL injection prevention (ORM)
+
+---
+
+## GPU Setup
+
+### Prerequisites
+
+- NVIDIA GPU (GTX 1050 or newer)
+- CUDA Toolkit 12.1
+- 4GB+ VRAM
+
+### Installation
+
+```bash
+# Windows: Download CUDA from https://developer.nvidia.com/cuda-downloads
+# Linux:
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt-get update && sudo apt-get -y install cuda-toolkit-12-1
+
+# Install GPU PyTorch
+pip uninstall torch torchvision torchaudio
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+### Verify
+
+```bash
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
+```
+
+### Performance Improvement
+
+| Model | CPU | GPU | Speedup |
+|-------|-----|-----|---------|
+| EasyOCR | 45s | 3s | 15x |
+| Donut | 20s | 2s | 10x |
+| Florence-2 | 60s | 4s | 15x |
+
+---
+
+## API Reference
+
+### Authentication Endpoints
+
+```bash
+# Register
+POST /api/auth/register
+{"email": "user@example.com", "password": "SecurePass123!"}
+
+# Login
+POST /api/auth/login
+{"email": "user@example.com", "password": "SecurePass123!"}
+
+# Logout
+POST /api/auth/logout
+{"refresh_token": "..."}
+
+# Refresh Token
+POST /api/auth/refresh
+{"refresh_token": "..."}
+
+# Get Profile
+GET /api/auth/me
+Authorization: Bearer <token>
+```
+
+### Receipts Endpoints
+
+```bash
+# List Receipts
+GET /api/receipts
+Authorization: Bearer <token>
+
+# Get Receipt
+GET /api/receipts/<id>
+Authorization: Bearer <token>
+
+# Update Receipt
+PATCH /api/receipts/<id>
+Authorization: Bearer <token>
+{"store_name": "...", "total_amount": 25.99}
+
+# Delete Receipt
+DELETE /api/receipts/<id>
+Authorization: Bearer <token>
+
+# Get Statistics
+GET /api/receipts/stats
+Authorization: Bearer <token>
+```
+
+### Extraction Endpoints
+
+```bash
+# Single extraction
+POST /api/extract
+multipart/form-data: image, model_id
+
+# Batch extraction (all models)
+POST /api/extract/batch
+multipart/form-data: image
+```
+
+---
+
+## OCR Quality Guide
+
+### Image Preprocessing Pipeline
+
+1. Upscale (if < 1000px) → 1500px minimum
+2. Deskew (auto-rotate)
+3. Denoise
+4. CLAHE (enhance faded text)
+5. Bilateral Filter
+6. Otsu Binarization
+7. Morphological Cleanup
+8. Invert if dark background
+
+### Quality Tips
+
+- **Resolution**: 300+ DPI recommended
+- **Lighting**: Even, no glare
+- **Orientation**: Straight, flat
+- **For faded thermal receipts**: Use EasyOCR
+
+### Model Selection Guide
+
+| Image Type | Best Model |
+|------------|------------|
+| Clear, printed | Tesseract |
+| Handwritten | EasyOCR |
+| Complex layout | Florence-2 |
+| Multi-language | PaddleOCR |
+
+---
+
+## Development Guide
+
+### Database Setup (PostgreSQL)
+
+```bash
+# Create database
+sudo -u postgres createdb receipt_extractor
+sudo -u postgres createuser receipt_user -P
+
+# Set environment
+DATABASE_URL=postgresql://receipt_user:password@localhost:5432/receipt_extractor
+JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+```
+
+### Running Tests
+
+```bash
+# All tests
+./launch.sh --test
+
+# With coverage
+pytest tests/ --cov=shared --cov=web-app/backend --cov-report=html
+
+# Specific tests
+pytest tests/backend/auth/ -v
+```
+
+### Project Structure (Max Depth 3)
+
+```
+├── launch.sh           # Unified launcher
+├── README.md           # Project readme
+├── DOCS.md             # All documentation (this file)
+├── requirements.txt    # Dependencies
+├── pytest.ini          # Test config
+├── shared/             # Shared code
+│   ├── models/         # OCR processors
+│   ├── utils/          # Utilities
+│   └── config/         # Configuration
+├── web-app/            # Web application
+│   ├── backend/        # Flask API
+│   └── frontend/       # Web UI
+├── desktop-app/        # Electron app
+├── tests/              # All tests
+└── test_data/          # Test images
+```
+
+---
+
+## Support
+
+- **Logs:** Check `logs/` directory
+- **Test Reports:** `logs/test-reports/`
+- **Configuration:** `shared/config/models_config.json`

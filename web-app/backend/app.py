@@ -20,8 +20,8 @@ finetune_jobs={}
 
 # Register auth and API routes
 try:
-    from auth.routes import register_auth_routes
-    from api.receipts import register_receipts_routes
+    from auth import register_auth_routes
+    from receipts import register_receipts_routes
     register_auth_routes(app)
     register_receipts_routes(app)
     logger.info("Auth and Receipts API routes registered")

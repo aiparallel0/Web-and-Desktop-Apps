@@ -1,4 +1,582 @@
 """
+Authentication and authorization module
+
+Provides complete authentication infrastructure including:
+- Password hashing with bcrypt
+- JWT token creation and verification
+- Route decorators for authentication and authorization
+- API routes for user registration, login, and session management
+"""
+from .password import hash_password, verify_password, is_password_strong
+from .jwt_handler import (
+    create_access_token,
+    create_refresh_token,
+    verify_access_token,
+    verify_refresh_token,
+    revoke_refresh_token
+)
+from .decorators import require_auth, require_admin, rate_limit, require_plan, check_usage_limit
+from .routes import auth_bp, register_auth_routes
+
+__all__ = [
+    # Password utilities
+    'hash_password',
+    'verify_password',
+    'is_password_strong',
+    # JWT utilities
+    'create_access_token',
+    'create_refresh_token',
+    'verify_access_token',
+    'verify_refresh_token',
+    'revoke_refresh_token',
+    # Decorators
+    'require_auth',
+    'require_admin',
+    'rate_limit',
+    'require_plan',
+    'check_usage_limit',
+    # Routes
+    'auth_bp',
+    'register_auth_routes'
+]
+"""
+Password hashing and verification using bcrypt
+"""
+import bcrypt
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def hash_password(password: str) -> str:
+    """
+    Hash a password using bcrypt
+
+    Args:
+        password: Plain text password
+
+    Returns:
+        Hashed password as string
+    """
+    if not password:
+        raise ValueError("Password cannot be empty")
+
+    # Generate salt and hash password
+    salt = bcrypt.gensalt(rounds=12)  # 12 rounds is secure and performant
+    password_bytes = password.encode('utf-8')
+    hashed = bcrypt.hashpw(password_bytes, salt)
+
+    return hashed.decode('utf-8')
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """
+    Verify a password against its hash
+
+    Args:
+        password: Plain text password to verify
+        password_hash: Hashed password to compare against
+
+    Returns:
+        True if password matches, False otherwise
+    """
+    if not password or not password_hash:
+        return False
+
+    try:
+        password_bytes = password.encode('utf-8')
+        hash_bytes = password_hash.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hash_bytes)
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        return False
+
+
+def is_password_strong(password: str) -> tuple[bool, list[str]]:
+    """
+    Check if password meets strength requirements
+
+    Requirements:
+    - At least 8 characters
+    - Contains uppercase letter
+    - Contains lowercase letter
+    - Contains number
+    - Contains special character
+
+    Args:
+        password: Password to check
+
+    Returns:
+        Tuple of (is_strong, list_of_issues)
+    """
+    issues = []
+
+    if len(password) < 8:
+        issues.append("Password must be at least 8 characters long")
+
+    if not any(c.isupper() for c in password):
+        issues.append("Password must contain at least one uppercase letter")
+
+    if not any(c.islower() for c in password):
+        issues.append("Password must contain at least one lowercase letter")
+
+    if not any(c.isdigit() for c in password):
+        issues.append("Password must contain at least one number")
+
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    if not any(c in special_chars for c in password):
+        issues.append("Password must contain at least one special character")
+
+    return (len(issues) == 0, issues)
+"""
+JWT token creation and verification
+"""
+import os
+import jwt
+import hashlib
+from datetime import datetime, timedelta
+from typing import Optional, Dict
+import logging
+import secrets
+
+logger = logging.getLogger(__name__)
+
+# JWT Configuration
+JWT_SECRET = os.getenv('JWT_SECRET', 'change-this-secret-in-production-use-env-var')
+JWT_ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access tokens
+REFRESH_TOKEN_EXPIRE_DAYS = 30  # Long-lived refresh tokens
+
+if JWT_SECRET == 'change-this-secret-in-production-use-env-var':
+    logger.warning(
+        "Using default JWT_SECRET! "
+        "Set JWT_SECRET environment variable in production!"
+    )
+
+
+def create_access_token(user_id: str, email: str, is_admin: bool = False) -> str:
+    """
+    Create a short-lived JWT access token
+
+    Args:
+        user_id: User's UUID
+        email: User's email
+        is_admin: Whether user is admin
+
+    Returns:
+        Encoded JWT token
+    """
+    now = datetime.utcnow()
+    expires = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    payload = {
+        'user_id': str(user_id),
+        'email': email,
+        'is_admin': is_admin,
+        'iat': now,  # Issued at
+        'exp': expires,  # Expires at
+        'type': 'access'
+    }
+
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return token
+
+
+def create_refresh_token() -> tuple[str, str]:
+    """
+    Create a long-lived refresh token
+
+    Returns:
+        Tuple of (token, token_hash) where:
+        - token: The actual token to return to client
+        - token_hash: Hash to store in database
+    """
+    # Generate cryptographically secure random token
+    token = secrets.token_urlsafe(32)
+
+    # Hash the token for storage
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    return token, token_hash
+
+
+def verify_access_token(token: str) -> Optional[Dict]:
+    """
+    Verify and decode an access token
+
+    Args:
+        token: JWT token to verify
+
+    Returns:
+        Decoded payload if valid, None otherwise
+    """
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
+        # Verify it's an access token
+        if payload.get('type') != 'access':
+            logger.warning("Token is not an access token")
+            return None
+
+        return payload
+
+    except jwt.ExpiredSignatureError:
+        logger.debug("Access token has expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Invalid access token: {e}")
+        return None
+
+
+def verify_refresh_token(token: str, stored_hash: str) -> bool:
+    """
+    Verify a refresh token against its stored hash
+
+    Args:
+        token: The refresh token from client
+        stored_hash: The hash stored in database
+
+    Returns:
+        True if token is valid, False otherwise
+    """
+    try:
+        # Hash the provided token
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        # Compare with stored hash (constant-time comparison)
+        return secrets.compare_digest(token_hash, stored_hash)
+
+    except Exception as e:
+        logger.error(f"Error verifying refresh token: {e}")
+        return False
+
+
+def revoke_refresh_token(db, token: str) -> bool:
+    """
+    Revoke a refresh token
+
+    Args:
+        db: Database session
+        token: The refresh token to revoke
+
+    Returns:
+        True if token was revoked, False if not found
+    """
+    from database.models import RefreshToken
+
+    try:
+        # Hash the token to find it in database
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+        # Find and revoke the token
+        refresh_token = db.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash
+        ).first()
+
+        if refresh_token:
+            refresh_token.revoked = True
+            refresh_token.revoked_at = datetime.utcnow()
+            db.commit()
+            logger.info(f"Revoked refresh token for user {refresh_token.user_id}")
+            return True
+
+        return False
+
+    except Exception as e:
+        logger.error(f"Error revoking refresh token: {e}")
+        db.rollback()
+        return False
+
+
+def decode_token_without_verification(token: str) -> Optional[Dict]:
+    """
+    Decode a token without verifying signature
+    Useful for debugging or extracting user_id from expired tokens
+
+    Args:
+        token: JWT token to decode
+
+    Returns:
+        Decoded payload (unverified)
+    """
+    try:
+        return jwt.decode(token, options={"verify_signature": False})
+    except Exception as e:
+        logger.error(f"Error decoding token: {e}")
+        return None
+"""
+Authentication and authorization decorators for Flask
+"""
+from functools import wraps
+from flask import request, jsonify, g
+import logging
+from typing import Callable
+from datetime import datetime, timedelta
+import hashlib
+
+logger = logging.getLogger(__name__)
+
+# In-memory rate limit storage (use Redis in production)
+_rate_limit_storage = {}
+
+# Import database connection at module level for better testability
+_get_db_context = None
+
+
+def _lazy_get_db_context():
+    """Lazy import of get_db_context for better testability."""
+    global _get_db_context
+    if _get_db_context is None:
+        from database.connection import get_db_context
+        _get_db_context = get_db_context
+    return _get_db_context
+
+
+def get_db_context():
+    """Get database context - wrapper for testing."""
+    return _lazy_get_db_context()()
+
+
+def require_auth(f: Callable) -> Callable:
+    """
+    Decorator to require valid JWT authentication
+
+    Usage:
+        @app.route('/api/protected')
+        @require_auth
+        def protected_route():
+            user_id = g.user_id
+            return jsonify({'message': 'Hello authenticated user'})
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        from .jwt_handler import verify_access_token
+        from database.models import User
+
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'error': 'Missing authorization header'}), 401
+
+        # Extract token
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            return jsonify({'error': 'Invalid authorization header format. Use: Bearer <token>'}), 401
+
+        token = parts[1]
+
+        # Verify token
+        payload = verify_access_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        # Get user from database
+        user_id = payload.get('user_id')
+        with get_db_context() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+
+            if not user:
+                return jsonify({'error': 'User not found'}), 401
+
+            if not user.is_active:
+                return jsonify({'error': 'User account is disabled'}), 401
+
+            # Store user info in Flask's g object
+            g.user_id = str(user.id)
+            g.user_email = user.email
+            g.is_admin = user.is_admin
+            g.user_plan = user.plan
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_admin(f: Callable) -> Callable:
+    """
+    Decorator to require admin privileges
+
+    Must be used with @require_auth
+
+    Usage:
+        @app.route('/api/admin/users')
+        @require_auth
+        @require_admin
+        def admin_route():
+            return jsonify({'message': 'Hello admin'})
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not getattr(g, 'is_admin', False):
+            return jsonify({'error': 'Admin privileges required'}), 403
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def rate_limit(max_requests: int = 100, window_seconds: int = 3600,
+               key_prefix: str = 'rate_limit') -> Callable:
+    """
+    Rate limiting decorator
+
+    Args:
+        max_requests: Maximum requests allowed in window
+        window_seconds: Time window in seconds
+        key_prefix: Prefix for rate limit keys
+
+    Usage:
+        @app.route('/api/extract')
+        @require_auth
+        @rate_limit(max_requests=10, window_seconds=60)
+        def extract_route():
+            return jsonify({'message': 'Processing...'})
+    """
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get identifier (user_id if authenticated, IP otherwise)
+            identifier = getattr(g, 'user_id', None) or request.remote_addr
+
+            if not identifier:
+                return jsonify({'error': 'Unable to determine request source'}), 400
+
+            # Create rate limit key
+            key = f"{key_prefix}:{identifier}:{f.__name__}"
+
+            # Clean up old entries
+            now = datetime.utcnow()
+            if key in _rate_limit_storage:
+                _rate_limit_storage[key] = [
+                    timestamp for timestamp in _rate_limit_storage[key]
+                    if (now - timestamp).total_seconds() < window_seconds
+                ]
+
+            # Check rate limit
+            request_count = len(_rate_limit_storage.get(key, []))
+
+            if request_count >= max_requests:
+                retry_after = window_seconds
+                return jsonify({
+                    'error': 'Rate limit exceeded',
+                    'retry_after': retry_after
+                }), 429
+
+            # Record this request
+            if key not in _rate_limit_storage:
+                _rate_limit_storage[key] = []
+            _rate_limit_storage[key].append(now)
+
+            # Add rate limit headers
+            response = f(*args, **kwargs)
+            if isinstance(response, tuple):
+                response_obj, status_code = response[0], response[1]
+            else:
+                response_obj, status_code = response, 200
+
+            # Add headers if response is a Flask response object
+            if hasattr(response_obj, 'headers'):
+                response_obj.headers['X-RateLimit-Limit'] = str(max_requests)
+                response_obj.headers['X-RateLimit-Remaining'] = str(max_requests - request_count - 1)
+                response_obj.headers['X-RateLimit-Reset'] = str(int(now.timestamp()) + window_seconds)
+
+            return response
+
+        return decorated_function
+
+    return decorator
+
+
+def require_plan(required_plan: str) -> Callable:
+    """
+    Decorator to require specific subscription plan
+
+    Must be used with @require_auth
+
+    Args:
+        required_plan: Minimum plan required (free, pro, business, enterprise)
+
+    Usage:
+        @app.route('/api/premium-feature')
+        @require_auth
+        @require_plan('pro')
+        def premium_route():
+            return jsonify({'message': 'Premium feature'})
+    """
+    plan_hierarchy = {'free': 0, 'pro': 1, 'business': 2, 'enterprise': 3}
+
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user_plan = getattr(g, 'user_plan', 'free')
+
+            if plan_hierarchy.get(user_plan.value, 0) < plan_hierarchy.get(required_plan, 999):
+                return jsonify({
+                    'error': f'This feature requires {required_plan} plan or higher',
+                    'current_plan': user_plan.value,
+                    'required_plan': required_plan
+                }), 403
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
+def check_usage_limit(f: Callable) -> Callable:
+    """
+    Decorator to check monthly usage limits
+
+    Must be used with @require_auth
+
+    Usage:
+        @app.route('/api/extract')
+        @require_auth
+        @check_usage_limit
+        def extract_route():
+            return jsonify({'message': 'Processing...'})
+    """
+    # Usage limits per plan
+    PLAN_LIMITS = {
+        'free': 50,
+        'pro': 1000,
+        'business': 10000,
+        'enterprise': 999999
+    }
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        from database.models import User
+
+        user_id = g.user_id
+        user_plan = g.user_plan
+
+        with get_db_context() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+
+            limit = PLAN_LIMITS.get(user_plan.value, PLAN_LIMITS['free'])
+
+            if user.receipts_processed_month >= limit:
+                return jsonify({
+                    'error': 'Monthly usage limit exceeded',
+                    'limit': limit,
+                    'used': user.receipts_processed_month,
+                    'plan': user_plan.value,
+                    'message': 'Please upgrade your plan to process more receipts'
+                }), 429
+
+            # Increment usage counter
+            user.receipts_processed_month += 1
+            db.commit()
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+"""
 Authentication API routes for user registration, login, and session management.
 
 These routes integrate the auth module with the database and provide a complete
