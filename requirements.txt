@@ -38,7 +38,7 @@ easyocr>=1.7.0
 pytesseract>=0.3.10
 
 # PaddleOCR (optional - enterprise-grade OCR)
-# Note: paddlepaddle may require specific Python versions
+# Note: paddlepaddle may require specific Python versions and build tools
 # paddleocr>=2.7.0
 # paddlepaddle>=2.6.0
 

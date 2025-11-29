@@ -18,11 +18,13 @@
 #   --clean: Clean cache only
 #
 # UI designed for maximum compatibility with ASCII terminals (1970s+)
+# Color codes are optional and degrade gracefully on non-color terminals.
 ###############################################################################
 
 set -e
 
 # Colors and formatting (optional - degrades gracefully on non-color terminals)
+# Terminals without color support will simply ignore these escape sequences.
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
