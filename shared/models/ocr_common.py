@@ -6,10 +6,11 @@ This module provides:
 - Shared constants like SKIP_KEYWORDS
 - Common price normalization function
 - Reusable text extraction utilities
+- Text post-processing and cleaning utilities
 """
 import re
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, List, Tuple
 
 # Price validation constants
 PRICE_MIN = Decimal('0')
@@ -60,6 +61,32 @@ ADDRESS_KEYWORDS = frozenset({
     'st', 'ave', 'rd', 'blvd', 'lane', 'drive', 'street',
     'avenue', 'way', 'plaza', 'court', 'circle'
 })
+
+# Common OCR error corrections (character substitutions)
+OCR_CORRECTIONS = {
+    '0': 'O',  # Zero vs letter O
+    'O': '0',
+    '1': 'I',  # One vs letter I
+    'I': '1',
+    'l': '1',  # lowercase L vs one
+    '5': 'S',  # Five vs letter S
+    'S': '5',
+    '8': 'B',  # Eight vs letter B
+    'B': '8',
+}
+
+# Common word corrections for OCR errors
+WORD_CORRECTIONS = {
+    'tota1': 'total',
+    't0tal': 'total',
+    'subt0tal': 'subtotal',
+    'subtota1': 'subtotal',
+    'ca5h': 'cash',
+    'chang3': 'change',
+    'rec3ipt': 'receipt',
+    'reciept': 'receipt',
+    'receiept': 'receipt',
+}
 
 
 def normalize_price(value) -> Optional[Decimal]:
@@ -242,3 +269,186 @@ def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
         if len(line) >= 2 and not line.isdigit():
             return line
     return lines[0] if lines else None
+
+
+def clean_ocr_text(text: str) -> str:
+    """
+    Clean and correct common OCR errors in text.
+    
+    Args:
+        text: Raw OCR text
+        
+    Returns:
+        Cleaned text with common errors corrected
+    """
+    if not text:
+        return text
+    
+    # Apply word-level corrections
+    cleaned = text
+    for wrong, correct in WORD_CORRECTIONS.items():
+        cleaned = re.sub(rf'\b{wrong}\b', correct, cleaned, flags=re.IGNORECASE)
+    
+    # Remove excessive whitespace
+    cleaned = ' '.join(cleaned.split())
+    
+    # Fix common punctuation issues
+    cleaned = re.sub(r'\s+([.,;:!?])', r'\1', cleaned)  # Remove space before punctuation
+    cleaned = re.sub(r'([.,;:!?])(?=[^\s\d])', r'\1 ', cleaned)  # Add space after punctuation
+    
+    return cleaned.strip()
+
+
+def merge_text_lines(lines: List[str], threshold: float = 0.8) -> List[str]:
+    """
+    Merge text lines that likely belong together.
+    
+    Uses heuristics to combine lines that were split incorrectly by OCR.
+    
+    Args:
+        lines: List of text lines
+        threshold: Similarity threshold for merging
+        
+    Returns:
+        Merged list of text lines
+    """
+    if not lines or len(lines) < 2:
+        return lines
+    
+    merged = []
+    current_line = lines[0]
+    
+    for next_line in lines[1:]:
+        # Check if lines should be merged
+        should_merge = False
+        
+        # Case 1: Current line ends without sentence-ending punctuation
+        # and next line starts with lowercase
+        if (current_line and not current_line.rstrip()[-1:] in '.!?:' 
+            and next_line and next_line[0].islower()):
+            should_merge = True
+        
+        # Case 2: Current line is very short (likely partial)
+        if len(current_line.strip()) < 10 and not current_line.rstrip()[-1:] in '.!?:':
+            should_merge = True
+        
+        if should_merge:
+            current_line = current_line.rstrip() + ' ' + next_line.lstrip()
+        else:
+            merged.append(current_line)
+            current_line = next_line
+    
+    merged.append(current_line)
+    return merged
+
+
+def calculate_text_confidence(text: str, raw_confidence: float = 1.0) -> float:
+    """
+    Calculate adjusted confidence score for extracted text.
+    
+    Considers factors like:
+    - Raw OCR confidence
+    - Text coherence (word patterns)
+    - Character validity
+    
+    Args:
+        text: Extracted text
+        raw_confidence: Raw confidence from OCR engine
+        
+    Returns:
+        Adjusted confidence score (0.0 to 1.0)
+    """
+    if not text:
+        return 0.0
+    
+    confidence = raw_confidence
+    
+    # Penalize for excessive special characters
+    special_ratio = sum(1 for c in text if not c.isalnum() and not c.isspace()) / max(len(text), 1)
+    if special_ratio > 0.3:
+        confidence *= 0.7
+    
+    # Penalize for very short text
+    if len(text) < 3:
+        confidence *= 0.5
+    
+    # Boost for recognizable word patterns
+    word_count = len(text.split())
+    if word_count >= 2:
+        confidence *= 1.1
+    
+    # Cap at 1.0
+    return min(confidence, 1.0)
+
+
+def extract_email(lines: list) -> Optional[str]:
+    """
+    Extract email address from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Email address or None
+    """
+    email_pattern = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+    for line in lines:
+        match = email_pattern.search(line)
+        if match:
+            return match.group(0)
+    return None
+
+
+def extract_url(lines: list) -> Optional[str]:
+    """
+    Extract URL from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        URL or None
+    """
+    url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')
+    for line in lines:
+        match = url_pattern.search(line)
+        if match:
+            return match.group(0)
+    return None
+
+
+def detect_language_hint(text: str) -> str:
+    """
+    Detect language hint from text content.
+    
+    Simple heuristic-based detection for common languages.
+    
+    Args:
+        text: Text to analyze
+        
+    Returns:
+        Language code hint (e.g., 'en', 'es', 'fr')
+    """
+    text_lower = text.lower()
+    
+    # Spanish indicators
+    spanish_words = {'el', 'la', 'de', 'que', 'en', 'un', 'es', 'por', 'con', 'para'}
+    # French indicators
+    french_words = {'le', 'la', 'de', 'et', 'en', 'un', 'est', 'que', 'pour', 'dans'}
+    # German indicators
+    german_words = {'der', 'die', 'und', 'ist', 'von', 'ein', 'mit', 'auf', 'für'}
+    
+    words = set(text_lower.split())
+    
+    spanish_count = len(words & spanish_words)
+    french_count = len(words & french_words)
+    german_count = len(words & german_words)
+    
+    if spanish_count > french_count and spanish_count > german_count and spanish_count >= 2:
+        return 'es'
+    if french_count > spanish_count and french_count > german_count and french_count >= 2:
+        return 'fr'
+    if german_count > spanish_count and german_count > french_count and german_count >= 2:
+        return 'de'
+    
+    return 'en'  # Default to English

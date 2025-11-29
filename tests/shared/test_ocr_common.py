@@ -229,3 +229,100 @@ class TestExtractAddress:
         from shared.models.ocr_common import extract_address
         result = extract_address(['Store', 'No address here'])
         assert result is None
+
+
+class TestCleanOcrText:
+    """Tests for clean_ocr_text function"""
+
+    def test_word_corrections(self):
+        from shared.models.ocr_common import clean_ocr_text
+        assert 'total' in clean_ocr_text('tota1 amount')
+        assert 'subtotal' in clean_ocr_text('subt0tal')
+
+    def test_whitespace_normalization(self):
+        from shared.models.ocr_common import clean_ocr_text
+        result = clean_ocr_text('too   many    spaces')
+        assert '   ' not in result
+
+    def test_punctuation_spacing(self):
+        from shared.models.ocr_common import clean_ocr_text
+        result = clean_ocr_text('word ,another')
+        assert result == 'word, another'
+
+
+class TestMergeTextLines:
+    """Tests for merge_text_lines function"""
+
+    def test_merge_continuation(self):
+        from shared.models.ocr_common import merge_text_lines
+        lines = ['This is a', 'continuation']
+        result = merge_text_lines(lines)
+        assert len(result) == 1
+        assert 'continuation' in result[0]
+
+    def test_no_merge_complete_sentences(self):
+        from shared.models.ocr_common import merge_text_lines
+        lines = ['Complete sentence.', 'Another sentence.']
+        result = merge_text_lines(lines)
+        assert len(result) == 2
+
+
+class TestCalculateTextConfidence:
+    """Tests for calculate_text_confidence function"""
+
+    def test_normal_text(self):
+        from shared.models.ocr_common import calculate_text_confidence
+        conf = calculate_text_confidence('Hello World', 0.9)
+        assert conf >= 0.9
+
+    def test_special_chars_penalty(self):
+        from shared.models.ocr_common import calculate_text_confidence
+        conf = calculate_text_confidence('@#$%^&*()', 0.9)
+        assert conf < 0.9
+
+    def test_short_text_penalty(self):
+        from shared.models.ocr_common import calculate_text_confidence
+        conf = calculate_text_confidence('A', 0.9)
+        assert conf < 0.9
+
+
+class TestExtractEmail:
+    """Tests for extract_email function"""
+
+    def test_valid_email(self):
+        from shared.models.ocr_common import extract_email
+        result = extract_email(['Contact: test@example.com'])
+        assert result == 'test@example.com'
+
+    def test_no_email(self):
+        from shared.models.ocr_common import extract_email
+        result = extract_email(['No email here'])
+        assert result is None
+
+
+class TestExtractUrl:
+    """Tests for extract_url function"""
+
+    def test_https_url(self):
+        from shared.models.ocr_common import extract_url
+        result = extract_url(['Visit https://example.com'])
+        assert result == 'https://example.com'
+
+    def test_www_url(self):
+        from shared.models.ocr_common import extract_url
+        result = extract_url(['Visit www.example.com'])
+        assert result == 'www.example.com'
+
+
+class TestDetectLanguageHint:
+    """Tests for detect_language_hint function"""
+
+    def test_english_default(self):
+        from shared.models.ocr_common import detect_language_hint
+        result = detect_language_hint('Hello world')
+        assert result == 'en'
+
+    def test_spanish_detection(self):
+        from shared.models.ocr_common import detect_language_hint
+        result = detect_language_hint('el la de que en un es')
+        assert result == 'es'

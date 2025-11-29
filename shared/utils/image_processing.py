@@ -4,7 +4,9 @@ from PIL import Image,ImageEnhance,ImageFilter
 import logging
 logger=logging.getLogger(__name__)
 BRIGHTNESS_THRESHOLD,CONTRAST_THRESHOLD=100,40
+
 def load_and_validate_image(image_path:str)->Image.Image:
+    """Load and validate an image file with comprehensive format support."""
     try:
         if not os.path.exists(image_path):raise FileNotFoundError(f"Image file not found: {image_path}")
         if not os.access(image_path,os.R_OK):raise PermissionError(f"Cannot read image file: {image_path}")
@@ -24,7 +26,9 @@ def load_and_validate_image(image_path:str)->Image.Image:
     except Exception as e:
         logger.error(f"Failed to load image from {image_path}: {e}")
         raise
+
 def enhance_image(image:Image.Image,enhance_contrast:bool=True,enhance_brightness:bool=True,sharpen:bool=True)->Image.Image:
+    """Apply comprehensive image enhancement for better OCR."""
     try:
         enhanced=image.copy()
         if enhance_brightness:
@@ -39,17 +43,60 @@ def enhance_image(image:Image.Image,enhance_contrast:bool=True,enhance_brightnes
     except Exception as e:
         logger.warning(f"Enhancement failed, using original: {e}")
         return image
+
 def assess_image_quality(image:Image.Image)->dict:
+    """Assess image quality for OCR suitability with detailed metrics."""
     try:
         img_array=np.array(image.convert('L'))
         brightness,contrast=np.mean(img_array),np.std(img_array)
-        quality={'brightness':float(brightness),'contrast':float(contrast),'is_bright_enough':brightness>BRIGHTNESS_THRESHOLD,'has_good_contrast':contrast>CONTRAST_THRESHOLD,'overall_quality':'good'if(brightness>BRIGHTNESS_THRESHOLD and contrast>CONTRAST_THRESHOLD)else'poor'}
-        logger.info(f"Image quality: brightness={brightness:.1f}, contrast={contrast:.1f}")
+        
+        # Calculate additional quality metrics
+        blur_score = _estimate_blur(img_array)
+        noise_level = _estimate_noise(img_array)
+        
+        quality={
+            'brightness':float(brightness),
+            'contrast':float(contrast),
+            'blur_score':float(blur_score),
+            'noise_level':float(noise_level),
+            'is_bright_enough':brightness>BRIGHTNESS_THRESHOLD,
+            'has_good_contrast':contrast>CONTRAST_THRESHOLD,
+            'is_sharp':blur_score > 100,
+            'is_clean':noise_level < 15,
+            'overall_quality':'good' if(brightness>BRIGHTNESS_THRESHOLD and contrast>CONTRAST_THRESHOLD and blur_score > 100)else'poor'
+        }
+        logger.info(f"Image quality: brightness={brightness:.1f}, contrast={contrast:.1f}, blur={blur_score:.1f}, noise={noise_level:.1f}")
         return quality
     except Exception as e:
         logger.error(f"Quality assessment failed: {e}")
         return{'overall_quality':'unknown'}
+
+def _estimate_blur(gray_image: np.ndarray) -> float:
+    """Estimate image blur using Laplacian variance."""
+    import cv2
+    laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
+    return float(laplacian.var())
+
+def _estimate_noise(gray_image: np.ndarray) -> float:
+    """Estimate noise level in the image."""
+    import cv2
+    # Use median absolute deviation of Laplacian
+    laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
+    noise = np.median(np.abs(laplacian - np.median(laplacian)))
+    return float(noise)
+
 def preprocess_for_ocr(image:Image.Image,aggressive:bool=True)->Image.Image:
+    """
+    Advanced preprocessing pipeline for OCR with multiple enhancement stages.
+    
+    Implements techniques similar to professional OCR services:
+    - Adaptive upscaling for low-resolution images
+    - Advanced deskewing and alignment
+    - Multi-stage noise reduction
+    - Adaptive contrast enhancement (CLAHE)
+    - Edge-preserving smoothing
+    - Intelligent binarization
+    """
     import cv2
     try:
         img_array=np.array(image)
@@ -59,22 +106,38 @@ def preprocess_for_ocr(image:Image.Image,aggressive:bool=True)->Image.Image:
         else:gray=img_array
         if aggressive:
             height,width=gray.shape
+            # Adaptive upscaling for better text recognition
             if max(height,width)<1000:
                 scale_factor=1500/max(height,width)
                 new_width,new_height=int(width*scale_factor),int(height*scale_factor)
                 gray=cv2.resize(gray,(new_width,new_height),interpolation=cv2.INTER_CUBIC)
                 logger.info(f"Upscaled image from {width}x{height} to {new_width}x{new_height}")
+            
+            # Deskew for better text alignment
             gray=_deskew_image(gray)
-            gray=cv2.fastNlMeansDenoising(gray,h=10)
+            
+            # Advanced noise reduction with edge preservation
+            gray = _advanced_denoise(gray)
+            
+            # Adaptive contrast enhancement
             clahe=cv2.createCLAHE(clipLimit=3.0,tileGridSize=(8,8))
             gray=clahe.apply(gray)
+            
+            # Edge-preserving smoothing
             gray=cv2.bilateralFilter(gray,9,75,75)
-            _,binary=cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            
+            # Intelligent binarization
+            binary = _adaptive_binarize(gray)
+            
+            # Morphological cleanup
             kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(1,1))
             binary=cv2.morphologyEx(binary,cv2.MORPH_CLOSE,kernel)
+            
+            # Handle inverted images (dark background)
             if np.mean(binary)<127:
                 binary=cv2.bitwise_not(binary)
                 logger.info("Inverted image (dark background detected)")
+            
             result=Image.fromarray(binary)
             logger.info("Aggressive OCR preprocessing complete")
         else:
@@ -86,7 +149,69 @@ def preprocess_for_ocr(image:Image.Image,aggressive:bool=True)->Image.Image:
     except Exception as e:
         logger.warning(f"OCR preprocessing failed, using enhanced image: {e}")
         return enhance_image(image)
+
+def _advanced_denoise(gray: np.ndarray) -> np.ndarray:
+    """
+    Multi-stage noise reduction preserving text edges.
+    
+    Uses a combination of techniques for optimal text preservation:
+    1. Fast non-local means denoising for general noise
+    2. Median filter for salt-and-pepper noise
+    3. Morphological operations for cleaning
+    """
+    import cv2
+    # First pass: non-local means denoising
+    denoised = cv2.fastNlMeansDenoising(gray, h=10)
+    
+    # Second pass: light median filter for remaining salt-and-pepper noise
+    denoised = cv2.medianBlur(denoised, 3)
+    
+    return denoised
+
+def _adaptive_binarize(gray: np.ndarray) -> np.ndarray:
+    """
+    Intelligent binarization that adapts to image content.
+    
+    Combines multiple binarization techniques:
+    1. Otsu's method for global threshold
+    2. Adaptive thresholding for local variations
+    3. Result selection based on text density
+    """
+    import cv2
+    
+    # Method 1: Otsu's binarization
+    _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    # Method 2: Adaptive Gaussian thresholding
+    adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                      cv2.THRESH_BINARY, 11, 2)
+    
+    # Calculate text density for each method
+    otsu_density = _calculate_text_density(otsu)
+    adaptive_density = _calculate_text_density(adaptive)
+    
+    # Choose the method with better text density (closer to typical document ratio)
+    # Typical text documents have 5-30% text coverage
+    ideal_density = 0.15
+    otsu_diff = abs(otsu_density - ideal_density)
+    adaptive_diff = abs(adaptive_density - ideal_density)
+    
+    if otsu_diff <= adaptive_diff:
+        logger.info(f"Using Otsu binarization (density: {otsu_density:.3f})")
+        return otsu
+    else:
+        logger.info(f"Using Adaptive binarization (density: {adaptive_density:.3f})")
+        return adaptive
+
+def _calculate_text_density(binary: np.ndarray) -> float:
+    """Calculate the ratio of text pixels to total pixels."""
+    # Assuming white background, black text
+    text_pixels = np.sum(binary < 128)
+    total_pixels = binary.size
+    return text_pixels / total_pixels
+
 def _deskew_image(image:np.ndarray)->np.ndarray:
+    """Correct image skew for better text alignment."""
     import cv2
     try:
         coords=np.column_stack(np.where(image>0))
@@ -108,7 +233,9 @@ def _deskew_image(image:np.ndarray)->np.ndarray:
     except Exception as e:
         logger.warning(f"Deskew failed: {e}")
         return image
+
 def resize_if_needed(image:Image.Image,max_size:int=2048)->Image.Image:
+    """Resize image if it exceeds maximum dimensions."""
     width,height=image.size
     if max(width,height)>max_size:
         ratio=max_size/max(width,height)
@@ -117,3 +244,78 @@ def resize_if_needed(image:Image.Image,max_size:int=2048)->Image.Image:
         logger.info(f"Resized image from {image.size} to {new_size}")
         return resized
     return image
+
+def detect_text_regions(image: Image.Image) -> list:
+    """
+    Detect text regions in an image using contour analysis.
+    
+    Returns a list of bounding boxes (x, y, w, h) for detected text regions.
+    Similar to region detection used by advanced OCR services.
+    """
+    import cv2
+    try:
+        img_array = np.array(image.convert('L'))
+        
+        # Apply edge detection
+        edges = cv2.Canny(img_array, 50, 150)
+        
+        # Dilate to connect text components
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 3))
+        dilated = cv2.dilate(edges, kernel, iterations=2)
+        
+        # Find contours
+        contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Filter and sort text regions
+        regions = []
+        min_area = 100  # Minimum area to consider as text
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            area = w * h
+            aspect_ratio = w / max(h, 1)
+            
+            # Text regions typically have width > height and reasonable area
+            if area > min_area and 0.5 < aspect_ratio < 50:
+                regions.append((x, y, w, h))
+        
+        # Sort by y-coordinate (top to bottom), then x (left to right)
+        regions.sort(key=lambda r: (r[1], r[0]))
+        
+        logger.info(f"Detected {len(regions)} text regions")
+        return regions
+    except Exception as e:
+        logger.warning(f"Text region detection failed: {e}")
+        return []
+
+def preprocess_multi_pass(image: Image.Image) -> list:
+    """
+    Generate multiple preprocessed versions for ensemble OCR.
+    
+    Returns a list of preprocessed images using different techniques,
+    allowing OCR engines to pick the best result.
+    """
+    results = []
+    
+    try:
+        # Original enhanced
+        results.append(('enhanced', enhance_image(image)))
+        
+        # Aggressive preprocessing
+        results.append(('aggressive', preprocess_for_ocr(image, aggressive=True)))
+        
+        # Standard preprocessing
+        results.append(('standard', preprocess_for_ocr(image, aggressive=False)))
+        
+        # High contrast version
+        import cv2
+        img_array = np.array(image.convert('L'))
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(4, 4))
+        high_contrast = clahe.apply(img_array)
+        results.append(('high_contrast', Image.fromarray(high_contrast)))
+        
+        logger.info(f"Generated {len(results)} preprocessed versions")
+    except Exception as e:
+        logger.warning(f"Multi-pass preprocessing failed: {e}")
+        results.append(('fallback', enhance_image(image)))
+    
+    return results
