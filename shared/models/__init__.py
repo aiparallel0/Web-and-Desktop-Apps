@@ -1,23 +1,35 @@
-# Only import ModelManager by default to avoid dependency issues
-# Other processors will be imported dynamically by ModelManager when needed
-from .model_manager import ModelManager
+"""
+OCR Models Package - Consolidated
+Contains all OCR processors and AI model utilities
+"""
 
-__all__ = ['ModelManager']
-
-# Lazy imports for processors (imported by ModelManager when needed)
-def _get_processor_class(processor_type):
-    """Dynamically import processor classes to avoid dependency issues"""
-    if processor_type in ('donut', 'florence'):
-        from .donut_processor import DonutProcessor, FlorenceProcessor
-        return DonutProcessor if processor_type == 'donut' else FlorenceProcessor
-    elif processor_type == 'ocr':
+# Lazy imports to avoid import errors when optional deps not installed
+def __getattr__(name):
+    if name == 'BaseProcessor':
+        from .processors import BaseProcessor
+        return BaseProcessor
+    elif name == 'EasyOCRProcessor':
+        from .processors import EasyOCRProcessor
+        return EasyOCRProcessor
+    elif name == 'PaddleProcessor':
+        from .processors import PaddleProcessor
+        return PaddleProcessor
+    elif name == 'DonutProcessor':
+        from .ai_models import DonutProcessor
+        return DonutProcessor
+    elif name == 'ModelManager':
+        from .model_manager import ModelManager
+        return ModelManager
+    elif name == 'OCRProcessor':
         from .ocr_processor import OCRProcessor
         return OCRProcessor
-    elif processor_type == 'paddle':
-        from .paddle_processor import PaddleProcessor
-        return PaddleProcessor
-    elif processor_type == 'easyocr':
-        from .easyocr_processor import EasyOCRProcessor
-        return EasyOCRProcessor
-    else:
-        raise ValueError(f"Unknown processor type: {processor_type}")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+__all__ = [
+    'BaseProcessor',
+    'EasyOCRProcessor', 
+    'PaddleProcessor',
+    'DonutProcessor',
+    'ModelManager',
+    'OCRProcessor'
+]

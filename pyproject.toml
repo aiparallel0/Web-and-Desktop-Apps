@@ -1,0 +1,27 @@
+[project]
+name = "receipt-extractor"
+version = "3.0.0"
+description = "AI-powered receipt extraction application"
+
+[tool.pytest.ini_options]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers --cov=shared --cov=web-app/backend --cov-report=html --cov-report=term-missing"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "model: Model tests",
+    "slow: Slow tests",
+    "web: Web app tests"
+]
+norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
+
+[tool.coverage.run]
+source = ["shared", "web-app/backend"]
+omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true

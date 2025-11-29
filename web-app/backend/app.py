@@ -17,6 +17,17 @@ app.config['REQUEST_TIMEOUT']=3600
 ALLOWED_EXTENSIONS={'png','jpg','jpeg','bmp','tiff','tif'}
 model_manager=ModelManager(max_loaded_models=3)
 finetune_jobs={}
+
+# Register auth and API routes
+try:
+    from auth import register_auth_routes
+    from receipts import register_receipts_routes
+    register_auth_routes(app)
+    register_receipts_routes(app)
+    logger.info("Auth and Receipts API routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register additional routes: {e}")
+
 def allowed_file(filename):
  return '.' in filename and filename.rsplit('.',1)[1].lower()in ALLOWED_EXTENSIONS
 def safe_delete_temp_file(file_path:str,max_retries:int=3):
