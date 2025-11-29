@@ -239,7 +239,8 @@ class EasyOCRProcessor:
         
         try:
             logger.info("Initializing EasyOCR...")
-            self.reader = easyocr.Reader(['en'], gpu=False)
+            # Set verbose=False to avoid encoding issues with progress bar characters
+            self.reader = easyocr.Reader(['en'], gpu=False, verbose=False)
             logger.info("EasyOCR initialized")
         except Exception as e:
             raise RuntimeError(f"EasyOCR init failed: {e}") from e

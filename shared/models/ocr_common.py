@@ -90,7 +90,6 @@ WORD_CORRECTIONS = {
     'fashiuned': 'fashioned',
     'plpper': 'pepper',
     'peppper': 'pepper',
-    'shredded': 'shredded',
     'oatmea1': 'oatmeal',
 }
 
@@ -99,7 +98,6 @@ UNIT_CORRECTIONS = {
     ' 02': ' OZ',      # "10 02" -> "10 OZ" (ounces)
     ' 0Z': ' OZ',      # "10 0Z" -> "10 OZ"
     ' Oz': ' OZ',      # "10 Oz" -> "10 OZ"
-    ' LB': ' LB',      # Keep LB as-is
     'ct': 'CT',        # "4ct" -> "4CT" (count)
     'Xt': 'XL',        # "Xt" -> "XL" (extra large)
     'X1': 'XL',        # "X1" -> "XL"
@@ -320,7 +318,8 @@ def clean_item_name(name: str) -> str:
                 return correct.lower()
             elif matched_text[0].isupper():
                 return correct.capitalize()
-            return correct
+            # For mixed case (e.g., 'FashIUNED'), default to uppercase for OCR text
+            return correct.upper()
         cleaned = re.sub(rf'\b{wrong}\b', preserve_case, cleaned, flags=re.IGNORECASE)
     
     # Apply unit corrections (case-sensitive replacements)
@@ -356,9 +355,13 @@ def correct_store_name(name: str) -> str:
     
     name_lower = name.lower().strip()
     
-    # Check for exact or partial matches in store corrections
+    # Check for exact match first
+    if name_lower in STORE_NAME_CORRECTIONS:
+        return STORE_NAME_CORRECTIONS[name_lower]
+    
+    # Check if any known error pattern is contained in the name
     for wrong, correct in STORE_NAME_CORRECTIONS.items():
-        if wrong in name_lower or name_lower in wrong:
+        if wrong in name_lower:
             return correct
     
     return name
