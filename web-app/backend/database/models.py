@@ -4,17 +4,74 @@ Implements Priority 1: MVP Backend Infrastructure
 """
 from datetime import datetime
 from typing import Optional
-import uuid
+import uuid as uuid_module
 from sqlalchemy import (
     Column, String, DateTime, Boolean, Integer, Float,
     ForeignKey, Text, JSON, Enum as SQLEnum, Index
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator, CHAR
 import enum
+import json
 
 Base = declarative_base()
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    
+    Uses PostgreSQL's UUID type or CHAR(36) for other databases (like SQLite).
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import UUID
+            return dialect.type_descriptor(GUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            if dialect.name == 'postgresql':
+                return value
+            else:
+                if isinstance(value, uuid_module.UUID):
+                    return str(value)
+                return value
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            if not isinstance(value, uuid_module.UUID):
+                return uuid_module.UUID(value)
+        return value
+
+
+class JSONBCompatible(TypeDecorator):
+    """A JSON type that works with both PostgreSQL (JSONB) and SQLite (JSON)."""
+    impl = JSON
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import JSONB
+            return dialect.type_descriptor(JSONB())
+        return dialect.type_descriptor(JSON())
+    
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            if dialect.name == 'sqlite':
+                return json.dumps(value) if not isinstance(value, str) else value
+        return value
+    
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            if dialect.name == 'sqlite' and isinstance(value, str):
+                return json.loads(value)
+        return value
 
 
 class SubscriptionPlan(str, enum.Enum):
@@ -38,7 +95,7 @@ class User(Base):
     __tablename__ = "users"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # Authentication
     email = Column(String(255), unique=True, nullable=False, index=True)
@@ -93,10 +150,10 @@ class Receipt(Base):
     __tablename__ = "receipts"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # Foreign Key
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # File Information
     filename = Column(String(255), nullable=False)
@@ -105,7 +162,7 @@ class Receipt(Base):
     mime_type = Column(String(100), nullable=True)
 
     # Extraction Results
-    extracted_data = Column(JSONB, nullable=True)  # Full receipt data as JSON
+    extracted_data = Column(JSONBCompatible, nullable=True)  # Full receipt data as JSON
     store_name = Column(String(255), nullable=True, index=True)  # For searching
     total_amount = Column(Float, nullable=True)  # For analytics
     transaction_date = Column(DateTime, nullable=True, index=True)  # For filtering
@@ -144,10 +201,10 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # Foreign Key
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # Stripe Information
     stripe_subscription_id = Column(String(255), unique=True, nullable=False)
@@ -179,10 +236,10 @@ class APIKey(Base):
     __tablename__ = "api_keys"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # Foreign Key
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # API Key
     key_hash = Column(String(255), unique=True, nullable=False, index=True)  # Hashed key
@@ -212,10 +269,10 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # Foreign Key
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
 
     # Token
     token_hash = Column(String(255), unique=True, nullable=False, index=True)
@@ -253,22 +310,22 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     # Primary Key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
 
     # User (nullable for anonymous actions)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
 
     # Action Details
     action = Column(String(100), nullable=False, index=True)  # login, logout, create_receipt, etc.
     resource_type = Column(String(100), nullable=True)  # receipt, user, subscription
-    resource_id = Column(UUID(as_uuid=True), nullable=True)
+    resource_id = Column(GUID(), nullable=True)
 
     # Request Metadata
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(512), nullable=True)
 
     # Additional Data
-    extra_data = Column(JSONB, nullable=True)  # Flexible additional info
+    audit_extra_data = Column(JSONBCompatible, nullable=True)  # Flexible additional info (renamed from 'extra_data')
 
     # Result
     success = Column(Boolean, default=True)
