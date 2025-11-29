@@ -37,7 +37,7 @@ from utils.data_structures import LineItem, ReceiptData, ExtractionResult
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
-    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS
+    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, clean_item_name
 )
 
 # Conditional imports for optional dependencies
@@ -336,6 +336,8 @@ class EasyOCRProcessor:
                 m = pattern.search(line.strip())
                 if m:
                     name = m.group(1).strip()
+                    # Apply item name cleaning for OCR corrections
+                    name = clean_item_name(name)
                     price_str = m.group(2)
                     
                     if len(name) < 2 or name in seen:
@@ -603,6 +605,8 @@ class PaddleProcessor:
                 m = pattern.search(line.strip())
                 if m:
                     name = m.group(1).strip()
+                    # Apply item name cleaning for OCR corrections
+                    name = clean_item_name(name)
                     price_str = m.group(2).replace(',', '.')
                     
                     if len(name) < 2 or name in seen or name.replace(' ', '').isdigit():
@@ -631,6 +635,8 @@ class PaddleProcessor:
                     if price:
                         name_part = line[:pm.start()].strip()
                         name_part = re.sub(r'^\d+\s*[x*]\s*', '', name_part).strip()
+                        # Apply item name cleaning for OCR corrections
+                        name_part = clean_item_name(name_part)
                         
                         if len(name_part) >= 2 and name_part not in seen:
                             if not should_skip_line(name_part):

@@ -70,6 +70,11 @@ _LAZY_IMPORTS = {
     'OCRProcessor': ('ocr_processor', 'OCRProcessor'),
     'normalize_price': ('ocr_common', 'normalize_price'),
     'SKIP_KEYWORDS': ('ocr_common', 'SKIP_KEYWORDS'),
+    'clean_item_name': ('ocr_common', 'clean_item_name'),
+    'correct_store_name': ('ocr_common', 'correct_store_name'),
+    'WORD_CORRECTIONS': ('ocr_common', 'WORD_CORRECTIONS'),
+    'UNIT_CORRECTIONS': ('ocr_common', 'UNIT_CORRECTIONS'),
+    'STORE_NAME_CORRECTIONS': ('ocr_common', 'STORE_NAME_CORRECTIONS'),
 }
 
 
@@ -115,6 +120,11 @@ __all__ = [
     # OCR Utilities
     'normalize_price',
     'SKIP_KEYWORDS',
+    'clean_item_name',
+    'correct_store_name',
+    'WORD_CORRECTIONS',
+    'UNIT_CORRECTIONS',
+    'STORE_NAME_CORRECTIONS',
 ]
 
 __version__ = '2.0.0'

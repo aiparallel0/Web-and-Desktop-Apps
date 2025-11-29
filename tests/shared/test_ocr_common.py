@@ -326,3 +326,124 @@ class TestDetectLanguageHint:
         from shared.models.ocr_common import detect_language_hint
         result = detect_language_hint('el la de que en un es')
         assert result == 'es'
+
+
+class TestCleanItemName:
+    """Tests for clean_item_name function"""
+
+    def test_fix_fashiuned_typo(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('ORGANIC OLD FASHIUNED OATMEAL')
+        assert 'FASHIONED' in result
+
+    def test_fix_plpper_typo(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('A-PLPPER BELL EACH XL RED')
+        assert 'PEPPER' in result
+
+    def test_fix_02_to_oz(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('R-CARROTS SHREDDED 10 02')
+        assert '10 OZ' in result
+
+    def test_fix_xt_to_xl(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('A-PEPPER BELL EACH Xt RED')
+        assert 'XL' in result
+
+    def test_remove_trailing_periods(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('MINI-PEARL TOMATOES. .')
+        assert not result.endswith('.')
+        assert 'MINI-PEARL TOMATOES' in result
+
+    def test_remove_trailing_pipe(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('WHL WHT PITA BREAD |')
+        assert not result.endswith('|')
+        assert 'PITA BREAD' in result
+
+    def test_normalize_whitespace(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('EGGS  1  DOZ   ORGANIC')
+        assert '  ' not in result
+
+    def test_empty_string(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('')
+        assert result == ''
+
+    def test_none_returns_none(self):
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name(None)
+        assert result is None
+
+
+class TestCorrectStoreName:
+    """Tests for correct_store_name function"""
+
+    def test_trader_joes_correction(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name('a ae)')
+        assert result == "TRADER JOE'S"
+
+    def test_trader_joes_without_apostrophe(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name('trader joes')
+        assert result == "TRADER JOE'S"
+
+    def test_walmart_correction(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name('wa1mart')
+        assert result == 'WALMART'
+
+    def test_unknown_store_unchanged(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name('RANDOM STORE')
+        assert result == 'RANDOM STORE'
+
+    def test_empty_string(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name('')
+        assert result == ''
+
+    def test_none_returns_none(self):
+        from shared.models.ocr_common import correct_store_name
+        result = correct_store_name(None)
+        assert result is None
+
+
+class TestUnitCorrections:
+    """Tests for UNIT_CORRECTIONS constant"""
+
+    def test_oz_correction(self):
+        from shared.models.ocr_common import UNIT_CORRECTIONS
+        assert ' 02' in UNIT_CORRECTIONS
+        assert UNIT_CORRECTIONS[' 02'] == ' OZ'
+
+    def test_xl_correction(self):
+        from shared.models.ocr_common import UNIT_CORRECTIONS
+        assert 'Xt' in UNIT_CORRECTIONS
+        assert UNIT_CORRECTIONS['Xt'] == 'XL'
+
+    def test_ct_correction(self):
+        from shared.models.ocr_common import UNIT_CORRECTIONS
+        assert 'ct' in UNIT_CORRECTIONS
+        assert UNIT_CORRECTIONS['ct'] == 'CT'
+
+
+class TestStoreNameCorrections:
+    """Tests for STORE_NAME_CORRECTIONS constant"""
+
+    def test_contains_trader_joes(self):
+        from shared.models.ocr_common import STORE_NAME_CORRECTIONS
+        assert 'a ae)' in STORE_NAME_CORRECTIONS
+        assert STORE_NAME_CORRECTIONS['a ae)'] == "TRADER JOE'S"
+
+    def test_contains_walmart(self):
+        from shared.models.ocr_common import STORE_NAME_CORRECTIONS
+        assert 'wa1mart' in STORE_NAME_CORRECTIONS
+
+    def test_contains_costco(self):
+        from shared.models.ocr_common import STORE_NAME_CORRECTIONS
+        assert 'costc0' in STORE_NAME_CORRECTIONS

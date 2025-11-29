@@ -86,6 +86,41 @@ WORD_CORRECTIONS = {
     'rec3ipt': 'receipt',
     'reciept': 'receipt',
     'receiept': 'receipt',
+    # Receipt item OCR errors
+    'fashiuned': 'fashioned',
+    'plpper': 'pepper',
+    'peppper': 'pepper',
+    'shredded': 'shredded',
+    'oatmea1': 'oatmeal',
+}
+
+# Unit abbreviation corrections (case-sensitive patterns)
+UNIT_CORRECTIONS = {
+    ' 02': ' OZ',      # "10 02" -> "10 OZ" (ounces)
+    ' 0Z': ' OZ',      # "10 0Z" -> "10 OZ"
+    ' Oz': ' OZ',      # "10 Oz" -> "10 OZ"
+    ' LB': ' LB',      # Keep LB as-is
+    'ct': 'CT',        # "4ct" -> "4CT" (count)
+    'Xt': 'XL',        # "Xt" -> "XL" (extra large)
+    'X1': 'XL',        # "X1" -> "XL"
+}
+
+# Known store name corrections
+STORE_NAME_CORRECTIONS = {
+    'a ae)': "TRADER JOE'S",
+    'trader joes': "TRADER JOE'S",
+    'trader joe': "TRADER JOE'S",
+    'wa1mart': 'WALMART',
+    'wa1-mart': 'WALMART',
+    'wal-mart': 'WALMART',
+    'costc0': 'COSTCO',
+    'target': 'TARGET',
+    'who1e foods': 'WHOLE FOODS',
+    'wholefoods': 'WHOLE FOODS',
+    'kroger': 'KROGER',
+    'safeway': 'SAFEWAY',
+    'pub1ix': 'PUBLIX',
+    'publix': 'PUBLIX',
 }
 
 
@@ -253,9 +288,87 @@ def should_skip_item_name(name: str) -> bool:
     return any(pattern in name_lower for pattern in ITEM_SKIP_PATTERNS)
 
 
+def clean_item_name(name: str) -> str:
+    """
+    Clean and correct common OCR errors in item names.
+    
+    Applies:
+    - Word-level corrections (e.g., FASHIUNED -> FASHIONED)
+    - Unit abbreviation fixes (e.g., "10 02" -> "10 OZ")
+    - Removes trailing periods and extra punctuation
+    - Normalizes whitespace
+    
+    Args:
+        name: Raw item name from OCR
+        
+    Returns:
+        Cleaned item name
+    """
+    if not name:
+        return name
+    
+    cleaned = name.strip()
+    
+    # Apply word-level corrections (case-preserving)
+    for wrong, correct in WORD_CORRECTIONS.items():
+        # Find all matches and replace preserving case of original
+        def preserve_case(match):
+            matched_text = match.group(0)
+            if matched_text.isupper():
+                return correct.upper()
+            elif matched_text.islower():
+                return correct.lower()
+            elif matched_text[0].isupper():
+                return correct.capitalize()
+            return correct
+        cleaned = re.sub(rf'\b{wrong}\b', preserve_case, cleaned, flags=re.IGNORECASE)
+    
+    # Apply unit corrections (case-sensitive replacements)
+    for wrong, correct in UNIT_CORRECTIONS.items():
+        cleaned = cleaned.replace(wrong, correct)
+    
+    # Remove trailing periods and dots (but keep decimal points in prices)
+    # Handle patterns like ". ." or "..."
+    cleaned = re.sub(r'[\s.]+$', '', cleaned)  # Remove trailing dots and spaces
+    cleaned = re.sub(r'\s*\.\s+\.', '', cleaned)  # Remove ". ." patterns
+    
+    # Remove pipe characters often misread at line ends
+    cleaned = re.sub(r'\s*\|+\s*$', '', cleaned)
+    
+    # Normalize whitespace
+    cleaned = ' '.join(cleaned.split())
+    
+    return cleaned.strip()
+
+
+def correct_store_name(name: str) -> str:
+    """
+    Apply known store name corrections for common OCR errors.
+    
+    Args:
+        name: Potentially incorrectly recognized store name
+        
+    Returns:
+        Corrected store name if a match is found, otherwise original
+    """
+    if not name:
+        return name
+    
+    name_lower = name.lower().strip()
+    
+    # Check for exact or partial matches in store corrections
+    for wrong, correct in STORE_NAME_CORRECTIONS.items():
+        if wrong in name_lower or name_lower in wrong:
+            return correct
+    
+    return name
+
+
 def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
     """
     Extract store name from the first few lines.
+    
+    Applies store name corrections for common OCR errors.
     
     Args:
         lines: List of text lines
@@ -267,8 +380,9 @@ def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
     for line in lines[:max_lines]:
         line = line.strip()
         if len(line) >= 2 and not line.isdigit():
-            return line
-    return lines[0] if lines else None
+            # Apply store name corrections
+            return correct_store_name(line)
+    return correct_store_name(lines[0]) if lines else None
 
 
 def clean_ocr_text(text: str) -> str:
