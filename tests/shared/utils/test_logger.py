@@ -384,8 +384,9 @@ class TestLogWithContext:
         logger = logging.getLogger('test_context')
         logger.handlers = []  # Clear handlers
 
-        # Add mock handler to capture log records
+        # Add mock handler to capture log records with proper level attribute
         mock_handler = Mock()
+        mock_handler.level = logging.DEBUG  # Set level to allow all log levels
         logger.addHandler(mock_handler)
         logger.setLevel(logging.INFO)
 
@@ -414,6 +415,7 @@ class TestLogWithContext:
         logger = logging.getLogger('test_levels')
         logger.handlers = []
         mock_handler = Mock()
+        mock_handler.level = logging.DEBUG  # Set level to allow all log levels
         logger.addHandler(mock_handler)
         logger.setLevel(logging.DEBUG)
 
