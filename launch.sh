@@ -391,36 +391,28 @@ run_tests() {
             test_failed=true
         fi
     else
-        # Fall back to individual test files
-        # Run system health test
-        if [ -f "tests/test_system_health.py" ]; then
-            echo ""
-            print_info "Running system health tests..."
-            $PYTHON_CMD -m pytest tests/test_system_health.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/health.log"
-            if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                print_success "System health tests passed"
-                ((passed_count++))
-            else
-                print_error "System health tests failed"
-                test_failed=true
-            fi
-            ((test_count++))
+        # Run complete pytest suite including circular_exchange framework
+        # This ensures local coverage matches GitHub coverage
+        echo ""
+        print_info "Running complete test suite with coverage..."
+        print_info "Including: circular_exchange framework, shared modules, backend tests"
+        
+        $PYTHON_CMD -m pytest tests/ \
+            --cov=shared --cov=web-app/backend \
+            --cov-report=term-missing \
+            --cov-report=html \
+            -v --tb=short \
+            2>&1 | tee "$LOG_DIR/test-reports/full-suite.log"
+        
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Complete test suite passed"
+            TESTS_PASSED=true
+            ((passed_count++))
+        else
+            print_warning "Some tests failed"
+            test_failed=true
         fi
-
-        # Run API tests
-        if [ -f "tests/web/test_api.py" ]; then
-            echo ""
-            print_info "Running API tests..."
-            $PYTHON_CMD -m pytest tests/web/test_api.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/api.log"
-            if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                print_success "API tests passed"
-                ((passed_count++))
-            else
-                print_error "API tests failed"
-                test_failed=true
-            fi
-            ((test_count++))
-        fi
+        ((test_count++))
     fi
 
     echo ""
