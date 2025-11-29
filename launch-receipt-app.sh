@@ -432,6 +432,138 @@ run_tests() {
         ((test_count++))
     fi
 
+    # Run backend authentication tests (NEW - comprehensive security coverage)
+    if [ -f "tests/backend/auth/test_jwt_handler.py" ]; then
+        echo ""
+        print_info "Running JWT authentication tests..."
+        python3 -m pytest tests/backend/auth/test_jwt_handler.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/jwt_auth.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "JWT authentication tests passed"
+            ((passed_count++))
+        else
+            print_warning "JWT authentication tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    if [ -f "tests/backend/auth/test_password.py" ]; then
+        echo ""
+        print_info "Running password security tests..."
+        python3 -m pytest tests/backend/auth/test_password.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/password_security.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Password security tests passed"
+            ((passed_count++))
+        else
+            print_warning "Password security tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    if [ -f "tests/backend/auth/test_decorators.py" ]; then
+        echo ""
+        print_info "Running auth decorator tests..."
+        python3 -m pytest tests/backend/auth/test_decorators.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/auth_decorators.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Auth decorator tests passed"
+            ((passed_count++))
+        else
+            print_warning "Auth decorator tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run database tests (NEW - data integrity coverage)
+    if [ -f "tests/backend/database/test_models.py" ]; then
+        echo ""
+        print_info "Running database model tests..."
+        python3 -m pytest tests/backend/database/test_models.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/db_models.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Database model tests passed"
+            ((passed_count++))
+        else
+            print_warning "Database model tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    if [ -f "tests/backend/database/test_connection.py" ]; then
+        echo ""
+        print_info "Running database connection tests..."
+        python3 -m pytest tests/backend/database/test_connection.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/db_connection.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Database connection tests passed"
+            ((passed_count++))
+        else
+            print_warning "Database connection tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run validation tests (NEW - input security coverage)
+    if [ -f "tests/backend/validation/test_schemas.py" ]; then
+        echo ""
+        print_info "Running input validation tests..."
+        python3 -m pytest tests/backend/validation/test_schemas.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/validation_schemas.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Input validation tests passed"
+            ((passed_count++))
+        else
+            print_warning "Input validation tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run Flask app tests (NEW - endpoint coverage)
+    if [ -f "tests/backend/test_app.py" ]; then
+        echo ""
+        print_info "Running Flask application tests..."
+        python3 -m pytest tests/backend/test_app.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/flask_app.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Flask application tests passed"
+            ((passed_count++))
+        else
+            print_warning "Flask application tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run ML model tests (NEW - finetuning coverage)
+    if [ -f "tests/shared/models/test_donut_finetuner.py" ]; then
+        echo ""
+        print_info "Running Donut finetuner tests..."
+        python3 -m pytest tests/shared/models/test_donut_finetuner.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/donut_finetuner.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Donut finetuner tests passed"
+            ((passed_count++))
+        else
+            print_warning "Donut finetuner tests failed (may require dependencies)"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
+    # Run logger tests (NEW - utility coverage)
+    if [ -f "tests/shared/utils/test_logger.py" ]; then
+        echo ""
+        print_info "Running logger utility tests..."
+        python3 -m pytest tests/shared/utils/test_logger.py -v --tb=short 2>&1 | tee "$LOG_DIR/test-reports/logger_utils.log"
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            print_success "Logger utility tests passed"
+            ((passed_count++))
+        else
+            print_warning "Logger utility tests failed"
+            test_failed=true
+        fi
+        ((test_count++))
+    fi
+
     echo ""
     print_separator
     echo -e "${BOLD}Test Summary:${NC}"
@@ -678,7 +810,7 @@ start_servers() {
     echo ""
     echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
-    echo -e "${GREEN}${BOLD}║        🚀 Receipt Extractor is now running!                   ║${NC}"
+    echo -e "${GREEN}${BOLD}║        Receipt Extractor is now running!                      ║${NC}"
     echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
     echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -837,9 +969,9 @@ export_system_report() {
         echo "## Test Results"
         echo ""
         if [ "$TESTS_PASSED" = true ]; then
-            echo "**Overall Status:** ✅ PASSED"
+            echo "**Overall Status:** [PASSED]"
         else
-            echo "**Overall Status:** ⚠️ NOT RUN OR FAILED"
+            echo "**Overall Status:** [NOT RUN OR FAILED]"
         fi
         echo ""
 
