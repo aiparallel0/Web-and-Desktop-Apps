@@ -3,18 +3,46 @@ os.environ.update({'TF_ENABLE_ONEDNN_OPTS':'0','TF_CPP_MIN_LOG_LEVEL':'3','TRANS
 import sys,json,re,logging,time
 from decimal import Decimal
 from typing import Dict,List,Optional
-import torch
-from transformers import DonutProcessor as TransformersDonutProcessor,VisionEncoderDecoderModel,AutoProcessor,AutoModelForCausalLM
 from PIL import Image
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,enhance_image
+
 logger=logging.getLogger(__name__)
+
+# Lazy imports to allow mocking in tests
+torch = None
+TransformersDonutProcessor = None
+VisionEncoderDecoderModel = None
+AutoProcessor = None
+AutoModelForCausalLM = None
+
+def _get_torch():
+    global torch
+    if torch is None:
+        import torch as _torch
+        torch = _torch
+    return torch
+
+def _get_transformers():
+    global TransformersDonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
+    if TransformersDonutProcessor is None:
+        from transformers import DonutProcessor as _TransformersDonutProcessor
+        from transformers import VisionEncoderDecoderModel as _VisionEncoderDecoderModel
+        from transformers import AutoProcessor as _AutoProcessor
+        from transformers import AutoModelForCausalLM as _AutoModelForCausalLM
+        TransformersDonutProcessor = _TransformersDonutProcessor
+        VisionEncoderDecoderModel = _VisionEncoderDecoderModel
+        AutoProcessor = _AutoProcessor
+        AutoModelForCausalLM = _AutoModelForCausalLM
+    return TransformersDonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
+
 PRICE_MIN,PRICE_MAX=0,9999
 class BaseDonutProcessor:
     def __init__(self,model_config:Dict):
         self.model_config,self.model_id,self.task_prompt,self.model_name=model_config,model_config['huggingface_id'],model_config['task_prompt'],model_config['name']
-        self.device="cuda"if torch.cuda.is_available()else"cpu"
+        _torch = _get_torch()
+        self.device="cuda"if _torch.cuda.is_available()else"cpu"
         self.processor,self.model=None,None
         self._load_model()
     def _load_model(self):
@@ -55,12 +83,13 @@ class BaseDonutProcessor:
 class DonutProcessor(BaseDonutProcessor):
     def _load_model(self):
         logger.info(f"Loading Donut model: {self.model_id}")
+        _TransformersDonutProcessor, _VisionEncoderDecoderModel, _, _ = _get_transformers()
         max_retries=3
         for attempt in range(max_retries):
             try:
                 logger.info(f"Download attempt {attempt+1}/{max_retries}")
-                self.processor=TransformersDonutProcessor.from_pretrained(self.model_id)
-                self.model=VisionEncoderDecoderModel.from_pretrained(self.model_id)
+                self.processor=_TransformersDonutProcessor.from_pretrained(self.model_id)
+                self.model=_VisionEncoderDecoderModel.from_pretrained(self.model_id)
                 self.model.to(self.device)
                 logger.info(f"Model loaded successfully on {self.device}")
                 logger.info(f"Model max length: {self.model.decoder.config.max_position_embeddings}")
@@ -268,12 +297,13 @@ class DonutProcessor(BaseDonutProcessor):
 class FlorenceProcessor(BaseDonutProcessor):
     def _load_model(self):
         logger.info(f"Loading Florence-2 model: {self.model_id}")
+        _, _, _AutoProcessor, _AutoModelForCausalLM = _get_transformers()
         max_retries=3
         for attempt in range(max_retries):
             try:
                 logger.info(f"Download attempt {attempt+1}/{max_retries}")
-                self.model=AutoModelForCausalLM.from_pretrained(self.model_id,trust_remote_code=True,attn_implementation="eager")
-                self.processor=AutoProcessor.from_pretrained(self.model_id,trust_remote_code=True)
+                self.model=_AutoModelForCausalLM.from_pretrained(self.model_id,trust_remote_code=True,attn_implementation="eager")
+                self.processor=_AutoProcessor.from_pretrained(self.model_id,trust_remote_code=True)
                 self.model.to(self.device)
                 logger.info(f"Florence-2 model loaded successfully on {self.device}")
                 return

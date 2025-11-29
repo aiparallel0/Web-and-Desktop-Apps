@@ -6,11 +6,22 @@ import numpy as np
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,preprocess_for_ocr
-try:
-    from paddleocr import PaddleOCR
-except ImportError:
-    raise ImportError("paddleocr required: pip install paddleocr")
+
 logger=logging.getLogger(__name__)
+
+# Lazy import to allow mocking in tests
+PaddleOCR = None
+
+def _get_paddleocr():
+    global PaddleOCR
+    if PaddleOCR is None:
+        try:
+            from paddleocr import PaddleOCR as _PaddleOCR
+            PaddleOCR = _PaddleOCR
+        except ImportError:
+            raise ImportError("paddleocr required: pip install paddleocr")
+    return PaddleOCR
+
 PRICE_MIN,PRICE_MAX=0,9999
 
 class PaddleProcessor:
@@ -21,6 +32,7 @@ class PaddleProcessor:
         self.model_name=model_config['name']
         logger.info("Initializing PaddleOCR...")
         try:
+            PaddleOCR = _get_paddleocr()
             self.ocr=PaddleOCR(use_angle_cls=True,lang='en',det_db_thresh=0.2,det_db_box_thresh=0.3)
             logger.info("PaddleOCR initialized")
         except Exception as e:

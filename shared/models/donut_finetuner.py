@@ -1,14 +1,44 @@
-import os,logging,torch
+import os,logging
 from typing import List,Dict,Callable,Optional
 from pathlib import Path
 from PIL import Image
-from transformers import VisionEncoderDecoderModel,DonutProcessor,Seq2SeqTrainingArguments,Seq2SeqTrainer
-from torch.utils.data import Dataset
 import json
 logger=logging.getLogger(__name__)
 
-class ReceiptDataset(Dataset):
+# Lazy imports to allow the module to load without torch/transformers
+torch = None
+VisionEncoderDecoderModel = None
+DonutProcessor = None
+Seq2SeqTrainingArguments = None
+Seq2SeqTrainer = None
+Dataset = None
+
+def _get_torch():
+    global torch, Dataset
+    if torch is None:
+        import torch as _torch
+        from torch.utils.data import Dataset as _Dataset
+        torch = _torch
+        Dataset = _Dataset
+    return torch
+
+def _get_transformers():
+    global VisionEncoderDecoderModel, DonutProcessor, Seq2SeqTrainingArguments, Seq2SeqTrainer
+    if VisionEncoderDecoderModel is None:
+        from transformers import VisionEncoderDecoderModel as _VisionEncoderDecoderModel
+        from transformers import DonutProcessor as _DonutProcessor
+        from transformers import Seq2SeqTrainingArguments as _Seq2SeqTrainingArguments
+        from transformers import Seq2SeqTrainer as _Seq2SeqTrainer
+        VisionEncoderDecoderModel = _VisionEncoderDecoderModel
+        DonutProcessor = _DonutProcessor
+        Seq2SeqTrainingArguments = _Seq2SeqTrainingArguments
+        Seq2SeqTrainer = _Seq2SeqTrainer
+    return VisionEncoderDecoderModel, DonutProcessor, Seq2SeqTrainingArguments, Seq2SeqTrainer
+
+class ReceiptDataset:
+    """Dataset class for receipt training data. Requires torch to be installed."""
     def __init__(self,data:List[Dict],processor):
+        _get_torch()  # Ensure torch is loaded
         self.data=data
         self.processor=processor
 
@@ -26,8 +56,11 @@ class ReceiptDataset(Dataset):
 
 class DonutFinetuner:
     def __init__(self,model_id:str='donut_cord',image_size:tuple=(960,720)):
+        _torch = _get_torch()
+        _VisionEncoderDecoderModel, _DonutProcessor, _, _ = _get_transformers()
+        
         self.model_id=model_id
-        self.device='cuda'if torch.cuda.is_available()else'cpu'
+        self.device='cuda'if _torch.cuda.is_available()else'cpu'
         self.image_size=image_size
         logger.info(f"Initializing DonutFinetuner on {self.device} with image size {image_size}")
 
@@ -40,8 +73,8 @@ class DonutFinetuner:
             logger.info(f"Unknown model_id '{model_id}', using default: {base_model}")
 
         try:
-            self.model=VisionEncoderDecoderModel.from_pretrained(base_model)
-            self.processor=DonutProcessor.from_pretrained(base_model)
+            self.model=_VisionEncoderDecoderModel.from_pretrained(base_model)
+            self.processor=_DonutProcessor.from_pretrained(base_model)
             if hasattr(self.processor.image_processor,'size'):
                 self.processor.image_processor.size={"height":image_size[1],"width":image_size[0]}
                 logger.info(f"Set processor image size to {image_size}")
@@ -52,21 +85,24 @@ class DonutFinetuner:
             raise
 
     def train(self,training_data:List[Dict],epochs:int=3,batch_size:int=4,learning_rate:float=5e-5,progress_callback:Optional[Callable]=None,warmup_ratio:float=0.1)->Dict:
+        _torch = _get_torch()
+        _, _, _Seq2SeqTrainingArguments, _Seq2SeqTrainer = _get_transformers()
+        
         logger.info(f"Starting training with {len(training_data)} samples for {epochs} epochs")
         logger.info(f"Training config: lr={learning_rate}, batch_size={batch_size}, warmup_ratio={warmup_ratio}")
 
         try:
             train_dataset=ReceiptDataset(training_data,self.processor)
-            gradient_accumulation_steps=max(1,8//batch_size)if not torch.cuda.is_available()else 1
+            gradient_accumulation_steps=max(1,8//batch_size)if not _torch.cuda.is_available()else 1
 
-            training_args=Seq2SeqTrainingArguments(
+            training_args=_Seq2SeqTrainingArguments(
                 output_dir='./finetuned_donut',
                 num_train_epochs=epochs,
                 per_device_train_batch_size=batch_size,
                 gradient_accumulation_steps=gradient_accumulation_steps,
                 learning_rate=learning_rate,
                 warmup_ratio=warmup_ratio,
-                fp16=torch.cuda.is_available(),
+                fp16=_torch.cuda.is_available(),
                 save_strategy='epoch',
                 save_total_limit=2,
                 logging_steps=10,
@@ -95,7 +131,7 @@ class DonutFinetuner:
             if progress_callback:
                 callbacks.append(ProgressCallback(progress_callback))
 
-            trainer=Seq2SeqTrainer(
+            trainer=_Seq2SeqTrainer(
                 model=self.model,
                 args=training_args,
                 train_dataset=train_dataset,
@@ -124,11 +160,12 @@ class DonutFinetuner:
             raise
 
     def evaluate(self,test_data:List[Dict])->Dict:
+        _torch = _get_torch()
         logger.info(f"Evaluating on {len(test_data)} samples")
         self.model.eval()
         total_correct=0
 
-        with torch.no_grad():
+        with _torch.no_grad():
             for item in test_data:
                 image=Image.open(item['image']).convert('RGB')
                 pixel_values=self.processor(image,return_tensors='pt').pixel_values.to(self.device)
