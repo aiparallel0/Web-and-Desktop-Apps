@@ -76,7 +76,7 @@ class TestHashPassword:
         passwords = [
             "Short1!",  # 7 chars
             "Medium123!",  # 10 chars
-            "VeryLongPassword123!" * 5,  # Very long
+            "VeryLongPassword123!VeryLongPassword123!VeryLongPassword123!",  # 60 chars (within bcrypt 72-byte limit)
         ]
 
         for password in passwords:

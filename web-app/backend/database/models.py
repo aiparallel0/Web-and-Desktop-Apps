@@ -268,7 +268,7 @@ class AuditLog(Base):
     user_agent = Column(String(512), nullable=True)
 
     # Additional Data
-    metadata = Column(JSONB, nullable=True)  # Flexible additional info
+    extra_data = Column(JSONB, nullable=True)  # Flexible additional info
 
     # Result
     success = Column(Boolean, default=True)
