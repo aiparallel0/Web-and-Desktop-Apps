@@ -1,75 +1,42 @@
 """
-=============================================================================
-CIRCULAR INFORMATION EXCHANGE FRAMEWORK - Enterprise Core
-=============================================================================
+Circular Exchange Framework
+============================
 
-This framework implements a sophisticated dependency tracking and change
-propagation system inspired by reactive programming patterns used in
-mission-critical systems at top-tier technology companies.
+Connects all modules in this project through a shared dependency graph.
+When you change PROJECT_CONFIG, every connected module updates automatically.
 
-Architecture Overview:
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Circular Information Exchange                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐  │
-│  │ DependencyRegistry│◄──►│  ChangeNotifier  │◄──►│  VariablePackage │  │
-│  └────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘  │
-│           │                       │                        │            │
-│           └───────────────────────┼────────────────────────┘            │
-│                                   │                                      │
-│                    ┌──────────────┴──────────────┐                      │
-│                    │      CircularExchange        │                      │
-│                    │    (Central Orchestrator)    │                      │
-│                    └─────────────────────────────┘                      │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-
-Key Components:
-- DependencyRegistry: Tracks module dependencies in a bidirectional graph
-- VariablePackage: Observable data containers with change notifications
-- ChangeNotifier: Event-driven change propagation system
-- CircularExchange: Central orchestrator combining all components
-
-Design Patterns Implemented:
-- Observer Pattern: Reactive change notifications
-- Mediator Pattern: Centralized coordination
-- Registry Pattern: Dependency management
-- Event Sourcing: Change history tracking
-
-Use Cases:
-1. Automatic dependency resolution during file updates
-2. Reactive data flow between modules
-3. Circular dependency detection and handling
-4. Project-wide impact analysis for code changes
-
-Example Usage:
-    from shared.circular_exchange import CircularExchange, VariablePackage
+Quick Start:
+    from shared.circular_exchange import PROJECT_CONFIG
     
-    # Initialize the exchange
-    exchange = CircularExchange.get_instance(project_root='/path/to/project')
-    
-    # Register modules
-    exchange.register_module('config', 'config.py')
-    exchange.register_module('processor', 'processor.py')
-    exchange.add_dependency('processor', 'config')
-    
-    # Create reactive data packages
-    config = exchange.create_package('app_config', initial_value={'debug': True})
+    # Read config
+    debug = PROJECT_CONFIG.debug.value
     
     # Subscribe to changes
-    config.subscribe(lambda change: print(f'Config changed: {change}'))
+    PROJECT_CONFIG.debug.subscribe(lambda c: print(f"Debug changed to {c.new_value}"))
+
+How files connect:
     
-    # Updates automatically propagate
-    config.value = {'debug': False}
+    PROJECT_CONFIG (central hub, affects everything)
+         │
+         ├── shared/models/ (OCR and AI processors)
+         ├── shared/utils/ (data structures, logging, errors)  
+         ├── shared/config/ (settings)
+         └── web-app/backend/ (Flask API)
 
-Thread Safety:
-    All components are thread-safe and can be used in concurrent environments.
+Each file registers itself:
+    PROJECT_CONFIG.register_module(ModuleRegistration(
+        module_id="my.module",
+        file_path="path/to/file.py",
+        dependencies=["shared.utils"],
+        exports=["MyClass"]
+    ))
 
-Performance:
-    Optimized for high-throughput scenarios with batching and caching.
+The graph tracks which files import which, so changes propagate correctly.
+Files with higher "degree" can access more modules. PROJECT_CONFIG has
+infinite degree - it reaches everything.
 
-=============================================================================
+See project_config.py for the weighted graph implementation.
+See module_container.py for Docker-like isolation between modules.
 """
 
 from .dependency_registry import (
@@ -92,25 +59,66 @@ from .circular_exchange import (
     ModuleExport,
     ModuleImport
 )
+from .project_config import (
+    PROJECT_CONFIG,
+    ProjectConfiguration,
+    ModuleRegistration,
+    SecurityPolicy,
+    CodingStandards,
+    GraphNode,
+    GraphEdge,
+    PropagationMode
+)
+from .module_container import (
+    CONTAINER_ORCHESTRATOR,
+    ContainerOrchestrator,
+    ModuleContainer,
+    ContainerPort,
+    ContainerDependency,
+    ContainerStatus,
+    CompatibilityLevel,
+    CompatibilityReport,
+    create_container,
+    check_compatibility,
+    standardize_code
+)
 
 __all__ = [
-    # Core Registry
+    # Core
     'DependencyRegistry',
     'ModuleInfo',
-    # Variable Packages
     'VariablePackage',
     'PackageRegistry',
     'PackageChange',
-    # Change Notification
     'ChangeNotifier',
     'ChangeType',
     'ChangeEvent',
     'NotificationResult',
-    # Main Orchestrator
     'CircularExchange',
     'ModuleExport',
-    'ModuleImport'
+    'ModuleImport',
+    # Config
+    'PROJECT_CONFIG',
+    'ProjectConfiguration',
+    'ModuleRegistration',
+    'SecurityPolicy',
+    'CodingStandards',
+    # Graph
+    'GraphNode',
+    'GraphEdge',
+    'PropagationMode',
+    # Containers
+    'CONTAINER_ORCHESTRATOR',
+    'ContainerOrchestrator',
+    'ModuleContainer',
+    'ContainerPort',
+    'ContainerDependency',
+    'ContainerStatus',
+    'CompatibilityLevel',
+    'CompatibilityReport',
+    'create_container',
+    'check_compatibility',
+    'standardize_code'
 ]
 
 __version__ = '2.0.0'
-__author__ = 'Enterprise Architecture Team'
