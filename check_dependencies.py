@@ -41,6 +41,7 @@ def parse_requirements(path: Path) -> Dict[str, Tuple[str, str]]:
     Parse a simple requirements file into a mapping:
       package_name -> (comparator, version)
     Lines that cannot be parsed are ignored.
+    Package names are normalized to lowercase with underscores.
     """
     reqs: Dict[str, Tuple[str, str]] = {}
     if not path.exists():
@@ -53,15 +54,23 @@ def parse_requirements(path: Path) -> Dict[str, Tuple[str, str]]:
         if not m:
             continue
         name, op, ver = m.group(1), m.group(2) or "", m.group(3) or ""
-        reqs[name.replace('-', '_')] = (op, ver)
+        # Normalize: lowercase and replace hyphens with underscores
+        normalized_name = name.lower().replace('-', '_')
+        reqs[normalized_name] = (op, ver)
     return reqs
 
 def get_installed_versions() -> Dict[str, str]:
+    """
+    Get a dictionary of installed package names to versions.
+    Package names are normalized to lowercase with underscores.
+    """
     installed: Dict[str, str] = {}
     # importlib.metadata distributions returns normalized names
     try:
         for dist in distributions():
-            installed[dist.metadata['Name'].replace('-', '_')] = dist.version
+            # Normalize: lowercase and replace hyphens with underscores
+            normalized_name = dist.metadata['Name'].lower().replace('-', '_')
+            installed[normalized_name] = dist.version
     except Exception:
         # fallback: try pkg_version for common packages if distributions unavailable
         pass

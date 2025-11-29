@@ -16,11 +16,13 @@
 #   --quick: Quick launch (skip tests)
 #   --test:  Run tests only
 #   --clean: Clean cache only
+#
+# UI designed for maximum compatibility with ASCII terminals (1970s+)
 ###############################################################################
 
 set -e
 
-# Colors and formatting
+# Colors and formatting (optional - degrades gracefully on non-color terminals)
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -60,23 +62,23 @@ GPU_AVAILABLE=false
 print_banner() {
     clear
     echo -e "${CYAN}${BOLD}"
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║                                                                ║"
-    echo "║        Receipt Extractor - Unified Launcher v3.0               ║"
-    echo "║                                                                ║"
-    echo "║    AI-Powered Receipt Processing with Advanced OCR Models      ║"
-    echo "║                                                                ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo "+================================================================+"
+    echo "|                                                                |"
+    echo "|        Receipt Extractor - Unified Launcher v3.0               |"
+    echo "|                                                                |"
+    echo "|    AI-Powered Receipt Processing with Advanced OCR Models      |"
+    echo "|                                                                |"
+    echo "+================================================================+"
     echo -e "${NC}"
 }
 
 print_separator() {
-    echo -e "${DIM}────────────────────────────────────────────────────────────────${NC}"
+    echo -e "${DIM}----------------------------------------------------------------${NC}"
 }
 
 print_section() {
     echo ""
-    echo -e "${BOLD}${BLUE}▶ $1${NC}"
+    echo -e "${BOLD}${BLUE}> $1${NC}"
     print_separator
 }
 
@@ -678,11 +680,11 @@ start_servers() {
 
     # Success message
     echo ""
-    echo -e "${GREEN}${BOLD}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
-    echo -e "${GREEN}${BOLD}║        Receipt Extractor is now running!                       ║${NC}"
-    echo -e "${GREEN}${BOLD}║                                                                ║${NC}"
-    echo -e "${GREEN}${BOLD}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}${BOLD}+================================================================+${NC}"
+    echo -e "${GREEN}${BOLD}|                                                                |${NC}"
+    echo -e "${GREEN}${BOLD}|        Receipt Extractor is now running!                       |${NC}"
+    echo -e "${GREEN}${BOLD}|                                                                |${NC}"
+    echo -e "${GREEN}${BOLD}+================================================================+${NC}"
     echo ""
     echo -e "  ${BOLD}Frontend:${NC}  ${BLUE}http://localhost:$FRONTEND_PORT${NC}"
     echo -e "  ${BOLD}Backend:${NC}   ${BLUE}http://localhost:$BACKEND_PORT${NC}"

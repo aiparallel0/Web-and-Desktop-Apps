@@ -1,49 +1,50 @@
 # Receipt Extractor Backend
-# See requirements.txt for full project dependencies
+# See root requirements.txt for full project dependencies
+
 # Core Web Framework
-Flask==3.0.0
-Flask-CORS==4.0.0
-Werkzeug==3.0.1
+Flask>=3.0.0
+Flask-CORS>=4.0.0
+Werkzeug>=3.0.0
 
 # Image Processing
-Pillow==10.2.0
-opencv-python==4.9.0.80
+Pillow>=10.0.0
+opencv-python>=4.8.0
 
 # Core OCR Engines (Lightweight - No external dependencies)
-easyocr==1.7.0
+easyocr>=1.7.0
 
 # Additional OCR Engines (Optional - choose based on needs)
-pytesseract==0.3.10  # Requires tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki
-paddlepaddle>=2.6.2
-paddleocr==2.7.0
+pytesseract>=0.3.10  # Requires tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki
+# paddlepaddle>=2.6.0  # Uncomment for PaddleOCR support
+# paddleocr>=2.7.0     # Uncomment for PaddleOCR support
 
 # Utilities
-numpy==1.26.3
-psutil==5.9.8
-requests==2.31.0
+numpy>=1.24.0
+psutil>=5.9.0
+requests>=2.31.0
 
 # Advanced AI Models (OPTIONAL - Install separately for finetuning features)
 # These require C++ build tools on Windows. See INSTALLATION_GUIDE.md for details.
 # On Windows: Install Visual Studio Build Tools first
 # https://visualstudio.microsoft.com/visual-cpp-build-tools/
 #
-# torch>=2.2.0
-# transformers>=4.37.0
+# torch>=2.0.0
+# transformers>=4.30.0
 # accelerate>=0.26.0  # IMPORTANT: Version 0.26.0+ required for Trainer
 # huggingface-hub>=0.20.0
 # sentencepiece>=0.1.99  # Requires C++ compiler on Windows
 # protobuf>=3.20.0
 
 # Cloud Storage (Optional - for cloud integration)
-# google-auth==2.27.0
-# google-auth-oauthlib==1.2.0
-# google-cloud-storage==2.14.0
-# dropbox==11.36.2
-# boto3==1.34.34
+# google-auth>=2.27.0
+# google-auth-oauthlib>=1.2.0
+# google-cloud-storage>=2.14.0
+# dropbox>=11.36.0
+# boto3>=1.34.0
 
 # Development
-# pytest==8.0.0
-# black==24.1.1
+# pytest>=7.4.0
+# black>=24.1.0
 
 # INSTALLATION NOTES:
 #
