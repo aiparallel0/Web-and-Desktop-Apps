@@ -142,7 +142,8 @@ class User(Base):
     )
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', plan='{self.plan}')>"
+        plan_value = self.plan.value if hasattr(self.plan, 'value') else self.plan
+        return f"<User(id={self.id}, email='{self.email}', plan='{plan_value}')>"
 
 
 class Receipt(Base):
@@ -228,7 +229,9 @@ class Subscription(Base):
     user = relationship("User", back_populates="subscriptions")
 
     def __repr__(self):
-        return f"<Subscription(id={self.id}, user_id={self.user_id}, plan='{self.plan}', status='{self.status}')>"
+        plan_value = self.plan.value if hasattr(self.plan, 'value') else self.plan
+        status_value = self.status.value if hasattr(self.status, 'value') else self.status
+        return f"<Subscription(id={self.id}, user_id={self.user_id}, plan='{plan_value}', status='{status_value}')>"
 
 
 class APIKey(Base):

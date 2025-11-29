@@ -70,13 +70,17 @@ def get_session_factory():
     return _SessionLocal
 
 
-# Lazy session property
-SessionLocal = property(lambda self: get_session_factory())
+# Module-level SessionLocal that creates session factory on first access
+class SessionLocalProxy:
+    """Proxy class that lazily creates the session factory."""
+    def __call__(self):
+        return get_session_factory()()
+    
+    def __getattr__(self, name):
+        return getattr(get_session_factory(), name)
 
 
-def _get_session_local():
-    """Get the SessionLocal factory."""
-    return get_session_factory()
+SessionLocal = SessionLocalProxy()
 
 
 # Create scoped session for thread safety
