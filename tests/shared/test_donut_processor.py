@@ -93,21 +93,21 @@ def test_donut_processor_load_retry(mock_model_cls, mock_proc_cls, mock_torch, d
 
     mock_torch.cuda.is_available.return_value = False
 
-    # First attempt fails, second succeeds
+    # First attempt: processor fails
+    # Second attempt: both succeed
     mock_model = Mock()
     mock_processor = Mock()
     mock_tokenizer = Mock()
     mock_tokenizer.__len__ = Mock(return_value=30000)  # Add len support
     mock_processor.tokenizer = mock_tokenizer
 
-    mock_model_cls.from_pretrained.side_effect = [
-        RuntimeError("Download failed"),
-        mock_model
-    ]
+    # Processor fails on first attempt, succeeds on second
     mock_proc_cls.from_pretrained.side_effect = [
         RuntimeError("Download failed"),
         mock_processor
     ]
+    # Model only called on second attempt (after processor succeeds)
+    mock_model_cls.from_pretrained.return_value = mock_model
 
     with patch('time.sleep'):  # Don't actually sleep in tests
         processor = DonutProcessor(donut_config)
