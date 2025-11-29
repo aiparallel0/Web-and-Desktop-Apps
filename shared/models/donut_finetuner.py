@@ -35,27 +35,47 @@ def _get_transformers():
         Seq2SeqTrainer = _Seq2SeqTrainer
     return VisionEncoderDecoderModel, DonutProcessor, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
-class ReceiptDataset:
-    """Dataset class for receipt training data. Requires torch to be installed."""
-    def __init__(self,data:List[Dict],processor):
-        _get_torch()  # Ensure torch is loaded
-        self.data=data
-        self.processor=processor
+def _make_receipt_dataset_class():
+    """Factory function that creates ReceiptDataset class inheriting from torch.utils.data.Dataset"""
+    _torch = _get_torch()
+    from torch.utils.data import Dataset as TorchDataset
+    
+    class ReceiptDataset(TorchDataset):
+        """Dataset class for receipt training data. Requires torch to be installed."""
+        def __init__(self, data: List[Dict], processor):
+            super().__init__()
+            self.data = data
+            self.processor = processor
 
-    def __len__(self):
-        return len(self.data)
+        def __len__(self):
+            return len(self.data)
 
-    def __getitem__(self,idx):
-        item=self.data[idx]
-        image=Image.open(item['image']).convert('RGB')
-        pixel_values=self.processor(image,return_tensors='pt').pixel_values.squeeze()
-        target_text=json.dumps(item['truth'])
-        labels=self.processor.tokenizer(target_text,add_special_tokens=False,max_length=512,padding='max_length',truncation=True,return_tensors='pt').input_ids.squeeze()
-        labels[labels==self.processor.tokenizer.pad_token_id]=-100
-        return {'pixel_values':pixel_values,'labels':labels}
+        def __getitem__(self, idx):
+            item = self.data[idx]
+            image = Image.open(item['image']).convert('RGB')
+            pixel_values = self.processor(image, return_tensors='pt').pixel_values.squeeze()
+            target_text = json.dumps(item['truth'])
+            labels = self.processor.tokenizer(
+                target_text, add_special_tokens=False, max_length=512,
+                padding='max_length', truncation=True, return_tensors='pt'
+            ).input_ids.squeeze()
+            labels[labels == self.processor.tokenizer.pad_token_id] = -100
+            return {'pixel_values': pixel_values, 'labels': labels}
+    
+    return ReceiptDataset
+
+# Placeholder for backwards compatibility - actual class created at runtime
+ReceiptDataset = None
+
+def get_receipt_dataset_class():
+    """Get the ReceiptDataset class, creating it if necessary."""
+    global ReceiptDataset
+    if ReceiptDataset is None:
+        ReceiptDataset = _make_receipt_dataset_class()
+    return ReceiptDataset
 
 class DonutFinetuner:
-    def __init__(self,model_id:str='donut_cord',image_size:tuple=(960,720)):
+    def __init__(self, model_id: str = 'donut_cord', image_size: tuple = (960, 720)):
         _torch = _get_torch()
         _VisionEncoderDecoderModel, _DonutProcessor, _, _ = _get_transformers()
         
@@ -87,13 +107,14 @@ class DonutFinetuner:
     def train(self,training_data:List[Dict],epochs:int=3,batch_size:int=4,learning_rate:float=5e-5,progress_callback:Optional[Callable]=None,warmup_ratio:float=0.1)->Dict:
         _torch = _get_torch()
         _, _, _Seq2SeqTrainingArguments, _Seq2SeqTrainer = _get_transformers()
+        _ReceiptDataset = get_receipt_dataset_class()
         
         logger.info(f"Starting training with {len(training_data)} samples for {epochs} epochs")
         logger.info(f"Training config: lr={learning_rate}, batch_size={batch_size}, warmup_ratio={warmup_ratio}")
 
         try:
-            train_dataset=ReceiptDataset(training_data,self.processor)
-            gradient_accumulation_steps=max(1,8//batch_size)if not _torch.cuda.is_available()else 1
+            train_dataset = _ReceiptDataset(training_data, self.processor)
+            gradient_accumulation_steps = max(1, 8 // batch_size) if not _torch.cuda.is_available() else 1
 
             training_args=_Seq2SeqTrainingArguments(
                 output_dir='./finetuned_donut',
