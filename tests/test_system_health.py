@@ -8,7 +8,7 @@ def test_python_version():
     version = sys.version_info
     assert version.major == 3 and version.minor >= 8, \
         f"Python 3.8+ required, found {version.major}.{version.minor}"
-    print(f"✓ Python version: {version.major}.{version.minor}.{version.micro}")
+    print(f"[OK] Python version: {version.major}.{version.minor}.{version.micro}")
 
 def test_core_dependencies():
     required = {
@@ -22,22 +22,22 @@ def test_core_dependencies():
     for module, name in required.items():
         try:
             __import__(module)
-            print(f"✓ {name} installed")
+            print(f"[OK] {name} installed")
         except ImportError:
             if 'optional' in name:
-                print(f"⚠ {name} not installed (optional)")
+                print(f"[WARN] {name} not installed (optional)")
             else:
-                print(f"✗ {name} NOT installed (required)")
+                print(f"[FAIL] {name} NOT installed (required)")
                 raise
 
 def test_tesseract_installation():
     try:
         import pytesseract
         version = pytesseract.get_tesseract_version()
-        print(f"✓ Tesseract OCR version: {version}")
+        print(f"[OK] Tesseract OCR version: {version}")
         return True
     except Exception as e:
-        print(f"⚠ Tesseract OCR not available: {e}")
+        print(f"[WARN] Tesseract OCR not available: {e}")
         print("  Install from: https://github.com/tesseract-ocr/tesseract")
         return False
 
@@ -49,17 +49,17 @@ def test_config_files():
         config = json.load(f)
     assert 'available_models' in config
     assert 'default_model' in config
-    print(f"✓ Configuration file valid ({len(config['available_models'])} models)")
+    print(f"[OK] Configuration file valid ({len(config['available_models'])} models)")
 
 def test_model_manager_initialization():
     from shared.models.model_manager import ModelManager
     try:
         manager = ModelManager()
         models = manager.get_available_models()
-        print(f"✓ ModelManager initialized ({len(models)} models available)")
+        print(f"[OK] ModelManager initialized ({len(models)} models available)")
         return True
     except Exception as e:
-        print(f"✗ ModelManager initialization failed: {e}")
+        print(f"[FAIL] ModelManager initialization failed: {e}")
         return False
 
 def test_memory_available():
@@ -68,33 +68,33 @@ def test_memory_available():
         memory = psutil.virtual_memory()
         available_gb = memory.available / (1024**3)
         total_gb = memory.total / (1024**3)
-        print(f"✓ Memory: {available_gb:.1f}GB available / {total_gb:.1f}GB total")
+        print(f"[OK] Memory: {available_gb:.1f}GB available / {total_gb:.1f}GB total")
         if available_gb < 2:
-            print("  ⚠ Warning: Low memory. 4GB+ recommended for model loading")
+            print("  [WARN] Warning: Low memory. 4GB+ recommended for model loading")
     except ImportError:
-        print("  ℹ psutil not installed - cannot check memory")
+        print("  [INFO] psutil not installed - cannot check memory")
 
 def test_disk_space():
     try:
         import psutil
         disk = psutil.disk_usage('/')
         free_gb = disk.free / (1024**3)
-        print(f"✓ Disk space: {free_gb:.1f}GB free")
+        print(f"[OK] Disk space: {free_gb:.1f}GB free")
         if free_gb < 5:
-            print("  ⚠ Warning: Low disk space. 5GB+ recommended for models")
+            print("  [WARN] Warning: Low disk space. 5GB+ recommended for models")
     except ImportError:
-        print("  ℹ psutil not installed - cannot check disk space")
+        print("  [INFO] psutil not installed - cannot check disk space")
 
 def test_cuda_availability():
     try:
         import torch
         if torch.cuda.is_available():
             device_name = torch.cuda.get_device_name(0)
-            print(f"✓ CUDA available: {device_name}")
+            print(f"[OK] CUDA available: {device_name}")
         else:
-            print("  ℹ CUDA not available (CPU mode)")
+            print("  [INFO] CUDA not available (CPU mode)")
     except ImportError:
-        print("  ℹ PyTorch not installed - cannot check CUDA")
+        print("  [INFO] PyTorch not installed - cannot check CUDA")
 
 def run_all_tests():
     print("=" * 60)
@@ -117,7 +117,7 @@ def run_all_tests():
             result = test_func()
             results[name] = result if result is not None else True
         except Exception as e:
-            print(f"✗ {name} FAILED: {e}")
+            print(f"[FAIL] {name} FAILED: {e}")
             results[name] = False
     print("\n" + "=" * 60)
     print("SUMMARY")
@@ -125,14 +125,14 @@ def run_all_tests():
     passed = sum(1 for v in results.values() if v)
     total = len(results)
     for name, result in results.items():
-        status = "✓ PASS" if result else "✗ FAIL"
+        status = "[OK] PASS" if result else "[FAIL] FAIL"
         print(f"{status}: {name}")
     print(f"\nTotal: {passed}/{total} passed")
     if passed == total:
-        print("\n✓ All tests passed! System is ready.")
+        print("\n[OK] All tests passed! System is ready.")
         return 0
     else:
-        print(f"\n⚠ {total - passed} test(s) failed. Review errors above.")
+        print(f"\n[WARN] {total - passed} test(s) failed. Review errors above.")
         return 1
 
 if __name__ == '__main__':

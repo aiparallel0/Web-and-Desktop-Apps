@@ -36,11 +36,20 @@ except Exception:
 
 REQ_LINE_RE = re.compile(r'^\s*([A-Za-z0-9_.\-]+)\s*(?:([<>=!~]{1,2})\s*([^\s;#]+))?')
 
+def normalize_package_name(name: str) -> str:
+    """
+    Normalize package name for consistent comparison.
+    Converts to lowercase and replaces hyphens with underscores.
+    This follows PEP 503 naming conventions for package comparison.
+    """
+    return name.lower().replace('-', '_')
+
 def parse_requirements(path: Path) -> Dict[str, Tuple[str, str]]:
     """
     Parse a simple requirements file into a mapping:
       package_name -> (comparator, version)
     Lines that cannot be parsed are ignored.
+    Package names are normalized to lowercase with underscores.
     """
     reqs: Dict[str, Tuple[str, str]] = {}
     if not path.exists():
@@ -53,15 +62,19 @@ def parse_requirements(path: Path) -> Dict[str, Tuple[str, str]]:
         if not m:
             continue
         name, op, ver = m.group(1), m.group(2) or "", m.group(3) or ""
-        reqs[name.replace('-', '_')] = (op, ver)
+        reqs[normalize_package_name(name)] = (op, ver)
     return reqs
 
 def get_installed_versions() -> Dict[str, str]:
+    """
+    Get a dictionary of installed package names to versions.
+    Package names are normalized to lowercase with underscores.
+    """
     installed: Dict[str, str] = {}
     # importlib.metadata distributions returns normalized names
     try:
         for dist in distributions():
-            installed[dist.metadata['Name'].replace('-', '_')] = dist.version
+            installed[normalize_package_name(dist.metadata['Name'])] = dist.version
     except Exception:
         # fallback: try pkg_version for common packages if distributions unavailable
         pass
