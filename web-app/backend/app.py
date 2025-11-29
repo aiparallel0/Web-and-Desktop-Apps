@@ -1,24 +1,73 @@
-import os,sys,re,logging,time,gc,json,threading
-from flask import Flask,request,jsonify,send_file
+"""
+=============================================================================
+RECEIPT EXTRACTION API - Enterprise Flask Backend
+=============================================================================
+
+Version:    2.0.0
+Author:     Receipt Extractor Team
+
+Architecture:
+    - Flask REST API with CORS support
+    - Multi-model OCR processing pipeline
+    - Model finetuning capabilities
+    - Batch processing support
+
+=============================================================================
+"""
+
+# =============================================================================
+# MODULE IMPORTS & CONFIGURATION
+# =============================================================================
+
+import os
+import sys
+import re
+import logging
+import time
+import gc
+import json
+import threading
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import tempfile
 from pathlib import Path
 import zipfile
-sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..','..'))
-from shared.models.model_manager import ModelManager
-from shared.models.model_trainer import ModelTrainer,DataAugmenter
-logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger=logging.getLogger(__name__)
-app=Flask(__name__)
-CORS(app)
-app.config['MAX_CONTENT_LENGTH']=100*1024*1024
-app.config['REQUEST_TIMEOUT']=3600
-ALLOWED_EXTENSIONS={'png','jpg','jpeg','bmp','tiff','tif'}
-model_manager=ModelManager(max_loaded_models=3)
-finetune_jobs={}
 
-# Register auth and API routes
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from shared.models.model_manager import ModelManager
+from shared.models.model_trainer import ModelTrainer, DataAugmenter
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# APPLICATION SETUP
+# =============================================================================
+
+app = Flask(__name__)
+CORS(app)
+
+# Application configuration
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+app.config['REQUEST_TIMEOUT'] = 3600  # 1 hour timeout
+
+# Allowed file extensions for image uploads
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif'}
+
+# Initialize model manager with resource limits
+model_manager = ModelManager(max_loaded_models=3)
+
+# Storage for finetuning jobs
+finetune_jobs = {}
+
+# Register additional routes (auth, receipts)
 try:
     from auth import register_auth_routes
     from receipts import register_receipts_routes
@@ -28,31 +77,135 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register additional routes: {e}")
 
-def allowed_file(filename):
- return '.' in filename and filename.rsplit('.',1)[1].lower()in ALLOWED_EXTENSIONS
-def safe_delete_temp_file(file_path:str,max_retries:int=3):
- if not os.path.exists(file_path):return
- for attempt in range(max_retries):
-  try:
-   gc.collect()
-   if sys.platform=='win32'and attempt>0:time.sleep(0.1*(attempt+1))
-   os.unlink(file_path)
-   logger.debug(f"Successfully deleted temp file: {file_path}")
-   return
-  except PermissionError as e:
-   if attempt<max_retries-1:logger.warning(f"Temp file deletion attempt {attempt+1} failed (retrying): {e}")
-   else:logger.error(f"Failed to delete temp file after {max_retries} attempts: {file_path}. OS will clean up on reboot. Error: {e}")
-  except Exception as e:logger.error(f"Unexpected error deleting temp file {file_path}: {e}");break
-def create_error_response(error_message:str,error_type:str='UnknownError',status_code:int=500,details:dict=None):
- response={'success':False,'error':{'type':error_type,'message':error_message,'timestamp':time.time()}}
- if details:response['error']['details']=details
- return jsonify(response),status_code
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+def allowed_file(filename: str) -> bool:
+    """
+    Check if a filename has an allowed extension.
+    
+    Args:
+        filename: Name of the file to check
+        
+    Returns:
+        True if file extension is allowed, False otherwise
+    """
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def safe_delete_temp_file(file_path: str, max_retries: int = 3):
+    """
+    Safely delete a temporary file with retry logic.
+    
+    Args:
+        file_path: Path to the file to delete
+        max_retries: Maximum number of deletion attempts
+    """
+    if not os.path.exists(file_path):
+        return
+    
+    for attempt in range(max_retries):
+        try:
+            gc.collect()
+            if sys.platform == 'win32' and attempt > 0:
+                time.sleep(0.1 * (attempt + 1))
+            os.unlink(file_path)
+            logger.debug(f"Successfully deleted temp file: {file_path}")
+            return
+        except PermissionError as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Temp file deletion attempt {attempt + 1} failed (retrying): {e}")
+            else:
+                logger.error(
+                    f"Failed to delete temp file after {max_retries} attempts: {file_path}. "
+                    f"OS will clean up on reboot. Error: {e}"
+                )
+        except Exception as e:
+            logger.error(f"Unexpected error deleting temp file {file_path}: {e}")
+            break
+
+
+def create_error_response(
+    error_message: str,
+    error_type: str = 'UnknownError',
+    status_code: int = 500,
+    details: dict = None
+):
+    """
+    Create a standardized error response.
+    
+    Args:
+        error_message: Human-readable error message
+        error_type: Error classification
+        status_code: HTTP status code
+        details: Additional error details
+        
+    Returns:
+        Tuple of (response, status_code)
+    """
+    response = {
+        'success': False,
+        'error': {
+            'type': error_type,
+            'message': error_message,
+            'timestamp': time.time()
+        }
+    }
+    if details:
+        response['error']['details'] = details
+    return jsonify(response), status_code
+
+
+# =============================================================================
+# ERROR HANDLERS
+# =============================================================================
+
 @app.errorhandler(413)
-def request_entity_too_large(error):return create_error_response(f"File too large. Maximum file size is {app.config['MAX_CONTENT_LENGTH']/(1024*1024):.0f}MB",error_type='FileTooLarge',status_code=413)
+def request_entity_too_large(error):
+    """Handle file too large errors."""
+    max_size_mb = app.config['MAX_CONTENT_LENGTH'] / (1024 * 1024)
+    return create_error_response(
+        f"File too large. Maximum file size is {max_size_mb:.0f}MB",
+        error_type='FileTooLarge',
+        status_code=413
+    )
+
+
 @app.errorhandler(500)
-def internal_error(error):logger.error(f"Internal server error: {error}");return create_error_response('Internal server error occurred',error_type='InternalServerError',status_code=500)
-@app.route('/',methods=['GET'])
-def index():return jsonify({'service':'Receipt Extraction API','version':'1.1','status':'running','endpoints':{'health':'/api/health','models':'/api/models','select_model':'/api/models/select (POST)','extract':'/api/extract (POST)','batch_extract':'/api/extract/batch (POST) - Extract with ALL models','model_info':'/api/models/<model_id>/info','unload_models':'/api/models/unload (POST)'},'documentation':'Access /api/health for health check or /api/models to see available models'})
+def internal_error(error):
+    """Handle internal server errors."""
+    logger.error(f"Internal server error: {error}")
+    return create_error_response(
+        'Internal server error occurred',
+        error_type='InternalServerError',
+        status_code=500
+    )
+
+
+# =============================================================================
+# HEALTH & STATUS ENDPOINTS
+# =============================================================================
+
+@app.route('/', methods=['GET'])
+def index():
+    """API root endpoint with documentation."""
+    return jsonify({
+        'service': 'Receipt Extraction API',
+        'version': '1.1',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'models': '/api/models',
+            'select_model': '/api/models/select (POST)',
+            'extract': '/api/extract (POST)',
+            'batch_extract': '/api/extract/batch (POST) - Extract with ALL models',
+            'model_info': '/api/models/<model_id>/info',
+            'unload_models': '/api/models/unload (POST)'
+        },
+        'documentation': 'Access /api/health for health check or /api/models to see available models'
+    })
 @app.route('/api/health',methods=['GET'])
 def health_check():
  try:
