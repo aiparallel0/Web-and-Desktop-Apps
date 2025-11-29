@@ -318,9 +318,10 @@ def clean_item_name(name: str) -> str:
                 return correct.lower()
             elif matched_text[0].isupper():
                 return correct.capitalize()
-            # For mixed case (e.g., 'FashIUNED'), default to uppercase for OCR text
+            # For other cases, default to uppercase for OCR text
             return correct.upper()
-        cleaned = re.sub(rf'\b{wrong}\b', preserve_case, cleaned, flags=re.IGNORECASE)
+        # Use re.escape to safely handle any regex special characters in the pattern
+        cleaned = re.sub(rf'\b{re.escape(wrong)}\b', preserve_case, cleaned, flags=re.IGNORECASE)
     
     # Apply unit corrections (case-sensitive replacements)
     for wrong, correct in UNIT_CORRECTIONS.items():
