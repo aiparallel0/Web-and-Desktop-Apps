@@ -45,10 +45,20 @@ class TestNormalizePrice:
         from shared.models.ocr_common import normalize_price
         assert normalize_price(25.99) == Decimal('25.99')
 
-    def test_multiple_thousands_separators(self):
+    def test_thousands_separator_single(self):
         from shared.models.ocr_common import normalize_price
-        # 1,234,567 should be treated as 1234567 but exceeds max
+        # 1,234 treated as thousands separator
         assert normalize_price('1,234') == Decimal('1234')
+
+    def test_invalid_comma_format_returns_none(self):
+        from shared.models.ocr_common import normalize_price
+        # 1,23,4 is invalid format
+        assert normalize_price('1,23,4') is None
+
+    def test_ambiguous_comma_treated_as_decimal(self):
+        from shared.models.ocr_common import normalize_price
+        # 1,23 could be European format (1.23)
+        assert normalize_price('1,23') == Decimal('1.23')
 
 
 class TestExtractDate:
