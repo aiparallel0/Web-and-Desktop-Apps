@@ -359,38 +359,11 @@ function displayBatchResults(data) {
 
 /**
  * Load files from cloud storage provider
+ * Note: Cloud storage integration is not yet implemented
  * @param {string} provider - Cloud provider name
  */
 async function loadCloudFiles(provider) {
     showError('Cloud storage integration is not yet implemented. This feature requires API integration with Google Drive, Dropbox, or AWS S3. See README for setup instructions.');
-    return;
-
-    // Placeholder for future cloud integration
-    showLoading(true, `Loading files from ${provider}...`);
-    try {
-        const response = await fetch(`${API_BASE_URL}/cloud/list`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider, path: '/' })
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            displayCloudFiles(data.files, provider);
-            showSuccess(`Found ${data.files.length} files in ${provider}`);
-        } else {
-            if (data.is_placeholder) {
-                showError('Cloud storage not implemented. Please use local file upload.');
-            } else {
-                showError(data.error || 'Failed to load cloud files');
-            }
-        }
-    } catch (error) {
-        console.error('Cloud files error:', error);
-        showError('Failed to connect to cloud storage');
-    } finally {
-        showLoading(false);
-    }
 }
 
 /**

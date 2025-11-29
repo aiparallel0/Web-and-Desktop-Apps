@@ -505,7 +505,7 @@ class PaddleProcessor:
                         if isinstance(fp, (list, tuple)) and len(fp) > 1:
                             return fp[1]
                     return 0
-                except Exception:
+                except (KeyError, TypeError, IndexError):
                     return 0
             
             text_lines = sorted(text_lines, key=safe_get_y)
