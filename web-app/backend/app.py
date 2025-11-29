@@ -38,7 +38,7 @@ import zipfile
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from shared.models.model_manager import ModelManager
-from shared.models.model_trainer import ModelTrainer, DataAugmenter
+from shared.models.ai_models import ModelTrainer, DataAugmenter
 
 # Configure logging
 logging.basicConfig(
