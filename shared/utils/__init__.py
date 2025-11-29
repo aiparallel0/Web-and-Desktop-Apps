@@ -33,7 +33,9 @@ from .image_processing import (
     enhance_image,
     assess_image_quality,
     preprocess_for_ocr,
-    resize_if_needed
+    resize_if_needed,
+    detect_text_regions,
+    preprocess_multi_pass
 )
 from .logger import (
     setup_logger,
@@ -56,6 +58,39 @@ __all__ = [
     'TransactionTotals',
     'ExtractionStatus',
     # Image Processing
+from .centralized_logging import (
+    get_module_logger,
+    set_context,
+    get_context,
+    clear_context,
+    logging_context,
+    log_errors,
+    log_with_context,
+    ErrorHandler,
+)
+from .errors import (
+    ReceiptExtractorError,
+    ValidationError,
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    ProcessingError,
+    RateLimitError,
+    ExternalServiceError,
+    ErrorCode,
+    ErrorCategory,
+    create_error_response,
+    handle_exception,
+    register_error_handlers
+)
+from .logger import setup_logger, get_logger, log_with_context
+
+__all__ = [
+    # Data structures
+    'LineItem',
+    'ReceiptData',
+    'ExtractionResult',
+    # Image processing
     'load_and_validate_image',
     'enhance_image',
     'assess_image_quality',
@@ -71,4 +106,33 @@ __all__ = [
     'LogLevel',
     'generate_correlation_id',
     'get_default_logger'
+    # Centralized logging - automatically available when importing from shared.utils
+    'get_module_logger',
+    'set_context',
+    'get_context',
+    'clear_context',
+    'logging_context',
+    'log_errors',
+    'log_with_context',
+    'ErrorHandler',
+    'detect_text_regions',
+    'preprocess_multi_pass',
+    # Error handling
+    'ReceiptExtractorError',
+    'ValidationError',
+    'AuthenticationError',
+    'AuthorizationError',
+    'NotFoundError',
+    'ProcessingError',
+    'RateLimitError',
+    'ExternalServiceError',
+    'ErrorCode',
+    'ErrorCategory',
+    'create_error_response',
+    'handle_exception',
+    'register_error_handlers',
+    # Logging
+    'setup_logger',
+    'get_logger',
+    'log_with_context'
 ]

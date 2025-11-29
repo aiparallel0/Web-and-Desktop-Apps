@@ -1,7 +1,5 @@
 """
-=============================================================================
 SHARED CORE MODULE - Enterprise Architecture Foundation
-=============================================================================
 
 This module serves as the foundational layer for the Receipt Extraction System,
 implementing enterprise-grade patterns used by top-tier technology companies.
@@ -31,7 +29,6 @@ Integration Pattern:
     # Automatic dependency propagation
     exchange.register_module('my_module', __file__)
 
-=============================================================================
 """
 
 from typing import TYPE_CHECKING
@@ -108,3 +105,34 @@ __all__ = [
 
 __version__ = '2.0.0'
 __author__ = 'Enterprise Architecture Team'
+# Shared modules for receipt extraction
+#
+# This module automatically initializes centralized logging when imported.
+# New files that import from 'shared' will automatically get logging configured.
+#
+# Usage:
+#   from shared.utils import get_module_logger, log_errors
+#   logger = get_module_logger()
+#   
+#   @log_errors
+#   def my_function():
+#       logger.info("Processing...")
+
+# Auto-initialize centralized logging on import
+from shared.utils.centralized_logging import (
+    get_module_logger,
+    log_errors,
+    logging_context,
+    set_context,
+    clear_context,
+    ErrorHandler,
+)
+
+__all__ = [
+    'get_module_logger',
+    'log_errors',
+    'logging_context',
+    'set_context',
+    'clear_context',
+    'ErrorHandler',
+]
