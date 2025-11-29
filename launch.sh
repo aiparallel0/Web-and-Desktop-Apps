@@ -302,7 +302,7 @@ run_dependency_check() {
     if [ -f "check_dependencies.py" ]; then
         print_info "Running dependency checker with auto-install..."
         echo ""
-        $PYTHON_CMD check_dependencies.py --auto-install
+        $PYTHON_CMD check_dependencies.py --install
         local exit_code=$?
 
         if [ $exit_code -eq 0 ]; then
