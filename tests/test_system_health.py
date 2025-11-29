@@ -35,11 +35,9 @@ def test_tesseract_installation():
         import pytesseract
         version = pytesseract.get_tesseract_version()
         print(f"[OK] Tesseract OCR version: {version}")
-        return True
     except Exception as e:
         print(f"[WARN] Tesseract OCR not available: {e}")
         print("  Install from: https://github.com/tesseract-ocr/tesseract")
-        return False
 
 def test_config_files():
     config_path = Path(__file__).parent.parent / 'shared' / 'config' / 'models_config.json'
@@ -57,10 +55,9 @@ def test_model_manager_initialization():
         manager = ModelManager()
         models = manager.get_available_models()
         print(f"[OK] ModelManager initialized ({len(models)} models available)")
-        return True
     except Exception as e:
         print(f"[FAIL] ModelManager initialization failed: {e}")
-        return False
+        assert False, f"ModelManager initialization failed: {e}"
 
 def test_memory_available():
     try:
