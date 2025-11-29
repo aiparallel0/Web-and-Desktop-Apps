@@ -22,6 +22,12 @@ SKIP_KEYWORDS = frozenset({
     'credit', 'approved', 'transaction', 'visa', 'mastercard', 'amex'
 })
 
+# Additional keywords to skip in item names (store info, hours, etc.)
+ITEM_SKIP_PATTERNS = frozenset({
+    'store', 'thank', 'visit', 'phone', 'fax', 'email', 
+    'open', 'hours', 'daily', 'am', 'pm'
+})
+
 # Pre-compiled regex patterns for performance
 # Order matters - more specific patterns first
 DATE_PATTERNS = [
@@ -186,6 +192,20 @@ def should_skip_line(line: str) -> bool:
     """
     line_lower = line.lower()
     return any(kw in line_lower for kw in SKIP_KEYWORDS)
+
+
+def should_skip_item_name(name: str) -> bool:
+    """
+    Check if an item name contains patterns that indicate it's not a product.
+    
+    Args:
+        name: Item name to check
+        
+    Returns:
+        True if name should be skipped
+    """
+    name_lower = name.lower()
+    return any(pattern in name_lower for pattern in ITEM_SKIP_PATTERNS)
 
 
 def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:

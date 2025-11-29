@@ -114,6 +114,41 @@ class TestSkipKeywords:
         assert isinstance(SKIP_KEYWORDS, frozenset)
 
 
+class TestItemSkipPatterns:
+    """Tests for ITEM_SKIP_PATTERNS constant"""
+
+    def test_contains_store_info_keywords(self):
+        from shared.models.ocr_common import ITEM_SKIP_PATTERNS
+        assert 'store' in ITEM_SKIP_PATTERNS
+        assert 'phone' in ITEM_SKIP_PATTERNS
+        assert 'fax' in ITEM_SKIP_PATTERNS
+        assert 'email' in ITEM_SKIP_PATTERNS
+
+    def test_contains_hours_keywords(self):
+        from shared.models.ocr_common import ITEM_SKIP_PATTERNS
+        assert 'open' in ITEM_SKIP_PATTERNS
+        assert 'hours' in ITEM_SKIP_PATTERNS
+        assert 'daily' in ITEM_SKIP_PATTERNS
+        assert 'am' in ITEM_SKIP_PATTERNS
+        assert 'pm' in ITEM_SKIP_PATTERNS
+
+
+class TestShouldSkipItemName:
+    """Tests for should_skip_item_name function"""
+
+    def test_skip_store_name(self):
+        from shared.models.ocr_common import should_skip_item_name
+        assert should_skip_item_name('Store Hours') is True
+
+    def test_skip_phone_info(self):
+        from shared.models.ocr_common import should_skip_item_name
+        assert should_skip_item_name('Phone: 555-1234') is True
+
+    def test_dont_skip_product_name(self):
+        from shared.models.ocr_common import should_skip_item_name
+        assert should_skip_item_name('Coffee Large') is False
+
+
 class TestShouldSkipLine:
     """Tests for should_skip_line function"""
 

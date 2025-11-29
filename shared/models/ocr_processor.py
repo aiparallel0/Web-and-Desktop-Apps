@@ -9,7 +9,8 @@ from utils.image_processing import load_and_validate_image,preprocess_for_ocr
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_phone, extract_address,
-    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, TOTAL_PATTERNS
+    should_skip_line, should_skip_item_name, extract_store_name, 
+    LINE_ITEM_PATTERNS, TOTAL_PATTERNS
 )
 try:
     import pytesseract
@@ -155,7 +156,6 @@ class OCRProcessor:
 
     def _extract_line_items(self,lines:List[str])->List[LineItem]:
         items,seen=[],set()
-        skip_patterns=['store','thank','visit','phone','fax','email','open','hours','daily','am','pm']
         for line in lines:
             if should_skip_line(line):
                 continue
@@ -175,7 +175,7 @@ class OCRProcessor:
                     price=normalize_price(price_str)
                     if not price or price<=0 or price>1000:
                         continue
-                    if any(skip in name.lower() for skip in skip_patterns):
+                    if should_skip_item_name(name):
                         continue
                     items.append(LineItem(name=name,total_price=price,quantity=1))
                     seen.add(name)
