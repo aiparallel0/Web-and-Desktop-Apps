@@ -87,6 +87,7 @@ with ErrorHandler(logger, "Receipt processing", reraise=False):
 | `LOG_TO_FILE` | `true` | Whether to log to file |
 | `LOG_MAX_BYTES` | `10485760` | Max log file size (10MB) |
 | `LOG_BACKUP_COUNT` | `5` | Number of backup log files |
+| `LOG_APP_NAME` | `receipt_extractor` | Root logger name (allows reuse in other projects) |
 
 ### logger.py (Legacy)
 

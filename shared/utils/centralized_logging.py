@@ -32,6 +32,9 @@ Environment Variables:
     LOG_DIR: Directory for log files (default: 'logs')
     LOG_TO_CONSOLE: Whether to log to console ('true'/'false')
     LOG_TO_FILE: Whether to log to file ('true'/'false')
+    LOG_APP_NAME: Root logger name (default: 'receipt_extractor') - allows reuse in other projects
+    LOG_MAX_BYTES: Max log file size in bytes (default: 10MB)
+    LOG_BACKUP_COUNT: Number of backup log files to keep (default: 5)
 """
 
 import logging
@@ -60,6 +63,7 @@ _CONFIG = {
     'file_output': os.getenv('LOG_TO_FILE', 'true').lower() == 'true',
     'max_bytes': int(os.getenv('LOG_MAX_BYTES', 10 * 1024 * 1024)),  # 10MB
     'backup_count': int(os.getenv('LOG_BACKUP_COUNT', 5)),
+    'app_name': os.getenv('LOG_APP_NAME', 'receipt_extractor'),  # Configurable root logger name
 }
 
 # Type variable for generic decorator
@@ -183,8 +187,9 @@ class CentralizedLoggingManager:
             if self._configured and not force:
                 return
             
-            # Get or create root logger for our app
-            root_logger = logging.getLogger('receipt_extractor')
+            # Get or create root logger for our app (configurable via LOG_APP_NAME env var)
+            app_name = _CONFIG['app_name']
+            root_logger = logging.getLogger(app_name)
             root_logger.setLevel(getattr(logging, _CONFIG['level']))
             
             # Clear existing handlers
@@ -233,9 +238,10 @@ class CentralizedLoggingManager:
         if name in self._loggers:
             return self._loggers[name]
         
-        # Create logger as child of our root logger
-        if not name.startswith('receipt_extractor'):
-            full_name = f'receipt_extractor.{name}'
+        # Create logger as child of our root logger (uses configurable app name)
+        app_name = _CONFIG['app_name']
+        if not name.startswith(app_name):
+            full_name = f'{app_name}.{name}'
         else:
             full_name = name
         

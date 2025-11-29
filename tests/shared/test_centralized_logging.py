@@ -491,8 +491,9 @@ class TestIntegration:
             with logging_context(request_id='test123'):
                 logger.info("Contextual message")
             
-            # Force flush
-            for handler in logging.getLogger('receipt_extractor').handlers:
+            # Force flush - use configurable app name
+            app_name = cl._CONFIG['app_name']
+            for handler in logging.getLogger(app_name).handlers:
                 handler.flush()
             
             # Verify log file was created
@@ -546,3 +547,16 @@ class TestEnvironmentConfiguration:
         # The level should be a valid log level
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
         assert cl._CONFIG['level'] in valid_levels
+
+    def test_app_name_is_configurable(self):
+        """Test that app name can be configured via LOG_APP_NAME"""
+        import shared.utils.centralized_logging as cl
+        
+        # Default app name should be set
+        assert 'app_name' in cl._CONFIG
+        assert cl._CONFIG['app_name'] == 'receipt_extractor'  # Default value
+        
+        # App name is used in logger creation
+        manager = CentralizedLoggingManager()
+        logger = manager.get_logger('test.module')
+        assert cl._CONFIG['app_name'] in logger.name
