@@ -267,7 +267,7 @@ def refresh_token():
             # Find refresh token
             refresh_record = db.query(RefreshToken).filter(
                 RefreshToken.token_hash == token_hash,
-                RefreshToken.revoked == False,
+                RefreshToken.revoked.is_(False),
                 RefreshToken.expires_at > datetime.utcnow()
             ).first()
             
@@ -357,10 +357,14 @@ def get_current_user():
         if not payload:
             return jsonify({'success': False, 'error': 'Invalid or expired token'}), 401
         
+        user_id = payload.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Invalid token payload'}), 401
+        
         User, _ = _get_models()
         
         with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == payload['user_id']).first()
+            user = db.query(User).filter(User.id == user_id).first()
             if not user:
                 return jsonify({'success': False, 'error': 'User not found'}), 404
             
@@ -441,10 +445,14 @@ def change_password():
                 'issues': issues
             }), 400
         
+        user_id = payload.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Invalid token payload'}), 401
+        
         User, _ = _get_models()
         
         with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == payload['user_id']).first()
+            user = db.query(User).filter(User.id == user_id).first()
             if not user:
                 return jsonify({'success': False, 'error': 'User not found'}), 404
             

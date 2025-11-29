@@ -123,7 +123,10 @@ def list_receipts():
                 except ValueError:
                     pass
             
-            # Apply sorting
+            # Apply sorting - validate against allowed fields
+            ALLOWED_SORT_FIELDS = {'created_at', 'transaction_date', 'total_amount', 'store_name'}
+            if sort_by not in ALLOWED_SORT_FIELDS:
+                sort_by = 'created_at'
             sort_column = getattr(Receipt, sort_by, Receipt.created_at)
             if sort_order == 'asc':
                 query = query.order_by(sort_column.asc())
