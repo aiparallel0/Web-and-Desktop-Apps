@@ -19,13 +19,20 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 import threading
 
-# Import circular exchange components
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+# Import circular exchange components using relative import
+from ..circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
 
 logger = logging.getLogger(__name__)
+
+
+# Auto-tuning configuration constants
+AUTO_TUNE_MIN_SAMPLES = 10  # Minimum extractions before auto-tuning activates
+AUTO_TUNE_WINDOW_SIZE = 20  # Number of recent extractions to consider
+AUTO_TUNE_SUCCESS_TOLERANCE = 0.1  # Tolerance around target success rate
+AUTO_TUNE_CONFIDENCE_MIN = 0.1  # Minimum confidence threshold
+AUTO_TUNE_CONFIDENCE_MAX = 0.5  # Maximum confidence threshold
+AUTO_TUNE_RELAX_STEP = 0.05  # Step to decrease confidence when relaxing
+AUTO_TUNE_TIGHTEN_STEP = 0.02  # Step to increase confidence when tightening
 
 
 @dataclass
@@ -387,30 +394,30 @@ class OCRConfig:
         - If success rate is below target, relax constraints
         - If success rate is above target, tighten constraints slightly
         """
-        if len(self._extraction_history) < 10:
+        if len(self._extraction_history) < AUTO_TUNE_MIN_SAMPLES:
             return  # Need minimum data
         
-        recent = self._extraction_history[-20:]  # Last 20 extractions
+        recent = self._extraction_history[-AUTO_TUNE_WINDOW_SIZE:]
         success_rate = sum(1 for r in recent if r['success']) / len(recent)
         
         target = self._registry.get_package('ocr.target_success_rate')
         target_rate = target.get() if target else 0.8
         
         # Only adjust if significantly below target
-        if success_rate < target_rate - 0.1:
+        if success_rate < target_rate - AUTO_TUNE_SUCCESS_TOLERANCE:
             # Relax constraints
             current_conf = self.min_confidence
-            if current_conf > 0.1:
-                new_conf = max(0.1, current_conf - 0.05)
+            if current_conf > AUTO_TUNE_CONFIDENCE_MIN:
+                new_conf = max(AUTO_TUNE_CONFIDENCE_MIN, current_conf - AUTO_TUNE_RELAX_STEP)
                 self.set_min_confidence(new_conf)
                 logger.info(f"Auto-tuned min_confidence: {current_conf:.2f} -> {new_conf:.2f} "
                            f"(success_rate: {success_rate:.2%})")
         
-        elif success_rate > target_rate + 0.1:
+        elif success_rate > target_rate + AUTO_TUNE_SUCCESS_TOLERANCE:
             # Tighten constraints slightly for better precision
             current_conf = self.min_confidence
-            if current_conf < 0.5:
-                new_conf = min(0.5, current_conf + 0.02)
+            if current_conf < AUTO_TUNE_CONFIDENCE_MAX:
+                new_conf = min(AUTO_TUNE_CONFIDENCE_MAX, current_conf + AUTO_TUNE_TIGHTEN_STEP)
                 self.set_min_confidence(new_conf)
                 logger.debug(f"Auto-tuned min_confidence: {current_conf:.2f} -> {new_conf:.2f} "
                             f"(success_rate: {success_rate:.2%})")
