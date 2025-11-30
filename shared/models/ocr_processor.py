@@ -136,6 +136,13 @@ class OCRProcessor:
         if receipt.items:score+=10*len(receipt.items)
         if receipt.store_address:score+=10
         if receipt.store_phone:score+=10
+        # Validate math: subtotal + tax should equal total
+        if receipt.subtotal and receipt.tax and receipt.total:
+            expected = receipt.subtotal + receipt.tax
+            if abs(expected - receipt.total) < Decimal('0.10'):
+                score += 50  # Big bonus for valid math
+            else:
+                score -= 30  # Penalty for invalid math
         special_ratio=sum(1 for c in text if not c.isalnum() and not c.isspace())/max(len(text),1)
         if special_ratio>0.3:score-=20
         return max(0,score)

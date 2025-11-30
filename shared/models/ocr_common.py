@@ -35,7 +35,7 @@ DATE_PATTERNS = [
     re.compile(r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})'),  # ISO format: 2024-01-15
     re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{4})'),  # US format with 4-digit year: 12/25/2024
     re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2})'),  # US format with 2-digit year: 12/25/24
-    re.compile(r'(\w{3}\s+\d{1,2},?\s+\d{4})'),    # Month format: Jan 15, 2024
+    re.compile(r'\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4})\b', re.IGNORECASE),  # Month format: Jan 15, 2024
 ]
 
 TOTAL_PATTERNS = [
@@ -51,20 +51,23 @@ PHONE_PATTERNS = [
 ]
 
 LINE_ITEM_PATTERNS = [
+    # Walmart format: ITEM NAME SKU [F] PRICE TAX_CODE (most specific first)
+    # Example: "SC_BCN CHDDR 007874202906 F 6.98 0"
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+[.,]\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    # Walmart format without trailing tax code: ITEM NAME SKU PRICE
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+[.,]\d{2})\s*$'),
+    # Format with tax code at end: ITEM NAME  XX.XX F/T/N/X/O/0
+    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
     # Standard formats: ITEM NAME   $XX.XX or ITEM NAME XX.XX
     re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
     re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*$'),
     re.compile(r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$'),
-    # Format with SKU: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
+    # Format with SKU at start: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
     re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
-    # Format with tax code: ITEM NAME  XX.XX F/T/N/X
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNXOD]$'),
     # Format with quantity: QTY x ITEM NAME  XX.XX
     re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
-    # Walmart format: ITEM NAME SKU PRICE TAX_CODE (SKU is 11-14 digits)
-    re.compile(r'^[\'"]?(.+?)\s+\d{11,14}[;,]?\s*(\d+[.,]\d{2})\s*[FTNXOD]?$'),
-    # Format: ITEM NAME  SKU  PRICE (with possible leading quote or garbage)
-    re.compile(r'^[^\w]*(.{3,}?)\s+\d{10,14}\s+(\d+[.,]\d{2})'),
+    # Format with leading quote/garbage: "ITEM NAME SKU PRICE
+    re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+[.,]\d{2})'),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -312,6 +315,7 @@ def clean_item_name(name: str) -> str:
     - Word-level corrections (e.g., FASHIUNED -> FASHIONED)
     - Unit abbreviation fixes (e.g., "10 02" -> "10 OZ")
     - Removes trailing periods and extra punctuation
+    - Removes OCR noise and SKU-like patterns
     - Normalizes whitespace
     
     Args:
@@ -324,6 +328,18 @@ def clean_item_name(name: str) -> str:
         return name
     
     cleaned = name.strip()
+    
+    # Apply unit corrections FIRST (before removing trailing letters)
+    for wrong, correct in UNIT_CORRECTIONS.items():
+        cleaned = cleaned.replace(wrong, correct)
+    
+    # Remove OCR noise patterns (random lowercase mixed with uppercase letters)
+    # Pattern like "oo2igogqggi6" - mostly lowercase with occasional digits
+    cleaned = re.sub(r'\s+[a-z0-9]{8,}\s*$', '', cleaned)  # Trailing noise
+    cleaned = re.sub(r'\s+[oO0]+[a-z0-9]{6,}\s*$', '', cleaned)  # OCR O/0 confusion noise (min 6 chars)
+    
+    # Remove trailing single tax code letters (but not OZ, LB, CT etc.)
+    cleaned = re.sub(r'\s+[FTNXD0]\s*$', '', cleaned, flags=re.IGNORECASE)
     
     # Apply word-level corrections (case-preserving)
     for wrong, correct in WORD_CORRECTIONS.items():
@@ -340,10 +356,6 @@ def clean_item_name(name: str) -> str:
             return correct.upper()
         # Use re.escape to safely handle any regex special characters in the pattern
         cleaned = re.sub(rf'\b{re.escape(wrong)}\b', preserve_case, cleaned, flags=re.IGNORECASE)
-    
-    # Apply unit corrections (case-sensitive replacements)
-    for wrong, correct in UNIT_CORRECTIONS.items():
-        cleaned = cleaned.replace(wrong, correct)
     
     # Remove trailing periods and dots (but keep decimal points in prices)
     # Handle patterns like ". ." or "..."
