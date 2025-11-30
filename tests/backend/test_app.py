@@ -6,6 +6,7 @@ import pytest
 import sys
 import os
 import io
+import json
 from PIL import Image
 from unittest.mock import Mock, patch, MagicMock
 

@@ -10,7 +10,8 @@ from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
     should_skip_line, should_skip_item_name, extract_store_name, 
-    LINE_ITEM_PATTERNS, clean_item_name
+    LINE_ITEM_PATTERNS, clean_item_name, extract_subtotal, extract_tax,
+    validate_receipt_totals, extract_sku
 )
 try:
     import pytesseract
@@ -140,9 +141,16 @@ class OCRProcessor:
         receipt.store_name=extract_store_name(lines)
         receipt.transaction_date=extract_date(lines)
         receipt.total=extract_total(lines)
+        receipt.subtotal=extract_subtotal(lines)
+        receipt.tax=extract_tax(lines)
         receipt.items=self._extract_line_items(lines)
         receipt.store_address=extract_address(lines)
         receipt.store_phone=extract_phone(lines)
+        # Validate totals for accuracy
+        validation=validate_receipt_totals(receipt.subtotal,receipt.tax,receipt.total)
+        if validation.get('notes'):
+            for note in validation['notes']:
+                receipt.extraction_notes.append(note)
         return receipt
 
     def _extract_line_items(self,lines:List[str])->List[LineItem]:

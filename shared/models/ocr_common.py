@@ -51,10 +51,20 @@ PHONE_PATTERNS = [
 ]
 
 LINE_ITEM_PATTERNS = [
+    # Standard formats: ITEM NAME   $XX.XX or ITEM NAME XX.XX
     re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
     re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*$'),
     re.compile(r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$'),
+    # Format with SKU: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
+    re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    # Format with tax code: ITEM NAME  XX.XX F/T/N/X
+    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNX]$'),
+    # Format with quantity: QTY x ITEM NAME  XX.XX
+    re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
 ]
+
+# SKU pattern for receipt items (12-14 digits)
+SKU_PATTERN = re.compile(r'\b\d{12,14}\b')
 
 # Address keywords for detection
 ADDRESS_KEYWORDS = frozenset({
@@ -570,3 +580,210 @@ def detect_language_hint(text: str) -> str:
         return 'de'
     
     return 'en'  # Default to English
+
+
+def extract_sku(line: str) -> Optional[str]:
+    """
+    Extract SKU (12-14 digit code) from a line.
+    
+    Args:
+        line: Text line to search
+        
+    Returns:
+        SKU string or None
+    """
+    match = SKU_PATTERN.search(line)
+    return match.group(0) if match else None
+
+
+def extract_subtotal(lines: list) -> Optional[Decimal]:
+    """
+    Extract subtotal amount from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Decimal subtotal or None
+    """
+    subtotal_patterns = [
+        re.compile(r'sub\s*total[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+        re.compile(r'subtotal[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+    ]
+    
+    for pattern in subtotal_patterns:
+        for line in lines:
+            match = pattern.search(line)
+            if match:
+                subtotal_val = normalize_price(match.group(1))
+                if subtotal_val:
+                    return subtotal_val
+    return None
+
+
+def extract_tax(lines: list) -> Optional[Decimal]:
+    """
+    Extract tax amount from a list of text lines.
+    
+    Args:
+        lines: List of text lines
+        
+    Returns:
+        Decimal tax or None
+    """
+    tax_patterns = [
+        re.compile(r'\btax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+        re.compile(r'sales\s*tax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+    ]
+    
+    for pattern in tax_patterns:
+        for line in lines:
+            match = pattern.search(line)
+            if match:
+                tax_val = normalize_price(match.group(1))
+                if tax_val:
+                    return tax_val
+    return None
+
+
+def validate_receipt_totals(subtotal: Optional[Decimal], tax: Optional[Decimal], 
+                            total: Optional[Decimal], tolerance: Decimal = Decimal('0.05')) -> dict:
+    """
+    Validate that receipt totals are mathematically consistent.
+    
+    Checks: subtotal + tax = total (within tolerance)
+    
+    Args:
+        subtotal: Extracted subtotal
+        tax: Extracted tax
+        total: Extracted total
+        tolerance: Maximum acceptable difference
+        
+    Returns:
+        Validation result dict with 'valid', 'confidence_adjustment', 'notes'
+    """
+    result = {
+        'valid': True,
+        'confidence_adjustment': 1.0,
+        'notes': []
+    }
+    
+    # Check if we have all required values
+    if subtotal is None:
+        result['notes'].append("Subtotal not found")
+        result['confidence_adjustment'] *= 0.9
+    
+    if tax is None:
+        result['notes'].append("Tax not found")
+        result['confidence_adjustment'] *= 0.95
+    
+    if total is None:
+        result['valid'] = False
+        result['notes'].append("Total not found - CRITICAL")
+        result['confidence_adjustment'] *= 0.3
+        return result
+    
+    # Validate math: subtotal + tax = total
+    if subtotal is not None and tax is not None and total is not None:
+        expected_total = subtotal + tax
+        difference = abs(expected_total - total)
+        
+        if difference <= tolerance:
+            result['notes'].append("Math validation passed")
+            result['confidence_adjustment'] *= 1.1  # Boost confidence
+        else:
+            result['valid'] = False
+            result['notes'].append(f"Math validation failed: {subtotal} + {tax} = {expected_total}, expected {total}")
+            result['confidence_adjustment'] *= 0.7
+    
+    return result
+
+
+def validate_item_count(items: list, expected_count: Optional[int] = None) -> dict:
+    """
+    Validate extracted items for quality and consistency.
+    
+    Args:
+        items: List of extracted items
+        expected_count: Expected number of items (if known)
+        
+    Returns:
+        Validation result dict with 'valid', 'confidence_adjustment', 'notes'
+    """
+    result = {
+        'valid': True,
+        'confidence_adjustment': 1.0,
+        'notes': []
+    }
+    
+    if not items:
+        result['notes'].append("No items extracted")
+        result['confidence_adjustment'] *= 0.5
+    else:
+        result['notes'].append(f"Extracted {len(items)} items")
+        
+        # Boost confidence for reasonable item counts
+        if 1 <= len(items) <= 50:
+            result['confidence_adjustment'] *= 1.05
+        elif len(items) > 50:
+            result['notes'].append("Unusually high item count - verify")
+            result['confidence_adjustment'] *= 0.9
+    
+    # Validate against expected count if provided
+    if expected_count is not None and items:
+        if len(items) == expected_count:
+            result['notes'].append("Item count matches expected")
+            result['confidence_adjustment'] *= 1.1
+        else:
+            result['notes'].append(f"Item count mismatch: got {len(items)}, expected {expected_count}")
+            result['confidence_adjustment'] *= 0.85
+    
+    return result
+
+
+def calculate_overall_confidence(base_confidence: float, 
+                                  receipt_data: dict,
+                                  raw_text: str = "") -> float:
+    """
+    Calculate overall confidence score based on extraction quality.
+    
+    Considers:
+    - Presence of required fields (store, total, items)
+    - Math validation
+    - Text quality indicators
+    
+    Args:
+        base_confidence: Initial confidence from OCR engine
+        receipt_data: Extracted receipt data dict
+        raw_text: Raw OCR text for quality assessment
+        
+    Returns:
+        Adjusted confidence score (0.0 to 1.0)
+    """
+    confidence = base_confidence
+    
+    # Check required fields
+    store = receipt_data.get('store', {})
+    if store.get('name'):
+        confidence *= 1.1
+    else:
+        confidence *= 0.7
+    
+    totals = receipt_data.get('totals', {})
+    if totals.get('total'):
+        confidence *= 1.2
+    else:
+        confidence *= 0.4  # Critical field
+    
+    items = receipt_data.get('items', [])
+    if items:
+        confidence *= min(1.2, 1.0 + len(items) * 0.02)
+    
+    # Penalize for excessive special characters in raw text (OCR artifacts)
+    if raw_text:
+        special_ratio = sum(1 for c in raw_text if not c.isalnum() and not c.isspace()) / max(len(raw_text), 1)
+        if special_ratio > 0.3:
+            confidence *= 0.7
+    
+    # Cap at 1.0
+    return min(1.0, max(0.0, confidence))
