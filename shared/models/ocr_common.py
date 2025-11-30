@@ -73,6 +73,16 @@ LINE_ITEM_PATTERNS = [
     re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with leading quote/garbage: "ITEM NAME SKU PRICE
     re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+)\s*[.,]\s*(\d{2})'),
+    # NEW: Simple item-price format with any whitespace
+    re.compile(r'^([A-Za-z][A-Za-z0-9\s]{1,}?)\s{2,}(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Item with price in parentheses or after colon
+    re.compile(r'^(.+?)[:]\s*\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Multi-word item names with price
+    re.compile(r'^([A-Z][A-Za-z]+(?:\s+[A-Za-z]+)+)\s+(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Lowercase item names (some receipts)
+    re.compile(r'^([a-z][a-z0-9\s]{2,}?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$', re.IGNORECASE),
+    # NEW: Item with unit price format (e.g., "MILK  2.99 EA")
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*(?:EA|LB|OZ|CT|PK)?$', re.IGNORECASE),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -876,7 +886,8 @@ def calculate_overall_confidence(base_confidence: float,
     return min(1.0, max(0.0, confidence))
 
 
-def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None) -> List[Tuple[str, Decimal, int]]:
+def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None, 
+                       min_confidence: float = 0.3, relaxed_mode: bool = False) -> List[Tuple[str, Decimal, int]]:
     """
     Extract line items from text lines - shared implementation for all OCR processors.
     
@@ -887,6 +898,8 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
         lines: List of text lines from OCR
         text_metadata: Optional list of metadata dicts with 'confidence' keys
                       (used by PaddleProcessor for confidence filtering)
+        min_confidence: Minimum confidence threshold (default 0.3 for better recall)
+        relaxed_mode: If True, use less strict validation rules for better detection
         
     Returns:
         List of tuples (name, price, quantity) representing line items.
@@ -894,6 +907,9 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
     """
     items = []
     seen = set()
+    
+    # In relaxed mode, use lower thresholds
+    min_name_length = 1 if relaxed_mode else 2
     
     for i, line in enumerate(lines):
         if should_skip_line(line):
@@ -917,26 +933,33 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                 
                 price_str = price_str.replace(',', '.')
                 
-                # Validate item name
-                if len(name) < 2 or name in seen:
+                # Validate item name - relaxed validation for better detection
+                if len(name) < min_name_length or name in seen:
                     continue
                 
-                # Check for digit-heavy names (likely SKUs or garbage)
+                # Check for purely digit names (likely SKUs or garbage)
                 if name.replace(' ', '').isdigit():
                     continue
                 
+                # More lenient digit/alpha ratio check - only reject if overwhelmingly numeric
                 alphas = sum(1 for c in name if c.isalpha())
                 digits = sum(1 for c in name if c.isdigit())
-                if digits > alphas and len(name) >= 3:
+                # Only skip if more than 70% digits and no alpha at all wouldn't make sense
+                if alphas == 0 and digits > 0:
+                    continue
+                if not relaxed_mode and digits > alphas * 2 and len(name) >= 3:
                     continue
                 
-                if len(name) < 5 and not name.replace(' ', '').isalpha():
-                    continue
+                # Relaxed short name check - allow short names if they're mostly letters
+                if not relaxed_mode and len(name) < 5 and not name.replace(' ', '').isalpha():
+                    # Allow if at least half are letters
+                    if alphas < len(name.replace(' ', '')) / 2:
+                        continue
                 
-                # Check confidence if metadata provided
+                # Check confidence if metadata provided - use configurable threshold
                 if text_metadata and i < len(text_metadata):
                     conf = text_metadata[i].get('confidence')
-                    if conf and conf < 0.4:
+                    if conf and conf < min_confidence:
                         continue
                 
                 price = normalize_price(price_str)
@@ -951,28 +974,41 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                 matched = True
                 break
         
-        # Try fallback pattern for unmatched lines
+        # Try fallback pattern for unmatched lines - more aggressive matching
         if not matched:
-            pm = re.search(r'\$?\s*(\d+[.,]\d{2})(?!\d)', line)
-            if pm:
-                price_str = pm.group(1).replace(',', '.')
-                price = normalize_price(price_str)
-                
-                if price:
-                    name_part = line[:pm.start()].strip()
-                    name_part = re.sub(r'^\d+\s*[x*]\s*', '', name_part).strip()
-                    # Apply item name cleaning for OCR corrections
-                    name_part = clean_item_name(name_part)
+            # Try multiple fallback patterns for better coverage
+            fallback_patterns = [
+                r'\$?\s*(\d+[.,]\d{2})(?!\d)',  # Standard price
+                r'(\d+[.,]\d{2})\s*$',  # Price at end
+                r'(\d{1,3}[.,]\d{2})\s*[A-Z]?$',  # Price with optional tax code
+            ]
+            
+            for fallback_pattern in fallback_patterns:
+                pm = re.search(fallback_pattern, line)
+                if pm:
+                    price_str = pm.group(1).replace(',', '.')
+                    price = normalize_price(price_str)
                     
-                    if len(name_part) >= 2 and name_part not in seen:
-                        if not should_skip_line(name_part) and not should_skip_item_name(name_part):
-                            items.append((name_part, price, 1))
-                            seen.add(name_part)
+                    if price and price > 0:
+                        name_part = line[:pm.start()].strip()
+                        # Remove quantity prefixes
+                        name_part = re.sub(r'^\d+\s*[xX*]\s*', '', name_part).strip()
+                        # Remove SKU-like patterns at the end
+                        name_part = re.sub(r'\s+\d{10,14}\s*$', '', name_part).strip()
+                        # Apply item name cleaning for OCR corrections
+                        name_part = clean_item_name(name_part)
+                        
+                        if len(name_part) >= min_name_length and name_part not in seen:
+                            if not should_skip_line(name_part) and not should_skip_item_name(name_part):
+                                items.append((name_part, price, 1))
+                                seen.add(name_part)
+                                break  # Found a match, stop trying fallback patterns
     
     return items
 
 
-def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None) -> dict:
+def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None,
+                       min_confidence: float = 0.3, relaxed_mode: bool = False) -> dict:
     """
     Parse raw text lines into structured receipt data - shared implementation.
     
@@ -982,6 +1018,8 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
     Args:
         lines: List of text lines from OCR
         text_metadata: Optional list of metadata dicts with 'confidence' keys
+        min_confidence: Minimum confidence threshold for item extraction (default 0.3)
+        relaxed_mode: If True, use less strict validation for better detection rates
         
     Returns:
         Dictionary with extracted receipt fields:
@@ -1017,9 +1055,16 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
     result['total'] = extract_total(lines)
     result['subtotal'] = extract_subtotal(lines)
     result['tax'] = extract_tax(lines)
-    result['items'] = extract_line_items(lines, text_metadata)
+    # Use improved extraction with configurable thresholds
+    result['items'] = extract_line_items(lines, text_metadata, min_confidence, relaxed_mode)
     result['store_address'] = extract_address(lines)
     result['store_phone'] = extract_phone(lines)
+    
+    # If no items found with standard mode, try relaxed mode
+    if not result['items'] and not relaxed_mode:
+        result['items'] = extract_line_items(lines, text_metadata, min_confidence=0.2, relaxed_mode=True)
+        if result['items']:
+            result['extraction_notes'].append("Used relaxed extraction mode")
     
     # Validate totals for accuracy
     validation = validate_receipt_totals(result['subtotal'], result['tax'], result['total'])
