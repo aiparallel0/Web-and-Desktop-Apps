@@ -607,16 +607,15 @@ def extract_subtotal(lines: list) -> Optional[Decimal]:
         Decimal subtotal or None
     """
     subtotal_patterns = [
-        re.compile(r'sub\s*total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-        re.compile(r'subtotal[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+        re.compile(r'sub\s*total[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+        re.compile(r'subtotal[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
     ]
     
     for pattern in subtotal_patterns:
         for line in lines:
             match = pattern.search(line)
             if match:
-                subtotal_str = match.group(1).replace(',', '.')
-                subtotal_val = normalize_price(subtotal_str)
+                subtotal_val = normalize_price(match.group(1))
                 if subtotal_val:
                     return subtotal_val
     return None
@@ -633,16 +632,15 @@ def extract_tax(lines: list) -> Optional[Decimal]:
         Decimal tax or None
     """
     tax_patterns = [
-        re.compile(r'\btax[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-        re.compile(r'sales\s*tax[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+        re.compile(r'\btax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+        re.compile(r'sales\s*tax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
     ]
     
     for pattern in tax_patterns:
         for line in lines:
             match = pattern.search(line)
             if match:
-                tax_str = match.group(1).replace(',', '.')
-                tax_val = normalize_price(tax_str)
+                tax_val = normalize_price(match.group(1))
                 if tax_val:
                     return tax_val
     return None
