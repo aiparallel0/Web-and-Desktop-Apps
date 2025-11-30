@@ -58,9 +58,13 @@ LINE_ITEM_PATTERNS = [
     # Format with SKU: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
     re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
     # Format with tax code: ITEM NAME  XX.XX F/T/N/X
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNX]$'),
+    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNXOD]$'),
     # Format with quantity: QTY x ITEM NAME  XX.XX
     re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    # Walmart format: ITEM NAME SKU PRICE TAX_CODE (SKU is 11-14 digits)
+    re.compile(r'^[\'"]?(.+?)\s+\d{11,14}[;,]?\s*(\d+[.,]\d{2})\s*[FTNXOD]?$'),
+    # Format: ITEM NAME  SKU  PRICE (with possible leading quote or garbage)
+    re.compile(r'^[^\w]*(.{3,}?)\s+\d{10,14}\s+(\d+[.,]\d{2})'),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -116,11 +120,15 @@ UNIT_CORRECTIONS = {
 # Known store name corrections
 STORE_NAME_CORRECTIONS = {
     'a ae)': "TRADER JOE'S",
+    'a =o': "TRADER JOE'S",
     'trader joes': "TRADER JOE'S",
     'trader joe': "TRADER JOE'S",
     'wa1mart': 'WALMART',
     'wa1-mart': 'WALMART',
     'wal-mart': 'WALMART',
+    'wal*mart': 'WALMART',
+    'walmart s': 'WALMART',
+    'walmart': 'WALMART',
     'costc0': 'COSTCO',
     'target': 'TARGET',
     'who1e foods': 'WHOLE FOODS',
@@ -378,11 +386,12 @@ def correct_store_name(name: str) -> str:
     return name
 
 
-def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
+def extract_store_name(lines: list, max_lines: int = 10) -> Optional[str]:
     """
-    Extract store name from the first few lines.
+    Extract store name from text lines.
     
-    Applies store name corrections for common OCR errors.
+    Searches for known store patterns first, then falls back to 
+    first valid line. Applies store name corrections for common OCR errors.
     
     Args:
         lines: List of text lines
@@ -391,6 +400,31 @@ def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
     Returns:
         Store name or None
     """
+    # First, check for known store patterns in all lines
+    known_stores = {
+        'walmart': 'WALMART',
+        'wal-mart': 'WALMART',
+        'wal*mart': 'WALMART',
+        'trader joe': "TRADER JOE'S",
+        'costco': 'COSTCO',
+        'target': 'TARGET',
+        'whole foods': 'WHOLE FOODS',
+        'kroger': 'KROGER',
+        'safeway': 'SAFEWAY',
+        'publix': 'PUBLIX',
+        'cvs': 'CVS',
+        'walgreens': 'WALGREENS',
+        'home depot': 'HOME DEPOT',
+        'lowes': "LOWE'S",
+    }
+    
+    for line in lines[:max_lines]:
+        line_lower = line.lower().strip()
+        for pattern, store_name in known_stores.items():
+            if pattern in line_lower:
+                return store_name
+    
+    # Fallback to first valid line with correction
     for line in lines[:max_lines]:
         line = line.strip()
         if len(line) >= 2 and not line.isdigit():

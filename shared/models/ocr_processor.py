@@ -124,7 +124,13 @@ class OCRProcessor:
 
     def _score_result(self,receipt:ReceiptData,text:str)->int:
         score=0
-        if receipt.store_name and len(receipt.store_name)>2:score+=20
+        # Known store names get higher score
+        known_stores = ['WALMART', "TRADER JOE'S", 'COSTCO', 'TARGET', 'WHOLE FOODS', 'KROGER', 'SAFEWAY', 'PUBLIX', 'CVS', 'WALGREENS']
+        if receipt.store_name:
+            if receipt.store_name.upper() in known_stores:
+                score+=40  # Bonus for recognized store
+            elif len(receipt.store_name)>2:
+                score+=10
         if receipt.transaction_date:score+=15
         if receipt.total and receipt.total>0:score+=30
         if receipt.items:score+=10*len(receipt.items)
