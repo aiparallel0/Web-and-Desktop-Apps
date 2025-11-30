@@ -7,10 +7,29 @@ This module provides:
 - Common price normalization function
 - Reusable text extraction utilities
 - Text post-processing and cleaning utilities
+- Integration with circular exchange framework via OCRConfig
 """
 import re
+import logging
 from decimal import Decimal
 from typing import Optional, List, Tuple
+
+logger = logging.getLogger(__name__)
+
+# Lazy import of OCRConfig to avoid circular imports
+_ocr_config = None
+
+def get_config():
+    """Get the global OCR configuration (lazy loading)."""
+    global _ocr_config
+    if _ocr_config is None:
+        try:
+            from .ocr_config import get_ocr_config
+            _ocr_config = get_ocr_config()
+        except ImportError:
+            logger.warning("OCRConfig not available, using defaults")
+            _ocr_config = None
+    return _ocr_config
 
 # Price validation constants
 PRICE_MIN = Decimal('0')
@@ -887,24 +906,38 @@ def calculate_overall_confidence(base_confidence: float,
 
 
 def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None, 
-                       min_confidence: float = 0.3, relaxed_mode: bool = False) -> List[Tuple[str, Decimal, int]]:
+                       min_confidence: float = None, relaxed_mode: bool = None) -> List[Tuple[str, Decimal, int]]:
     """
     Extract line items from text lines - shared implementation for all OCR processors.
     
     This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
     and PaddleProcessor to avoid code duplication.
     
+    Integrates with OCRConfig from the circular exchange framework for dynamic
+    parameter management and auto-tuning.
+    
     Args:
         lines: List of text lines from OCR
         text_metadata: Optional list of metadata dicts with 'confidence' keys
                       (used by PaddleProcessor for confidence filtering)
-        min_confidence: Minimum confidence threshold (default 0.3 for better recall)
-        relaxed_mode: If True, use less strict validation rules for better detection
+        min_confidence: Minimum confidence threshold (uses OCRConfig if None)
+        relaxed_mode: If True, use less strict validation rules (uses OCRConfig if None)
         
     Returns:
         List of tuples (name, price, quantity) representing line items.
         Caller should convert to LineItem objects.
     """
+    # Get configuration from circular exchange if not provided
+    config = get_config()
+    if min_confidence is None:
+        min_confidence = config.min_confidence if config else 0.3
+    if relaxed_mode is None:
+        relaxed_mode = config.relaxed_mode if config else False
+    
+    # Get additional parameters from config
+    max_price = config.max_price if config else 1000.0
+    max_digit_ratio = config.max_digit_ratio if config else 2.0
+    
     items = []
     seen = set()
     
@@ -941,13 +974,13 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                 if name.replace(' ', '').isdigit():
                     continue
                 
-                # More lenient digit/alpha ratio check - only reject if overwhelmingly numeric
+                # More lenient digit/alpha ratio check - use configurable threshold
                 alphas = sum(1 for c in name if c.isalpha())
                 digits = sum(1 for c in name if c.isdigit())
                 # Only skip if more than 70% digits and no alpha at all wouldn't make sense
                 if alphas == 0 and digits > 0:
                     continue
-                if not relaxed_mode and digits > alphas * 2 and len(name) >= 3:
+                if not relaxed_mode and digits > alphas * max_digit_ratio and len(name) >= 3:
                     continue
                 
                 # Relaxed short name check - allow short names if they're mostly letters
@@ -963,7 +996,7 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                         continue
                 
                 price = normalize_price(price_str)
-                if not price or price <= 0 or price > 1000:
+                if not price or price <= 0 or price > max_price:
                     continue
                 
                 if should_skip_item_name(name):
@@ -1008,18 +1041,21 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
 
 
 def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None,
-                       min_confidence: float = 0.3, relaxed_mode: bool = False) -> dict:
+                       min_confidence: float = None, relaxed_mode: bool = None) -> dict:
     """
     Parse raw text lines into structured receipt data - shared implementation.
     
     This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
     and PaddleProcessor to avoid code duplication.
     
+    Integrates with OCRConfig from the circular exchange framework for dynamic
+    parameter management, auto-tuning, and extraction result tracking.
+    
     Args:
         lines: List of text lines from OCR
         text_metadata: Optional list of metadata dicts with 'confidence' keys
-        min_confidence: Minimum confidence threshold for item extraction (default 0.3)
-        relaxed_mode: If True, use less strict validation for better detection rates
+        min_confidence: Minimum confidence threshold (uses OCRConfig if None)
+        relaxed_mode: If True, use less strict validation (uses OCRConfig if None)
         
     Returns:
         Dictionary with extracted receipt fields:
@@ -1033,6 +1069,17 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
         - store_phone: str or None
         - extraction_notes: List of notes
     """
+    # Get configuration from circular exchange if not provided
+    config = get_config()
+    if min_confidence is None:
+        min_confidence = config.min_confidence if config else 0.3
+    if relaxed_mode is None:
+        relaxed_mode = config.relaxed_mode if config else False
+    
+    # Get auto-fallback setting from config
+    auto_fallback = config.auto_fallback if config else True
+    relaxed_confidence = config.relaxed_confidence if config else 0.2
+    
     result = {
         'store_name': None,
         'transaction_date': None,
@@ -1045,8 +1092,19 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
         'extraction_notes': []
     }
     
+    used_relaxed = False
+    
     if not lines:
         result['extraction_notes'].append("No text")
+        # Record empty extraction for auto-tuning
+        if config:
+            config.record_extraction_result(
+                items_count=0,
+                total_detected=None,
+                confidence_avg=0.0,
+                success=False,
+                used_relaxed=False
+            )
         return result
     
     # Extract structured data using shared functions
@@ -1060,16 +1118,34 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
     result['store_address'] = extract_address(lines)
     result['store_phone'] = extract_phone(lines)
     
-    # If no items found with standard mode, try relaxed mode
-    if not result['items'] and not relaxed_mode:
-        result['items'] = extract_line_items(lines, text_metadata, min_confidence=0.2, relaxed_mode=True)
+    # If no items found with standard mode, try relaxed mode (auto-fallback)
+    if not result['items'] and not relaxed_mode and auto_fallback:
+        result['items'] = extract_line_items(lines, text_metadata, min_confidence=relaxed_confidence, relaxed_mode=True)
         if result['items']:
             result['extraction_notes'].append("Used relaxed extraction mode")
+            used_relaxed = True
     
     # Validate totals for accuracy
     validation = validate_receipt_totals(result['subtotal'], result['tax'], result['total'])
     if validation.get('notes'):
         for note in validation['notes']:
             result['extraction_notes'].append(note)
+    
+    # Calculate average confidence for recording
+    avg_confidence = 0.0
+    if text_metadata:
+        confidences = [m.get('confidence', 0) for m in text_metadata if m.get('confidence')]
+        avg_confidence = sum(confidences) / max(len(confidences), 1)
+    
+    # Record extraction result for auto-tuning via circular exchange
+    if config:
+        success = len(result['items']) > 0 or result['total'] is not None
+        config.record_extraction_result(
+            items_count=len(result['items']),
+            total_detected=result['total'],
+            confidence_avg=avg_confidence,
+            success=success,
+            used_relaxed=used_relaxed
+        )
     
     return result
