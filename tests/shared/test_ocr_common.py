@@ -104,6 +104,71 @@ class TestExtractTotal:
         from shared.models.ocr_common import extract_total
         assert extract_total(['Item 5.99', 'Tax 1.00']) is None
 
+    def test_subtotal_not_matched_as_total(self):
+        """Test that SUBTOTAL is not incorrectly extracted as TOTAL"""
+        from shared.models.ocr_common import extract_total
+        # When only SUBTOTAL present, should return None
+        assert extract_total(['SUBTOTAL 100.00']) is None
+
+    def test_total_extracted_correctly_with_subtotal_present(self):
+        """Test that TOTAL is extracted correctly when SUBTOTAL also present"""
+        from shared.models.ocr_common import extract_total
+        # Should extract TOTAL, not SUBTOTAL
+        assert extract_total(['SUBTOTAL 139.44', 'TOTAL 144.02']) == Decimal('144.02')
+
+
+class TestExtractTax:
+    """Tests for extract_tax function"""
+
+    def test_simple_tax(self):
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 4.58']) == Decimal('4.58')
+
+    def test_tax_with_code_walmart_format(self):
+        """Test Walmart-style tax format with tax code"""
+        from shared.models.ocr_common import extract_tax
+        # TAX 1 is tax category, 4.58 is the actual tax
+        assert extract_tax(['TAX 1 4.58']) == Decimal('4.58')
+
+    def test_tax_with_code_no_space(self):
+        """Test tax format with code without space (TAX1)"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX1 4.58']) == Decimal('4.58')
+
+    def test_tax_with_different_code(self):
+        """Test tax with different tax category code"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 2 10.50']) == Decimal('10.50')
+
+    def test_sales_tax(self):
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['SALES TAX 4.58']) == Decimal('4.58')
+
+    def test_no_tax_returns_none(self):
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TOTAL 100.00']) is None
+
+    def test_taxation_not_matched(self):
+        """Test that 'taxation' is not incorrectly matched as 'tax'"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAXATION info']) is None
+
+    def test_taxable_not_matched(self):
+        """Test that 'taxable' is not incorrectly matched as 'tax'"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAXABLE items']) is None
+
+    def test_whole_dollar_tax(self):
+        """Test tax extraction with whole dollar amounts"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 5']) == Decimal('5')
+        assert extract_tax(['TAX 15']) == Decimal('15')
+
+    def test_tax_code_with_whole_dollar(self):
+        """Test tax code followed by whole dollar amount"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 1 5']) == Decimal('5')
+
 
 class TestSkipKeywords:
     """Tests for SKIP_KEYWORDS constant"""

@@ -124,12 +124,25 @@ class OCRProcessor:
 
     def _score_result(self,receipt:ReceiptData,text:str)->int:
         score=0
-        if receipt.store_name and len(receipt.store_name)>2:score+=20
+        # Known store names get higher score
+        known_stores = ['WALMART', "TRADER JOE'S", 'COSTCO', 'TARGET', 'WHOLE FOODS', 'KROGER', 'SAFEWAY', 'PUBLIX', 'CVS', 'WALGREENS']
+        if receipt.store_name:
+            if receipt.store_name.upper() in known_stores:
+                score+=40  # Bonus for recognized store
+            elif len(receipt.store_name)>2:
+                score+=10
         if receipt.transaction_date:score+=15
         if receipt.total and receipt.total>0:score+=30
         if receipt.items:score+=10*len(receipt.items)
         if receipt.store_address:score+=10
         if receipt.store_phone:score+=10
+        # Validate math: subtotal + tax should equal total
+        if receipt.subtotal and receipt.tax and receipt.total:
+            expected = receipt.subtotal + receipt.tax
+            if abs(expected - receipt.total) < Decimal('0.10'):
+                score += 50  # Big bonus for valid math
+            else:
+                score -= 30  # Penalty for invalid math
         special_ratio=sum(1 for c in text if not c.isalnum() and not c.isspace())/max(len(text),1)
         if special_ratio>0.3:score-=20
         return max(0,score)
@@ -164,7 +177,11 @@ class OCRProcessor:
                     name=m.group(1).strip()
                     # Apply item name cleaning for OCR corrections
                     name=clean_item_name(name)
-                    price_str=m.group(2)
+                    # Handle 3-group patterns (name, dollars, cents)
+                    if len(m.groups()) >= 3:
+                        price_str = f"{m.group(2)}.{m.group(3)}"
+                    else:
+                        price_str=m.group(2)
                     if len(name)<3 or name in seen:
                         continue
                     alphas=sum(1 for c in name if c.isalpha())

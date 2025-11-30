@@ -35,14 +35,15 @@ DATE_PATTERNS = [
     re.compile(r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})'),  # ISO format: 2024-01-15
     re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{4})'),  # US format with 4-digit year: 12/25/2024
     re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2})'),  # US format with 2-digit year: 12/25/24
-    re.compile(r'(\w{3}\s+\d{1,2},?\s+\d{4})'),    # Month format: Jan 15, 2024
+    re.compile(r'\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4})\b', re.IGNORECASE),  # Month format: Jan 15, 2024
 ]
 
 TOTAL_PATTERNS = [
-    re.compile(r'total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'amount[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'balance[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    # Handle OCR errors like "$38 .68" or "$38 68" (space instead of dot)
+    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'amount[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'balance[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
 ]
 
 PHONE_PATTERNS = [
@@ -51,16 +52,27 @@ PHONE_PATTERNS = [
 ]
 
 LINE_ITEM_PATTERNS = [
+    # Walmart format: ITEM NAME SKU [F] PRICE TAX_CODE (most specific first)
+    # Example: "SC_BCN CHDDR 007874202906 F 6.98 0"
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    # Walmart format without trailing tax code: ITEM NAME SKU PRICE
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*$'),
+    # Format with em-dash or dash separator: ITEM NAME — XX.XX or ITEM T — XX.XX
+    re.compile(r'^(.+?)\s+[—–-]\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    # Format with tax code at end: ITEM NAME  XX.XX F/T/N/X/O/0
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    # Trader Joe's format: ITEM NAME XX.XX or ITEM NAME X.XX (simple)
+    re.compile(r'^([A-Z][A-Z0-9\s/_-]{2,}?)\s+(\d+)\s*[.,]\s*(\d{2})$'),
     # Standard formats: ITEM NAME   $XX.XX or ITEM NAME XX.XX
-    re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*$'),
-    re.compile(r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$'),
-    # Format with SKU: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
-    re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
-    # Format with tax code: ITEM NAME  XX.XX F/T/N/X
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNX]$'),
+    re.compile(r'^(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*$'),
+    re.compile(r'^(.+?)\s+\$\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    # Format with SKU at start: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
+    re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with quantity: QTY x ITEM NAME  XX.XX
-    re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    # Format with leading quote/garbage: "ITEM NAME SKU PRICE
+    re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+)\s*[.,]\s*(\d{2})'),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -116,11 +128,15 @@ UNIT_CORRECTIONS = {
 # Known store name corrections
 STORE_NAME_CORRECTIONS = {
     'a ae)': "TRADER JOE'S",
+    'a =o': "TRADER JOE'S",
     'trader joes': "TRADER JOE'S",
     'trader joe': "TRADER JOE'S",
     'wa1mart': 'WALMART',
     'wa1-mart': 'WALMART',
     'wal-mart': 'WALMART',
+    'wal*mart': 'WALMART',
+    'walmart s': 'WALMART',
+    'walmart': 'WALMART',
     'costc0': 'COSTCO',
     'target': 'TARGET',
     'who1e foods': 'WHOLE FOODS',
@@ -214,6 +230,8 @@ def extract_total(lines: list) -> Optional[Decimal]:
     """
     Extract total amount from a list of text lines.
     
+    Handles OCR errors like "$38 .68" or "$38 68" (space instead of decimal).
+    
     Args:
         lines: List of text lines
         
@@ -224,7 +242,10 @@ def extract_total(lines: list) -> Optional[Decimal]:
         for line in lines:
             match = pattern.search(line)
             if match:
-                total_str = match.group(1).replace(',', '.')
+                # Combine the two groups (dollars and cents)
+                dollars = match.group(1)
+                cents = match.group(2) if len(match.groups()) > 1 else '00'
+                total_str = f"{dollars}.{cents}"
                 total_val = normalize_price(total_str)
                 if total_val:
                     return total_val
@@ -279,7 +300,13 @@ def should_skip_line(line: str) -> bool:
         True if line should be skipped
     """
     line_lower = line.lower()
-    return any(kw in line_lower for kw in SKIP_KEYWORDS)
+    # Skip lines with common keywords
+    if any(kw in line_lower for kw in SKIP_KEYWORDS):
+        return True
+    # Skip quantity lines like "2 @ 0.49" or "3FA @.0.29/EA"
+    if re.match(r'^\d+\s*@', line) or re.match(r'^\d+[A-Z]*\s*[@—-]', line):
+        return True
+    return False
 
 
 def should_skip_item_name(name: str) -> bool:
@@ -304,6 +331,7 @@ def clean_item_name(name: str) -> str:
     - Word-level corrections (e.g., FASHIUNED -> FASHIONED)
     - Unit abbreviation fixes (e.g., "10 02" -> "10 OZ")
     - Removes trailing periods and extra punctuation
+    - Removes OCR noise and SKU-like patterns
     - Normalizes whitespace
     
     Args:
@@ -316,6 +344,18 @@ def clean_item_name(name: str) -> str:
         return name
     
     cleaned = name.strip()
+    
+    # Apply unit corrections FIRST (before removing trailing letters)
+    for wrong, correct in UNIT_CORRECTIONS.items():
+        cleaned = cleaned.replace(wrong, correct)
+    
+    # Remove OCR noise patterns (random lowercase mixed with uppercase letters)
+    # Pattern like "oo2igogqggi6" - mostly lowercase with occasional digits
+    cleaned = re.sub(r'\s+[a-z0-9]{8,}\s*$', '', cleaned)  # Trailing noise
+    cleaned = re.sub(r'\s+[oO0]+[a-z0-9]{6,}\s*$', '', cleaned)  # OCR O/0 confusion noise (min 6 chars)
+    
+    # Remove trailing single tax code letters (but not OZ, LB, CT etc.)
+    cleaned = re.sub(r'\s+[FTNXD0]\s*$', '', cleaned, flags=re.IGNORECASE)
     
     # Apply word-level corrections (case-preserving)
     for wrong, correct in WORD_CORRECTIONS.items():
@@ -332,10 +372,6 @@ def clean_item_name(name: str) -> str:
             return correct.upper()
         # Use re.escape to safely handle any regex special characters in the pattern
         cleaned = re.sub(rf'\b{re.escape(wrong)}\b', preserve_case, cleaned, flags=re.IGNORECASE)
-    
-    # Apply unit corrections (case-sensitive replacements)
-    for wrong, correct in UNIT_CORRECTIONS.items():
-        cleaned = cleaned.replace(wrong, correct)
     
     # Remove trailing periods and dots (but keep decimal points in prices)
     # Handle patterns like ". ." or "..."
@@ -378,11 +414,12 @@ def correct_store_name(name: str) -> str:
     return name
 
 
-def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
+def extract_store_name(lines: list, max_lines: int = 10) -> Optional[str]:
     """
-    Extract store name from the first few lines.
+    Extract store name from text lines.
     
-    Applies store name corrections for common OCR errors.
+    Searches for known store patterns first, then falls back to 
+    first valid line. Applies store name corrections for common OCR errors.
     
     Args:
         lines: List of text lines
@@ -391,6 +428,31 @@ def extract_store_name(lines: list, max_lines: int = 5) -> Optional[str]:
     Returns:
         Store name or None
     """
+    # First, check for known store patterns in all lines
+    known_stores = {
+        'walmart': 'WALMART',
+        'wal-mart': 'WALMART',
+        'wal*mart': 'WALMART',
+        'trader joe': "TRADER JOE'S",
+        'costco': 'COSTCO',
+        'target': 'TARGET',
+        'whole foods': 'WHOLE FOODS',
+        'kroger': 'KROGER',
+        'safeway': 'SAFEWAY',
+        'publix': 'PUBLIX',
+        'cvs': 'CVS',
+        'walgreens': 'WALGREENS',
+        'home depot': 'HOME DEPOT',
+        'lowes': "LOWE'S",
+    }
+    
+    for line in lines[:max_lines]:
+        line_lower = line.lower().strip()
+        for pattern, store_name in known_stores.items():
+            if pattern in line_lower:
+                return store_name
+    
+    # Fallback to first valid line with correction
     for line in lines[:max_lines]:
         line = line.strip()
         if len(line) >= 2 and not line.isdigit():
@@ -625,24 +687,49 @@ def extract_tax(lines: list) -> Optional[Decimal]:
     """
     Extract tax amount from a list of text lines.
     
+    Handles various tax formats including:
+    - "TAX 4.58" - Simple tax amount
+    - "TAX1 4.58" or "TAX 1 4.58" - Tax with category code (common on Walmart receipts)
+    - "SALES TAX 4.58" - Sales tax label
+    
+    For lines with tax category codes (e.g., TAX 1, TAX 2), the function
+    extracts the last valid price on the line as the tax amount.
+    
     Args:
         lines: List of text lines
         
     Returns:
         Decimal tax or None
     """
-    tax_patterns = [
-        re.compile(r'\btax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
-        re.compile(r'sales\s*tax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+    # Pattern to match tax lines - captures the entire line for further processing
+    # Match "TAX" optionally followed by digits (TAX1, TAX2) then word boundary
+    # Using (?:\d+)? to match zero or more digits, then \b for word boundary
+    # This avoids matching "taxation" or "taxable"
+    tax_line_patterns = [
+        re.compile(r'\btax(?:\d+)?\b', re.IGNORECASE),
+        re.compile(r'sales\s*tax', re.IGNORECASE),
     ]
     
-    for pattern in tax_patterns:
-        for line in lines:
-            match = pattern.search(line)
-            if match:
-                tax_val = normalize_price(match.group(1))
-                if tax_val:
-                    return tax_val
+    # Pattern to find price values - handles both XX.XX and whole numbers
+    # Matches prices with 1-2 decimal places or whole numbers followed by non-digit
+    price_pattern = re.compile(r'\$?\s*(\d+(?:[.,]\d{1,2})?)\b')
+    
+    for line in lines:
+        # Check if this is a tax line
+        is_tax_line = any(pattern.search(line) for pattern in tax_line_patterns)
+        if not is_tax_line:
+            continue
+        
+        # Find all prices on the line
+        prices = price_pattern.findall(line)
+        if prices:
+            # Use the last price on the line (handles "TAX 1 4.58" format)
+            # The last price is typically the actual tax amount
+            last_price = prices[-1]
+            tax_val = normalize_price(last_price)
+            if tax_val and tax_val > Decimal('0'):
+                return tax_val
+    
     return None
 
 
