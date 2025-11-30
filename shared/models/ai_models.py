@@ -656,6 +656,10 @@ class FlorenceProcessor(BaseDonutProcessor):
                     pass
         
         return min(100.0, score)
+# =============================================================================
+# FINETUNING-SPECIFIC LAZY IMPORTS
+# These are used only by the DonutFinetuner class for model fine-tuning
+# =============================================================================
 import os,logging
 from typing import List,Dict,Callable,Optional
 from pathlib import Path
@@ -663,39 +667,39 @@ from PIL import Image
 import json
 logger=logging.getLogger(__name__)
 
-# Lazy imports to allow the module to load without torch/transformers
-torch = None
-VisionEncoderDecoderModel = None
-DonutProcessor = None
-Seq2SeqTrainingArguments = None
-Seq2SeqTrainer = None
-Dataset = None
+# Lazy imports for finetuning (separate from processing imports)
+_finetuning_torch = None
+_finetuning_VisionEncoderDecoderModel = None
+_finetuning_DonutProcessor = None
+_finetuning_Seq2SeqTrainingArguments = None
+_finetuning_Seq2SeqTrainer = None
+_finetuning_Dataset = None
 
-def _get_torch():
-    global torch, Dataset
-    if torch is None:
+def _get_finetuning_torch():
+    global _finetuning_torch, _finetuning_Dataset
+    if _finetuning_torch is None:
         import torch as _torch
         from torch.utils.data import Dataset as _Dataset
-        torch = _torch
-        Dataset = _Dataset
-    return torch
+        _finetuning_torch = _torch
+        _finetuning_Dataset = _Dataset
+    return _finetuning_torch
 
-def _get_transformers():
-    global VisionEncoderDecoderModel, DonutProcessor, Seq2SeqTrainingArguments, Seq2SeqTrainer
-    if VisionEncoderDecoderModel is None:
+def _get_finetuning_transformers():
+    global _finetuning_VisionEncoderDecoderModel, _finetuning_DonutProcessor, _finetuning_Seq2SeqTrainingArguments, _finetuning_Seq2SeqTrainer
+    if _finetuning_VisionEncoderDecoderModel is None:
         from transformers import VisionEncoderDecoderModel as _VisionEncoderDecoderModel
         from transformers import DonutProcessor as _DonutProcessor
         from transformers import Seq2SeqTrainingArguments as _Seq2SeqTrainingArguments
         from transformers import Seq2SeqTrainer as _Seq2SeqTrainer
-        VisionEncoderDecoderModel = _VisionEncoderDecoderModel
-        DonutProcessor = _DonutProcessor
-        Seq2SeqTrainingArguments = _Seq2SeqTrainingArguments
-        Seq2SeqTrainer = _Seq2SeqTrainer
-    return VisionEncoderDecoderModel, DonutProcessor, Seq2SeqTrainingArguments, Seq2SeqTrainer
+        _finetuning_VisionEncoderDecoderModel = _VisionEncoderDecoderModel
+        _finetuning_DonutProcessor = _DonutProcessor
+        _finetuning_Seq2SeqTrainingArguments = _Seq2SeqTrainingArguments
+        _finetuning_Seq2SeqTrainer = _Seq2SeqTrainer
+    return _finetuning_VisionEncoderDecoderModel, _finetuning_DonutProcessor, _finetuning_Seq2SeqTrainingArguments, _finetuning_Seq2SeqTrainer
 
 def _make_receipt_dataset_class():
     """Factory function that creates ReceiptDataset class inheriting from torch.utils.data.Dataset"""
-    _torch = _get_torch()
+    _torch = _get_finetuning_torch()
     from torch.utils.data import Dataset as TorchDataset
     
     class ReceiptDataset(TorchDataset):
@@ -734,8 +738,8 @@ def get_receipt_dataset_class():
 
 class DonutFinetuner:
     def __init__(self, model_id: str = 'donut_cord', image_size: tuple = (960, 720)):
-        _torch = _get_torch()
-        _VisionEncoderDecoderModel, _DonutProcessor, _, _ = _get_transformers()
+        _torch = _get_finetuning_torch()
+        _VisionEncoderDecoderModel, _DonutProcessor, _, _ = _get_finetuning_transformers()
         
         self.model_id=model_id
         self.device='cuda'if _torch.cuda.is_available()else'cpu'
@@ -763,8 +767,8 @@ class DonutFinetuner:
             raise
 
     def train(self,training_data:List[Dict],epochs:int=3,batch_size:int=4,learning_rate:float=5e-5,progress_callback:Optional[Callable]=None,warmup_ratio:float=0.1)->Dict:
-        _torch = _get_torch()
-        _, _, _Seq2SeqTrainingArguments, _Seq2SeqTrainer = _get_transformers()
+        _torch = _get_finetuning_torch()
+        _, _, _Seq2SeqTrainingArguments, _Seq2SeqTrainer = _get_finetuning_transformers()
         _ReceiptDataset = get_receipt_dataset_class()
         
         logger.info(f"Starting training with {len(training_data)} samples for {epochs} epochs")

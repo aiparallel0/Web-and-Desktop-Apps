@@ -39,10 +39,10 @@ DATE_PATTERNS = [
 ]
 
 TOTAL_PATTERNS = [
-    re.compile(r'total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
-    re.compile(r'amount[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
-    re.compile(r'balance[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
-    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+\.?\d{0,2})', re.IGNORECASE),
+    re.compile(r'total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    re.compile(r'amount[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    re.compile(r'balance[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
 ]
 
 PHONE_PATTERNS = [
