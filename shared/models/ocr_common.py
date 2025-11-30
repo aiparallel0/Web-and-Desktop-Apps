@@ -57,8 +57,12 @@ LINE_ITEM_PATTERNS = [
     re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
     # Walmart format without trailing tax code: ITEM NAME SKU PRICE
     re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*$'),
+    # Format with em-dash or dash separator: ITEM NAME — XX.XX or ITEM T — XX.XX
+    re.compile(r'^(.+?)\s+[—–-]\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with tax code at end: ITEM NAME  XX.XX F/T/N/X/O/0
     re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    # Trader Joe's format: ITEM NAME XX.XX or ITEM NAME X.XX (simple)
+    re.compile(r'^([A-Z][A-Z0-9\s/_-]{2,}?)\s+(\d+)\s*[.,]\s*(\d{2})$'),
     # Standard formats: ITEM NAME   $XX.XX or ITEM NAME XX.XX
     re.compile(r'^(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*$'),
@@ -296,7 +300,13 @@ def should_skip_line(line: str) -> bool:
         True if line should be skipped
     """
     line_lower = line.lower()
-    return any(kw in line_lower for kw in SKIP_KEYWORDS)
+    # Skip lines with common keywords
+    if any(kw in line_lower for kw in SKIP_KEYWORDS):
+        return True
+    # Skip quantity lines like "2 @ 0.49" or "3FA @.0.29/EA"
+    if re.match(r'^\d+\s*@', line) or re.match(r'^\d+[A-Z]*\s*[@—-]', line):
+        return True
+    return False
 
 
 def should_skip_item_name(name: str) -> bool:
