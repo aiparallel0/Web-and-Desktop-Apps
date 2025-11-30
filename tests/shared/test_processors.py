@@ -722,13 +722,17 @@ def test_normalize_price_invalid():
 @patch('shared.models.processors.easyocr')
 def test_extract_empty_text_lines(mock_easyocr, easyocr_config):
     """Test parsing with empty text lines after filtering"""
+    # Reset OCRConfig before test to ensure clean state
+    from shared.models.ocr_config import OCRConfig
+    OCRConfig._instance = None
+    
     mock_reader = Mock()
     mock_easyocr.Reader.return_value = mock_reader
 
-    # All low confidence results
+    # All very low confidence results that are below even the lowered threshold
     mock_reader.readtext.return_value = [
-        ([[0, 0], [100, 0], [100, 50], [0, 50]], 'Text', 0.1),
-        ([[0, 60], [100, 60], [100, 90], [0, 90]], 'More', 0.2),
+        ([[0, 0], [100, 0], [100, 50], [0, 50]], 'Text', 0.05),
+        ([[0, 60], [100, 60], [100, 90], [0, 90]], 'More', 0.08),
     ]
 
     processor = EasyOCRProcessor(easyocr_config)
@@ -790,8 +794,16 @@ def mock_paddle_ocr():
 @patch('shared.models.processors.load_and_validate_image')
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_paddle_processor_initialization_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
-    """Test successful initialization of Paddle processor"""
+    """Test successful initialization of Paddle processor with circular exchange config"""
     from shared.models.processors import PaddleProcessor
+    from shared.models.ocr_config import OCRConfig
+    
+    # Reset OCRConfig to ensure default values
+    OCRConfig._instance = None
+    config = OCRConfig()
+    
+    # Get the expected box_threshold from the config
+    expected_box_threshold = config.detection_box_threshold
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -805,7 +817,7 @@ def test_paddle_processor_initialization_success(mock_preprocess, mock_load, moc
         use_angle_cls=True,
         lang='en',
         det_db_thresh=0.2,
-        det_db_box_thresh=0.3
+        det_db_box_thresh=expected_box_threshold
     )
 
 
