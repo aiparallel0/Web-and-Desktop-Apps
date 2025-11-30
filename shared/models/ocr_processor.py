@@ -177,7 +177,11 @@ class OCRProcessor:
                     name=m.group(1).strip()
                     # Apply item name cleaning for OCR corrections
                     name=clean_item_name(name)
-                    price_str=m.group(2)
+                    # Handle 3-group patterns (name, dollars, cents)
+                    if len(m.groups()) >= 3:
+                        price_str = f"{m.group(2)}.{m.group(3)}"
+                    else:
+                        price_str=m.group(2)
                     if len(name)<3 or name in seen:
                         continue
                     alphas=sum(1 for c in name if c.isalpha())

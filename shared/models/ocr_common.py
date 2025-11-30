@@ -39,10 +39,11 @@ DATE_PATTERNS = [
 ]
 
 TOTAL_PATTERNS = [
-    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'amount[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'balance[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
-    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    # Handle OCR errors like "$38 .68" or "$38 68" (space instead of dot)
+    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'amount[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'balance[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    re.compile(r'grand\s*total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
 ]
 
 PHONE_PATTERNS = [
@@ -53,21 +54,21 @@ PHONE_PATTERNS = [
 LINE_ITEM_PATTERNS = [
     # Walmart format: ITEM NAME SKU [F] PRICE TAX_CODE (most specific first)
     # Example: "SC_BCN CHDDR 007874202906 F 6.98 0"
-    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+[.,]\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
     # Walmart format without trailing tax code: ITEM NAME SKU PRICE
-    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+[.,]\d{2})\s*$'),
+    re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*$'),
     # Format with tax code at end: ITEM NAME  XX.XX F/T/N/X/O/0
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
     # Standard formats: ITEM NAME   $XX.XX or ITEM NAME XX.XX
-    re.compile(r'^(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
-    re.compile(r'^(.+?)\s+(\d+[.,]\d{2})\s*$'),
-    re.compile(r'^(.+?)\s+\$\s*(\d+[.,]\d{2})$'),
+    re.compile(r'^(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*$'),
+    re.compile(r'^(.+?)\s+\$\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with SKU at start: SKU  ITEM NAME  XX.XX (12-14 digit SKU)
-    re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    re.compile(r'^\d{12,14}\s+(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with quantity: QTY x ITEM NAME  XX.XX
-    re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+[.,]\d{2})$'),
+    re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with leading quote/garbage: "ITEM NAME SKU PRICE
-    re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+[.,]\d{2})'),
+    re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+)\s*[.,]\s*(\d{2})'),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -225,6 +226,8 @@ def extract_total(lines: list) -> Optional[Decimal]:
     """
     Extract total amount from a list of text lines.
     
+    Handles OCR errors like "$38 .68" or "$38 68" (space instead of decimal).
+    
     Args:
         lines: List of text lines
         
@@ -235,7 +238,10 @@ def extract_total(lines: list) -> Optional[Decimal]:
         for line in lines:
             match = pattern.search(line)
             if match:
-                total_str = match.group(1).replace(',', '.')
+                # Combine the two groups (dollars and cents)
+                dollars = match.group(1)
+                cents = match.group(2) if len(match.groups()) > 1 else '00'
+                total_str = f"{dollars}.{cents}"
                 total_val = normalize_price(total_str)
                 if total_val:
                     return total_val
