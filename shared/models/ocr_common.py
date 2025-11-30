@@ -876,7 +876,7 @@ def calculate_overall_confidence(base_confidence: float,
     return min(1.0, max(0.0, confidence))
 
 
-def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None) -> List:
+def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None) -> List[Tuple[str, Decimal, int]]:
     """
     Extract line items from text lines - shared implementation for all OCR processors.
     
