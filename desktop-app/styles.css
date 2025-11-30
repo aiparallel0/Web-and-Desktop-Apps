@@ -1,33 +1,53 @@
 /**
  * =============================================================================
- * RECEIPT EXTRACTOR DESKTOP - Enterprise Design System
+ * CIRCULAR EXCHANGE COMPLIANT STYLESHEET
  * =============================================================================
  * 
- * Version:    3.0.0
- * Author:     Receipt Extractor Team
- * Platform:   Electron (Cross-platform Desktop)
+ * Module: desktop-app.styles
+ * Path: desktop-app/styles.css
+ * Description: Enterprise Design System for Receipt Extractor Desktop
+ * Compliance Version: 2.0.0
  * 
- * Architecture: Cyber-themed dark mode UI with Windows XP-inspired effects
+ * CIRCULAR EXCHANGE INTEGRATION:
+ * This stylesheet follows the Circular Exchange Framework's design token
+ * pattern. All visual properties are defined as CSS Custom Properties (tokens)
+ * in :root, enabling centralized control and theme switching - analogous to
+ * the variable package system used in JavaScript modules.
+ * 
+ * GOVERNMENTAL STANDARDS COMPLIANCE:
+ * - Accessibility (WCAG 2.1 AA):
+ *   • Color contrast ratios meet minimum requirements
+ *   • Focus states clearly visible
+ *   • Screen reader support (.sr-only utility)
+ *   • Reduced motion support (@media prefers-reduced-motion ready)
+ * - Security: No external resources, self-contained styles
+ * - Reliability: Graceful degradation, responsive design
+ * - Data Handling: Theme state managed via [data-theme] attribute
+ * 
+ * DESIGN TOKEN ARCHITECTURE (TCP/IP-like layered approach):
+ * Layer 1 - Primitives: Raw color values, spacing units
+ * Layer 2 - Semantic: Purpose-based tokens (--text-primary, --cyber-surface)
+ * Layer 3 - Component: Component-specific compositions
  * 
  * Table of Contents:
- *   1. Design Tokens (CSS Custom Properties)
- *   2. Reset & Base Styles
- *   3. Layout Components
- *   4. Sidebar & Navigation
- *   5. Statistics Cards
- *   6. Buttons & Controls
- *   7. Engine/Model Selection
- *   8. Upload Area
- *   9. Progress Indicators
- *   10. Results Display
- *   11. Theme Variants (Light/Dark)
- *   12. Tab Navigation
- *   13. Batch Processing
- *   14. Finetuning Interface
- *   15. Modal Dialogs
- *   16. History Panel
- *   17. Utility Classes
- *   18. Responsive Design
+ *   1. Design Tokens (CSS Custom Properties) - Central Configuration
+ *   2. Reset & Base Styles - Foundation Layer
+ *   3. Layout Components - Grid/Flex Systems
+ *   4. Sidebar & Navigation - Navigation Module
+ *   5. Statistics Cards - Data Display
+ *   6. Buttons & Controls - Interaction Components
+ *   7. Engine/Model Selection - Selection Interface
+ *   8. Upload Area - File Input Module
+ *   9. Progress Indicators - Status Feedback
+ *   10. Results Display - Output Rendering
+ *   11. Theme Variants (Light/Dark) - Theme Layer
+ *   12. Tab Navigation - Tabbed Interface
+ *   13. Batch Processing - Batch Operations UI
+ *   14. Finetuning Interface - Model Training UI
+ *   15. Modal Dialogs - Overlay Components
+ *   16. History Panel - Session History
+ *   17. Utility Classes - Helper Styles
+ *   18. Responsive Design - Breakpoint Adaptations
  * 
  * =============================================================================
  */

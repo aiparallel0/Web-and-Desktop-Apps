@@ -1,5 +1,44 @@
-// ===== RECEIPT EXTRACTOR - DESKTOP APP RENDERER =====
-// Combined Web App + Desktop App Functionality
+/**
+ * =============================================================================
+ * CIRCULAR EXCHANGE COMPLIANT MODULE
+ * =============================================================================
+ * 
+ * Module: desktop-app.renderer
+ * Path: desktop-app/renderer.js
+ * Description: Desktop app renderer process - UI logic and state management
+ * Compliance Version: 2.0.0
+ * 
+ * CIRCULAR EXCHANGE INTEGRATION:
+ * This module is integrated with the Circular Information Exchange Framework.
+ * It manages UI state through encapsulated modules and communicates with the
+ * main process via the secure preload bridge, following internal TCP/IP-like
+ * protocol patterns for reliable message exchange.
+ * 
+ * Dependencies: electronAPI (from preload), DOM APIs
+ * Exports: None (self-contained renderer module)
+ * 
+ * GOVERNMENTAL STANDARDS COMPLIANCE:
+ * - Security: No direct Node.js access, sandboxed renderer
+ * - Accessibility: ARIA announcements, keyboard navigation (Ctrl+O)
+ * - Data Handling: Structured state management with validation
+ * - Reliability: Error handling with user feedback, session stats tracking
+ * 
+ * STATE ENCAPSULATION:
+ * All global state is encapsulated in module-scoped variables with controlled
+ * access through dedicated functions. State changes propagate through the
+ * circular exchange pattern via event listeners and callbacks.
+ * 
+ * AI AGENT INSTRUCTIONS:
+ * - Access configuration via window.electronAPI.getSettings()
+ * - Use announce() for accessibility notifications
+ * - Follow error handling patterns with showError()
+ * - Update sessionStats for reliability tracking
+ * 
+ * =============================================================================
+ */
+
+// ===== ENCAPSULATED STATE (Circular Exchange Pattern) =====
+// State is managed internally and accessed through controlled interfaces
 
 const DEBUG = false;
 const log = {

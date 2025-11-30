@@ -1,13 +1,33 @@
 /**
  * =============================================================================
- * RECEIPT EXTRACTOR DESKTOP - Preload Script
+ * CIRCULAR EXCHANGE COMPLIANT MODULE
  * =============================================================================
  * 
- * This script runs in a privileged context before the renderer process loads.
- * It safely exposes Node.js and Electron APIs to the renderer via contextBridge.
+ * Module: desktop-app.preload
+ * Path: desktop-app/preload.js
+ * Description: Electron preload script - secure IPC bridge for renderer process
+ * Compliance Version: 2.0.0
  * 
- * Version:    3.0.0
- * Author:     Receipt Extractor Team
+ * CIRCULAR EXCHANGE INTEGRATION:
+ * This module is integrated with the Circular Information Exchange Framework.
+ * It provides encapsulated, secure communication channels between the main
+ * process and renderer, following TCP/IP-like protocol discipline for internal
+ * message passing (request/response pattern via IPC invoke).
+ * 
+ * Dependencies: electron (contextBridge, ipcRenderer)
+ * Exports: electronAPI (exposed to renderer via contextBridge)
+ * 
+ * GOVERNMENTAL STANDARDS COMPLIANCE:
+ * - Security: Context isolation enabled, no direct Node.js exposure
+ * - Accessibility: API supports screen reader announcements
+ * - Data Handling: Structured message protocol for all IPC calls
+ * - Reliability: Promise-based invoke pattern with error propagation
+ * 
+ * AI AGENT INSTRUCTIONS:
+ * - Use PROJECT_CONFIG for all configuration values
+ * - All IPC channels follow request/response pattern
+ * - Use VariablePackages for shared state synchronization
+ * - Subscribe to relevant change notifications from main process
  * 
  * =============================================================================
  */

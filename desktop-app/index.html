@@ -1,18 +1,41 @@
 <!DOCTYPE html>
 <!--
 ================================================================================
-RECEIPT EXTRACTOR DESKTOP - Enterprise Electron Application
+CIRCULAR EXCHANGE COMPLIANT MODULE
 ================================================================================
-Platform: AI-Powered OCR & Data Extraction System
-Version:  3.0.0
-Author:   Receipt Extractor Team
-License:  MIT
 
-Architecture: Single Page Application with Tab-based Navigation
-Components:
-  - Model Selection & Extraction
-  - Batch Processing Pipeline  
-  - Model Finetuning Interface
+Module: desktop-app.index
+Path: desktop-app/index.html
+Description: Main HTML document for Receipt Extractor Desktop Application
+Compliance Version: 2.0.0
+
+CIRCULAR EXCHANGE INTEGRATION:
+This document serves as the entry point for the Electron renderer process.
+It follows the Circular Exchange Framework's separation of concerns by
+loading external resources (styles.css, renderer.js) rather than inline code.
+
+GOVERNMENTAL STANDARDS COMPLIANCE:
+- Security: Content Security Policy compatible, no inline scripts
+- Accessibility (WCAG 2.1 AA):
+  • Semantic HTML5 structure
+  • ARIA live regions for announcements
+  • Proper heading hierarchy
+  • Keyboard-accessible controls
+  • Screen reader support
+- Reliability: Progressive enhancement, graceful degradation
+- Data Handling: Form validation, input sanitization in renderer.js
+
+COMPONENT ARCHITECTURE (Encapsulated Modules):
+- Sidebar: Model selection, session stats, configuration
+- Main Content: Tab-based interface (Extract, Batch, Finetune)
+- History Panel: Session history and quick access
+- Modal Overlays: Dialogs and notifications
+
+RESOURCE LOADING (TCP/IP-like layered approach):
+Layer 1: styles.css - Design tokens and visual presentation
+Layer 2: renderer.js - Application logic and state management  
+Layer 3: preload.js - Secure IPC bridge (loaded by Electron)
+
 ================================================================================
 -->
 <html lang="en">
