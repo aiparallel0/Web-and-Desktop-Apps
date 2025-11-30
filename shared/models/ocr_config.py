@@ -845,6 +845,18 @@ class OCRConfig:
             self._detection_history.clear()
         
         logger.info("OCRConfig reset to defaults (including detection parameters)")
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reset the singleton instance for clean test isolation.
+        
+        This method should be used in test setup/teardown to ensure
+        clean state between tests. Not intended for production use.
+        """
+        with cls._lock:
+            cls._instance = None
+        logger.debug("OCRConfig singleton instance reset")
 
 
 # Global configuration instance
@@ -857,3 +869,15 @@ def get_ocr_config() -> OCRConfig:
     if _ocr_config is None:
         _ocr_config = OCRConfig()
     return _ocr_config
+
+
+def reset_ocr_config() -> None:
+    """
+    Reset the global OCR configuration instance for clean test isolation.
+    
+    This function resets both the global instance and the singleton
+    to ensure clean state between tests.
+    """
+    global _ocr_config
+    _ocr_config = None
+    OCRConfig.reset_instance()

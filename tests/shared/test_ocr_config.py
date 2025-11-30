@@ -5,15 +5,15 @@ import pytest
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
-from shared.models.ocr_config import OCRConfig, OCRPipelineStage, get_ocr_config
+from shared.models.ocr_config import OCRConfig, OCRPipelineStage, get_ocr_config, reset_ocr_config
 
 
 class TestOCRConfig:
     """Test OCRConfig class."""
     
     def setup_method(self):
-        """Reset singleton for each test."""
-        OCRConfig._instance = None
+        """Reset singleton for each test using proper reset mechanism."""
+        reset_ocr_config()
     
     def test_singleton_pattern(self):
         """Test that OCRConfig is a singleton."""
@@ -70,7 +70,7 @@ class TestOCRConfigPipeline:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_pipeline_stages_initialized(self):
         """Test that pipeline stages are initialized."""
@@ -107,7 +107,7 @@ class TestOCRConfigAutoTuning:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_record_extraction_result(self):
         """Test recording extraction results."""
@@ -150,7 +150,7 @@ class TestOCRConfigExportImport:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_export_config(self):
         """Test exporting configuration."""
@@ -217,7 +217,7 @@ class TestGetOcrConfig:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_get_ocr_config(self):
         """Test that get_ocr_config returns singleton."""
@@ -233,7 +233,7 @@ class TestOCRConfigDetection:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_detection_default_parameters(self):
         """Test default detection parameter values (lowered defaults)."""
@@ -312,7 +312,7 @@ class TestOCRConfigDetectionAutoTuning:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_record_detection_result(self):
         """Test recording detection results."""
@@ -373,7 +373,7 @@ class TestOCRConfigDetectionPipeline:
     
     def setup_method(self):
         """Reset singleton for each test."""
-        OCRConfig._instance = None
+        reset_ocr_config()
     
     def test_detection_pipeline_stages(self):
         """Test that detection-related pipeline stages are configured."""
