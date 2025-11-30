@@ -148,6 +148,27 @@ class TestExtractTax:
         from shared.models.ocr_common import extract_tax
         assert extract_tax(['TOTAL 100.00']) is None
 
+    def test_taxation_not_matched(self):
+        """Test that 'taxation' is not incorrectly matched as 'tax'"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAXATION info']) is None
+
+    def test_taxable_not_matched(self):
+        """Test that 'taxable' is not incorrectly matched as 'tax'"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAXABLE items']) is None
+
+    def test_whole_dollar_tax(self):
+        """Test tax extraction with whole dollar amounts"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 5']) == Decimal('5')
+        assert extract_tax(['TAX 15']) == Decimal('15')
+
+    def test_tax_code_with_whole_dollar(self):
+        """Test tax code followed by whole dollar amount"""
+        from shared.models.ocr_common import extract_tax
+        assert extract_tax(['TAX 1 5']) == Decimal('5')
+
 
 class TestSkipKeywords:
     """Tests for SKIP_KEYWORDS constant"""

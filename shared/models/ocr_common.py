@@ -640,14 +640,17 @@ def extract_tax(lines: list) -> Optional[Decimal]:
         Decimal tax or None
     """
     # Pattern to match tax lines - captures the entire line for further processing
-    # Match "TAX" optionally followed by a digit (TAX1, TAX2) or word boundary
+    # Match "TAX" optionally followed by digits (TAX1, TAX2) then word boundary
+    # Using (?:\d+)? to match zero or more digits, then \b for word boundary
+    # This avoids matching "taxation" or "taxable"
     tax_line_patterns = [
-        re.compile(r'\btax(?:\d|\b)', re.IGNORECASE),
+        re.compile(r'\btax(?:\d+)?\b', re.IGNORECASE),
         re.compile(r'sales\s*tax', re.IGNORECASE),
     ]
     
-    # Pattern to find price values (XX.XX format)
-    price_pattern = re.compile(r'\$?\s*(\d+[.,]\d{2})\b')
+    # Pattern to find price values - handles both XX.XX and whole numbers
+    # Matches prices with 1-2 decimal places or whole numbers followed by non-digit
+    price_pattern = re.compile(r'\$?\s*(\d+(?:[.,]\d{1,2})?)\b')
     
     for line in lines:
         # Check if this is a tax line
