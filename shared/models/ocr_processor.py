@@ -11,7 +11,9 @@ from .ocr_common import (
     extract_date, extract_total, extract_phone, extract_address,
     should_skip_line, should_skip_item_name, extract_store_name, 
     LINE_ITEM_PATTERNS, clean_item_name, extract_subtotal, extract_tax,
-    validate_receipt_totals, extract_sku
+    validate_receipt_totals, extract_sku,
+    extract_line_items as _extract_line_items_shared,
+    parse_receipt_text as _parse_receipt_text_shared
 )
 try:
     import pytesseract
@@ -151,51 +153,21 @@ class OCRProcessor:
         receipt=ReceiptData()
         lines=[line.strip() for line in text.split('\n') if line.strip()]
         if not lines:return receipt
-        receipt.store_name=extract_store_name(lines)
-        receipt.transaction_date=extract_date(lines)
-        receipt.total=extract_total(lines)
-        receipt.subtotal=extract_subtotal(lines)
-        receipt.tax=extract_tax(lines)
-        receipt.items=self._extract_line_items(lines)
-        receipt.store_address=extract_address(lines)
-        receipt.store_phone=extract_phone(lines)
-        # Validate totals for accuracy
-        validation=validate_receipt_totals(receipt.subtotal,receipt.tax,receipt.total)
-        if validation.get('notes'):
-            for note in validation['notes']:
-                receipt.extraction_notes.append(note)
+        # Use shared implementation
+        parsed = _parse_receipt_text_shared(lines)
+        receipt.store_name = parsed['store_name']
+        receipt.transaction_date = parsed['transaction_date']
+        receipt.total = parsed['total']
+        receipt.subtotal = parsed['subtotal']
+        receipt.tax = parsed['tax']
+        # Convert tuples to LineItem objects
+        receipt.items = [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in parsed['items']]
+        receipt.store_address = parsed['store_address']
+        receipt.store_phone = parsed['store_phone']
+        receipt.extraction_notes = parsed['extraction_notes']
         return receipt
 
     def _extract_line_items(self,lines:List[str])->List[LineItem]:
-        items,seen=[],set()
-        for line in lines:
-            if should_skip_line(line):
-                continue
-            for pattern in LINE_ITEM_PATTERNS:
-                m=pattern.search(line.strip())
-                if m:
-                    name=m.group(1).strip()
-                    # Apply item name cleaning for OCR corrections
-                    name=clean_item_name(name)
-                    # Handle 3-group patterns (name, dollars, cents)
-                    if len(m.groups()) >= 3:
-                        price_str = f"{m.group(2)}.{m.group(3)}"
-                    else:
-                        price_str=m.group(2)
-                    if len(name)<3 or name in seen:
-                        continue
-                    alphas=sum(1 for c in name if c.isalpha())
-                    digits=sum(1 for c in name if c.isdigit())
-                    if digits>alphas:
-                        continue
-                    if len(name)<5 and not name.replace(' ','').isalpha():
-                        continue
-                    price=normalize_price(price_str)
-                    if not price or price<=0 or price>1000:
-                        continue
-                    if should_skip_item_name(name):
-                        continue
-                    items.append(LineItem(name=name,total_price=price,quantity=1))
-                    seen.add(name)
-                    break
-        return items
+        # Use shared implementation and convert tuples to LineItem objects
+        items_data = _extract_line_items_shared(lines)
+        return [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in items_data]

@@ -874,3 +874,157 @@ def calculate_overall_confidence(base_confidence: float,
     
     # Cap at 1.0
     return min(1.0, max(0.0, confidence))
+
+
+def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None) -> List:
+    """
+    Extract line items from text lines - shared implementation for all OCR processors.
+    
+    This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
+    and PaddleProcessor to avoid code duplication.
+    
+    Args:
+        lines: List of text lines from OCR
+        text_metadata: Optional list of metadata dicts with 'confidence' keys
+                      (used by PaddleProcessor for confidence filtering)
+        
+    Returns:
+        List of tuples (name, price, quantity) representing line items.
+        Caller should convert to LineItem objects.
+    """
+    items = []
+    seen = set()
+    
+    for i, line in enumerate(lines):
+        if should_skip_line(line):
+            continue
+        
+        matched = False
+        
+        # Try standard patterns
+        for pattern in LINE_ITEM_PATTERNS:
+            m = pattern.search(line.strip())
+            if m:
+                name = m.group(1).strip()
+                # Apply item name cleaning for OCR corrections
+                name = clean_item_name(name)
+                
+                # Handle 3-group patterns (name, dollars, cents)
+                if len(m.groups()) >= 3:
+                    price_str = f"{m.group(2)}.{m.group(3)}"
+                else:
+                    price_str = m.group(2)
+                
+                price_str = price_str.replace(',', '.')
+                
+                # Validate item name
+                if len(name) < 2 or name in seen:
+                    continue
+                
+                # Check for digit-heavy names (likely SKUs or garbage)
+                if name.replace(' ', '').isdigit():
+                    continue
+                
+                alphas = sum(1 for c in name if c.isalpha())
+                digits = sum(1 for c in name if c.isdigit())
+                if digits > alphas and len(name) >= 3:
+                    continue
+                
+                if len(name) < 5 and not name.replace(' ', '').isalpha():
+                    continue
+                
+                # Check confidence if metadata provided
+                if text_metadata and i < len(text_metadata):
+                    conf = text_metadata[i].get('confidence')
+                    if conf and conf < 0.4:
+                        continue
+                
+                price = normalize_price(price_str)
+                if not price or price <= 0 or price > 1000:
+                    continue
+                
+                if should_skip_item_name(name):
+                    continue
+                
+                items.append((name, price, 1))
+                seen.add(name)
+                matched = True
+                break
+        
+        # Try fallback pattern for unmatched lines
+        if not matched:
+            pm = re.search(r'\$?\s*(\d+[.,]\d{2})(?!\d)', line)
+            if pm:
+                price_str = pm.group(1).replace(',', '.')
+                price = normalize_price(price_str)
+                
+                if price:
+                    name_part = line[:pm.start()].strip()
+                    name_part = re.sub(r'^\d+\s*[x*]\s*', '', name_part).strip()
+                    # Apply item name cleaning for OCR corrections
+                    name_part = clean_item_name(name_part)
+                    
+                    if len(name_part) >= 2 and name_part not in seen:
+                        if not should_skip_line(name_part) and not should_skip_item_name(name_part):
+                            items.append((name_part, price, 1))
+                            seen.add(name_part)
+    
+    return items
+
+
+def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None) -> dict:
+    """
+    Parse raw text lines into structured receipt data - shared implementation.
+    
+    This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
+    and PaddleProcessor to avoid code duplication.
+    
+    Args:
+        lines: List of text lines from OCR
+        text_metadata: Optional list of metadata dicts with 'confidence' keys
+        
+    Returns:
+        Dictionary with extracted receipt fields:
+        - store_name: str or None
+        - transaction_date: str or None
+        - total: Decimal or None
+        - subtotal: Decimal or None  
+        - tax: Decimal or None
+        - items: List of tuples (name, price, quantity)
+        - store_address: str or None
+        - store_phone: str or None
+        - extraction_notes: List of notes
+    """
+    result = {
+        'store_name': None,
+        'transaction_date': None,
+        'total': None,
+        'subtotal': None,
+        'tax': None,
+        'items': [],
+        'store_address': None,
+        'store_phone': None,
+        'extraction_notes': []
+    }
+    
+    if not lines:
+        result['extraction_notes'].append("No text")
+        return result
+    
+    # Extract structured data using shared functions
+    result['store_name'] = extract_store_name(lines)
+    result['transaction_date'] = extract_date(lines)
+    result['total'] = extract_total(lines)
+    result['subtotal'] = extract_subtotal(lines)
+    result['tax'] = extract_tax(lines)
+    result['items'] = extract_line_items(lines, text_metadata)
+    result['store_address'] = extract_address(lines)
+    result['store_phone'] = extract_phone(lines)
+    
+    # Validate totals for accuracy
+    validation = validate_receipt_totals(result['subtotal'], result['tax'], result['total'])
+    if validation.get('notes'):
+        for note in validation['notes']:
+            result['extraction_notes'].append(note)
+    
+    return result
