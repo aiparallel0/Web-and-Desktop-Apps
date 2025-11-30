@@ -39,7 +39,7 @@ DATE_PATTERNS = [
 ]
 
 TOTAL_PATTERNS = [
-    re.compile(r'total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
+    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
     re.compile(r'amount[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
     re.compile(r'balance[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
     re.compile(r'grand\s*total[:\s]*\$?\s*(\d+[.,]?\d{0,2})', re.IGNORECASE),
@@ -625,24 +625,46 @@ def extract_tax(lines: list) -> Optional[Decimal]:
     """
     Extract tax amount from a list of text lines.
     
+    Handles various tax formats including:
+    - "TAX 4.58" - Simple tax amount
+    - "TAX1 4.58" or "TAX 1 4.58" - Tax with category code (common on Walmart receipts)
+    - "SALES TAX 4.58" - Sales tax label
+    
+    For lines with tax category codes (e.g., TAX 1, TAX 2), the function
+    extracts the last valid price on the line as the tax amount.
+    
     Args:
         lines: List of text lines
         
     Returns:
         Decimal tax or None
     """
-    tax_patterns = [
-        re.compile(r'\btax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
-        re.compile(r'sales\s*tax[:\s]*\$?\s*(\d+(?:[.,]\d{2})?)', re.IGNORECASE),
+    # Pattern to match tax lines - captures the entire line for further processing
+    # Match "TAX" optionally followed by a digit (TAX1, TAX2) or word boundary
+    tax_line_patterns = [
+        re.compile(r'\btax(?:\d|\b)', re.IGNORECASE),
+        re.compile(r'sales\s*tax', re.IGNORECASE),
     ]
     
-    for pattern in tax_patterns:
-        for line in lines:
-            match = pattern.search(line)
-            if match:
-                tax_val = normalize_price(match.group(1))
-                if tax_val:
-                    return tax_val
+    # Pattern to find price values (XX.XX format)
+    price_pattern = re.compile(r'\$?\s*(\d+[.,]\d{2})\b')
+    
+    for line in lines:
+        # Check if this is a tax line
+        is_tax_line = any(pattern.search(line) for pattern in tax_line_patterns)
+        if not is_tax_line:
+            continue
+        
+        # Find all prices on the line
+        prices = price_pattern.findall(line)
+        if prices:
+            # Use the last price on the line (handles "TAX 1 4.58" format)
+            # The last price is typically the actual tax amount
+            last_price = prices[-1]
+            tax_val = normalize_price(last_price)
+            if tax_val and tax_val > Decimal('0'):
+                return tax_val
+    
     return None
 
 
