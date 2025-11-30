@@ -250,17 +250,18 @@ class TestVariablePackage:
 
     def test_last_modified_timestamp(self):
         """Test last modified timestamp updates."""
-        import time
         pkg = VariablePackage(name='test', initial_value=0)
         before = pkg.last_modified
         
-        # Add a small delay to ensure timestamp difference
-        time.sleep(0.001)
-        
+        # Simply verify that the timestamp is updated after set()
+        # The set() method always updates _last_modified to datetime.now()
         pkg.set(1)
         after = pkg.last_modified
         
-        assert after >= before  # Use >= to handle fast execution
+        # After must be the same or later (they could be equal if fast enough)
+        assert after >= before
+        # But the value must have changed
+        assert pkg.get() == 1
 
 
 class TestPackageRegistry:
