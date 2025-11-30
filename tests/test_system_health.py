@@ -23,7 +23,8 @@ def test_core_dependencies():
         try:
             __import__(module)
             print(f"[OK] {name} installed")
-        except ImportError:
+        except (ImportError, OSError) as e:
+            # OSError can happen when torch is partially installed but broken
             if 'optional' in name:
                 print(f"[WARN] {name} not installed (optional)")
             else:
@@ -90,8 +91,9 @@ def test_cuda_availability():
             print(f"[OK] CUDA available: {device_name}")
         else:
             print("  [INFO] CUDA not available (CPU mode)")
-    except ImportError:
-        print("  [INFO] PyTorch not installed - cannot check CUDA")
+    except (ImportError, OSError):
+        # OSError can happen when torch is partially installed but broken
+        print("  [INFO] PyTorch not installed or not working - cannot check CUDA")
 
 def run_all_tests():
     print("=" * 60)
