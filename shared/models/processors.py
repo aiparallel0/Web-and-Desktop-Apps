@@ -37,7 +37,9 @@ from utils.data_structures import LineItem, ReceiptData, ExtractionResult
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
-    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, clean_item_name
+    should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, clean_item_name,
+    extract_line_items as _extract_line_items_shared,
+    parse_receipt_text as _parse_receipt_text_shared
 )
 
 # Conditional imports for optional dependencies
@@ -307,13 +309,18 @@ class EasyOCRProcessor:
             receipt.extraction_notes.append("No text")
             return receipt
         
-        # Extract structured data
-        receipt.store_name = extract_store_name(text_lines)
-        receipt.transaction_date = extract_date(text_lines)
-        receipt.total = extract_total(text_lines)
-        receipt.items = self._extract_line_items(text_lines)
-        receipt.store_address = extract_address(text_lines)
-        receipt.store_phone = extract_phone(text_lines)
+        # Use shared implementation
+        parsed = _parse_receipt_text_shared(text_lines)
+        receipt.store_name = parsed['store_name']
+        receipt.transaction_date = parsed['transaction_date']
+        receipt.total = parsed['total']
+        receipt.subtotal = parsed['subtotal']
+        receipt.tax = parsed['tax']
+        # Convert tuples to LineItem objects
+        receipt.items = [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in parsed['items']]
+        receipt.store_address = parsed['store_address']
+        receipt.store_phone = parsed['store_phone']
+        receipt.extraction_notes = parsed['extraction_notes']
         
         return receipt
 
@@ -327,33 +334,9 @@ class EasyOCRProcessor:
         Returns:
             List of LineItem objects
         """
-        items = []
-        seen = set()
-        
-        for line in lines:
-            if should_skip_line(line):
-                continue
-            
-            for pattern in LINE_ITEM_PATTERNS:
-                m = pattern.search(line.strip())
-                if m:
-                    name = m.group(1).strip()
-                    # Apply item name cleaning for OCR corrections
-                    name = clean_item_name(name)
-                    price_str = m.group(2)
-                    
-                    if len(name) < 2 or name in seen:
-                        continue
-                    
-                    price = normalize_price(price_str)
-                    if not price or price <= 0:
-                        continue
-                    
-                    items.append(LineItem(name=name, total_price=price, quantity=1))
-                    seen.add(name)
-                    break
-        
-        return items
+        # Use shared implementation and convert tuples to LineItem objects
+        items_data = _extract_line_items_shared(lines)
+        return [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in items_data]
 
 
 # =============================================================================
@@ -549,32 +532,35 @@ class PaddleProcessor:
         
         lines = [l['text'].strip() for l in text_lines]
         
-        # Extract store information
-        receipt.store_name = extract_store_name(lines)
+        # Use shared implementation with text metadata for confidence filtering
+        parsed = _parse_receipt_text_shared(lines, text_lines)
+        receipt.store_name = parsed['store_name']
         if receipt.store_name and len(receipt.store_name) < 2:
             receipt.extraction_notes.append(f"Short name: '{receipt.store_name}'")
         
-        # Extract date
-        receipt.transaction_date = extract_date(lines)
+        receipt.transaction_date = parsed['transaction_date']
         if receipt.transaction_date:
             logger.info(f"Date: {receipt.transaction_date}")
         
-        # Extract total
-        receipt.total = extract_total(lines)
+        receipt.total = parsed['total']
         if receipt.total:
             logger.info(f"Total: {receipt.total}")
         
-        # Extract line items
-        receipt.items = self._extract_line_items(lines, text_lines)
+        receipt.subtotal = parsed['subtotal']
+        receipt.tax = parsed['tax']
         
-        # Extract address and phone
-        receipt.store_address = extract_address(lines)
+        # Convert tuples to LineItem objects
+        receipt.items = [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in parsed['items']]
+        
+        receipt.store_address = parsed['store_address']
         if receipt.store_address:
             logger.info(f"Address: {receipt.store_address}")
         
-        receipt.store_phone = extract_phone(lines)
+        receipt.store_phone = parsed['store_phone']
         if receipt.store_phone:
             logger.info(f"Phone: {receipt.store_phone}")
+        
+        receipt.extraction_notes.extend(parsed['extraction_notes'])
         
         return receipt
 
@@ -593,57 +579,7 @@ class PaddleProcessor:
         Returns:
             List of LineItem objects
         """
-        items = []
-        seen = set()
-        
-        for i, line in enumerate(lines):
-            if should_skip_line(line):
-                continue
-            
-            matched = False
-            
-            # Try standard patterns
-            for pattern in LINE_ITEM_PATTERNS:
-                m = pattern.search(line.strip())
-                if m:
-                    name = m.group(1).strip()
-                    # Apply item name cleaning for OCR corrections
-                    name = clean_item_name(name)
-                    price_str = m.group(2).replace(',', '.')
-                    
-                    if len(name) < 2 or name in seen or name.replace(' ', '').isdigit():
-                        continue
-                    
-                    price = normalize_price(price_str)
-                    if not price:
-                        continue
-                    
-                    conf = text_lines[i].get('confidence') if i < len(text_lines) else None
-                    if conf and conf < 0.4:
-                        continue
-                    
-                    items.append(LineItem(name=name, total_price=price))
-                    seen.add(name)
-                    matched = True
-                    break
-            
-            # Try fallback pattern
-            if not matched:
-                pm = re.search(r'\$?\s*(\d+[.,]\d{2})(?!\d)', line)
-                if pm:
-                    price_str = pm.group(1).replace(',', '.')
-                    price = normalize_price(price_str)
-                    
-                    if price:
-                        name_part = line[:pm.start()].strip()
-                        name_part = re.sub(r'^\d+\s*[x*]\s*', '', name_part).strip()
-                        # Apply item name cleaning for OCR corrections
-                        name_part = clean_item_name(name_part)
-                        
-                        if len(name_part) >= 2 and name_part not in seen:
-                            if not should_skip_line(name_part):
-                                items.append(LineItem(name=name_part, total_price=price))
-                                seen.add(name_part)
-        
-        logger.info(f"Extracted {len(items)} items")
-        return items
+        # Use shared implementation with metadata for confidence filtering
+        items_data = _extract_line_items_shared(lines, text_lines)
+        logger.info(f"Extracted {len(items_data)} items")
+        return [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in items_data]

@@ -541,7 +541,8 @@ def test_parse_receipt_store_name_detection(mock_easyocr, easyocr_config):
     result = processor.extract('/path/to/test/image.jpg')
 
     assert result.success is True
-    assert result.data.store_name == 'Walmart'
+    # Known store names are normalized to uppercase by extract_store_name
+    assert result.data.store_name == 'WALMART'
 
 
 @pytest.mark.unit

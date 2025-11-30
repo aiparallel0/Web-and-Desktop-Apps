@@ -7,10 +7,29 @@ This module provides:
 - Common price normalization function
 - Reusable text extraction utilities
 - Text post-processing and cleaning utilities
+- Integration with circular exchange framework via OCRConfig
 """
 import re
+import logging
 from decimal import Decimal
 from typing import Optional, List, Tuple
+
+logger = logging.getLogger(__name__)
+
+# Lazy import of OCRConfig to avoid circular imports
+_ocr_config = None
+
+def get_config():
+    """Get the global OCR configuration (lazy loading)."""
+    global _ocr_config
+    if _ocr_config is None:
+        try:
+            from .ocr_config import get_ocr_config
+            _ocr_config = get_ocr_config()
+        except ImportError:
+            logger.warning("OCRConfig not available, using defaults")
+            _ocr_config = None
+    return _ocr_config
 
 # Price validation constants
 PRICE_MIN = Decimal('0')
@@ -73,6 +92,16 @@ LINE_ITEM_PATTERNS = [
     re.compile(r'^(?:\d+\s*[xX*]\s*)?(.+?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with leading quote/garbage: "ITEM NAME SKU PRICE
     re.compile(r'^[\'"][^\'"]*(.{3,}?)\s+\d{10,14}\s+(\d+)\s*[.,]\s*(\d{2})'),
+    # NEW: Simple item-price format with any whitespace
+    re.compile(r'^([A-Za-z][A-Za-z0-9\s]{1,}?)\s{2,}(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Item with price in parentheses or after colon
+    re.compile(r'^(.+?)[:]\s*\$?\s*(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Multi-word item names with price
+    re.compile(r'^([A-Z][A-Za-z]+(?:\s+[A-Za-z]+)+)\s+(\d+)\s*[.,]\s*(\d{2})$'),
+    # NEW: Lowercase item names (some receipts)
+    re.compile(r'^([a-z][a-z0-9\s]{2,}?)\s+\$?\s*(\d+)\s*[.,]\s*(\d{2})$', re.IGNORECASE),
+    # NEW: Item with unit price format (e.g., "MILK  2.99 EA")
+    re.compile(r'^(.+?)\s+(\d+)\s*[.,]\s*(\d{2})\s*(?:EA|LB|OZ|CT|PK)?$', re.IGNORECASE),
 ]
 
 # SKU pattern for receipt items (12-14 digits)
@@ -874,3 +903,249 @@ def calculate_overall_confidence(base_confidence: float,
     
     # Cap at 1.0
     return min(1.0, max(0.0, confidence))
+
+
+def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None, 
+                       min_confidence: float = None, relaxed_mode: bool = None) -> List[Tuple[str, Decimal, int]]:
+    """
+    Extract line items from text lines - shared implementation for all OCR processors.
+    
+    This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
+    and PaddleProcessor to avoid code duplication.
+    
+    Integrates with OCRConfig from the circular exchange framework for dynamic
+    parameter management and auto-tuning.
+    
+    Args:
+        lines: List of text lines from OCR
+        text_metadata: Optional list of metadata dicts with 'confidence' keys
+                      (used by PaddleProcessor for confidence filtering)
+        min_confidence: Minimum confidence threshold (uses OCRConfig if None)
+        relaxed_mode: If True, use less strict validation rules (uses OCRConfig if None)
+        
+    Returns:
+        List of tuples (name, price, quantity) representing line items.
+        Caller should convert to LineItem objects.
+    """
+    # Get configuration from circular exchange if not provided
+    config = get_config()
+    if min_confidence is None:
+        min_confidence = config.min_confidence if config else 0.3
+    if relaxed_mode is None:
+        relaxed_mode = config.relaxed_mode if config else False
+    
+    # Get additional parameters from config
+    max_price = config.max_price if config else 1000.0
+    max_digit_ratio = config.max_digit_ratio if config else 2.0
+    
+    items = []
+    seen = set()
+    
+    # In relaxed mode, use lower thresholds
+    min_name_length = 1 if relaxed_mode else 2
+    
+    for i, line in enumerate(lines):
+        if should_skip_line(line):
+            continue
+        
+        matched = False
+        
+        # Try standard patterns
+        for pattern in LINE_ITEM_PATTERNS:
+            m = pattern.search(line.strip())
+            if m:
+                name = m.group(1).strip()
+                # Apply item name cleaning for OCR corrections
+                name = clean_item_name(name)
+                
+                # Handle 3-group patterns (name, dollars, cents)
+                if len(m.groups()) >= 3:
+                    price_str = f"{m.group(2)}.{m.group(3)}"
+                else:
+                    price_str = m.group(2)
+                
+                price_str = price_str.replace(',', '.')
+                
+                # Validate item name - relaxed validation for better detection
+                if len(name) < min_name_length or name in seen:
+                    continue
+                
+                # Check for purely digit names (likely SKUs or garbage)
+                if name.replace(' ', '').isdigit():
+                    continue
+                
+                # More lenient digit/alpha ratio check - use configurable threshold
+                alphas = sum(1 for c in name if c.isalpha())
+                digits = sum(1 for c in name if c.isdigit())
+                # Only skip if more than 70% digits and no alpha at all wouldn't make sense
+                if alphas == 0 and digits > 0:
+                    continue
+                if not relaxed_mode and digits > alphas * max_digit_ratio and len(name) >= 3:
+                    continue
+                
+                # Relaxed short name check - allow short names if they're mostly letters
+                if not relaxed_mode and len(name) < 5 and not name.replace(' ', '').isalpha():
+                    # Allow if at least half are letters
+                    if alphas < len(name.replace(' ', '')) / 2:
+                        continue
+                
+                # Check confidence if metadata provided - use configurable threshold
+                if text_metadata and i < len(text_metadata):
+                    conf = text_metadata[i].get('confidence')
+                    if conf and conf < min_confidence:
+                        continue
+                
+                price = normalize_price(price_str)
+                if not price or price <= 0 or price > max_price:
+                    continue
+                
+                if should_skip_item_name(name):
+                    continue
+                
+                items.append((name, price, 1))
+                seen.add(name)
+                matched = True
+                break
+        
+        # Try fallback pattern for unmatched lines - more aggressive matching
+        if not matched:
+            # Try multiple fallback patterns for better coverage
+            fallback_patterns = [
+                r'\$?\s*(\d+[.,]\d{2})(?!\d)',  # Standard price
+                r'(\d+[.,]\d{2})\s*$',  # Price at end
+                r'(\d{1,3}[.,]\d{2})\s*[A-Z]?$',  # Price with optional tax code
+            ]
+            
+            for fallback_pattern in fallback_patterns:
+                pm = re.search(fallback_pattern, line)
+                if pm:
+                    price_str = pm.group(1).replace(',', '.')
+                    price = normalize_price(price_str)
+                    
+                    if price and price > 0:
+                        name_part = line[:pm.start()].strip()
+                        # Remove quantity prefixes
+                        name_part = re.sub(r'^\d+\s*[xX*]\s*', '', name_part).strip()
+                        # Remove SKU-like patterns at the end
+                        name_part = re.sub(r'\s+\d{10,14}\s*$', '', name_part).strip()
+                        # Apply item name cleaning for OCR corrections
+                        name_part = clean_item_name(name_part)
+                        
+                        if len(name_part) >= min_name_length and name_part not in seen:
+                            if not should_skip_line(name_part) and not should_skip_item_name(name_part):
+                                items.append((name_part, price, 1))
+                                seen.add(name_part)
+                                break  # Found a match, stop trying fallback patterns
+    
+    return items
+
+
+def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None,
+                       min_confidence: float = None, relaxed_mode: bool = None) -> dict:
+    """
+    Parse raw text lines into structured receipt data - shared implementation.
+    
+    This is the consolidated implementation used by OCRProcessor, EasyOCRProcessor,
+    and PaddleProcessor to avoid code duplication.
+    
+    Integrates with OCRConfig from the circular exchange framework for dynamic
+    parameter management, auto-tuning, and extraction result tracking.
+    
+    Args:
+        lines: List of text lines from OCR
+        text_metadata: Optional list of metadata dicts with 'confidence' keys
+        min_confidence: Minimum confidence threshold (uses OCRConfig if None)
+        relaxed_mode: If True, use less strict validation (uses OCRConfig if None)
+        
+    Returns:
+        Dictionary with extracted receipt fields:
+        - store_name: str or None
+        - transaction_date: str or None
+        - total: Decimal or None
+        - subtotal: Decimal or None  
+        - tax: Decimal or None
+        - items: List of tuples (name, price, quantity)
+        - store_address: str or None
+        - store_phone: str or None
+        - extraction_notes: List of notes
+    """
+    # Get configuration from circular exchange if not provided
+    config = get_config()
+    if min_confidence is None:
+        min_confidence = config.min_confidence if config else 0.3
+    if relaxed_mode is None:
+        relaxed_mode = config.relaxed_mode if config else False
+    
+    # Get auto-fallback setting from config
+    auto_fallback = config.auto_fallback if config else True
+    relaxed_confidence = config.relaxed_confidence if config else 0.2
+    
+    result = {
+        'store_name': None,
+        'transaction_date': None,
+        'total': None,
+        'subtotal': None,
+        'tax': None,
+        'items': [],
+        'store_address': None,
+        'store_phone': None,
+        'extraction_notes': []
+    }
+    
+    used_relaxed = False
+    
+    if not lines:
+        result['extraction_notes'].append("No text")
+        # Record empty extraction for auto-tuning
+        if config:
+            config.record_extraction_result(
+                items_count=0,
+                total_detected=None,
+                confidence_avg=0.0,
+                success=False,
+                used_relaxed=False
+            )
+        return result
+    
+    # Extract structured data using shared functions
+    result['store_name'] = extract_store_name(lines)
+    result['transaction_date'] = extract_date(lines)
+    result['total'] = extract_total(lines)
+    result['subtotal'] = extract_subtotal(lines)
+    result['tax'] = extract_tax(lines)
+    # Use improved extraction with configurable thresholds
+    result['items'] = extract_line_items(lines, text_metadata, min_confidence, relaxed_mode)
+    result['store_address'] = extract_address(lines)
+    result['store_phone'] = extract_phone(lines)
+    
+    # If no items found with standard mode, try relaxed mode (auto-fallback)
+    if not result['items'] and not relaxed_mode and auto_fallback:
+        result['items'] = extract_line_items(lines, text_metadata, min_confidence=relaxed_confidence, relaxed_mode=True)
+        if result['items']:
+            result['extraction_notes'].append("Used relaxed extraction mode")
+            used_relaxed = True
+    
+    # Validate totals for accuracy
+    validation = validate_receipt_totals(result['subtotal'], result['tax'], result['total'])
+    if validation.get('notes'):
+        for note in validation['notes']:
+            result['extraction_notes'].append(note)
+    
+    # Calculate average confidence for recording
+    avg_confidence = 0.0
+    if text_metadata:
+        confidences = [m.get('confidence', 0) for m in text_metadata if m.get('confidence')]
+        avg_confidence = sum(confidences) / max(len(confidences), 1)
+    
+    # Record extraction result for auto-tuning via circular exchange
+    if config:
+        success = len(result['items']) > 0 or result['total'] is not None
+        config.record_extraction_result(
+            items_count=len(result['items']),
+            total_detected=result['total'],
+            confidence_avg=avg_confidence,
+            success=success,
+            used_relaxed=used_relaxed
+        )
+    
+    return result
