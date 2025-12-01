@@ -1,0 +1,9 @@
+{"input": {"image": "image_0.jpg"}, "output": {"text": "extracted_text_0"}, "metadata": {"confidence": 0.9}, "timestamp": "2025-12-01T09:54:54.785899"}
+{"input": {"image": "image_1.jpg"}, "output": {"text": "extracted_text_1"}, "metadata": {"confidence": 0.9}, "timestamp": "2025-12-01T09:54:54.786000"}
+{"input": {"image": "image_2.jpg"}, "output": {"text": "extracted_text_2"}, "metadata": {"confidence": 0.9}, "timestamp": "2025-12-01T09:54:54.786065"}
+{"input": {"image": "image_3.jpg"}, "output": {"text": "extracted_text_3"}, "metadata": {"confidence": 0.9}, "timestamp": "2025-12-01T09:54:54.786097"}
+{"input": {"image": "image_4.jpg"}, "output": {"text": "extracted_text_4"}, "metadata": {"confidence": 0.9}, "timestamp": "2025-12-01T09:54:54.786123"}
+{"input": {"image": "image_0.jpg"}, "output": {"text": "text"}, "metadata": {}, "timestamp": "2025-12-01T09:54:54.786927"}
+{"input": {"image": "image_1.jpg"}, "output": {"text": "text"}, "metadata": {}, "timestamp": "2025-12-01T09:54:54.786981"}
+{"input": {"image": "test.jpg"}, "output": {"text": "test"}, "metadata": {}, "timestamp": "2025-12-01T09:54:54.787920"}
+{"input": {"image": "test.jpg"}, "output": {"text": "test"}, "metadata": {}, "timestamp": "2025-12-01T09:54:54.788768"}

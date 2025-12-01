@@ -115,6 +115,17 @@ from .refactoring_engine import (
     EffortLevel,
     CodeLocation
 )
+from .feedback_loop import (
+    FEEDBACK_LOOP,
+    FeedbackLoop,
+    AutoTuner,
+    ModelTrainingPipeline,
+    TuningDecision,
+    TrainingJob,
+    TuningAction,
+    FeedbackType,
+    TrainingStatus
+)
 
 __all__ = [
     # Core
@@ -182,6 +193,16 @@ __all__ = [
     'ImpactLevel',
     'EffortLevel',
     'CodeLocation',
+    # Feedback Loop (for continuous auto-tuning and model fine-tuning)
+    'FEEDBACK_LOOP',
+    'FeedbackLoop',
+    'AutoTuner',
+    'ModelTrainingPipeline',
+    'TuningDecision',
+    'TrainingJob',
+    'TuningAction',
+    'FeedbackType',
+    'TrainingStatus',
 ]
 
 __version__ = '2.0.0'
