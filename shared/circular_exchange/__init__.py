@@ -126,6 +126,20 @@ from .feedback_loop import (
     FeedbackType,
     TrainingStatus
 )
+from .webhook_notifier import (
+    WEBHOOK_NOTIFIER,
+    WebhookNotifier,
+    NotificationConfig,
+    NotificationLevel,
+    NotificationChannel,
+    Notification
+)
+from .persistence import (
+    PERSISTENCE_LAYER,
+    PersistenceLayer,
+    DBConfig,
+    ConnectionPool
+)
 
 __all__ = [
     # Core
@@ -203,6 +217,18 @@ __all__ = [
     'TuningAction',
     'FeedbackType',
     'TrainingStatus',
+    # Webhook Notifications (for real-time alerts)
+    'WEBHOOK_NOTIFIER',
+    'WebhookNotifier',
+    'NotificationConfig',
+    'NotificationLevel',
+    'NotificationChannel',
+    'Notification',
+    # Persistence Layer (for data storage)
+    'PERSISTENCE_LAYER',
+    'PersistenceLayer',
+    'DBConfig',
+    'ConnectionPool',
 ]
 
-__version__ = '2.0.0'
+__version__ = '2.1.0'
