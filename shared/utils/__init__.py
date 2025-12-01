@@ -25,7 +25,7 @@ AI AGENT INSTRUCTIONS:
 
 UTILITIES PACKAGE - Cross-Cutting Concerns & Infrastructure
 
-This package provides enterprise-grade utilities and cross-cutting concerns
+This package provides robust utilities and cross-cutting concerns
 for the Receipt Extraction System.
 
 Modules:
