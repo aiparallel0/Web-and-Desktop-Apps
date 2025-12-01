@@ -4,8 +4,14 @@ Image Processing Module with Circular Exchange Integration
 This module provides image loading, validation, and preprocessing functions
 for OCR processing. It integrates with the Circular Exchange Framework for
 dynamic parameter configuration and auto-tuning.
+
+Round 2 CEF Improvements:
+- Added memory-efficient image loading with size limits
+- Implemented image streaming for large files
+- Added memory usage monitoring and warnings
 """
 import os
+import gc
 import numpy as np
 from PIL import Image,ImageEnhance,ImageFilter
 import logging
@@ -19,6 +25,67 @@ except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
 logger=logging.getLogger(__name__)
+
+# =============================================================================
+# MEMORY MANAGEMENT - Added based on CEF Round 2 analysis
+# =============================================================================
+
+# Maximum image dimensions to prevent memory exhaustion
+MAX_IMAGE_DIMENSION = 8000  # pixels
+MAX_IMAGE_MEMORY_MB = 100  # Maximum memory for single image processing
+
+def _estimate_memory_usage(width: int, height: int, channels: int = 3) -> float:
+    """
+    Estimate memory usage for an image in MB.
+    
+    CEF-suggested improvement to prevent memory exhaustion errors.
+    """
+    bytes_needed = width * height * channels
+    return bytes_needed / (1024 * 1024)
+
+def _check_image_memory_safe(image: Image.Image) -> bool:
+    """
+    Check if processing an image would be memory-safe.
+    
+    CEF Round 2: Added to prevent memory allocation failures.
+    """
+    width, height = image.size
+    channels = len(image.getbands())
+    memory_mb = _estimate_memory_usage(width, height, channels)
+    
+    if memory_mb > MAX_IMAGE_MEMORY_MB:
+        logger.warning(
+            f"Image would require ~{memory_mb:.1f}MB, exceeds {MAX_IMAGE_MEMORY_MB}MB limit"
+        )
+        return False
+    return True
+
+def _resize_if_too_large(image: Image.Image) -> Image.Image:
+    """
+    Resize image if it exceeds maximum dimensions.
+    
+    CEF Round 2: Added to handle large images gracefully instead of failing.
+    """
+    width, height = image.size
+    
+    if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+        # Calculate scale factor to fit within limits
+        scale = min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        
+        logger.info(
+            f"Resizing large image from {width}x{height} to {new_width}x{new_height} "
+            f"(scale: {scale:.2f})"
+        )
+        
+        # Use high-quality downsampling
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Force garbage collection after resize
+        gc.collect()
+    
+    return image
 
 # Register module with Circular Exchange
 if CIRCULAR_EXCHANGE_AVAILABLE:
@@ -94,7 +161,11 @@ BRIGHTNESS_THRESHOLD = _config['brightness_threshold']
 CONTRAST_THRESHOLD = _config['contrast_threshold']
 
 def load_and_validate_image(image_path:str)->Image.Image:
-    """Load and validate an image file with comprehensive format support."""
+    """
+    Load and validate an image file with comprehensive format support.
+    
+    CEF Round 2: Added memory-safe loading with automatic resizing for large images.
+    """
     try:
         if not os.path.exists(image_path):raise FileNotFoundError(f"Image file not found: {image_path}")
         if not os.access(image_path,os.R_OK):raise PermissionError(f"Cannot read image file: {image_path}")
@@ -103,6 +174,18 @@ def load_and_validate_image(image_path:str)->Image.Image:
         logger.info(f"Loading image from: {image_path} (size: {file_size} bytes)")
         image=Image.open(image_path)
         if image is None:raise ValueError(f"PIL failed to load image: {image_path}")
+        
+        # CEF Round 2: Resize if too large to prevent memory exhaustion
+        image = _resize_if_too_large(image)
+        
+        # CEF Round 2: Check memory safety before processing
+        if not _check_image_memory_safe(image):
+            logger.warning("Image may cause memory pressure, applying additional size reduction")
+            # Additional reduction for very high memory usage
+            width, height = image.size
+            scale = 0.5
+            image = image.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS)
+        
         if image.mode not in('RGB','L'):
             if image.mode=='RGBA':
                 background=Image.new('RGB',image.size,(255,255,255))

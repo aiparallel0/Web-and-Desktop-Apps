@@ -76,6 +76,7 @@ import gc
 import json
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, List, Any, Protocol, TypeVar, runtime_checkable
 from pathlib import Path
 from datetime import datetime
@@ -105,6 +106,58 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass  # Ignore registration errors during import
+
+
+# =============================================================================
+# THREAD POOL MANAGEMENT - Added based on CEF Round 2 analysis
+# =============================================================================
+
+# CEF Round 2: Configurable thread pool settings to prevent exhaustion
+THREAD_POOL_SIZE = int(os.environ.get('MODEL_MANAGER_THREAD_POOL_SIZE', '4'))
+THREAD_POOL_TIMEOUT = int(os.environ.get('MODEL_MANAGER_THREAD_POOL_TIMEOUT', '30'))
+
+# Global thread pool for model loading operations
+_model_executor: Optional[ThreadPoolExecutor] = None
+_executor_lock = threading.Lock()
+
+
+def get_model_executor() -> ThreadPoolExecutor:
+    """
+    Get the shared thread pool executor for model loading operations.
+    
+    CEF Round 2: Added to prevent thread pool exhaustion by using a shared,
+    bounded thread pool instead of creating unlimited threads.
+    """
+    global _model_executor
+    
+    with _executor_lock:
+        if _model_executor is None:
+            logger.info(
+                f"Initializing model loading thread pool (size: {THREAD_POOL_SIZE}, "
+                f"timeout: {THREAD_POOL_TIMEOUT}s)"
+            )
+            _model_executor = ThreadPoolExecutor(
+                max_workers=THREAD_POOL_SIZE,
+                thread_name_prefix="model_loader"
+            )
+    
+    return _model_executor
+
+
+def shutdown_model_executor():
+    """
+    Shutdown the model loading thread pool gracefully.
+    
+    CEF Round 2: Added for proper resource cleanup.
+    """
+    global _model_executor
+    
+    with _executor_lock:
+        if _model_executor is not None:
+            logger.info("Shutting down model loading thread pool...")
+            _model_executor.shutdown(wait=True, cancel_futures=False)
+            _model_executor = None
+            logger.info("Model loading thread pool shutdown complete")
 
 
 # =============================================================================
