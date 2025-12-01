@@ -22,12 +22,20 @@ import threading
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    from shared.circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
     CIRCULAR_EXCHANGE_AVAILABLE = True
 except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Import circular exchange components using relative import
-from ..circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+    try:
+        # Fallback to relative imports when running as a package
+        from ..circular_exchange import PROJECT_CONFIG, ModuleRegistration
+        from ..circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+        CIRCULAR_EXCHANGE_AVAILABLE = True
+    except ImportError:
+        CIRCULAR_EXCHANGE_AVAILABLE = False
+        # Define stubs for when circular exchange is not available
+        VariablePackage = None
+        PackageRegistry = None
+        PackageChange = None
 
 logger = logging.getLogger(__name__)
 
