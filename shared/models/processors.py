@@ -88,6 +88,62 @@ class ProcessorHealthCheckError(Exception):
     pass
 
 
+class ProcessorConnectionError(Exception):
+    """Raised when a processor fails to connect to external service (CEF-suggested)."""
+    pass
+
+
+class ProcessorTimeoutError(Exception):
+    """Raised when a processor operation times out (CEF-suggested)."""
+    pass
+
+
+# =============================================================================
+# RETRY UTILITY - Added based on CEF refactoring suggestion
+# =============================================================================
+
+def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0, 
+                       max_delay: float = 30.0, exceptions: tuple = (Exception,)):
+    """
+    Retry decorator with exponential backoff.
+    
+    Added based on CEF analysis detecting recurring connection timeout errors.
+    Implements exponential backoff to handle transient failures gracefully.
+    
+    Args:
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay between retries (seconds)
+        max_delay: Maximum delay between retries (seconds)
+        exceptions: Tuple of exceptions to catch and retry
+        
+    Returns:
+        Decorated function with retry logic
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        delay = min(base_delay * (2 ** attempt), max_delay)
+                        logger.warning(
+                            "Attempt %d/%d failed for %s: %s. Retrying in %.1fs...",
+                            attempt + 1, max_retries + 1, func.__name__, str(e), delay
+                        )
+                        time.sleep(delay)
+                    else:
+                        logger.error(
+                            "All %d attempts failed for %s: %s",
+                            max_retries + 1, func.__name__, str(e)
+                        )
+            raise last_exception
+        return wrapper
+    return decorator
+
+
 # =============================================================================
 # BASE PROCESSOR - Abstract Base Class
 # =============================================================================

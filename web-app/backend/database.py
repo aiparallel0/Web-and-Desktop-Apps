@@ -82,9 +82,21 @@ if os.getenv('USE_SQLITE', 'false').lower() == 'true' or os.getenv('TESTING', 'f
 # Create engine lazily to support testing
 _engine = None
 
+# Connection pool configuration (CEF-suggested based on pool exhaustion errors)
+# These settings help prevent "connection pool exhausted" errors
+POOL_SIZE = int(os.getenv('DB_POOL_SIZE', '5'))  # Maximum connections in pool
+POOL_MAX_OVERFLOW = int(os.getenv('DB_POOL_MAX_OVERFLOW', '10'))  # Extra connections when pool is full
+POOL_TIMEOUT = int(os.getenv('DB_POOL_TIMEOUT', '30'))  # Seconds to wait for connection
+POOL_RECYCLE = int(os.getenv('DB_POOL_RECYCLE', '1800'))  # Recycle connections every 30 minutes
+
 
 def get_engine():
-    """Get or create the database engine."""
+    """
+    Get or create the database engine.
+    
+    Configured with connection pool management to prevent pool exhaustion.
+    Added based on CEF analysis detecting recurring "connection pool exhausted" errors.
+    """
     global _engine
     if _engine is None:
         # Use NullPool for serverless/Lambda environments
@@ -94,6 +106,19 @@ def get_engine():
             'pool_pre_ping': True,  # Verify connections before using
             'echo': os.getenv('SQL_ECHO', 'false').lower() == 'true'  # Log SQL queries if SQL_ECHO=true
         }
+        
+        # Add pool configuration for PostgreSQL (not for SQLite or serverless)
+        if not DATABASE_URL.startswith('sqlite') and poolclass is None:
+            engine_kwargs.update({
+                'pool_size': POOL_SIZE,
+                'max_overflow': POOL_MAX_OVERFLOW,
+                'pool_timeout': POOL_TIMEOUT,
+                'pool_recycle': POOL_RECYCLE,
+            })
+            logger.info(
+                "Database pool configured: size=%d, max_overflow=%d, timeout=%ds, recycle=%ds",
+                POOL_SIZE, POOL_MAX_OVERFLOW, POOL_TIMEOUT, POOL_RECYCLE
+            )
         
         # Only add poolclass for non-SQLite databases
         if poolclass and not DATABASE_URL.startswith('sqlite'):
