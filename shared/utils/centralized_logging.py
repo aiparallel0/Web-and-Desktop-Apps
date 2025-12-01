@@ -671,16 +671,45 @@ def log_operation(
         raise
 
 
-# Backward compatibility aliases
-LogContext = type('LogContext', (), {
-    '__init__': lambda self, **kwargs: setattr(self, 'context', kwargs),
-    '__enter__': lambda self: (set_context(**self.context), self)[1],
-    '__exit__': lambda self, *args: clear_context(),
-    'get': staticmethod(lambda key, default=None: get_context().get(key, default)),
-    'get_all': staticmethod(get_context),
-    'set': staticmethod(lambda key, value: set_context(**{key: value})),
-    'clear': staticmethod(clear_context),
-})
+class LogContext:
+    """
+    Context manager for adding contextual information to logs.
+    Backward compatibility wrapper for logging_context.
+    
+    Example:
+        with LogContext(request_id='abc123', user_id='user456'):
+            logger.info('Processing request')
+    """
+    def __init__(self, **kwargs):
+        self.context = kwargs
+    
+    def __enter__(self):
+        set_context(**self.context)
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        clear_context()
+        return False
+    
+    @staticmethod
+    def get(key, default=None):
+        """Get a value from the current log context."""
+        return get_context().get(key, default)
+    
+    @staticmethod
+    def get_all():
+        """Get all current context values."""
+        return get_context()
+    
+    @staticmethod
+    def set(key, value):
+        """Set a value in the current log context."""
+        set_context(**{key: value})
+    
+    @staticmethod
+    def clear():
+        """Clear all context data."""
+        clear_context()
 
 
 def setup_logger(
