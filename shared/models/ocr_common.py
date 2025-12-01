@@ -113,6 +113,14 @@ PRICE_MAX = Decimal('9999')
 # Items priced above this threshold are likely OCR errors
 MAX_REALISTIC_ITEM_PRICE = Decimal('99.99')
 
+# Garbage text detection thresholds
+MIN_UNIQUE_CHAR_RATIO = 0.5  # Minimum ratio of unique chars to detect repeated char noise
+MAX_SPECIAL_CHAR_RATIO = 0.2  # Maximum ratio of special chars in valid text
+MIN_ALPHA_RATIO = 0.5  # Minimum ratio of alpha chars in non-space text
+MIN_ALPHAS_FOR_CASE_CHECK = 6  # Minimum alpha count before checking case transitions
+MAX_CASE_TRANSITIONS = 3  # Maximum case transitions before flagging as garbage
+MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK = 5  # Minimum text length before special char ratio check
+
 # Keywords to skip when extracting line items
 SKIP_KEYWORDS = frozenset({
     'subtotal', 'total', 'cash', 'change', 'tax', 'payment', 'balance',
@@ -522,41 +530,39 @@ def is_garbage_text(text: str) -> bool:
     # Strip and normalize
     clean = text.strip()
     
-    # Very short text (2 chars) that aren't valid abbreviations
+    # Very short text (2 chars) is likely garbage - valid items are 3+ chars
     if len(clean) <= 2:
-        # Only allow known 2-letter items
         return True
     
     # Calculate character type ratios
     total_chars = len(clean)
     alphas = sum(1 for c in clean if c.isalpha())
-    digits = sum(1 for c in clean if c.isdigit())
     specials = sum(1 for c in clean if not c.isalnum() and not c.isspace())
     spaces = sum(1 for c in clean if c.isspace())
     
     # Very short text with punctuation is likely garbage (e.g., ".- %", "eee -")
-    if len(clean) <= 5:
+    if len(clean) <= MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK:
         # Allow short valid items like "TEA", "GUM", "EGG" (3+ letters, all alpha)
         if clean.isalpha() and len(clean) >= 3:
             # Check for repeated characters (like "eee")
-            if len(set(clean.lower())) < len(clean) * 0.5:
+            if len(set(clean.lower())) < len(clean) * MIN_UNIQUE_CHAR_RATIO:
                 return True  # Too many repeated chars
             return False
         # Otherwise too short with mixed chars is garbage
         if alphas < 3 or specials > 0:
             return True
     
-    # Garbage detection: excessive special characters (>20%)
-    if total_chars > 5 and specials > total_chars * 0.2:
+    # Garbage detection: excessive special characters
+    if total_chars > MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK and specials > total_chars * MAX_SPECIAL_CHAR_RATIO:
         return True
     
     # Garbage detection: no letters at all (except for numbers with units)
     if alphas == 0:
         return True
     
-    # Garbage detection: too few letters compared to total (< 50%)
+    # Garbage detection: too few letters compared to total
     non_space_chars = total_chars - spaces
-    if non_space_chars > 0 and alphas < non_space_chars * 0.5:
+    if non_space_chars > 0 and alphas < non_space_chars * MIN_ALPHA_RATIO:
         return True
     
     # Garbage detection: isolated single letters like "LY" or "eet"
@@ -583,8 +589,8 @@ def is_garbage_text(text: str) -> bool:
     # Too many case transitions for the length suggests OCR noise
     # Normal text: "TOMATOES WHOLE" has 0 mid-word transitions
     # Garbage: "oo )sprauteDCaSTYLE" has many mid-word transitions
-    if alphas >= 6 and case_transitions >= 3:
-        # More than 2 case transitions in text with 6+ letters is suspicious
+    if alphas >= MIN_ALPHAS_FOR_CASE_CHECK and case_transitions >= MAX_CASE_TRANSITIONS:
+        # More than threshold case transitions in text with sufficient letters is suspicious
         # Additionally check for words starting with lowercase followed by uppercase
         for word in words:
             if len(word) >= 4:
