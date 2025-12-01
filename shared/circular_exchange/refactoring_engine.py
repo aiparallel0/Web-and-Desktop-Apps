@@ -753,6 +753,36 @@ DATA_COLLECTOR.export_training_data(Path("training_data/{report.model_id}.jsonl"
             auto_select=False
         )
     
+    def analyze_all(self) -> List[CodeSuggestion]:
+        """
+        Run all analysis methods and return combined suggestions.
+        
+        This method runs:
+        - analyze_error_handling()
+        - analyze_performance()
+        - analyze_testing()
+        - analyze_model_training()
+        
+        Returns:
+            List of all CodeSuggestion objects from all analyses
+        """
+        error_suggestions = self.analyze_error_handling()
+        performance_suggestions = self.analyze_performance()
+        testing_suggestions = self.analyze_testing()
+        model_suggestions = self.analyze_model_training()
+        
+        all_suggestions = (
+            error_suggestions + 
+            performance_suggestions + 
+            testing_suggestions + 
+            model_suggestions
+        )
+        
+        # Sort by priority
+        all_suggestions.sort(key=lambda s: s.priority_score())
+        
+        return all_suggestions
+    
     # =========================================================================
     # EXPORT & REPORTING
     # =========================================================================
