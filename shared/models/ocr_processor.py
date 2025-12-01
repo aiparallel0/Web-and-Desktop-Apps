@@ -147,6 +147,7 @@ class OCRProcessor:
             
             # First pass: Try 2 PSM modes on preprocessed image
             # Score each result based on extraction quality, not just text length
+            # Each result is a tuple: (mode_name, raw_text, parsed_receipt, quality_score)
             ocr_results=[]
             config1=r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
             text1=pytesseract.image_to_string(processed,lang='eng',config=config1)

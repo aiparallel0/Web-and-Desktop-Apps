@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Circular Exchange Framework Integration (MANDATORY)
 try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
     CIRCULAR_EXCHANGE_AVAILABLE = True
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
@@ -189,7 +189,7 @@ def process_images(project_root: Path, verbose: bool = False) -> List[Dict[str, 
         if result['success']:
             logger.info(f"  ✓ Success - Score: {result['confidence_score']:.2f}")
             logger.info(f"    Store: {result['store_name']}")
-            logger.info(f"    Total: ${result['total_detected']:.2f}" if result['total_detected'] else "    Total: Not detected")
+            logger.info(f"    Total: ${result['total_detected']:.2f}" if result['total_detected'] is not None else "    Total: Not detected")
             logger.info(f"    Items: {result['items_count']}")
             logger.info(f"    Time: {result['processing_time']:.2f}s")
         else:

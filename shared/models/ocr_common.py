@@ -135,7 +135,7 @@ TOTAL_PATTERNS = [
     # Handle reverse format where amount comes before TOTAL: "7.43 TOTAL PURCHASE"
     # This should be checked first as it's more reliable when present
     re.compile(r'\$?\s*(\d+)\s*[.,]\s*(\d{2})\s+total\s*(?:purchase|due|puri)?', re.IGNORECASE),
-    # Handle OCR errors like "$38 .68" or "$38 68" (space instead of dot) - requires decimal point or space
+    # Standard format: "TOTAL 38.68" - requires decimal point or comma
     re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+)\s*[.,]\s*(\d{2})\b', re.IGNORECASE),
     re.compile(r'amount[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
     re.compile(r'balance[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
