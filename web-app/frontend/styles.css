@@ -8,6 +8,17 @@
  * 
  * Architecture: BEM-inspired naming with CSS Custom Properties
  * 
+ * Circular Exchange Framework Integration:
+ * -----------------------------------------
+ * Module ID: web-app.frontend.styles
+ * Description: CSS design system with custom properties and responsive layouts
+ * Dependencies: []
+ * Exports: [CSS Custom Properties, Component Styles]
+ * 
+ * Note: CSS integrates with the Circular Exchange Framework through CSS Custom
+ * Properties (CSS Variables) defined in :root. These can be dynamically updated
+ * via JavaScript when configuration changes are received from the backend.
+ * 
  * Table of Contents:
  *   1. CSS Reset & Foundation
  *   2. Design Tokens (Custom Properties)

@@ -1,5 +1,20 @@
 # Receipt Extractor Pro - Web Application
 
+<!--
+================================================================================
+CIRCULAR EXCHANGE FRAMEWORK - Module Documentation
+================================================================================
+Module ID: web-app
+Description: Professional web-based receipt extraction system with AI finetuning
+Dependencies: [shared.circular_exchange, shared.models, shared.utils]
+Exports: [backend API, frontend SPA, finetune capabilities]
+
+This module is fully integrated with the Circular Exchange Framework.
+All configuration parameters are managed through VariablePackages for
+runtime tuning and auto-optimization.
+================================================================================
+-->
+
 A professional web-based receipt extraction system with AI model finetuning, batch processing, and cloud storage integration.
 
 ## Features
