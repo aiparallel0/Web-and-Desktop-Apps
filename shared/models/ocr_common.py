@@ -132,8 +132,11 @@ DATE_PATTERNS = [
 ]
 
 TOTAL_PATTERNS = [
-    # Handle OCR errors like "$38 .68" or "$38 68" (space instead of dot)
-    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
+    # Handle reverse format where amount comes before TOTAL: "7.43 TOTAL PURCHASE"
+    # This should be checked first as it's more reliable when present
+    re.compile(r'\$?\s*(\d+)\s*[.,]\s*(\d{2})\s+total\s*(?:purchase|due|puri)?', re.IGNORECASE),
+    # Standard format: "TOTAL 38.68" - requires decimal point or comma
+    re.compile(r'(?<![a-z])total[:\s]*\$?\s*(\d+)\s*[.,]\s*(\d{2})\b', re.IGNORECASE),
     re.compile(r'amount[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
     re.compile(r'balance[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
     re.compile(r'grand\s*total[:\s]*\$?\s*(\d+)\s*[.,]?\s*(\d{2})\b', re.IGNORECASE),
@@ -150,6 +153,9 @@ LINE_ITEM_PATTERNS = [
     re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]$', re.IGNORECASE),
     # Walmart format without trailing tax code: ITEM NAME SKU PRICE
     re.compile(r'^(.+?)\s+\d{10,14}\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*$'),
+    # Walmart format with semicolon: ITEM NAME SKU; PRICE T (handles OCR artifacts)
+    # Example: "SW HRO FGHTR 06305094073; 6.94 T"
+    re.compile(r'^(.+?)\s+\d{10,14}[;,]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]?$', re.IGNORECASE),
     # Format with em-dash or dash separator: ITEM NAME — XX.XX or ITEM T — XX.XX
     re.compile(r'^(.+?)\s+[—–-]\s*(\d+)\s*[.,]\s*(\d{2})$'),
     # Format with tax code at end: ITEM NAME  XX.XX F/T/N/X/O/0

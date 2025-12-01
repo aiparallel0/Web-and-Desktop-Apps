@@ -1,6 +1,6 @@
 # CEF Automated Refactoring Report
 
-**Generated:** 2025-12-01T15:38:28.874995
+**Generated:** 2025-12-01T16:09:17.820634
 **Mode:** Dry Run
 
 ## Summary

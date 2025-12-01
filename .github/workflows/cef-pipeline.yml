@@ -60,19 +60,26 @@ jobs:
           ENABLE_DATA_COLLECTION: 'true'
         run: |
           mkdir -p data/collected
+          # Run tests and capture exit code
           python -m pytest tests/ \
             --json-report \
             --json-report-file=data/collected/test_results.json \
             --cov=shared \
             --cov-report=json:data/collected/coverage.json \
             -v || true
+          # Ensure we have at least a placeholder file for artifact upload
+          if [ ! -f data/collected/test_results.json ]; then
+            echo '{"tests":[],"summary":{"total":0,"passed":0,"failed":0}}' > data/collected/test_results.json
+          fi
       
       - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-results
           path: data/collected/
           retention-days: 30
+          if-no-files-found: warn
 
   cef-analysis:
     name: CEF Analysis Cycle
@@ -96,9 +103,18 @@ jobs:
       
       - name: Download test results
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: test-results
           path: data/collected/
+      
+      - name: Ensure data directory exists
+        run: |
+          mkdir -p data/collected
+          # Create placeholder if no test results exist
+          if [ ! -f data/collected/test_results.json ]; then
+            echo '{"tests":[],"summary":{"total":0,"passed":0,"failed":0}}' > data/collected/test_results.json
+          fi
       
       - name: Run CEF Analysis Pipeline
         env:

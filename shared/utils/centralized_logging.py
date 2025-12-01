@@ -1,42 +1,27 @@
 """
 Centralized Logging and Error Handling System
 
-This module provides automatic logging injection and error handling for the entire
-application. It follows industry best practices used by companies like Amazon and Meta:
-
-1. **Automatic Logger Injection**: When any module imports `get_module_logger()`,
-   it automatically receives a pre-configured logger with the correct module name.
-
-2. **Structured Logging**: All logs are formatted as JSON for easy parsing and
-   aggregation in log management systems (ELK, Splunk, CloudWatch, etc.)
-
-3. **Automatic Error Handling**: Decorators automatically capture and log errors
-   with full context (request ID, user info, etc.)
-
-4. **Zero-Configuration**: New files automatically get logging by importing from
-   this module - no manual setup required.
-
-Usage in any Python file:
-    from shared.utils.centralized_logging import get_module_logger, log_errors
-
-    logger = get_module_logger()  # Automatically uses __name__ of calling module
-
-    @log_errors
-    def my_function():
-        logger.info("Processing...")
-        # ... function code ...
+Supports industry-standard log formats:
+- Syslog (RFC 5424) - Standard system logging protocol
+- Common Log Format (CLF) - Apache/NCSA standard  
+- Cisco IOS Format - Network device standard
+- JSON - Structured logging for log aggregation
+- Text - Human-readable colored console output
 
 Environment Variables:
-    LOG_LEVEL: Set global log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    LOG_FORMAT: Set format type ('json' or 'text')
+    LOG_LEVEL: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_FORMAT: syslog, clf, cisco, json, text
     LOG_DIR: Directory for log files (default: 'logs')
-    LOG_TO_CONSOLE: Whether to log to console ('true'/'false')
-    LOG_TO_FILE: Whether to log to file ('true'/'false')
-    LOG_APP_NAME: Root logger name (default: 'receipt_extractor') - allows reuse in other projects
-    LOG_MAX_BYTES: Max log file size in bytes (default: 10MB)
-    LOG_BACKUP_COUNT: Number of backup log files to keep (default: 5)
+    LOG_TO_CONSOLE: 'true'/'false'
+    LOG_TO_FILE: 'true'/'false'
+    LOG_APP_NAME: Root logger name (default: 'receipt_extractor')
+    LOG_MAX_BYTES: Max file size (default: 10MB)
+    LOG_BACKUP_COUNT: Backup files to keep (default: 5)
 
-Integrated with Circular Exchange Framework for dynamic log configuration.
+Usage:
+    from shared.utils.centralized_logging import get_module_logger
+    logger = get_module_logger()
+    logger.info("Processing...")
 """
 
 import logging
@@ -305,8 +290,23 @@ class CentralizedLoggingManager:
             # Clear existing handlers
             root_logger.handlers.clear()
             
-            # Create formatters
-            if _CONFIG['format'] == 'json':
+            # Create formatters based on LOG_FORMAT env var
+            # Supports: json, syslog, clf, cisco, text
+            log_format = _CONFIG['format'].lower()
+            
+            if log_format == 'syslog':
+                from shared.utils.standard_logging import SyslogFormatter
+                file_formatter = SyslogFormatter(app_name=app_name)
+                console_formatter = SyslogFormatter(app_name=app_name)
+            elif log_format == 'clf':
+                from shared.utils.standard_logging import CLFFormatter
+                file_formatter = CLFFormatter()
+                console_formatter = CLFFormatter()
+            elif log_format == 'cisco':
+                from shared.utils.standard_logging import CiscoFormatter
+                file_formatter = CiscoFormatter(facility=app_name[:3].upper())
+                console_formatter = CiscoFormatter(facility=app_name[:3].upper())
+            elif log_format == 'json':
                 file_formatter = StructuredJSONFormatter()
                 console_formatter = StructuredJSONFormatter()
             else:

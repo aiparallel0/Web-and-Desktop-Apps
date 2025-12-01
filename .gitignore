@@ -91,6 +91,8 @@ logs/
 # Data collection and training artifacts
 data/training/
 data/collected/
+data/cefr_results/
+data/pipeline/
 data/*.db
 *.db
 
