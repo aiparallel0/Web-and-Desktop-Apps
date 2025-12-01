@@ -682,13 +682,15 @@ class LogContext:
     """
     def __init__(self, **kwargs):
         self.context = kwargs
+        self._previous_context = None
     
     def __enter__(self):
+        self._previous_context = getattr(_context, 'data', {}).copy()
         set_context(**self.context)
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        clear_context()
+        _context.data = self._previous_context if self._previous_context else {}
         return False
     
     @staticmethod
