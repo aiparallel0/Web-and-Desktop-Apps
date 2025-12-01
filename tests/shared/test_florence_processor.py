@@ -321,3 +321,93 @@ class TestFlorenceTaskPrompts:
             assert FlorenceProcessor.TASK_OCR == "<OCR>"
             assert FlorenceProcessor.TASK_OCR_WITH_REGION == "<OCR_WITH_REGION>"
             assert FlorenceProcessor.TASK_DENSE_CAPTION == "<DENSE_REGION_CAPTION>"
+
+
+class TestFlorenceNullChecks:
+    """Tests for Florence-2 null safety checks."""
+
+    @pytest.fixture
+    def mock_florence_processor_no_model(self):
+        """Create a mock Florence processor without model loaded."""
+        with patch.dict('sys.modules', {
+            'torch': MagicMock(),
+            'transformers': MagicMock()
+        }):
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
+            from ai_models import FlorenceProcessor
+            
+            with patch.object(FlorenceProcessor, '_load_model', return_value=None):
+                processor = FlorenceProcessor.__new__(FlorenceProcessor)
+                processor.model_config = {'huggingface_id': 'test', 'task_prompt': '<OCR>', 'name': 'test'}
+                processor.model_id = 'test'
+                processor.task_prompt = '<OCR>'
+                processor.model_name = 'test'
+                processor.device = 'cpu'
+                processor.model = None  # Simulate failed model load
+                processor.processor = None  # Simulate failed processor load
+                
+            return processor
+
+    def test_extract_returns_error_when_model_none(self, mock_florence_processor_no_model):
+        """Test that extract returns error result when model is None."""
+        result = mock_florence_processor_no_model.extract('/path/to/image.jpg')
+        assert result.success is False
+        assert 'not loaded' in result.error.lower()
+
+    def test_run_florence_task_raises_when_processor_none(self, mock_florence_processor_no_model):
+        """Test that _run_florence_task raises error when processor is None."""
+        with pytest.raises(RuntimeError) as exc_info:
+            mock_florence_processor_no_model._run_florence_task(Mock(), '<OCR>')
+        assert 'processor not loaded' in str(exc_info.value).lower()
+
+    def test_run_florence_task_raises_when_model_none(self):
+        """Test that _run_florence_task raises error when model is None."""
+        with patch.dict('sys.modules', {
+            'torch': MagicMock(),
+            'transformers': MagicMock()
+        }):
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
+            from ai_models import FlorenceProcessor
+            
+            with patch.object(FlorenceProcessor, '_load_model', return_value=None):
+                processor = FlorenceProcessor.__new__(FlorenceProcessor)
+                processor.model_config = {'huggingface_id': 'test', 'task_prompt': '<OCR>', 'name': 'test'}
+                processor.model_id = 'test'
+                processor.task_prompt = '<OCR>'
+                processor.model_name = 'test'
+                processor.device = 'cpu'
+                processor.processor = Mock()  # Processor is set
+                processor.model = None  # Model is None
+            
+            with pytest.raises(RuntimeError) as exc_info:
+                processor._run_florence_task(Mock(), '<OCR>')
+            assert 'model not loaded' in str(exc_info.value).lower()
+
+    def test_run_florence_task_raises_when_image_none(self):
+        """Test that _run_florence_task raises error when image is None."""
+        with patch.dict('sys.modules', {
+            'torch': MagicMock(),
+            'transformers': MagicMock()
+        }):
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
+            from ai_models import FlorenceProcessor
+            
+            with patch.object(FlorenceProcessor, '_load_model', return_value=None):
+                processor = FlorenceProcessor.__new__(FlorenceProcessor)
+                processor.model_config = {'huggingface_id': 'test', 'task_prompt': '<OCR>', 'name': 'test'}
+                processor.model_id = 'test'
+                processor.task_prompt = '<OCR>'
+                processor.model_name = 'test'
+                processor.device = 'cpu'
+                processor.processor = Mock()  # Processor is set
+                processor.model = Mock()  # Model is set
+            
+            with pytest.raises(ValueError) as exc_info:
+                processor._run_florence_task(None, '<OCR>')
+            assert 'image cannot be none' in str(exc_info.value).lower()

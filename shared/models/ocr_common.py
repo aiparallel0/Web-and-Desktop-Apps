@@ -117,10 +117,17 @@ SKIP_KEYWORDS = frozenset({
 })
 
 # Additional keywords to skip in item names (store info, hours, etc.)
+# Short patterns (2 chars) need word boundary matching to avoid false positives
 ITEM_SKIP_PATTERNS = frozenset({
     'store', 'thank', 'visit', 'phone', 'fax', 'email', 
-    'open', 'hours', 'daily', 'am', 'pm'
+    'open', 'hours', 'daily'
 })
+
+# Time patterns that need word boundary matching (to avoid matching 'creamy', 'spam', etc.)
+ITEM_SKIP_TIME_PATTERNS = [
+    re.compile(r'\b\d{1,2}:\d{2}\s*(?:am|pm)\b', re.IGNORECASE),  # 9:00 AM, 12:30PM
+    re.compile(r'\b(?:am|pm)\s+to\s+\d{1,2}(?::\d{2})?\b', re.IGNORECASE),  # AM TO 9:00, PM TO 5
+]
 
 # Pre-compiled regex patterns for performance
 # Order matters - more specific patterns first
@@ -422,6 +429,9 @@ def should_skip_item_name(name: str) -> bool:
     """
     Check if an item name contains patterns that indicate it's not a product.
     
+    Uses both substring matching for longer keywords and regex patterns
+    for short words like 'am'/'pm' to avoid false positives (e.g., 'creamy').
+    
     Args:
         name: Item name to check
         
@@ -429,7 +439,17 @@ def should_skip_item_name(name: str) -> bool:
         True if name should be skipped
     """
     name_lower = name.lower()
-    return any(pattern in name_lower for pattern in ITEM_SKIP_PATTERNS)
+    
+    # Check long patterns with simple substring match
+    if any(pattern in name_lower for pattern in ITEM_SKIP_PATTERNS):
+        return True
+    
+    # Check time patterns with word boundary matching
+    for pattern in ITEM_SKIP_TIME_PATTERNS:
+        if pattern.search(name_lower):
+            return True
+    
+    return False
 
 
 def clean_item_name(name: str) -> str:
