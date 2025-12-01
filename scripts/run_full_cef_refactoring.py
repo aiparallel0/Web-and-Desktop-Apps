@@ -267,7 +267,7 @@ def run_phase2_analysis(test_results, log_entries, extraction_events, analyzer: 
         patterns = analyzer.analyze_error_patterns()
         print(f"\n  → Error Patterns Detected: {len(patterns)}")
         for pattern in list(patterns)[:3]:
-            count = getattr(pattern, 'occurrence_count', getattr(pattern, 'count', 1))
+            count = getattr(pattern, 'occurrences', getattr(pattern, 'occurrence_count', getattr(pattern, 'count', 1)))
             print(f"     • {pattern.pattern_type.value}: {count} occurrences")
     except Exception as e:
         patterns = []
@@ -278,11 +278,14 @@ def run_phase2_analysis(test_results, log_entries, extraction_events, analyzer: 
         try:
             pattern_dicts = []
             for p in patterns:
-                count = getattr(p, 'occurrence_count', getattr(p, 'count', 1))
+                count = getattr(p, 'occurrences', getattr(p, 'occurrence_count', getattr(p, 'count', 1)))
                 pattern_dicts.append({
-                    'error_type': p.pattern_type.value,
-                    'message': p.description,
-                    'count': count
+                    'pattern_id': p.pattern_id,
+                    'pattern_type': p.pattern_type.value,
+                    'description': p.description,
+                    'occurrences': count,
+                    'confidence': getattr(p, 'confidence', 0.0),
+                    'affected_modules': getattr(p, 'affected_modules', [])
                 })
             clusters = intelligent.pattern_clusterer.cluster_patterns(pattern_dicts)
             print(f"\n  → Pattern Clusters: {len(clusters)}")
@@ -296,15 +299,15 @@ def run_phase2_analysis(test_results, log_entries, extraction_events, analyzer: 
     # Run anomaly detection with extraction events
     metrics_data = []
     for event in extraction_events:
-        metrics_data.append({
-            'timestamp': event.timestamp,
-            'metric_name': 'processing_time_ms',
-            'value': event.processing_time_ms
-        })
+        metrics_data.append((event.timestamp, event.processing_time_ms))
     
     if metrics_data:
         try:
-            anomalies = intelligent.anomaly_detector.detect_anomalies(metrics_data)
+            anomalies = intelligent.anomaly_detector.detect_anomalies(
+                'processing_time_ms',
+                metrics_data,
+                'extraction_events'
+            )
             print(f"\n  → Anomalies Detected: {len(anomalies)}")
             for anomaly in anomalies[:3]:
                 print(f"     • {anomaly.anomaly_type.value}: deviation {anomaly.deviation_percent:.1f}%")
@@ -314,13 +317,13 @@ def run_phase2_analysis(test_results, log_entries, extraction_events, analyzer: 
     # Run trend analysis
     if metrics_data:
         try:
-            trend = intelligent.trend_analyzer.analyze_trend('processing_time_ms', metrics_data)
+            trend = intelligent.trend_analyzer.analyze_trend('processing_time_ms', metrics_data, '24h')
             if trend:
                 print(f"\n  → Trend Analysis:")
                 print(f"     • Direction: {trend.direction.value}")
                 print(f"     • R-squared: {trend.r_squared:.3f}")
-                if trend.forecast:
-                    print(f"     • Forecast: {trend.forecast.value:.1f} (confidence: {trend.forecast.confidence:.1%})")
+                if trend.forecast_next_period is not None:
+                    print(f"     • Forecast: {trend.forecast_next_period:.1f} (confidence: {trend.forecast_confidence:.1%})")
         except Exception as e:
             print(f"\n  → Trend Analysis: Skipped ({e})")
     
