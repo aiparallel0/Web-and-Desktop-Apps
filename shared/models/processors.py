@@ -33,6 +33,13 @@ from abc import ABC, abstractmethod
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 from utils.data_structures import LineItem, ReceiptData, ExtractionResult
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
@@ -50,6 +57,21 @@ except ImportError:
     easyocr = None
 
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.processors",
+            file_path=__file__,
+            description="OCR processor implementations using EasyOCR and PaddleOCR",
+            dependencies=["shared.circular_exchange", "shared.models.ocr_common",
+                         "shared.utils.data_structures"],
+            exports=["BaseProcessor", "EasyOCRProcessor", "PaddleProcessor",
+                    "ProcessorInitializationError", "ProcessorHealthCheckError"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
 
 
 # =============================================================================

@@ -6,7 +6,31 @@ Provides complete authentication infrastructure including:
 - JWT token creation and verification
 - Route decorators for authentication and authorization
 - API routes for user registration, login, and session management
+
+Integrated with Circular Exchange Framework for dynamic configuration.
 """
+
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="web-app.backend.auth",
+            file_path=__file__,
+            description="Authentication and authorization with JWT tokens and password hashing",
+            dependencies=["shared.circular_exchange"],
+            exports=["hash_password", "verify_password", "create_access_token", 
+                    "verify_access_token", "require_auth", "require_admin", "auth_bp"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
+
 from .password import hash_password, verify_password, is_password_strong
 from .jwt_handler import (
     create_access_token,

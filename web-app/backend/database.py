@@ -1,6 +1,30 @@
 """
 Database package initialization
+
+Integrated with Circular Exchange Framework for dynamic configuration.
 """
+
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="web-app.backend.database",
+            file_path=__file__,
+            description="Database models and connection management for SQLAlchemy",
+            dependencies=["shared.circular_exchange"],
+            exports=["Base", "User", "Receipt", "Subscription", "APIKey", 
+                    "RefreshToken", "AuditLog", "get_db", "init_db"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
+
 from .models import (
     Base,
     User,

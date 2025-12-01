@@ -83,7 +83,29 @@ from dataclasses import dataclass, field
 from enum import Enum
 from abc import ABC, abstractmethod
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.model_manager",
+            file_path=__file__,
+            description="Enterprise ML model management with LRU caching and GPU detection",
+            dependencies=["shared.circular_exchange", "shared.models.ai_models", 
+                         "shared.models.processors", "shared.models.ocr_processor"],
+            exports=["ModelManager", "ModelType", "GPUInfo", "ModelInfo", 
+                    "ConfigValidator", "GPUDetector", "ProcessorFactory"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
 
 
 # =============================================================================
