@@ -195,7 +195,7 @@ class TestSkipKeywords:
 
 
 class TestItemSkipPatterns:
-    """Tests for ITEM_SKIP_PATTERNS constant"""
+    """Tests for ITEM_SKIP_PATTERNS and time pattern matching"""
 
     def test_contains_store_info_keywords(self):
         from shared.models.ocr_common import ITEM_SKIP_PATTERNS
@@ -209,8 +209,16 @@ class TestItemSkipPatterns:
         assert 'open' in ITEM_SKIP_PATTERNS
         assert 'hours' in ITEM_SKIP_PATTERNS
         assert 'daily' in ITEM_SKIP_PATTERNS
-        assert 'am' in ITEM_SKIP_PATTERNS
-        assert 'pm' in ITEM_SKIP_PATTERNS
+
+    def test_time_patterns_use_word_boundary(self):
+        """Test that AM/PM use word boundary matching to avoid false positives."""
+        from shared.models.ocr_common import should_skip_item_name
+        # Should skip time patterns
+        assert should_skip_item_name('OPEN 9:00 AM') is True
+        assert should_skip_item_name('HOURS 8:00AM TO 9:00PM') is True
+        # Should NOT skip words containing 'am' or 'pm'
+        assert should_skip_item_name('CREAMY SALTED PEANUT BUTTER') is False
+        assert should_skip_item_name('SPAM CLASSIC') is False
 
 
 class TestShouldSkipItemName:
