@@ -45,7 +45,27 @@ from enum import Enum
 import json
 import logging
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.utils.data_structures",
+            file_path=__file__,
+            description="Core domain models for receipt extraction (LineItem, ReceiptData, ExtractionResult)",
+            dependencies=["shared.circular_exchange"],
+            exports=["LineItem", "ReceiptData", "ExtractionResult", "ExtractionStatus"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
 
 
 class ExtractionStatus(Enum):

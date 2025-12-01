@@ -31,6 +31,58 @@ def get_config():
             _ocr_config = None
     return _ocr_config
 
+
+def get_detection_config():
+    """
+    Get detection configuration from circular exchange framework.
+    
+    Returns a dictionary with all detection parameters that can be used
+    by OCR processors for text detection. Parameters are dynamically
+    managed via the circular exchange framework with auto-tuning support.
+    
+    Returns:
+        Dictionary containing detection parameters or defaults if unavailable
+    """
+    config = get_config()
+    if config:
+        return config.get_detection_config()
+    
+    # Return defaults if config not available
+    return {
+        'min_confidence': 0.25,
+        'box_threshold': 0.3,
+        'min_text_height': 8,
+        'use_angle_cls': True,
+        'multi_scale': True,
+        'auto_retry': True,
+        'enhance_contrast': True,
+        'denoise_strength': 10
+    }
+
+
+def record_detection_result(text_regions_count: int, avg_confidence: float, 
+                            success: bool, processing_time: float = 0.0) -> None:
+    """
+    Record a detection result for auto-tuning via circular exchange.
+    
+    This function should be called by OCR processors after text detection
+    to enable automatic parameter adjustment based on detection success rates.
+    
+    Args:
+        text_regions_count: Number of text regions detected
+        avg_confidence: Average confidence of detected regions
+        success: Whether detection was successful
+        processing_time: Time taken for detection in seconds
+    """
+    config = get_config()
+    if config:
+        config.record_detection_result(
+            text_regions_count=text_regions_count,
+            avg_confidence=avg_confidence,
+            success=success,
+            processing_time=processing_time
+        )
+
 # Price validation constants
 PRICE_MIN = Decimal('0')
 PRICE_MAX = Decimal('9999')

@@ -1,9 +1,96 @@
+"""
+Image Processing Module with Circular Exchange Integration
+
+This module provides image loading, validation, and preprocessing functions
+for OCR processing. It integrates with the Circular Exchange Framework for
+dynamic parameter configuration and auto-tuning.
+"""
 import os
 import numpy as np
 from PIL import Image,ImageEnhance,ImageFilter
 import logging
+
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger=logging.getLogger(__name__)
-BRIGHTNESS_THRESHOLD,CONTRAST_THRESHOLD=100,40
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    PROJECT_CONFIG.register_module(ModuleRegistration(
+        module_id="shared.utils.image_processing",
+        file_path=__file__,
+        description="Image loading, validation, and preprocessing for OCR processing",
+        dependencies=["shared.circular_exchange"],
+        exports=["load_and_validate_image", "enhance_image", "preprocess_for_ocr", 
+                 "assess_image_quality", "get_image_config"]
+    ))
+
+# Create package registry for image processing configuration
+_image_config_registry = PackageRegistry() if CIRCULAR_EXCHANGE_AVAILABLE else None
+
+def _init_image_config():
+    """Initialize image processing configuration packages."""
+    if not CIRCULAR_EXCHANGE_AVAILABLE or _image_config_registry is None:
+        return
+    
+    _image_config_registry.create_package(
+        name='image.brightness_threshold',
+        initial_value=100,
+        source_module='shared.utils.image_processing',
+        validator=lambda v: 0 <= v <= 255
+    )
+    _image_config_registry.create_package(
+        name='image.contrast_threshold',
+        initial_value=40,
+        source_module='shared.utils.image_processing',
+        validator=lambda v: 0 <= v <= 255
+    )
+    _image_config_registry.create_package(
+        name='image.upscale_threshold',
+        initial_value=1000,
+        source_module='shared.utils.image_processing',
+        validator=lambda v: v >= 100
+    )
+    _image_config_registry.create_package(
+        name='image.enhancement_factor',
+        initial_value=1.2,
+        source_module='shared.utils.image_processing',
+        validator=lambda v: 0.5 <= v <= 3.0
+    )
+
+_init_image_config()
+
+def get_image_config():
+    """Get image processing configuration from Circular Exchange."""
+    if _image_config_registry is None:
+        return {
+            'brightness_threshold': 100,
+            'contrast_threshold': 40,
+            'upscale_threshold': 1000,
+            'enhancement_factor': 1.2
+        }
+    
+    def _get_pkg_value(name: str, default):
+        """Helper to get package value with fallback."""
+        pkg = _image_config_registry.get_package(name)
+        return pkg.get() if pkg else default
+    
+    return {
+        'brightness_threshold': _get_pkg_value('image.brightness_threshold', 100),
+        'contrast_threshold': _get_pkg_value('image.contrast_threshold', 40),
+        'upscale_threshold': _get_pkg_value('image.upscale_threshold', 1000),
+        'enhancement_factor': _get_pkg_value('image.enhancement_factor', 1.2)
+    }
+
+# Get config values (with fallback for backward compatibility)
+_config = get_image_config()
+BRIGHTNESS_THRESHOLD = _config['brightness_threshold']
+CONTRAST_THRESHOLD = _config['contrast_threshold']
 
 def load_and_validate_image(image_path:str)->Image.Image:
     """Load and validate an image file with comprehensive format support."""
