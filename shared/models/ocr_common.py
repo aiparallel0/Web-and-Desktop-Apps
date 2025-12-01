@@ -229,6 +229,7 @@ OCR_CORRECTIONS = {
 WORD_CORRECTIONS = {
     'tota1': 'total',
     't0tal': 'total',
+    'fotal': 'total',  # F misread as T
     'subt0tal': 'subtotal',
     'subtota1': 'subtotal',
     'ca5h': 'cash',
@@ -421,6 +422,8 @@ def should_skip_line(line: str) -> bool:
     """
     Check if a line should be skipped when extracting items.
     
+    Applies OCR corrections before checking for skip keywords.
+    
     Args:
         line: Text line to check
         
@@ -428,8 +431,15 @@ def should_skip_line(line: str) -> bool:
         True if line should be skipped
     """
     line_lower = line.lower()
-    # Skip lines with common keywords
-    if any(kw in line_lower for kw in SKIP_KEYWORDS):
+    
+    # Apply word corrections to catch OCR-misread keywords like FOTAL -> TOTAL
+    corrected_line = line_lower
+    for wrong, correct in WORD_CORRECTIONS.items():
+        if wrong in corrected_line:
+            corrected_line = corrected_line.replace(wrong, correct)
+    
+    # Skip lines with common keywords (using corrected line)
+    if any(kw in corrected_line for kw in SKIP_KEYWORDS):
         return True
     # Skip quantity lines like "2 @ 0.49" or "3FA @.0.29/EA"
     if re.match(r'^\d+\s*@', line) or re.match(r'^\d+[A-Z]*\s*[@—-]', line):

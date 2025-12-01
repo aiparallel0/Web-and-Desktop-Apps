@@ -252,6 +252,11 @@ class TestShouldSkipLine:
         from shared.models.ocr_common import should_skip_line
         assert should_skip_line('Coffee $3.50') is False
 
+    def test_skip_fotal_ocr_error(self):
+        """Test that FOTAL (OCR misread of TOTAL) is skipped."""
+        from shared.models.ocr_common import should_skip_line
+        assert should_skip_line('FOTAL 38.68') is True
+
 
 class TestExtractStoreName:
     """Tests for extract_store_name function"""
