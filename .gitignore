@@ -71,6 +71,7 @@ Thumbs.db
 !**/models_config.json
 !tests/**/*.json
 !test_data/**/*.json
+!docs/**/*.json
 
 # Test artifacts and coverage
 .coverage
