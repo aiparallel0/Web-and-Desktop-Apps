@@ -21,6 +21,12 @@ except ImportError:
     raise ImportError("pytesseract required: pip install pytesseract")
 logger=logging.getLogger(__name__)
 
+# Score thresholds for early-exit optimization in OCR extraction
+# Good quality threshold: has total + some other data (avoid aggressive preprocessing)
+GOOD_QUALITY_SCORE_THRESHOLD = 40
+# Excellent quality threshold: high confidence result (stop searching immediately)
+EXCELLENT_QUALITY_SCORE_THRESHOLD = 80
+
 class OCRProcessor:
 
     def __init__(self,model_config:Dict):
@@ -108,8 +114,7 @@ class OCRProcessor:
             initial_score=self._score_result(receipt,best_text)
             
             # Early exit if initial result is good (has total and reasonable score)
-            GOOD_SCORE_THRESHOLD = 40  # Has total + some other data
-            if initial_score >= GOOD_SCORE_THRESHOLD:
+            if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
                 receipt.processing_time=time.time()-start_time
                 receipt.model_used=f"{self.model_name} ({best_mode})"
                 receipt.confidence_score=min(1.0,initial_score/95)
@@ -135,13 +140,13 @@ class OCRProcessor:
                         if score>best_score:
                             best_score=score
                             best_result=rec
-                            # Early exit if we find a very good result
-                            if score >= 80:
+                            # Early exit if we find an excellent result
+                            if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
                                 logger.info(f"Found excellent result with score {score}, stopping search")
                                 break
                     except:continue
                 # Break outer loop too if excellent result found
-                if best_score >= 80:
+                if best_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
                     break
             
             if best_result is None or best_score==0:
