@@ -779,7 +779,10 @@ def get_default_logger() -> logging.Logger:
     return _default_logger
 
 
-class LogLevel:
+from enum import Enum as _Enum
+
+
+class LogLevel(_Enum):
     """Standardized log levels. Use logging module constants directly when possible."""
     DEBUG = 'DEBUG'
     INFO = 'INFO'
