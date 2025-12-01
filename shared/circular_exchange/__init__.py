@@ -134,17 +134,15 @@ from .refactoring_engine import (
     EffortLevel,
     CodeLocation
 )
-# CEFR - CEF Refactoring Engine (new unified naming)
-from .cefr import (
-    CEFR,
-    CEFRefactoringEngine,
-    CodeSuggestion as CEFRSuggestion,
-    RefactoringPlan as CEFRPlan,
-    SuggestionType as CEFRSuggestionType,
-    ImpactLevel as CEFRImpactLevel,
-    EffortLevel as CEFREffortLevel,
-    CodeLocation as CEFRCodeLocation
-)
+# CEFR - CEF Refactoring Engine (aliases to refactoring_engine)
+CEFR = REFACTORING_ENGINE
+CEFRefactoringEngine = RefactoringEngine
+CEFRSuggestion = CodeSuggestion
+CEFRPlan = RefactoringPlan
+CEFRSuggestionType = SuggestionType
+CEFRImpactLevel = ImpactLevel
+CEFREffortLevel = EffortLevel
+CEFRCodeLocation = CodeLocation
 from .feedback_loop import (
     FEEDBACK_LOOP,
     FeedbackLoop,
@@ -202,23 +200,21 @@ from .autonomous_refactor import (
     PRGenerator,
     get_autonomous_refactor
 )
-# CEFR Autonomous - CEF Refactoring Autonomous Engine (new unified naming)
-from .cefr_autonomous import (
-    AutonomousRefactor as CEFRAutonomous,
-    RefactorRisk as CEFRRisk,
-    RefactorStatus as CEFRStatus,
-    RefactorResult as CEFRResult,
-    ABTest as CEFRABTest,
-    ABTestVariant as CEFRABTestVariant,
-    ABTestResult as CEFRABTestResult,
-    ABTestManager as CEFRABTestManager,
-    RollbackManager as CEFRRollbackManager,
-    RollbackTrigger as CEFRRollbackTrigger,
-    RollbackAction as CEFRRollbackAction,
-    CodeTransformer as CEFRCodeTransformer,
-    PRGenerator as CEFRPRGenerator,
-    get_autonomous_refactor as get_cefr_autonomous
-)
+# CEFR Autonomous - CEF Refactoring Autonomous Engine (aliases to autonomous_refactor)
+CEFRAutonomous = AutonomousRefactor
+CEFRRisk = RefactorRisk
+CEFRStatus = RefactorStatus
+CEFRResult = RefactorResult
+CEFRABTest = ABTest
+CEFRABTestVariant = ABTestVariant
+CEFRABTestResult = ABTestResult
+CEFRABTestManager = ABTestManager
+CEFRRollbackManager = RollbackManager
+CEFRRollbackTrigger = RollbackTrigger
+CEFRRollbackAction = RollbackAction
+CEFRCodeTransformer = CodeTransformer
+CEFRPRGenerator = PRGenerator
+get_cefr_autonomous = get_autonomous_refactor
 
 __all__ = [
     # Core
