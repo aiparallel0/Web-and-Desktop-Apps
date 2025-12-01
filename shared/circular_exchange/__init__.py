@@ -105,6 +105,16 @@ from .metrics_analyzer import (
     TestHealthReport,
     ModelPerformanceReport
 )
+from .refactoring_engine import (
+    REFACTORING_ENGINE,
+    RefactoringEngine,
+    CodeSuggestion,
+    RefactoringPlan,
+    SuggestionType,
+    ImpactLevel,
+    EffortLevel,
+    CodeLocation
+)
 
 __all__ = [
     # Core
@@ -163,6 +173,15 @@ __all__ = [
     'PerformanceBottleneck',
     'TestHealthReport',
     'ModelPerformanceReport',
+    # Refactoring Engine (for automated code improvement)
+    'REFACTORING_ENGINE',
+    'RefactoringEngine',
+    'CodeSuggestion',
+    'RefactoringPlan',
+    'SuggestionType',
+    'ImpactLevel',
+    'EffortLevel',
+    'CodeLocation',
 ]
 
 __version__ = '2.0.0'
