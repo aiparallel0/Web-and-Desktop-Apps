@@ -39,7 +39,8 @@ from .ocr_common import (
     extract_date, extract_total, extract_phone, extract_address,
     should_skip_line, extract_store_name, LINE_ITEM_PATTERNS, clean_item_name,
     extract_line_items as _extract_line_items_shared,
-    parse_receipt_text as _parse_receipt_text_shared
+    parse_receipt_text as _parse_receipt_text_shared,
+    get_detection_config, record_detection_result
 )
 
 # Conditional imports for optional dependencies
@@ -252,6 +253,9 @@ class EasyOCRProcessor:
         """
         Extract receipt data from an image using EasyOCR.
         
+        Uses circular exchange framework for detection configuration with
+        lowered default thresholds for improved text detection rates.
+        
         Args:
             image_path: Path to the receipt image
             
@@ -267,20 +271,48 @@ class EasyOCRProcessor:
             return ExtractionResult(success=False, error="EasyOCR reader init failed")
         
         try:
-            logger.info(f"EasyOCR: {image_path}")
+            # Get detection configuration from circular exchange framework
+            detection_config = get_detection_config()
+            min_confidence = detection_config.get('min_confidence', 0.25)
+            
+            logger.info(f"EasyOCR: {image_path} (detection threshold: {min_confidence})")
             results = self.reader.readtext(image_path)
             logger.info(f"Detected {len(results)} regions")
             
-            # Extract text with confidence filtering
+            # Extract text with configurable confidence filtering
             text_lines = []
+            total_confidence = 0.0
             for detection in results:
                 if len(detection) >= 3:
                     bbox, text, confidence = detection[0], detection[1], detection[2]
-                    if confidence > 0.3:
+                    if confidence > min_confidence:
                         text_lines.append(text)
+                        total_confidence += confidence
+            
+            # Calculate average confidence for detection tracking
+            avg_confidence = total_confidence / max(len(text_lines), 1)
+            
+            # Record detection result for auto-tuning
+            record_detection_result(
+                text_regions_count=len(text_lines),
+                avg_confidence=avg_confidence,
+                success=len(text_lines) > 0,
+                processing_time=time.time() - start_time
+            )
             
             if not text_lines:
-                return ExtractionResult(success=False, error="No text detected")
+                # Try with even lower threshold if auto-retry is enabled
+                if detection_config.get('auto_retry', True):
+                    logger.info("No text detected, retrying with lower threshold...")
+                    lower_threshold = min_confidence * 0.5
+                    for detection in results:
+                        if len(detection) >= 3:
+                            bbox, text, confidence = detection[0], detection[1], detection[2]
+                            if confidence > lower_threshold:
+                                text_lines.append(text)
+                
+                if not text_lines:
+                    return ExtractionResult(success=False, error="No text detected")
             
             # Parse receipt data
             receipt = self._parse_receipt_text(text_lines)
@@ -373,10 +405,11 @@ def _get_paddleocr():
 
 class PaddleProcessor:
     """
-    OCR processor using PaddleOCR library.
+    OCR processor using PaddleOCR library with circular exchange integration.
     
     PaddleOCR provides fast and accurate OCR with angle detection
-    and multi-language support.
+    and multi-language support. Detection parameters are dynamically
+    managed via the circular exchange framework for automatic tuning.
     
     Attributes:
         model_config: Configuration dictionary for the model
@@ -386,7 +419,10 @@ class PaddleProcessor:
 
     def __init__(self, model_config: Dict):
         """
-        Initialize the PaddleOCR processor.
+        Initialize the PaddleOCR processor with circular exchange integration.
+        
+        Uses detection configuration from circular exchange framework for
+        lowered default thresholds to improve text detection rates.
         
         Args:
             model_config: Configuration dictionary
@@ -397,16 +433,21 @@ class PaddleProcessor:
         self.model_config = model_config
         self.model_name = model_config['name']
         
-        logger.info("Initializing PaddleOCR...")
+        # Get detection configuration from circular exchange framework
+        detection_config = get_detection_config()
+        use_angle_cls = detection_config.get('use_angle_cls', True)
+        box_threshold = detection_config.get('box_threshold', 0.3)
+        
+        logger.info(f"Initializing PaddleOCR with box_threshold={box_threshold}")
         try:
             PaddleOCR = _get_paddleocr()
             self.ocr = PaddleOCR(
-                use_angle_cls=True,
+                use_angle_cls=use_angle_cls,
                 lang='en',
-                det_db_thresh=0.2,
-                det_db_box_thresh=0.3
+                det_db_thresh=0.2,  # Lower threshold for better text region detection
+                det_db_box_thresh=box_threshold
             )
-            logger.info("PaddleOCR initialized")
+            logger.info("PaddleOCR initialized with circular exchange config")
         except Exception as e:
             logger.error(f"PaddleOCR init failed: {e}")
             raise
@@ -414,6 +455,9 @@ class PaddleProcessor:
     def extract(self, image_path: str) -> ExtractionResult:
         """
         Extract receipt data from an image using PaddleOCR.
+        
+        Uses circular exchange framework for detection configuration with
+        lowered default thresholds for improved text detection rates.
         
         Args:
             image_path: Path to the receipt image
@@ -424,6 +468,11 @@ class PaddleProcessor:
         start_time = time.time()
         
         try:
+            # Get detection configuration from circular exchange framework
+            detection_config = get_detection_config()
+            min_confidence = detection_config.get('min_confidence', 0.25)
+            auto_retry = detection_config.get('auto_retry', True)
+            
             # Load and preprocess image
             image = load_and_validate_image(image_path)
             preprocessed = preprocess_for_ocr(image, aggressive=True)
@@ -435,25 +484,33 @@ class PaddleProcessor:
                 logger.info(f"Converted grayscale to RGB: {image_np.shape}")
             
             # Run OCR
-            logger.info("Running PaddleOCR extraction...")
+            logger.info(f"Running PaddleOCR extraction (threshold: {min_confidence})...")
             result = self.ocr.ocr(image_np)
             logger.info(f"Result type:{type(result)}, len:{len(result) if result else 0}")
             
             if result and len(result) > 0:
                 logger.info(f"First elem: type={type(result[0])}, len={len(result[0]) if result[0] else 0}")
             
-            # Retry with original image if no results
-            if not result or not result[0]:
+            # Retry with original image if no results and auto_retry is enabled
+            if (not result or not result[0]) and auto_retry:
                 logger.warning("No results, retrying with original image")
                 image_np = np.array(image)
                 result = self.ocr.ocr(image_np)
             
             if not result or not result[0]:
                 logger.warning("PaddleOCR: no text detected")
+                # Record failed detection for auto-tuning
+                record_detection_result(
+                    text_regions_count=0,
+                    avg_confidence=0.0,
+                    success=False,
+                    processing_time=time.time() - start_time
+                )
                 return ExtractionResult(success=False, error="No text detected")
 
-            # Parse OCR results
+            # Parse OCR results with configurable confidence filtering
             text_lines = []
+            total_confidence = 0.0
             for line in result[0]:
                 if not line or len(line) < 2:
                     continue
@@ -473,15 +530,28 @@ class PaddleProcessor:
                     else:
                         continue
                     
-                    if confidence > 0.3:
+                    # Use configurable confidence threshold from circular exchange
+                    if confidence > min_confidence:
                         text_lines.append({
                             'text': text,
                             'confidence': confidence,
                             'bbox': bbox
                         })
+                        total_confidence += confidence
                         
                 except (ValueError, TypeError, IndexError):
                     continue
+            
+            # Calculate average confidence for detection tracking
+            avg_confidence = total_confidence / max(len(text_lines), 1)
+            
+            # Record detection result for auto-tuning
+            record_detection_result(
+                text_regions_count=len(text_lines),
+                avg_confidence=avg_confidence,
+                success=len(text_lines) > 0,
+                processing_time=time.time() - start_time
+            )
             
             # Sort by Y coordinate
             def safe_get_y(d):

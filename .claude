@@ -1,0 +1,51 @@
+# Claude AI Instructions for Receipt Extractor
+
+## MANDATORY ARCHITECTURAL REQUIREMENT
+
+This project uses the **Circular Exchange Framework** for ALL configuration and module management.
+
+**You MUST integrate with this framework in every code contribution.**
+
+## Before Any Code Change
+
+1. Read `CIRCULAR_EXCHANGE_GUIDE.md`
+2. Check how existing modules integrate (see `shared/models/ocr_config.py`)
+3. Follow the patterns established in this codebase
+
+## Required Integration Pattern
+
+```python
+# At top of every Python file:
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# After imports, register the module:
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="your.module.id",
+            file_path=__file__,
+            description="What this module does",
+            dependencies=["dependencies"],
+            exports=["exports"]
+        ))
+    except Exception:
+        pass
+
+# Use VariablePackage for all configurable values
+_registry = PackageRegistry() if CIRCULAR_EXCHANGE_AVAILABLE else None
+```
+
+## Key Files
+
+- `CIRCULAR_EXCHANGE_GUIDE.md` - Full guide
+- `AGENTS.md` - General AI agent instructions
+- `shared/circular_exchange/` - Framework implementation
+- `shared/models/ocr_config.py` - Reference implementation
+
+## This Is Not Optional
+
+The Circular Exchange Framework is the core architecture of this project. All code must integrate with it.

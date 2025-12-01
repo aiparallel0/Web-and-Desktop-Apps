@@ -35,6 +35,8 @@ Environment Variables:
     LOG_APP_NAME: Root logger name (default: 'receipt_extractor') - allows reuse in other projects
     LOG_MAX_BYTES: Max log file size in bytes (default: 10MB)
     LOG_BACKUP_COUNT: Number of backup log files to keep (default: 5)
+
+Integrated with Circular Exchange Framework for dynamic log configuration.
 """
 
 import logging
@@ -51,6 +53,27 @@ from pathlib import Path
 from typing import Optional, Any, Callable, Dict, TypeVar, Union
 from contextlib import contextmanager
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# Register module with Circular Exchange (deferred to avoid circular import)
+def _register_logging_module():
+    if CIRCULAR_EXCHANGE_AVAILABLE:
+        try:
+            PROJECT_CONFIG.register_module(ModuleRegistration(
+                module_id="shared.utils.centralized_logging",
+                file_path=__file__,
+                description="Centralized logging with automatic logger injection and structured JSON output",
+                dependencies=["shared.circular_exchange"],
+                exports=["get_module_logger", "log_errors", "set_request_context", "LoggingConfig"]
+            ))
+        except Exception:
+            pass  # Ignore registration errors during import
+
 # Thread-local storage for request context
 _context = threading.local()
 
@@ -65,6 +88,30 @@ _CONFIG = {
     'backup_count': int(os.getenv('LOG_BACKUP_COUNT', 5)),
     'app_name': os.getenv('LOG_APP_NAME', 'receipt_extractor'),  # Configurable root logger name
 }
+
+# Initialize Circular Exchange logging config
+_logging_registry = PackageRegistry() if CIRCULAR_EXCHANGE_AVAILABLE else None
+
+def _init_logging_config():
+    """Initialize logging configuration with Circular Exchange."""
+    if _logging_registry is None:
+        return
+    try:
+        _logging_registry.create_package(
+            name='logging.level',
+            initial_value=_CONFIG['level'],
+            source_module='shared.utils.centralized_logging'
+        )
+        _logging_registry.create_package(
+            name='logging.format',
+            initial_value=_CONFIG['format'],
+            source_module='shared.utils.centralized_logging'
+        )
+    except Exception:
+        pass  # Ignore errors during init
+
+_init_logging_config()
+_register_logging_module()
 
 # Type variable for generic decorator
 F = TypeVar('F', bound=Callable[..., Any])

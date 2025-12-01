@@ -193,49 +193,165 @@ class OCRConfig:
             validator=lambda v: 0.0 <= v <= 1.0
         )
         
-        logger.debug("OCR parameter packages initialized")
+        # =====================================================================
+        # Text Detection Parameters - Circular Exchange Integration
+        # These parameters control the text detection phase with dynamic tuning
+        # =====================================================================
+        
+        # Detection confidence threshold (lowered default for better detection)
+        self._registry.create_package(
+            name='ocr.detection.min_confidence',
+            initial_value=0.25,  # Lowered default for improved text detection
+            source_module='ocr_config',
+            validator=lambda v: 0.0 <= v <= 1.0
+        )
+        
+        # Detection box threshold for text region detection
+        self._registry.create_package(
+            name='ocr.detection.box_threshold',
+            initial_value=0.3,
+            source_module='ocr_config',
+            validator=lambda v: 0.0 <= v <= 1.0
+        )
+        
+        # Minimum text height in pixels
+        self._registry.create_package(
+            name='ocr.detection.min_text_height',
+            initial_value=8,  # Lowered to catch smaller text
+            source_module='ocr_config',
+            validator=lambda v: v >= 1
+        )
+        
+        # Maximum text height in pixels (to filter out noise)
+        self._registry.create_package(
+            name='ocr.detection.max_text_height',
+            initial_value=500,
+            source_module='ocr_config',
+            validator=lambda v: v >= 10
+        )
+        
+        # Text angle detection enabled
+        self._registry.create_package(
+            name='ocr.detection.use_angle_cls',
+            initial_value=True,
+            source_module='ocr_config'
+        )
+        
+        # Multi-scale detection for better accuracy
+        self._registry.create_package(
+            name='ocr.detection.multi_scale',
+            initial_value=True,
+            source_module='ocr_config'
+        )
+        
+        # Detection retry on failure
+        self._registry.create_package(
+            name='ocr.detection.auto_retry',
+            initial_value=True,
+            source_module='ocr_config'
+        )
+        
+        # Preprocessing parameters for detection
+        self._registry.create_package(
+            name='ocr.detection.enhance_contrast',
+            initial_value=True,
+            source_module='ocr_config'
+        )
+        
+        self._registry.create_package(
+            name='ocr.detection.denoise_strength',
+            initial_value=10,  # h parameter for fastNlMeansDenoising
+            source_module='ocr_config',
+            validator=lambda v: 0 <= v <= 50
+        )
+        
+        self._registry.create_package(
+            name='ocr.detection.binarization_threshold',
+            initial_value=0,  # 0 means use Otsu's method
+            source_module='ocr_config',
+            validator=lambda v: 0 <= v <= 255
+        )
+        
+        logger.debug("OCR parameter packages initialized (including detection parameters)")
     
     def _init_pipeline(self) -> None:
-        """Initialize the OCR processing pipeline stages."""
+        """Initialize the OCR processing pipeline stages with circular exchange integration."""
         self._pipeline_stages = {
+            # Image preprocessing stage
             'preprocessing': OCRPipelineStage(
                 name='preprocessing',
                 parameters={
                     'enhance_contrast': True,
                     'deskew': True,
-                    'denoise': True
+                    'denoise': True,
+                    'upscale_factor': 2.0,
+                    'adaptive_threshold': True
                 }
             ),
+            # Text detection stage - core detection parameters
             'text_detection': OCRPipelineStage(
                 name='text_detection',
                 parameters={
-                    'confidence_threshold': 0.3,
-                    'min_text_height': 10
+                    'confidence_threshold': 0.25,  # Lowered for better detection
+                    'min_text_height': 8,
+                    'max_text_height': 500,
+                    'use_angle_cls': True,
+                    'multi_scale': True,
+                    'detection_db_thresh': 0.2,
+                    'detection_db_box_thresh': 0.3
                 }
             ),
+            # Character recognition stage
+            'text_recognition': OCRPipelineStage(
+                name='text_recognition',
+                parameters={
+                    'recognition_confidence': 0.3,
+                    'language': 'eng',
+                    'use_space_char': True,
+                    'max_text_length': 256
+                }
+            ),
+            # Line merging and extraction
             'line_extraction': OCRPipelineStage(
                 name='line_extraction',
                 parameters={
                     'merge_lines': True,
-                    'sort_by_position': True
+                    'sort_by_position': True,
+                    'merge_threshold': 10,
+                    'line_height_tolerance': 0.5
                 }
             ),
+            # Item parsing stage
             'item_parsing': OCRPipelineStage(
                 name='item_parsing',
                 parameters={
                     'use_patterns': True,
-                    'fallback_enabled': True
+                    'fallback_enabled': True,
+                    'relaxed_matching': False,
+                    'min_item_confidence': 0.3
                 }
             ),
+            # Validation stage
             'validation': OCRPipelineStage(
                 name='validation',
                 parameters={
                     'validate_totals': True,
-                    'validate_items': True
+                    'validate_items': True,
+                    'validate_math': True,
+                    'tolerance': 0.10
+                }
+            ),
+            # Post-processing stage for cleanup
+            'post_processing': OCRPipelineStage(
+                name='post_processing',
+                parameters={
+                    'apply_corrections': True,
+                    'normalize_prices': True,
+                    'clean_item_names': True
                 }
             )
         }
-        logger.debug("OCR pipeline stages initialized")
+        logger.debug("OCR pipeline stages initialized with detection configuration")
     
     # =====================================================================
     # Parameter Accessors
@@ -312,6 +428,199 @@ class OCRConfig:
         """Check if auto-tuning is enabled."""
         pkg = self._registry.get_package('ocr.auto_tune')
         return pkg.get() if pkg else True
+    
+    # =====================================================================
+    # Text Detection Parameters - Circular Exchange Accessors
+    # =====================================================================
+    
+    @property
+    def detection_min_confidence(self) -> float:
+        """Get the minimum detection confidence threshold (lowered default)."""
+        pkg = self._registry.get_package('ocr.detection.min_confidence')
+        return pkg.get() if pkg else 0.25
+    
+    def set_detection_min_confidence(self, value: float) -> bool:
+        """Set the minimum detection confidence threshold."""
+        pkg = self._registry.get_package('ocr.detection.min_confidence')
+        return pkg.set(value) if pkg else False
+    
+    @property
+    def detection_box_threshold(self) -> float:
+        """Get the detection box threshold."""
+        pkg = self._registry.get_package('ocr.detection.box_threshold')
+        return pkg.get() if pkg else 0.3
+    
+    def set_detection_box_threshold(self, value: float) -> bool:
+        """Set the detection box threshold."""
+        pkg = self._registry.get_package('ocr.detection.box_threshold')
+        return pkg.set(value) if pkg else False
+    
+    @property
+    def detection_min_text_height(self) -> int:
+        """Get the minimum text height for detection."""
+        pkg = self._registry.get_package('ocr.detection.min_text_height')
+        return pkg.get() if pkg else 8
+    
+    def set_detection_min_text_height(self, value: int) -> bool:
+        """Set the minimum text height for detection."""
+        pkg = self._registry.get_package('ocr.detection.min_text_height')
+        return pkg.set(value) if pkg else False
+    
+    @property
+    def detection_use_angle_cls(self) -> bool:
+        """Check if angle classification is enabled for detection."""
+        pkg = self._registry.get_package('ocr.detection.use_angle_cls')
+        return pkg.get() if pkg else True
+    
+    @property
+    def detection_multi_scale(self) -> bool:
+        """Check if multi-scale detection is enabled."""
+        pkg = self._registry.get_package('ocr.detection.multi_scale')
+        return pkg.get() if pkg else True
+    
+    @property
+    def detection_auto_retry(self) -> bool:
+        """Check if auto-retry on detection failure is enabled."""
+        pkg = self._registry.get_package('ocr.detection.auto_retry')
+        return pkg.get() if pkg else True
+    
+    @property
+    def detection_enhance_contrast(self) -> bool:
+        """Check if contrast enhancement is enabled for detection."""
+        pkg = self._registry.get_package('ocr.detection.enhance_contrast')
+        return pkg.get() if pkg else True
+    
+    @property
+    def detection_denoise_strength(self) -> int:
+        """Get the denoise strength parameter."""
+        pkg = self._registry.get_package('ocr.detection.denoise_strength')
+        return pkg.get() if pkg else 10
+    
+    def set_detection_denoise_strength(self, value: int) -> bool:
+        """Set the denoise strength parameter."""
+        pkg = self._registry.get_package('ocr.detection.denoise_strength')
+        return pkg.set(value) if pkg else False
+    
+    def get_detection_config(self) -> Dict[str, Any]:
+        """
+        Get all detection parameters as a dictionary.
+        
+        This method provides a convenient way to get all detection parameters
+        at once for use by OCR processors. The parameters are dynamically
+        managed via the circular exchange framework.
+        
+        Returns:
+            Dictionary containing all detection parameters
+        """
+        return {
+            'min_confidence': self.detection_min_confidence,
+            'box_threshold': self.detection_box_threshold,
+            'min_text_height': self.detection_min_text_height,
+            'use_angle_cls': self.detection_use_angle_cls,
+            'multi_scale': self.detection_multi_scale,
+            'auto_retry': self.detection_auto_retry,
+            'enhance_contrast': self.detection_enhance_contrast,
+            'denoise_strength': self.detection_denoise_strength
+        }
+    
+    def record_detection_result(
+        self,
+        text_regions_count: int,
+        avg_confidence: float,
+        success: bool,
+        processing_time: float = 0.0
+    ) -> None:
+        """
+        Record a text detection result for auto-tuning.
+        
+        This method tracks detection results to enable automatic parameter
+        adjustment based on detection success rates.
+        
+        Args:
+            text_regions_count: Number of text regions detected
+            avg_confidence: Average confidence of detected regions
+            success: Whether detection was successful
+            processing_time: Time taken for detection in seconds
+        """
+        with self._lock:
+            result = {
+                'text_regions_count': text_regions_count,
+                'avg_confidence': avg_confidence,
+                'success': success,
+                'processing_time': processing_time,
+                'detection_min_confidence': self.detection_min_confidence,
+                'detection_box_threshold': self.detection_box_threshold
+            }
+            
+            # Store in detection-specific history
+            if not hasattr(self, '_detection_history'):
+                self._detection_history: List[Dict] = []
+            
+            self._detection_history.append(result)
+            if len(self._detection_history) > self._max_history:
+                self._detection_history.pop(0)
+            
+            # Auto-tune detection parameters if enabled
+            if self.auto_tune:
+                self._auto_tune_detection_parameters()
+    
+    def _auto_tune_detection_parameters(self) -> None:
+        """
+        Automatically tune detection parameters based on detection history.
+        
+        This implements an adaptive algorithm:
+        - If detection success rate is low, lower the confidence threshold
+        - If detection is returning too many false positives, increase threshold
+        """
+        if not hasattr(self, '_detection_history'):
+            return
+        
+        if len(self._detection_history) < AUTO_TUNE_MIN_SAMPLES:
+            return
+        
+        recent = self._detection_history[-AUTO_TUNE_WINDOW_SIZE:]
+        success_rate = sum(1 for r in recent if r['success']) / len(recent)
+        avg_regions = sum(r['text_regions_count'] for r in recent) / len(recent)
+        
+        # Target: 80% success rate with reasonable region count
+        target_rate = 0.8
+        
+        if success_rate < target_rate - AUTO_TUNE_SUCCESS_TOLERANCE:
+            # Lower threshold to detect more text
+            current = self.detection_min_confidence
+            if current > AUTO_TUNE_CONFIDENCE_MIN:
+                new_val = max(AUTO_TUNE_CONFIDENCE_MIN, current - AUTO_TUNE_RELAX_STEP)
+                self.set_detection_min_confidence(new_val)
+                logger.info(f"Auto-tuned detection_min_confidence: {current:.2f} -> {new_val:.2f} "
+                           f"(success_rate: {success_rate:.2%})")
+        elif success_rate > target_rate + AUTO_TUNE_SUCCESS_TOLERANCE and avg_regions > 50:
+            # Too many regions might mean low quality detection, tighten threshold
+            current = self.detection_min_confidence
+            if current < AUTO_TUNE_CONFIDENCE_MAX:
+                new_val = min(AUTO_TUNE_CONFIDENCE_MAX, current + AUTO_TUNE_TIGHTEN_STEP)
+                self.set_detection_min_confidence(new_val)
+                logger.debug(f"Auto-tuned detection_min_confidence: {current:.2f} -> {new_val:.2f}")
+    
+    def get_detection_stats(self) -> Dict:
+        """Get statistics about detection history."""
+        with self._lock:
+            if not hasattr(self, '_detection_history') or not self._detection_history:
+                return {'total': 0, 'success_rate': 0.0, 'avg_regions': 0.0}
+            
+            total = len(self._detection_history)
+            successful = sum(1 for r in self._detection_history if r['success'])
+            avg_regions = sum(r['text_regions_count'] for r in self._detection_history) / total
+            avg_confidence = sum(r['avg_confidence'] for r in self._detection_history) / total
+            
+            return {
+                'total': total,
+                'successful': successful,
+                'success_rate': successful / total,
+                'avg_regions': avg_regions,
+                'avg_confidence': avg_confidence,
+                'current_detection_min_confidence': self.detection_min_confidence,
+                'current_detection_box_threshold': self.detection_box_threshold
+            }
     
     # =====================================================================
     # Pipeline Management
@@ -460,6 +769,7 @@ class OCRConfig:
                 'max_digit_ratio': self.max_digit_ratio,
                 'auto_tune': self.auto_tune
             },
+            'detection': self.get_detection_config(),
             'pipeline': {
                 name: {
                     'enabled': stage.enabled,
@@ -468,7 +778,8 @@ class OCRConfig:
                 }
                 for name, stage in self._pipeline_stages.items()
             },
-            'stats': self.get_extraction_stats()
+            'stats': self.get_extraction_stats(),
+            'detection_stats': self.get_detection_stats()
         }
     
     def import_config(self, config: Dict) -> bool:
@@ -484,6 +795,17 @@ class OCRConfig:
                 self.set_relaxed_mode(params['relaxed_mode'])
             if 'auto_fallback' in params:
                 self.set_auto_fallback(params['auto_fallback'])
+            
+            # Import detection parameters
+            detection_config = config.get('detection', {})
+            if 'min_confidence' in detection_config:
+                self.set_detection_min_confidence(detection_config['min_confidence'])
+            if 'box_threshold' in detection_config:
+                self.set_detection_box_threshold(detection_config['box_threshold'])
+            if 'min_text_height' in detection_config:
+                self.set_detection_min_text_height(detection_config['min_text_height'])
+            if 'denoise_strength' in detection_config:
+                self.set_detection_denoise_strength(detection_config['denoise_strength'])
             
             # Import pipeline configuration
             pipeline_config = config.get('pipeline', {})
@@ -502,18 +824,39 @@ class OCRConfig:
     
     def reset_to_defaults(self) -> None:
         """Reset all parameters to their defaults."""
+        # Reset general OCR parameters
         self.set_min_confidence(0.3)
         self.set_relaxed_confidence(0.2)
         self.set_relaxed_mode(False)
         self.set_auto_fallback(True)
         
+        # Reset detection parameters (with lowered defaults for better detection)
+        self.set_detection_min_confidence(0.25)
+        self.set_detection_box_threshold(0.3)
+        self.set_detection_min_text_height(8)
+        self.set_detection_denoise_strength(10)
+        
         # Reset pipeline stages
         self._init_pipeline()
         
-        # Clear history
+        # Clear histories
         self._extraction_history.clear()
+        if hasattr(self, '_detection_history'):
+            self._detection_history.clear()
         
-        logger.info("OCRConfig reset to defaults")
+        logger.info("OCRConfig reset to defaults (including detection parameters)")
+    
+    @classmethod
+    def reset_instance(cls) -> None:
+        """
+        Reset the singleton instance for clean test isolation.
+        
+        This method should be used in test setup/teardown to ensure
+        clean state between tests. Not intended for production use.
+        """
+        with cls._lock:
+            cls._instance = None
+        logger.debug("OCRConfig singleton instance reset")
 
 
 # Global configuration instance
@@ -526,3 +869,15 @@ def get_ocr_config() -> OCRConfig:
     if _ocr_config is None:
         _ocr_config = OCRConfig()
     return _ocr_config
+
+
+def reset_ocr_config() -> None:
+    """
+    Reset the global OCR configuration instance for clean test isolation.
+    
+    This function resets both the global instance and the singleton
+    to ensure clean state between tests.
+    """
+    global _ocr_config
+    _ocr_config = None
+    OCRConfig.reset_instance()

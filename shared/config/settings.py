@@ -6,6 +6,8 @@ This module provides:
 - Default values with environment overrides
 - Type-safe configuration access
 - Validation of configuration values
+
+Integrated with Circular Exchange Framework for dynamic configuration.
 """
 import os
 import json
@@ -14,7 +16,27 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.config.settings",
+            file_path=__file__,
+            description="Centralized configuration management with environment-based settings",
+            dependencies=["shared.circular_exchange"],
+            exports=["ImageConfig", "OCRConfig", "APIConfig", "Settings", "get_settings"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors
 
 # Base paths
 CONFIG_DIR = Path(__file__).parent

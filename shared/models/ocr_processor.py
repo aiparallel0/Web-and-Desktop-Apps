@@ -13,7 +13,8 @@ from .ocr_common import (
     LINE_ITEM_PATTERNS, clean_item_name, extract_subtotal, extract_tax,
     validate_receipt_totals, extract_sku,
     extract_line_items as _extract_line_items_shared,
-    parse_receipt_text as _parse_receipt_text_shared
+    parse_receipt_text as _parse_receipt_text_shared,
+    get_detection_config, record_detection_result
 )
 try:
     import pytesseract
@@ -91,10 +92,20 @@ class OCRProcessor:
         unnecessary OCR calls. Only performs aggressive multi-pass
         extraction when initial results are poor quality.
         """
+        Extract receipt data from an image using Tesseract OCR.
+        
+        Uses circular exchange framework for detection configuration with
+        lowered default thresholds for improved text detection rates.
+        """
         start_time=time.time()
         if not self.tesseract_path:
             return ExtractionResult(success=False,error="Tesseract not installed")
         try:
+            # Get detection configuration from circular exchange framework
+            detection_config = get_detection_config()
+            min_confidence = detection_config.get('min_confidence', 0.25)
+            auto_retry = detection_config.get('auto_retry', True)
+            
             image=load_and_validate_image(image_path)
             processed=preprocess_for_ocr(image,aggressive=True)
             
@@ -110,6 +121,7 @@ class OCRProcessor:
             logger.info(f"OCR complete: {best_mode}, len={len(best_text)}")
             
             # Parse and score the initial result
+            logger.info(f"OCR complete: {best_mode}, len={len(best_text)} (threshold: {min_confidence})")
             receipt=self._parse_receipt_text(best_text)
             initial_score=self._score_result(receipt,best_text)
             
@@ -148,6 +160,15 @@ class OCRProcessor:
                 # Break outer loop too if excellent result found
                 if best_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
                     break
+            
+            # Record detection result for auto-tuning via circular exchange
+            text_regions = len(best_text.strip().split('\n')) if best_text else 0
+            record_detection_result(
+                text_regions_count=text_regions,
+                avg_confidence=min(1.0, best_score / 100) if best_score else 0.0,
+                success=best_result is not None and best_score > 0,
+                processing_time=time.time() - start_time
+            )
             
             if best_result is None or best_score==0:
                 return ExtractionResult(success=False,error="No readable text. Try EasyOCR.")
