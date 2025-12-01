@@ -149,7 +149,6 @@ class OCRProcessor:
             text2=pytesseract.image_to_string(processed,lang='eng',config=config2)
             ocr_results.append(('PSM 4',text2))
             best_mode,best_text=max(ocr_results,key=lambda x:len(x[1].strip()))
-            logger.info(f"OCR complete: {best_mode}, len={len(best_text)}")
             
             # Parse and score the initial result
             logger.info(f"OCR complete: {best_mode}, len={len(best_text)} (threshold: {min_confidence})")
