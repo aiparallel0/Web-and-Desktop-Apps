@@ -182,9 +182,9 @@ jobs:
           # Step 4: Run feedback loop
           print('\n🔄 Step 4: Running feedback loop...')
           FEEDBACK_LOOP.run_cycle()
-          state = FEEDBACK_LOOP.export_state()
-          print(f'   Processed {state[\"auto_tuner\"][\"total_signals\"]} signals')
-          print(f'   Made {state[\"auto_tuner\"][\"total_decisions\"]} tuning decisions')
+          feedback_summary = FEEDBACK_LOOP.get_summary()
+          print(f'   Processed {feedback_summary[\"metrics\"][\"total_feedback_signals\"]} signals')
+          print(f'   Made {feedback_summary[\"tuner_stats\"][\"total_decisions\"]} tuning decisions')
           
           # Save analysis results
           print('\n💾 Saving analysis results...')
@@ -193,7 +193,7 @@ jobs:
               'statistics': DATA_COLLECTOR.get_statistics(),
               'analysis_summary': summary,
               'test_health': health_report.to_dict() if health_report else None,
-              'feedback_state': state
+              'feedback_state': feedback_summary
           }
           
           with open('data/collected/cef_analysis.json', 'w') as f:
