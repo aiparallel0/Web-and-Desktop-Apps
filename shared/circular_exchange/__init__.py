@@ -140,6 +140,21 @@ from .persistence import (
     DBConfig,
     ConnectionPool
 )
+from .intelligent_analyzer import (
+    INTELLIGENT_ANALYZER,
+    IntelligentAnalyzer,
+    PatternClusterer,
+    AnomalyDetector,
+    TrendAnalyzer,
+    CodeEmbeddings,
+    PatternCluster,
+    Anomaly,
+    TrendAnalysis,
+    CodeSimilarity,
+    AnomalyType,
+    TrendDirection,
+    ClusterQuality
+)
 
 __all__ = [
     # Core
@@ -229,6 +244,20 @@ __all__ = [
     'PersistenceLayer',
     'DBConfig',
     'ConnectionPool',
+    # Intelligent Analyzer (for ML-powered analysis - Phase 2)
+    'INTELLIGENT_ANALYZER',
+    'IntelligentAnalyzer',
+    'PatternClusterer',
+    'AnomalyDetector',
+    'TrendAnalyzer',
+    'CodeEmbeddings',
+    'PatternCluster',
+    'Anomaly',
+    'TrendAnalysis',
+    'CodeSimilarity',
+    'AnomalyType',
+    'TrendDirection',
+    'ClusterQuality',
 ]
 
-__version__ = '2.1.0'
+__version__ = '2.2.0'
