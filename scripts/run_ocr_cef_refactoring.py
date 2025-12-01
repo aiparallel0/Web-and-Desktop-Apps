@@ -23,11 +23,21 @@ import sys
 import os
 import time
 import logging
+import random  # Used for simulating OCR results when models unavailable
 from pathlib import Path
 from datetime import datetime
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Simulation constants for OCR results when actual models are unavailable
+SIMULATION_SUCCESS_RATE = 0.7  # 70% success rate for simulated extractions
+SIMULATION_CONFIDENCE_SUCCESS_MIN = 0.6
+SIMULATION_CONFIDENCE_SUCCESS_MAX = 0.95
+SIMULATION_CONFIDENCE_FAILURE_MIN = 0.1
+SIMULATION_CONFIDENCE_FAILURE_MAX = 0.4
+SIMULATION_PROCESSING_TIME_MIN_MS = 500
+SIMULATION_PROCESSING_TIME_MAX_MS = 3000
 
 # Configure logging
 logging.basicConfig(
@@ -200,18 +210,18 @@ def run_ocr_extraction(image_paths: list, collector: DataCollector) -> list:
         print(f"  ⚠ OCR models not available: {e}")
         print("  → Simulating OCR results for CEF analysis...")
         
-        # Simulate extraction results for CEF analysis
-        import random
-        
         for idx, image_path in enumerate(image_paths):
             filename = os.path.basename(image_path)
             print(f"\n  → Simulating extraction for: {filename}")
             
             for model_id in ['tesseract', 'easyocr']:
-                # Simulate extraction
-                success = random.random() > 0.3  # 70% success rate
-                confidence = random.uniform(0.6, 0.95) if success else random.uniform(0.1, 0.4)
-                processing_time = random.uniform(500, 3000)
+                # Simulate extraction using constants
+                success = random.random() > (1 - SIMULATION_SUCCESS_RATE)
+                if success:
+                    confidence = random.uniform(SIMULATION_CONFIDENCE_SUCCESS_MIN, SIMULATION_CONFIDENCE_SUCCESS_MAX)
+                else:
+                    confidence = random.uniform(SIMULATION_CONFIDENCE_FAILURE_MIN, SIMULATION_CONFIDENCE_FAILURE_MAX)
+                processing_time = random.uniform(SIMULATION_PROCESSING_TIME_MIN_MS, SIMULATION_PROCESSING_TIME_MAX_MS)
                 
                 print(f"     {'✓' if success else '✗'} {model_id}: {'Success' if success else 'Failed'}")
                 
@@ -351,8 +361,14 @@ def run_intelligent_analysis(extraction_results: list) -> dict:
     try:
         intelligent = IntelligentAnalyzer()
         
-        # Prepare data for anomaly detection
-        metrics_data = [(event.timestamp, event.processing_time_ms) for event in extraction_results]
+        # Prepare data for analysis - ensure timestamps are datetime objects
+        metrics_data = []
+        for event in extraction_results:
+            timestamp = event.timestamp
+            # Ensure timestamp is a datetime object
+            if isinstance(timestamp, str):
+                timestamp = datetime.fromisoformat(timestamp)
+            metrics_data.append((timestamp, event.processing_time_ms))
         
         if len(metrics_data) >= 5:
             # Detect anomalies
@@ -369,9 +385,9 @@ def run_intelligent_analysis(extraction_results: list) -> dict:
             except Exception as e:
                 print(f"\n  → Anomaly Detection: Skipped ({e})")
             
-            # Analyze trends
+            # Analyze trends using same metrics_data (avoiding duplicate computation)
             try:
-                trend = intelligent.trend_analyzer.analyze_trend('processing_time_ms', metrics_data, '1h')
+                trend = intelligent.trend_analyzer.analyze_trend('processing_time_ms', metrics_data, 'batch')
                 if trend:
                     results['trends'].append(trend)
                     print(f"\n  → Trend Analysis:")
@@ -503,6 +519,11 @@ def print_summary(
         if total_extractions > 0 else 0
     )
     
+    # Count suggestions by category with safe attribute access
+    error_handling_count = sum(1 for s in suggestions if 'error' in getattr(s, 'title', '').lower())
+    performance_count = sum(1 for s in suggestions if 'performance' in getattr(s, 'title', '').lower() or 'optimize' in getattr(s, 'title', '').lower())
+    testing_count = sum(1 for s in suggestions if 'test' in getattr(s, 'title', '').lower() or 'flaky' in getattr(s, 'title', '').lower())
+    
     print(f"""
 📷 OCR Extraction Results:
    • Total extractions: {total_extractions}
@@ -516,9 +537,9 @@ def print_summary(
 
 🔧 Refactoring Suggestions:
    • Total suggestions: {len(suggestions)}
-   • Error handling: {sum(1 for s in suggestions if 'error' in s.title.lower())}
-   • Performance: {sum(1 for s in suggestions if 'performance' in s.title.lower() or 'optimize' in s.title.lower())}
-   • Testing: {sum(1 for s in suggestions if 'test' in s.title.lower() or 'flaky' in s.title.lower())}
+   • Error handling: {error_handling_count}
+   • Performance: {performance_count}
+   • Testing: {testing_count}
 
 🔄 Feedback Loop:
    • Tuning decisions: {len(feedback_results.get('tuning_decisions', []))}
