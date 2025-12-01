@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project File Relationships - Web-and-Desktop-Apps</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            color: #00d4ff;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #00d4ff33;
+        }
+        .diagram {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .layer {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .layer::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            width: 2px;
+            height: 15px;
+            background: #555;
+        }
+        .layer:last-child::after {
+            display: none;
+        }
+        .layer-label {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #00d4ff22;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            color: #00d4ff;
+        }
+        .module {
+            background: linear-gradient(145deg, #2d2d44 0%, #1f1f35 100%);
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 15px 20px;
+            min-width: 180px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .module:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,212,255,0.3);
+            border-color: #00d4ff;
+        }
+        .module.circular-exchange {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #3d2d44 0%, #2f1f35 100%);
+        }
+        .module.core {
+            border-color: #ffd93d;
+        }
+        .module.utils {
+            border-color: #6bcb77;
+        }
+        .module.models {
+            border-color: #4d96ff;
+        }
+        .module.config {
+            border-color: #9b59b6;
+        }
+        .module.web {
+            border-color: #e17055;
+        }
+        .module-name {
+            font-weight: bold;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+        .module-path {
+            font-size: 0.75em;
+            color: #888;
+        }
+        .module-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 0.65em;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .arrows {
+            text-align: center;
+            margin: 10px 0;
+            color: #555;
+            font-size: 1.5em;
+        }
+        .relationship-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .relationship-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #00d4ff;
+        }
+        .relationship-card h4 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        .relationship-list {
+            list-style: none;
+        }
+        .relationship-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+            font-size: 0.9em;
+        }
+        .relationship-list li:last-child {
+            border-bottom: none;
+        }
+        .dep-arrow {
+            color: #ff6b6b;
+        }
+        .export-arrow {
+            color: #6bcb77;
+        }
+        .info-box {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff33;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .info-box h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        .flow-box {
+            background: #2d2d44;
+            border: 2px solid #00d4ff;
+            border-radius: 8px;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .flow-arrow {
+            color: #00d4ff;
+            font-size: 1.5em;
+        }
+        @media (max-width: 768px) {
+            .layer {
+                flex-direction: column;
+                align-items: center;
+            }
+            .layer-label {
+                position: static;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Project File Relationships</h1>
+        <p class="subtitle">Web-and-Desktop-Apps - Circular Exchange Framework Integration Map</p>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Circular Exchange Core</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd93d;"></div>
+                <span>Core Config</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4d96ff;"></div>
+                <span>Models (OCR/AI)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6bcb77;"></div>
+                <span>Utilities</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e17055;"></div>
+                <span>Web Application</span>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>📋 Circular Exchange Framework Overview</h3>
+            <p>The Circular Exchange Framework is the central nervous system of this project. It provides:</p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li><strong>PROJECT_CONFIG</strong> - Global configuration hub that propagates changes to all modules</li>
+                <li><strong>VariablePackage</strong> - Observable configuration values with auto-tuning</li>
+                <li><strong>ModuleRegistration</strong> - Dependency tracking and change propagation</li>
+                <li><strong>PackageRegistry</strong> - Centralized package management</li>
+            </ul>
+        </div>
+
+        <section class="section">
+            <h2 class="section-title">🏗️ Architecture Layers</h2>
+            <div class="diagram">
+                <!-- Layer 1: Circular Exchange Core -->
+                <div class="layer">
+                    <div class="module circular-exchange">
+                        <div class="module-badge">HUB</div>
+                        <div class="module-name">PROJECT_CONFIG</div>
+                        <div class="module-path">circular_exchange/project_config.py</div>
+                    </div>
+                </div>
+
+                <div class="arrows">↓↑</div>
+
+                <!-- Layer 2: Circular Exchange Components -->
+                <div class="layer">
+                    <div class="module circular-exchange">
+                        <div class="module-name">VariablePackage</div>
+                        <div class="module-path">circular_exchange/variable_package.py</div>
+                    </div>
+                    <div class="module circular-exchange">
+                        <div class="module-name">ChangeNotifier</div>
+                        <div class="module-path">circular_exchange/change_notifier.py</div>
+                    </div>
+                    <div class="module circular-exchange">
+                        <div class="module-name">DependencyRegistry</div>
+                        <div class="module-path">circular_exchange/dependency_registry.py</div>
+                    </div>
+                    <div class="module circular-exchange">
+                        <div class="module-name">ModuleContainer</div>
+                        <div class="module-path">circular_exchange/module_container.py</div>
+                    </div>
+                </div>
+
+                <div class="arrows">↓↑</div>
+
+                <!-- Layer 3: Configuration -->
+                <div class="layer">
+                    <div class="module config">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">OCRConfig</div>
+                        <div class="module-path">models/ocr_config.py</div>
+                    </div>
+                    <div class="module config">
+                        <div class="module-name">Settings</div>
+                        <div class="module-path">config/settings.py</div>
+                    </div>
+                </div>
+
+                <div class="arrows">↓↑</div>
+
+                <!-- Layer 4: Models -->
+                <div class="layer">
+                    <div class="module models">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">OCRProcessor</div>
+                        <div class="module-path">models/ocr_processor.py</div>
+                    </div>
+                    <div class="module models">
+                        <div class="module-name">EasyOCRProcessor</div>
+                        <div class="module-path">models/processors.py</div>
+                    </div>
+                    <div class="module models">
+                        <div class="module-name">PaddleProcessor</div>
+                        <div class="module-path">models/processors.py</div>
+                    </div>
+                    <div class="module models">
+                        <div class="module-name">AIModels</div>
+                        <div class="module-path">models/ai_models.py</div>
+                    </div>
+                    <div class="module models">
+                        <div class="module-name">ModelManager</div>
+                        <div class="module-path">models/model_manager.py</div>
+                    </div>
+                </div>
+
+                <div class="arrows">↓↑</div>
+
+                <!-- Layer 5: Utilities -->
+                <div class="layer">
+                    <div class="module utils">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">ImageProcessing</div>
+                        <div class="module-path">utils/image_processing.py</div>
+                    </div>
+                    <div class="module utils">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">DataStructures</div>
+                        <div class="module-path">utils/data_structures.py</div>
+                    </div>
+                    <div class="module utils">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">Errors</div>
+                        <div class="module-path">utils/errors.py</div>
+                    </div>
+                    <div class="module utils">
+                        <div class="module-badge">✓ CE</div>
+                        <div class="module-name">CentralizedLogging</div>
+                        <div class="module-path">utils/centralized_logging.py</div>
+                    </div>
+                </div>
+
+                <div class="arrows">↓↑</div>
+
+                <!-- Layer 6: Web Application -->
+                <div class="layer">
+                    <div class="module web">
+                        <div class="module-name">Flask App</div>
+                        <div class="module-path">web-app/backend/app.py</div>
+                    </div>
+                    <div class="module web">
+                        <div class="module-name">Auth</div>
+                        <div class="module-path">web-app/backend/auth.py</div>
+                    </div>
+                    <div class="module web">
+                        <div class="module-name">Database</div>
+                        <div class="module-path">web-app/backend/database.py</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">🔗 Key Module Dependencies</h2>
+            <div class="relationship-grid">
+                <div class="relationship-card">
+                    <h4>📸 OCRProcessor</h4>
+                    <ul class="relationship-list">
+                        <li><span class="dep-arrow">←</span> shared.circular_exchange (PROJECT_CONFIG)</li>
+                        <li><span class="dep-arrow">←</span> utils.image_processing</li>
+                        <li><span class="dep-arrow">←</span> utils.data_structures</li>
+                        <li><span class="dep-arrow">←</span> models.ocr_common</li>
+                        <li><span class="dep-arrow">←</span> models.ocr_config (get_detection_config)</li>
+                        <li><span class="export-arrow">→</span> Exports: OCRProcessor class</li>
+                    </ul>
+                </div>
+
+                <div class="relationship-card">
+                    <h4>🖼️ ImageProcessing</h4>
+                    <ul class="relationship-list">
+                        <li><span class="dep-arrow">←</span> shared.circular_exchange (PROJECT_CONFIG, PackageRegistry)</li>
+                        <li><span class="export-arrow">→</span> load_and_validate_image()</li>
+                        <li><span class="export-arrow">→</span> preprocess_for_ocr()</li>
+                        <li><span class="export-arrow">→</span> enhance_image()</li>
+                        <li><span class="export-arrow">→</span> assess_image_quality()</li>
+                        <li><span class="export-arrow">→</span> get_image_config()</li>
+                    </ul>
+                </div>
+
+                <div class="relationship-card">
+                    <h4>⚙️ OCRConfig</h4>
+                    <ul class="relationship-list">
+                        <li><span class="dep-arrow">←</span> circular_exchange.variable_package</li>
+                        <li><span class="export-arrow">→</span> get_detection_config()</li>
+                        <li><span class="export-arrow">→</span> record_detection_result()</li>
+                        <li><span class="export-arrow">→</span> Auto-tuning parameters</li>
+                        <li><span class="export-arrow">→</span> Pipeline stages configuration</li>
+                    </ul>
+                </div>
+
+                <div class="relationship-card">
+                    <h4>🔄 PROJECT_CONFIG</h4>
+                    <ul class="relationship-list">
+                        <li><span class="export-arrow">→</span> register_module()</li>
+                        <li><span class="export-arrow">→</span> get_all_modules()</li>
+                        <li><span class="export-arrow">→</span> propagate_change()</li>
+                        <li><span class="export-arrow">→</span> subscribe_to_all()</li>
+                        <li><span class="export-arrow">→</span> Global config (debug, paths, etc.)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">🔄 Data Flow</h2>
+            <div class="diagram">
+                <div class="flow-diagram">
+                    <div class="flow-box">Image Input</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">ImageProcessing<br><small>(preprocess_for_ocr)</small></div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">OCRProcessor<br><small>(Tesseract OCR)</small></div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">OCRConfig<br><small>(get_detection_config)</small></div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-box">ReceiptData<br><small>(DataStructures)</small></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">📊 Integration Status</h2>
+            <div class="relationship-grid">
+                <div class="relationship-card" style="border-left-color: #6bcb77;">
+                    <h4 style="color: #6bcb77;">✅ Fully Integrated</h4>
+                    <ul class="relationship-list">
+                        <li>shared/models/ocr_config.py</li>
+                        <li>shared/models/ocr_processor.py</li>
+                        <li>shared/utils/image_processing.py</li>
+                        <li>shared/utils/data_structures.py</li>
+                        <li>shared/utils/centralized_logging.py</li>
+                        <li>shared/utils/errors.py</li>
+                    </ul>
+                </div>
+
+                <div class="relationship-card" style="border-left-color: #ffd93d;">
+                    <h4 style="color: #ffd93d;">⚠️ Needs Integration</h4>
+                    <ul class="relationship-list">
+                        <li>shared/models/ai_models.py</li>
+                        <li>shared/models/processors.py</li>
+                        <li>shared/config/settings.py</li>
+                        <li>web-app/backend/app.py</li>
+                        <li>web-app/backend/auth.py</li>
+                        <li>web-app/backend/database.py</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align: center; margin-top: 50px; color: #666;">
+            <p>Generated for Web-and-Desktop-Apps Project</p>
+            <p>Circular Exchange Framework v2.0.0</p>
+        </footer>
+    </div>
+</body>
+</html>

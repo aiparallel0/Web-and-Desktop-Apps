@@ -1,8 +1,28 @@
+"""
+OCR Processor Module with Circular Exchange Integration
+
+This module provides Tesseract OCR-based receipt data extraction with:
+- Dynamic parameter configuration via circular exchange framework
+- Early-exit optimization for faster processing
+- Multi-pass extraction for challenging images
+- Auto-tuning based on detection results
+
+The OCRProcessor class integrates with the circular exchange framework for
+runtime parameter tuning and automatic optimization.
+"""
 import os,sys,re,logging,time,subprocess
 from decimal import Decimal
 from typing import Dict,List,Optional
 from PIL import Image,ImageEnhance,ImageFilter
 import cv2,numpy as np
+
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,preprocess_for_ocr
@@ -21,6 +41,19 @@ try:
 except ImportError:
     raise ImportError("pytesseract required: pip install pytesseract")
 logger=logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.ocr_processor",
+            file_path=__file__,
+            description="Tesseract OCR-based receipt data extraction with early-exit optimization",
+            dependencies=["shared.utils.image_processing", "shared.models.ocr_common", "shared.models.ocr_config"],
+            exports=["OCRProcessor"]
+        ))
+    except Exception:
+        pass
 
 # Score thresholds for early-exit optimization in OCR extraction
 # Good quality threshold: has total + some other data (avoid aggressive preprocessing)
@@ -91,8 +124,6 @@ class OCRProcessor:
         Performance optimization: Uses early-exit strategy to avoid
         unnecessary OCR calls. Only performs aggressive multi-pass
         extraction when initial results are poor quality.
-        """
-        Extract receipt data from an image using Tesseract OCR.
         
         Uses circular exchange framework for detection configuration with
         lowered default thresholds for improved text detection rates.
