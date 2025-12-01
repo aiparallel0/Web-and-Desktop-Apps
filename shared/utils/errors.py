@@ -34,7 +34,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             description="Standardized error handling with custom exception classes and error formatting",
             dependencies=["shared.circular_exchange"],
             exports=["ErrorCategory", "ErrorCode", "ReceiptExtractorError", "ValidationError",
-                     "ProcessingError", "ExternalServiceError", "RateLimitError"]
+                     "ProcessingError", "ExternalServiceError", "RateLimitError", 
+                     "CircuitBreaker", "CircuitBreakerConfig", "get_circuit_breaker"]
         ))
     except Exception:
         pass  # Ignore registration errors
@@ -314,6 +315,154 @@ class ExternalServiceError(ReceiptExtractorError):
             suggestion="Please try again later or contact support if the issue persists",
             http_status=503
         )
+
+
+# =============================================================================
+# CIRCUIT BREAKER PATTERN - Added based on CEF Round 5 analysis
+# =============================================================================
+
+class CircuitBreakerState(str, Enum):
+    """Circuit breaker states."""
+    CLOSED = "closed"       # Normal operation
+    OPEN = "open"           # Failing, reject requests
+    HALF_OPEN = "half_open" # Testing if service recovered
+
+
+@dataclass
+class CircuitBreakerConfig:
+    """Configuration for circuit breaker."""
+    failure_threshold: int = 5          # Failures before opening
+    success_threshold: int = 3          # Successes to close from half-open
+    timeout_seconds: float = 30.0       # Time before attempting half-open
+    half_open_max_calls: int = 3        # Max calls in half-open state
+
+
+class CircuitBreaker:
+    """
+    Circuit breaker implementation for external service calls.
+    
+    CEF Round 5: Added to improve reliability by preventing cascading failures
+    when external services become unavailable.
+    
+    States:
+    - CLOSED: Normal operation, requests pass through
+    - OPEN: Service failing, requests rejected immediately  
+    - HALF_OPEN: Testing recovery, limited requests allowed
+    
+    Usage:
+        breaker = CircuitBreaker("ocr_service")
+        
+        @breaker
+        def call_ocr_service():
+            # External call
+            pass
+    """
+    
+    def __init__(self, service_name: str, config: Optional[CircuitBreakerConfig] = None):
+        self.service_name = service_name
+        self.config = config or CircuitBreakerConfig()
+        self.state = CircuitBreakerState.CLOSED
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time: Optional[float] = None
+        self.half_open_calls = 0
+    
+    def _should_allow_request(self) -> bool:
+        """Check if request should be allowed."""
+        if self.state == CircuitBreakerState.CLOSED:
+            return True
+        
+        if self.state == CircuitBreakerState.OPEN:
+            # Check if timeout has passed
+            if self.last_failure_time:
+                elapsed = time.time() - self.last_failure_time
+                if elapsed >= self.config.timeout_seconds:
+                    self.state = CircuitBreakerState.HALF_OPEN
+                    self.half_open_calls = 0
+                    self.success_count = 0
+                    logger.info(f"Circuit breaker for {self.service_name} entering HALF_OPEN state")
+                    return True
+            return False
+        
+        # HALF_OPEN: Allow limited requests
+        if self.half_open_calls < self.config.half_open_max_calls:
+            return True
+        return False
+    
+    def record_success(self):
+        """Record a successful call."""
+        if self.state == CircuitBreakerState.HALF_OPEN:
+            self.success_count += 1
+            self.half_open_calls += 1
+            
+            if self.success_count >= self.config.success_threshold:
+                self.state = CircuitBreakerState.CLOSED
+                self.failure_count = 0
+                logger.info(f"Circuit breaker for {self.service_name} CLOSED (service recovered)")
+        else:
+            # Reset failure count on success in closed state
+            self.failure_count = 0
+    
+    def record_failure(self):
+        """Record a failed call."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.state == CircuitBreakerState.HALF_OPEN:
+            # Any failure in half-open goes back to open
+            self.state = CircuitBreakerState.OPEN
+            logger.warning(f"Circuit breaker for {self.service_name} OPEN (failure in half-open)")
+        elif self.failure_count >= self.config.failure_threshold:
+            self.state = CircuitBreakerState.OPEN
+            logger.warning(f"Circuit breaker for {self.service_name} OPEN (threshold reached)")
+    
+    def __call__(self, func):
+        """Decorator to wrap function with circuit breaker."""
+        from functools import wraps
+        
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not self._should_allow_request():
+                raise ExternalServiceError(
+                    f"Service {self.service_name} is temporarily unavailable (circuit breaker open)",
+                    service_name=self.service_name
+                )
+            
+            try:
+                result = func(*args, **kwargs)
+                self.record_success()
+                return result
+            except Exception as e:
+                self.record_failure()
+                raise
+        
+        return wrapper
+    
+    def get_state(self) -> Dict[str, Any]:
+        """Get current circuit breaker state."""
+        return {
+            'service': self.service_name,
+            'state': self.state.value,
+            'failure_count': self.failure_count,
+            'success_count': self.success_count,
+            'last_failure': self.last_failure_time
+        }
+
+
+# Global circuit breaker registry for service monitoring
+_circuit_breakers: Dict[str, CircuitBreaker] = {}
+
+
+def get_circuit_breaker(service_name: str, config: Optional[CircuitBreakerConfig] = None) -> CircuitBreaker:
+    """Get or create a circuit breaker for a service."""
+    if service_name not in _circuit_breakers:
+        _circuit_breakers[service_name] = CircuitBreaker(service_name, config)
+    return _circuit_breakers[service_name]
+
+
+def get_all_circuit_breaker_states() -> Dict[str, Dict[str, Any]]:
+    """Get states of all circuit breakers (for health monitoring)."""
+    return {name: breaker.get_state() for name, breaker in _circuit_breakers.items()}
 
 
 # Error response utilities
