@@ -2,6 +2,7 @@ import os
 import numpy as np
 from PIL import Image,ImageEnhance,ImageFilter
 import logging
+import cv2  # Import cv2 once at module level for better performance
 logger=logging.getLogger(__name__)
 BRIGHTNESS_THRESHOLD,CONTRAST_THRESHOLD=100,40
 
@@ -73,13 +74,11 @@ def assess_image_quality(image:Image.Image)->dict:
 
 def _estimate_blur(gray_image: np.ndarray) -> float:
     """Estimate image blur using Laplacian variance."""
-    import cv2
     laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
     return float(laplacian.var())
 
 def _estimate_noise(gray_image: np.ndarray) -> float:
     """Estimate noise level in the image."""
-    import cv2
     # Use median absolute deviation of Laplacian
     laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
     noise = np.median(np.abs(laplacian - np.median(laplacian)))
@@ -97,7 +96,6 @@ def preprocess_for_ocr(image:Image.Image,aggressive:bool=True)->Image.Image:
     - Edge-preserving smoothing
     - Intelligent binarization
     """
-    import cv2
     try:
         img_array=np.array(image)
         if img_array is None or img_array.size==0:raise ValueError("Image array is empty or None")
@@ -159,7 +157,6 @@ def _advanced_denoise(gray: np.ndarray) -> np.ndarray:
     2. Median filter for salt-and-pepper noise
     3. Morphological operations for cleaning
     """
-    import cv2
     # First pass: non-local means denoising
     denoised = cv2.fastNlMeansDenoising(gray, h=10)
     
@@ -177,8 +174,6 @@ def _adaptive_binarize(gray: np.ndarray) -> np.ndarray:
     2. Adaptive thresholding for local variations
     3. Result selection based on text density
     """
-    import cv2
-    
     # Method 1: Otsu's binarization
     _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
@@ -212,7 +207,6 @@ def _calculate_text_density(binary: np.ndarray) -> float:
 
 def _deskew_image(image:np.ndarray)->np.ndarray:
     """Correct image skew for better text alignment."""
-    import cv2
     try:
         coords=np.column_stack(np.where(image>0))
         if len(coords)<10:
@@ -252,7 +246,6 @@ def detect_text_regions(image: Image.Image) -> list:
     Returns a list of bounding boxes (x, y, w, h) for detected text regions.
     Similar to region detection used by advanced OCR services.
     """
-    import cv2
     try:
         img_array = np.array(image.convert('L'))
         
@@ -307,7 +300,6 @@ def preprocess_multi_pass(image: Image.Image) -> list:
         results.append(('standard', preprocess_for_ocr(image, aggressive=False)))
         
         # High contrast version
-        import cv2
         img_array = np.array(image.convert('L'))
         clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(4, 4))
         high_contrast = clahe.apply(img_array)
