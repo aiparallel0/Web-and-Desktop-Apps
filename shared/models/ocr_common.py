@@ -126,7 +126,7 @@ ITEM_SKIP_PATTERNS = frozenset({
 # Time patterns that need word boundary matching (to avoid matching 'creamy', 'spam', etc.)
 ITEM_SKIP_TIME_PATTERNS = [
     re.compile(r'\b\d{1,2}:\d{2}\s*(?:am|pm)\b', re.IGNORECASE),  # 9:00 AM, 12:30PM
-    re.compile(r'\b(?:am|pm)\s+to\s+\d', re.IGNORECASE),  # AM TO 9, PM DAILY
+    re.compile(r'\b(?:am|pm)\s+to\s+\d{1,2}(?::\d{2})?\b', re.IGNORECASE),  # AM TO 9:00, PM TO 5
 ]
 
 # Pre-compiled regex patterns for performance
