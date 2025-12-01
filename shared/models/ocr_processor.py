@@ -22,6 +22,12 @@ except ImportError:
     raise ImportError("pytesseract required: pip install pytesseract")
 logger=logging.getLogger(__name__)
 
+# Score thresholds for early-exit optimization in OCR extraction
+# Good quality threshold: has total + some other data (avoid aggressive preprocessing)
+GOOD_QUALITY_SCORE_THRESHOLD = 40
+# Excellent quality threshold: high confidence result (stop searching immediately)
+EXCELLENT_QUALITY_SCORE_THRESHOLD = 80
+
 class OCRProcessor:
 
     def __init__(self,model_config:Dict):
@@ -80,6 +86,11 @@ class OCRProcessor:
         return preprocessed
 
     def extract(self,image_path:str)->ExtractionResult:
+        """Extract receipt data from image using Tesseract OCR.
+        
+        Performance optimization: Uses early-exit strategy to avoid
+        unnecessary OCR calls. Only performs aggressive multi-pass
+        extraction when initial results are poor quality.
         """
         Extract receipt data from an image using Tesseract OCR.
         
@@ -97,6 +108,8 @@ class OCRProcessor:
             
             image=load_and_validate_image(image_path)
             processed=preprocess_for_ocr(image,aggressive=True)
+            
+            # First pass: Try 2 PSM modes on preprocessed image
             ocr_results=[]
             config1=r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
             text1=pytesseract.image_to_string(processed,lang='eng',config=config1)
@@ -105,15 +118,29 @@ class OCRProcessor:
             text2=pytesseract.image_to_string(processed,lang='eng',config=config2)
             ocr_results.append(('PSM 4',text2))
             best_mode,best_text=max(ocr_results,key=lambda x:len(x[1].strip()))
+            logger.info(f"OCR complete: {best_mode}, len={len(best_text)}")
+            
+            # Parse and score the initial result
             logger.info(f"OCR complete: {best_mode}, len={len(best_text)} (threshold: {min_confidence})")
             receipt=self._parse_receipt_text(best_text)
-            receipt.processing_time=time.time()-start_time
-            receipt.model_used=f"{self.model_name} ({best_mode})"
+            initial_score=self._score_result(receipt,best_text)
+            
+            # Early exit if initial result is good (has total and reasonable score)
+            if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
+                receipt.processing_time=time.time()-start_time
+                receipt.model_used=f"{self.model_name} ({best_mode})"
+                receipt.confidence_score=min(1.0,initial_score/95)
+                logger.info(f"Early exit with good score: {initial_score}")
+                return ExtractionResult(success=True,data=receipt)
+            
+            # Low quality result - try aggressive multi-pass extraction
             if len(best_text.strip())<50:
-                receipt.extraction_notes.append("Low OCR output - poor image quality")
+                logger.info("Low OCR output - trying aggressive preprocessing")
+            
             preprocessed_versions=self._aggressive_preprocess(image)
             psm_modes=[6,4,11,3]
-            best_result,best_score=None,0
+            best_result,best_score=receipt,initial_score
+            
             for v_idx,proc_img in enumerate(preprocessed_versions):
                 for psm in psm_modes:
                     try:
@@ -125,7 +152,14 @@ class OCRProcessor:
                         if score>best_score:
                             best_score=score
                             best_result=rec
+                            # Early exit if we find an excellent result
+                            if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                                logger.info(f"Found excellent result with score {score}, stopping search")
+                                break
                     except:continue
+                # Break outer loop too if excellent result found
+                if best_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                    break
             
             # Record detection result for auto-tuning via circular exchange
             text_regions = len(best_text.strip().split('\n')) if best_text else 0
