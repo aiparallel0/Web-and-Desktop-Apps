@@ -121,12 +121,17 @@ class OCRProcessor:
     def extract(self,image_path:str)->ExtractionResult:
         """Extract receipt data from image using Tesseract OCR.
         
-        Performance optimization: Uses early-exit strategy to avoid
-        unnecessary OCR calls. Only performs aggressive multi-pass
-        extraction when initial results are poor quality.
+        Uses early-exit strategy to avoid unnecessary OCR calls. Only performs
+        aggressive multi-pass extraction when initial results are poor quality.
+        Detection configuration is managed via the circular exchange framework
+        with lowered default thresholds for improved text detection rates.
         
-        Uses circular exchange framework for detection configuration with
-        lowered default thresholds for improved text detection rates.
+        Args:
+            image_path: Path to the image file to process.
+            
+        Returns:
+            ExtractionResult containing the extracted receipt data on success,
+            or error information on failure.
         """
         start_time=time.time()
         if not self.tesseract_path:
