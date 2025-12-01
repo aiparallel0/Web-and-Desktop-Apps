@@ -155,6 +155,22 @@ from .intelligent_analyzer import (
     TrendDirection,
     ClusterQuality
 )
+from .autonomous_refactor import (
+    AutonomousRefactor,
+    RefactorRisk,
+    RefactorStatus,
+    RefactorResult,
+    ABTest,
+    ABTestVariant,
+    ABTestResult,
+    ABTestManager,
+    RollbackManager,
+    RollbackTrigger,
+    RollbackAction,
+    CodeTransformer,
+    PRGenerator,
+    get_autonomous_refactor
+)
 
 __all__ = [
     # Core
@@ -258,6 +274,21 @@ __all__ = [
     'AnomalyType',
     'TrendDirection',
     'ClusterQuality',
+    # Autonomous Refactor (for auto-apply and rollback - Phase 3)
+    'AutonomousRefactor',
+    'RefactorRisk',
+    'RefactorStatus',
+    'RefactorResult',
+    'ABTest',
+    'ABTestVariant',
+    'ABTestResult',
+    'ABTestManager',
+    'RollbackManager',
+    'RollbackTrigger',
+    'RollbackAction',
+    'CodeTransformer',
+    'PRGenerator',
+    'get_autonomous_refactor',
 ]
 
-__version__ = '2.2.0'
+__version__ = '3.0.0'
