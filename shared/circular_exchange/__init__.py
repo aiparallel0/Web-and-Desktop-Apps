@@ -82,6 +82,17 @@ from .module_container import (
     check_compatibility,
     standardize_code
 )
+from .data_collector import (
+    DATA_COLLECTOR,
+    DataCollector,
+    DataCategory,
+    TestStatus,
+    TestResult,
+    LogEntry,
+    MetricsSnapshot,
+    ExtractionEvent,
+    RefactorSuggestion
+)
 
 __all__ = [
     # Core
@@ -118,7 +129,17 @@ __all__ = [
     'CompatibilityReport',
     'create_container',
     'check_compatibility',
-    'standardize_code'
+    'standardize_code',
+    # Data Collection (for continuous improvement)
+    'DATA_COLLECTOR',
+    'DataCollector',
+    'DataCategory',
+    'TestStatus',
+    'TestResult',
+    'LogEntry',
+    'MetricsSnapshot',
+    'ExtractionEvent',
+    'RefactorSuggestion',
 ]
 
 __version__ = '2.0.0'
