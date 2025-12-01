@@ -146,19 +146,25 @@ class OCRProcessor:
             processed=preprocess_for_ocr(image,aggressive=True)
             
             # First pass: Try 2 PSM modes on preprocessed image
+            # Score each result based on extraction quality, not just text length
             ocr_results=[]
             config1=r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
             text1=pytesseract.image_to_string(processed,lang='eng',config=config1)
-            ocr_results.append(('PSM 6',text1))
+            receipt1=self._parse_receipt_text(text1)
+            score1=self._score_result(receipt1,text1)
+            ocr_results.append(('PSM 6',text1,receipt1,score1))
+            
             config2=r'--oem 3 --psm 4'
             text2=pytesseract.image_to_string(processed,lang='eng',config=config2)
-            ocr_results.append(('PSM 4',text2))
-            best_mode,best_text=max(ocr_results,key=lambda x:len(x[1].strip()))
+            receipt2=self._parse_receipt_text(text2)
+            score2=self._score_result(receipt2,text2)
+            ocr_results.append(('PSM 4',text2,receipt2,score2))
             
-            # Parse and score the initial result
-            logger.info(f"OCR complete: {best_mode}, len={len(best_text)} (threshold: {min_confidence})")
-            receipt=self._parse_receipt_text(best_text)
-            initial_score=self._score_result(receipt,best_text)
+            # Select best result by score (quality) rather than just length
+            best_mode,best_text,receipt,initial_score=max(ocr_results,key=lambda x:x[3])
+            
+            # Log both results for debugging
+            logger.info(f"OCR complete: {best_mode}, len={len(best_text)}, score={initial_score} (threshold: {min_confidence})")
             
             # Early exit if initial result is good (has total and reasonable score)
             if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
