@@ -194,6 +194,47 @@ class TestRefactoringEngine:
         assert plan is not None
         assert plan.plan_id is not None
     
+    def test_analyze_all(self):
+        """Test analyze_all method runs all analyses and returns combined suggestions."""
+        # Add some data for analysis
+        for i in range(5):
+            self.collector.record_log_entry(self.LogEntry(
+                log_id=str(uuid.uuid4()),
+                level="ERROR",
+                message="Analyze all test error",
+                module="test_module",
+                function="test_func",
+                line_number=1
+            ))
+        
+        # Also add a flaky test
+        for i in range(4):
+            self.collector.record_test_result(self.TestResult(
+                test_id=str(uuid.uuid4()),
+                test_name="test_flaky_for_analyze_all",
+                module_path="tests/test_example.py",
+                status=self.TestStatus.PASSED if i < 2 else self.TestStatus.FAILED,
+                duration_ms=100.0
+            ))
+        
+        # Analyze patterns
+        self.analyzer.analyze_error_patterns()
+        
+        # Call analyze_all
+        suggestions = self.engine.analyze_all()
+        
+        # Should return a list
+        assert isinstance(suggestions, list)
+        
+        # Should have suggestions from both error handling and testing
+        error_suggestions = [s for s in suggestions if s.suggestion_type == self.SuggestionType.ERROR_HANDLING]
+        testing_suggestions = [s for s in suggestions if s.suggestion_type == self.SuggestionType.TESTING]
+        
+        # At least one error handling suggestion
+        assert len(error_suggestions) >= 1
+        # At least one testing suggestion (for flaky test)
+        assert len(testing_suggestions) >= 1
+    
     def test_get_summary(self):
         """Test getting engine summary."""
         summary = self.engine.get_summary()
