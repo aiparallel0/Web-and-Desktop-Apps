@@ -512,3 +512,493 @@ class TestStoreNameCorrections:
     def test_contains_costco(self):
         from shared.models.ocr_common import STORE_NAME_CORRECTIONS
         assert 'costc0' in STORE_NAME_CORRECTIONS
+
+
+class TestExtractLineItems:
+    """Tests for extract_line_items function with generic receipt patterns."""
+
+    # Generic format tests - work for any receipt type
+    def test_item_with_hyphen_prefix(self):
+        """Test item with prefix like R- or A- (common grocery format)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['R-CARROTS SHREDDED 10 OZ 1.29']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('1.29')
+
+    def test_item_simple_name_price(self):
+        """Test simple item name followed by price."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['MILK 2% GALLON 3.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('3.99')
+
+    def test_item_with_weight_unit(self):
+        """Test item with weight/unit in name (1 LB, 10 OZ, etc.)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['CUCUMBERS PERSIAN 1 LB 1.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('1.99')
+
+    def test_item_multi_word_description(self):
+        """Test item with multi-word descriptive name."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['TOMATOES CRUSHED NO SALT 1.59']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('1.59')
+
+    def test_item_with_slash_in_name(self):
+        """Test item with slash separator (W/BASIL, W/CHEESE, etc.)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['TOMATOES WHOLE NO SALT W/BASIL 1.59']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('1.59')
+
+    def test_item_organic_product(self):
+        """Test organic product naming."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['ORGANIC OLD FASHIONED OATMEAL 2.69']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('2.69')
+
+    def test_item_with_hyphen_in_name(self):
+        """Test item with hyphen in product name."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['MINI-PEARL TOMATOES 2.49']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('2.49')
+
+    def test_item_abbreviation_prefix(self):
+        """Test item with abbreviation prefix (PKG, LG, SM, etc.)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['PKG SHREDDED MOZZARELLA 3.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('3.99')
+
+    def test_item_with_quantity_in_name(self):
+        """Test item with quantity embedded in name (1 DOZ, 4CT, etc.)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['EGGS 1 DOZ ORGANIC BROWN 3.79']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('3.79')
+
+    def test_item_single_word_name(self):
+        """Test simple single-word item name."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['BANANAS 0.87']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('0.87')
+
+    def test_item_adjective_product(self):
+        """Test item with adjective + product pattern."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['CREAMY SALTED PEANUT BUTTER 2.49']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('2.49')
+
+    def test_item_abbreviated_words(self):
+        """Test item with abbreviated words (WHL, WHT, etc.)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['WHL WHT PITA BREAD 1.69']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('1.69')
+
+    def test_item_with_dollar_sign(self):
+        """Test item with explicit dollar sign."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['COFFEE GROUND $5.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('5.99')
+
+    def test_item_with_sku(self):
+        """Test item with SKU barcode number."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['BACON SLICED 007874202906 6.98']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('6.98')
+
+    def test_item_with_tax_code(self):
+        """Test item with trailing tax code (common in US receipts)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['SODA 12 PACK 4.99 T']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('4.99')
+
+    def test_multiple_items_extraction(self):
+        """Test extraction of multiple items from various formats."""
+        from shared.models.ocr_common import extract_line_items
+        lines = [
+            'CARROTS SHREDDED 1.29',
+            'CUCUMBERS 1.99',
+            'MILK 2% 3.49',
+            'BREAD WHOLE WHEAT 2.99',
+        ]
+        items = extract_line_items(lines)
+        assert len(items) == 4
+        assert items[0][1] == Decimal('1.29')
+        assert items[1][1] == Decimal('1.99')
+        assert items[2][1] == Decimal('3.49')
+        assert items[3][1] == Decimal('2.99')
+
+    def test_skip_quantity_lines(self):
+        """Test that quantity lines like '2 @ 0.49' are skipped."""
+        from shared.models.ocr_common import extract_line_items
+        lines = [
+            'BANANAS ORGANIC 0.87',
+            '3EA @ 0.29/EA',
+            '2 @ 0.49',
+            'PITA BREAD 1.69',
+        ]
+        items = extract_line_items(lines)
+        assert len(items) == 2
+
+    def test_skip_subtotal_total_lines(self):
+        """Test that subtotal/total lines are skipped."""
+        from shared.models.ocr_common import extract_line_items
+        lines = [
+            'MILK 2.99',
+            'SUBTOTAL 2.99',
+            'TAX 0.24',
+            'TOTAL 3.23',
+        ]
+        items = extract_line_items(lines)
+        assert len(items) == 1
+
+    def test_item_with_period_in_name(self):
+        """Test item with period in name (trailing or mid-word)."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['MINI-PEARL TOMATOES.. 2.49']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        # Period should be cleaned from name
+        assert '..' not in items[0][0]
+
+    def test_item_low_price(self):
+        """Test extraction of very low priced items."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['BANANA SINGLE 0.19']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('0.19')
+
+    def test_item_high_price(self):
+        """Test extraction of higher priced items."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['PRIME RIB ROAST 45.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('45.99')
+
+    def test_relaxed_mode_short_names(self):
+        """Test relaxed mode accepts shorter item names."""
+        from shared.models.ocr_common import extract_line_items
+        lines = ['TEA 2.99']
+        items = extract_line_items(lines, relaxed_mode=True)
+        assert len(items) == 1
+
+
+class TestExtractTotalGeneric:
+    """Tests for total extraction from generic receipt formats."""
+
+    def test_total_standard_format(self):
+        """Test standard TOTAL XX.XX format."""
+        from shared.models.ocr_common import extract_total
+        lines = ['TOTAL 38.68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_total_with_colon(self):
+        """Test TOTAL: XX.XX format."""
+        from shared.models.ocr_common import extract_total
+        lines = ['TOTAL: 38.68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_total_with_dollar_sign(self):
+        """Test TOTAL $XX.XX format."""
+        from shared.models.ocr_common import extract_total
+        lines = ['TOTAL $38.68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_total_with_space_before_decimal(self):
+        """Test OCR error with space: TOTAL $38 .68"""
+        from shared.models.ocr_common import extract_total
+        lines = ['TOTAL $38 .68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_grand_total_format(self):
+        """Test GRAND TOTAL format."""
+        from shared.models.ocr_common import extract_total
+        lines = ['GRAND TOTAL 45.99']
+        result = extract_total(lines)
+        assert result == Decimal('45.99')
+
+    def test_amount_due_format(self):
+        """Test AMOUNT format (alternative total indicator)."""
+        from shared.models.ocr_common import extract_total
+        lines = ['AMOUNT: 38.68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_balance_format(self):
+        """Test BALANCE format."""
+        from shared.models.ocr_common import extract_total
+        lines = ['BALANCE 38.68']
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+    def test_total_among_other_lines(self):
+        """Test finding total among multiple lines."""
+        from shared.models.ocr_common import extract_total
+        lines = [
+            'SUBTOTAL 35.00',
+            'TAX 3.68',
+            'TOTAL 38.68',
+            'CASH 40.00',
+        ]
+        result = extract_total(lines)
+        assert result == Decimal('38.68')
+
+
+class TestParseReceiptText:
+    """Tests for parse_receipt_text function with generic receipt data."""
+
+    def test_parse_basic_receipt(self):
+        """Test parsing a basic receipt structure."""
+        from shared.models.ocr_common import parse_receipt_text
+        lines = [
+            "GROCERY STORE",
+            "123 Main Street",
+            "City, ST 12345",
+            "(555) 123-4567",
+            "MILK 2% GALLON 3.99",
+            "BREAD WHEAT 2.49",
+            "SUBTOTAL 6.48",
+            "TAX 0.52",
+            "TOTAL 7.00",
+            "01/15/2024",
+        ]
+        result = parse_receipt_text(lines)
+        
+        assert result['store_name'] is not None
+        assert result['transaction_date'] == '01/15/2024'
+        assert result['total'] == Decimal('7.00')
+        assert len(result['items']) >= 2
+        assert result['store_phone'] == '(555) 123-4567'
+
+    def test_parse_items_with_ocr_errors(self):
+        """Test parsing items with common OCR errors that get corrected."""
+        from shared.models.ocr_common import parse_receipt_text
+        lines = [
+            "ORGANIC OLD FASHIUNED OATMEAL 2.69",  # FASHIUNED -> FASHIONED
+            "CARROTS SHREDDED 10 02 1.29",  # 02 -> OZ
+        ]
+        result = parse_receipt_text(lines)
+        assert len(result['items']) >= 1
+
+    def test_parse_receipt_without_date(self):
+        """Test parsing receipt missing date."""
+        from shared.models.ocr_common import parse_receipt_text
+        lines = [
+            "STORE NAME",
+            "ITEM ONE 5.99",
+            "TOTAL 5.99",
+        ]
+        result = parse_receipt_text(lines)
+        assert result['transaction_date'] is None
+        assert result['total'] == Decimal('5.99')
+
+    def test_parse_receipt_without_total(self):
+        """Test parsing receipt missing total."""
+        from shared.models.ocr_common import parse_receipt_text
+        lines = [
+            "STORE NAME",
+            "ITEM ONE 5.99",
+            "ITEM TWO 3.99",
+        ]
+        result = parse_receipt_text(lines)
+        assert result['total'] is None
+        assert 'Total not found' in str(result['extraction_notes'])
+
+
+class TestExtractSubtotal:
+    """Tests for extract_subtotal function."""
+
+    def test_subtotal_with_dollar_sign(self):
+        from shared.models.ocr_common import extract_subtotal
+        lines = ['SUBTOTAL $38.68']
+        result = extract_subtotal(lines)
+        assert result == Decimal('38.68')
+
+    def test_subtotal_without_dollar_sign(self):
+        from shared.models.ocr_common import extract_subtotal
+        lines = ['SUBTOTAL 38.68']
+        result = extract_subtotal(lines)
+        assert result == Decimal('38.68')
+
+    def test_sub_total_with_space(self):
+        from shared.models.ocr_common import extract_subtotal
+        lines = ['SUB TOTAL $38.68']
+        result = extract_subtotal(lines)
+        assert result == Decimal('38.68')
+
+    def test_subtotal_among_other_lines(self):
+        from shared.models.ocr_common import extract_subtotal
+        lines = ['ITEM 5.99', 'SUBTOTAL 5.99', 'TAX 0.50']
+        result = extract_subtotal(lines)
+        assert result == Decimal('5.99')
+
+
+class TestGetDetectionConfig:
+    """Tests for get_detection_config function."""
+
+    def test_returns_dict(self):
+        from shared.models.ocr_common import get_detection_config
+        config = get_detection_config()
+        assert isinstance(config, dict)
+
+    def test_has_required_keys(self):
+        from shared.models.ocr_common import get_detection_config
+        config = get_detection_config()
+        assert 'min_confidence' in config
+        assert 'box_threshold' in config
+        assert 'min_text_height' in config
+        assert 'use_angle_cls' in config
+
+    def test_min_confidence_in_range(self):
+        from shared.models.ocr_common import get_detection_config
+        config = get_detection_config()
+        assert 0.0 <= config['min_confidence'] <= 1.0
+
+    def test_box_threshold_in_range(self):
+        from shared.models.ocr_common import get_detection_config
+        config = get_detection_config()
+        assert 0.0 <= config['box_threshold'] <= 1.0
+
+
+class TestRecordDetectionResult:
+    """Tests for record_detection_result function."""
+
+    def test_record_detection_result_no_error(self):
+        """Test that record_detection_result doesn't raise errors."""
+        from shared.models.ocr_common import record_detection_result
+        # Should not raise
+        record_detection_result(
+            text_regions_count=10,
+            avg_confidence=0.85,
+            success=True,
+            processing_time=1.5
+        )
+
+    def test_record_failed_detection(self):
+        """Test recording a failed detection."""
+        from shared.models.ocr_common import record_detection_result
+        # Should not raise
+        record_detection_result(
+            text_regions_count=0,
+            avg_confidence=0.0,
+            success=False,
+            processing_time=0.5
+        )
+
+
+class TestValidateReceiptTotals:
+    """Tests for validate_receipt_totals function."""
+
+    def test_valid_totals_math(self):
+        """Test that subtotal + tax = total validation passes."""
+        from shared.models.ocr_common import validate_receipt_totals
+        result = validate_receipt_totals(
+            subtotal=Decimal('35.00'),
+            tax=Decimal('3.68'),
+            total=Decimal('38.68')
+        )
+        assert result['valid'] is True
+        assert 'Math validation passed' in str(result['notes'])
+
+    def test_missing_total_critical(self):
+        """Test that missing total is flagged as critical."""
+        from shared.models.ocr_common import validate_receipt_totals
+        result = validate_receipt_totals(
+            subtotal=Decimal('35.00'),
+            tax=Decimal('3.68'),
+            total=None
+        )
+        assert result['valid'] is False
+        assert 'CRITICAL' in str(result['notes'])
+
+    def test_missing_subtotal_noted(self):
+        """Test that missing subtotal is noted."""
+        from shared.models.ocr_common import validate_receipt_totals
+        result = validate_receipt_totals(
+            subtotal=None,
+            tax=Decimal('3.68'),
+            total=Decimal('38.68')
+        )
+        assert 'Subtotal not found' in str(result['notes'])
+
+
+class TestValidateItemCount:
+    """Tests for validate_item_count function."""
+
+    def test_no_items_warning(self):
+        """Test that no items triggers warning."""
+        from shared.models.ocr_common import validate_item_count
+        result = validate_item_count([])
+        assert 'No items extracted' in str(result['notes'])
+
+    def test_reasonable_item_count(self):
+        """Test reasonable item count is validated."""
+        from shared.models.ocr_common import validate_item_count
+        items = [('Item', Decimal('1.00'), 1)] * 10
+        result = validate_item_count(items)
+        assert 'Extracted 10 items' in str(result['notes'])
+
+    def test_high_item_count_warning(self):
+        """Test that very high item count triggers verification note."""
+        from shared.models.ocr_common import validate_item_count
+        items = [('Item', Decimal('1.00'), 1)] * 60
+        result = validate_item_count(items)
+        assert 'verify' in str(result['notes']).lower()
+
+
+class TestCalculateOverallConfidence:
+    """Tests for calculate_overall_confidence function."""
+
+    def test_high_confidence_complete_data(self):
+        """Test high confidence with complete receipt data."""
+        from shared.models.ocr_common import calculate_overall_confidence
+        receipt_data = {
+            'store': {'name': 'Test Store'},
+            'totals': {'total': Decimal('50.00')},
+            'items': [{'name': 'Item', 'price': Decimal('50.00')}]
+        }
+        confidence = calculate_overall_confidence(0.8, receipt_data)
+        assert confidence > 0.5
+
+    def test_low_confidence_missing_total(self):
+        """Test low confidence when total is missing."""
+        from shared.models.ocr_common import calculate_overall_confidence
+        receipt_data = {
+            'store': {'name': 'Test Store'},
+            'totals': {'total': None},
+            'items': []
+        }
+        confidence = calculate_overall_confidence(0.8, receipt_data)
+        assert confidence < 0.5

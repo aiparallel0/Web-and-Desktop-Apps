@@ -374,6 +374,14 @@ class FlorenceProcessor(BaseDonutProcessor):
     
     def _run_florence_task(self, image, task_prompt: str, max_tokens: int = 512) -> Dict:
         """Run a Florence-2 task and return parsed output."""
+        # Validate model and processor are loaded
+        if self.processor is None:
+            raise RuntimeError("Florence-2 processor not loaded. Model initialization may have failed.")
+        if self.model is None:
+            raise RuntimeError("Florence-2 model not loaded. Model initialization may have failed.")
+        if image is None:
+            raise ValueError("Image cannot be None for Florence-2 processing")
+        
         inputs = self.processor(text=task_prompt, images=image, return_tensors="pt")
         inputs = inputs.to(self.device)
         
@@ -399,6 +407,12 @@ class FlorenceProcessor(BaseDonutProcessor):
     def extract(self, image_path: str) -> ExtractionResult:
         start_time = time.time()
         try:
+            # Validate model is loaded before attempting extraction
+            if self.processor is None or self.model is None:
+                error_msg = "Florence-2 model not loaded. Please ensure model initialization succeeded."
+                logger.error(error_msg)
+                return ExtractionResult(success=False, error=error_msg)
+            
             logger.info("Florence-2: Loading image...")
             image = load_and_validate_image(image_path)
             if image is None:
