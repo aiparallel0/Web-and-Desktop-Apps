@@ -1,0 +1,81 @@
+# Cursor Rules for Receipt Extractor Project
+
+## CRITICAL: Circular Exchange Framework Requirement
+
+You are working in a codebase that uses the **Circular Exchange Framework** for all configuration and module management.
+
+**EVERY piece of code you write MUST integrate with this framework.**
+
+## Automatic Code Template
+
+When creating a new Python file, ALWAYS start with:
+
+```python
+"""
+[Module Description]
+
+Integrated with Circular Exchange Framework for dynamic configuration.
+"""
+
+# Circular Exchange Framework Integration (MANDATORY)
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="your.module.name",
+            file_path=__file__,
+            description="What this module does",
+            dependencies=["list", "dependencies"],
+            exports=["ExportedItems"]
+        ))
+    except Exception:
+        pass
+
+# Create configuration registry for this module
+_config_registry = PackageRegistry() if CIRCULAR_EXCHANGE_AVAILABLE else None
+
+def _init_config():
+    """Initialize module configuration packages."""
+    if _config_registry is None:
+        return
+    # Add your configuration packages here
+    _config_registry.create_package(
+        name='module.parameter_name',
+        initial_value=default_value,
+        source_module='your.module.name',
+        validator=lambda v: validation_logic
+    )
+
+_init_config()
+```
+
+## Rules
+
+1. **Never hardcode configuration values** - Use VariablePackage
+2. **Always register modules** - Use PROJECT_CONFIG.register_module()
+3. **List all dependencies** - In the ModuleRegistration
+4. **List all exports** - Classes and functions that others can import
+5. **Add descriptions** - Every module needs a description
+
+## Reference Files
+
+- `CIRCULAR_EXCHANGE_GUIDE.md` - Complete integration guide
+- `shared/models/ocr_config.py` - Reference implementation
+- `shared/circular_exchange/__init__.py` - Framework API
+
+## Validation
+
+Before completing any task, ensure:
+- Module is registered with PROJECT_CONFIG
+- Configurable parameters use VariablePackage
+- Dependencies are correctly listed
+- Tests verify the integration works

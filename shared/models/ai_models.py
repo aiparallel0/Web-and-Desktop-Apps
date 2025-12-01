@@ -1,3 +1,9 @@
+"""
+AI Models Module with Circular Exchange Integration
+
+This module provides AI-powered receipt extraction using Donut and Florence models.
+It integrates with the Circular Exchange Framework for dynamic configuration.
+"""
 import os
 os.environ.update({'TF_ENABLE_ONEDNN_OPTS':'0','TF_CPP_MIN_LOG_LEVEL':'3','TRANSFORMERS_VERBOSITY':'error'})
 import sys,json,re,logging,time
@@ -8,7 +14,29 @@ sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,enhance_image
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger=logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.ai_models",
+            file_path=__file__,
+            description="AI-powered receipt extraction using Donut and Florence transformer models",
+            dependencies=["shared.utils.data_structures", "shared.utils.image_processing",
+                         "shared.circular_exchange"],
+            exports=["BaseDonutProcessor", "DonutProcessor", "FlorenceProcessor", 
+                    "DonutFinetuner", "ModelTrainer", "DataAugmenter"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors
 
 # Lazy imports to allow mocking in tests
 torch = None

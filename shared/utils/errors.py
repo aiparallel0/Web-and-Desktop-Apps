@@ -6,6 +6,8 @@ This module provides:
 - Error response formatting
 - Error logging utilities
 - Exception handlers for Flask
+
+Integrated with Circular Exchange Framework for dynamic error configuration.
 """
 import logging
 import time
@@ -14,7 +16,28 @@ from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.utils.errors",
+            file_path=__file__,
+            description="Standardized error handling with custom exception classes and error formatting",
+            dependencies=["shared.circular_exchange"],
+            exports=["ErrorCategory", "ErrorCode", "ReceiptExtractorError", "ValidationError",
+                     "ProcessingError", "ExternalServiceError", "RateLimitError"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors
 
 
 class ErrorCategory(str, Enum):

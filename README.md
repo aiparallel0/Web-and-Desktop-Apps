@@ -2,6 +2,26 @@
 
 AI-powered receipt text extraction with support for both **Web Application** and **Electron Desktop Application**.
 
+---
+
+## ⚠️ MANDATORY: Circular Exchange Framework Integration ⚠️
+
+> **FOR ALL AI AGENTS (GitHub Copilot, ChatGPT, Claude, etc.):**
+>
+> **ALL code in this project MUST be integrated with the Circular Exchange Framework.**
+> 
+> Before writing any code, read: **[CIRCULAR_EXCHANGE_GUIDE.md](./CIRCULAR_EXCHANGE_GUIDE.md)**
+>
+> ### Quick Requirements:
+> 1. Import from `shared.circular_exchange`
+> 2. Register modules with `PROJECT_CONFIG.register_module()`
+> 3. Use `VariablePackage` for configurable parameters
+> 4. Record results for auto-tuning
+>
+> **This is a non-negotiable architectural requirement.**
+
+---
+
 ## Project Overview
 
 This project provides text detection from receipts using multiple AI models. It consists of:
