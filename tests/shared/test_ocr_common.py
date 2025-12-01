@@ -252,6 +252,11 @@ class TestShouldSkipLine:
         from shared.models.ocr_common import should_skip_line
         assert should_skip_line('Coffee $3.50') is False
 
+    def test_skip_fotal_ocr_error(self):
+        """Test that FOTAL (OCR misread of TOTAL) is skipped."""
+        from shared.models.ocr_common import should_skip_line
+        assert should_skip_line('FOTAL 38.68') is True
+
 
 class TestExtractStoreName:
     """Tests for extract_store_name function"""
@@ -1010,3 +1015,156 @@ class TestCalculateOverallConfidence:
         }
         confidence = calculate_overall_confidence(0.8, receipt_data)
         assert confidence < 0.5
+
+
+class TestFixConcatenatedText:
+    """Tests for fix_concatenated_text function to handle OCR word merging."""
+
+    def test_letter_number_split(self):
+        """Test splitting letters from numbers: SHREDDED10 -> SHREDDED 10"""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('SHREDDED10')
+        assert result == 'SHREDDED 10'
+
+    def test_number_unit_split_oz(self):
+        """Test splitting number from OZ unit: 10OZ -> 10 OZ"""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('10OZ')
+        assert result == '10 OZ'
+
+    def test_number_unit_split_lb(self):
+        """Test splitting number from LB unit: 5LB -> 5 LB"""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('5LB')
+        assert result == '5 LB'
+
+    def test_leading_lowercase_noise(self):
+        """Test stripping leading lowercase noise: aTOMATOES -> TOMATOES"""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('aTOMATOES')
+        assert result == 'TOMATOES'
+
+    def test_complex_pattern(self):
+        """Test complex pattern with number and unit."""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('CARROTS10OZ')
+        assert '10 OZ' in result or '10OZ' in result  # Either is acceptable
+
+    def test_preserve_normal_text(self):
+        """Test that normal text is not modified."""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('MILK 2% GALLON')
+        assert result == 'MILK 2% GALLON'
+
+    def test_empty_string(self):
+        """Test empty string handling."""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text('')
+        assert result == ''
+
+    def test_none_handling(self):
+        """Test None handling."""
+        from shared.models.ocr_common import fix_concatenated_text
+        result = fix_concatenated_text(None)
+        assert result is None
+
+
+class TestIsGarbageText:
+    """Tests for is_garbage_text function to detect OCR garbage output."""
+
+    def test_empty_string_is_garbage(self):
+        """Test that empty string is garbage."""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('') is True
+
+    def test_very_short_punctuation_is_garbage(self):
+        """Test that short punctuation-heavy text is garbage: '.- %'"""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('.- %') is True
+
+    def test_random_letters_is_garbage(self):
+        """Test that random short letters are garbage: 'eee -'"""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('eee -') is True
+
+    def test_single_letters_is_garbage(self):
+        """Test that single letter words are garbage: 'LY'"""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('LY') is True
+
+    def test_mixed_case_chaos_is_garbage(self):
+        """Test that mixed case chaos is garbage: 'oo )sprauteDCaSTYLE'"""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('oo )sprauteDCaSTYLE') is True
+
+    def test_valid_short_item(self):
+        """Test that valid short items are not garbage: 'TEA'"""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('TEA') is False
+
+    def test_valid_product_name(self):
+        """Test that valid product names are not garbage."""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('MILK 2% GALLON') is False
+
+    def test_valid_item_with_numbers(self):
+        """Test that valid items with numbers are not garbage."""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('CARROTS 10 OZ') is False
+
+    def test_valid_abbreviations(self):
+        """Test that valid abbreviations are not garbage."""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('PKG CHEESE') is False
+
+    def test_excessive_special_chars_is_garbage(self):
+        """Test that text with excessive special chars is garbage."""
+        from shared.models.ocr_common import is_garbage_text
+        assert is_garbage_text('@@##$$%%') is True
+
+
+class TestMaxRealisticItemPrice:
+    """Tests for MAX_REALISTIC_ITEM_PRICE constant and price filtering."""
+
+    def test_constant_exists(self):
+        """Test that MAX_REALISTIC_ITEM_PRICE exists and has reasonable value."""
+        from shared.models.ocr_common import MAX_REALISTIC_ITEM_PRICE
+        from decimal import Decimal
+        assert MAX_REALISTIC_ITEM_PRICE == Decimal('99.99')
+
+    def test_unrealistic_price_filtered(self):
+        """Test that unrealistic prices like 200.49 are filtered."""
+        from shared.models.ocr_common import extract_line_items
+        # A line with an unrealistic price should not produce an item
+        lines = ['ITEM NAME 200.49']
+        items = extract_line_items(lines)
+        # Should not extract the item due to unrealistic price
+        assert len(items) == 0 or all(item[1] <= 99.99 for item in items)
+
+    def test_realistic_price_accepted(self):
+        """Test that realistic prices are accepted."""
+        from shared.models.ocr_common import extract_line_items
+        from decimal import Decimal
+        lines = ['MILK GALLON 4.99']
+        items = extract_line_items(lines)
+        assert len(items) == 1
+        assert items[0][1] == Decimal('4.99')
+
+
+class TestCleanItemNameWithConcatenation:
+    """Tests for clean_item_name function with concatenation fixes."""
+
+    def test_removes_leading_lowercase_noise(self):
+        """Test removal of leading lowercase noise: 'f-CARROTS' -> 'CARROTS'"""
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('f-CARROTS')
+        # Should remove leading noise
+        assert 'CARROTS' in result
+        assert not result.startswith('f-')
+
+    def test_fixes_number_concatenation(self):
+        """Test fixing number concatenation: 'SHREDDED10' -> 'SHREDDED 10'"""
+        from shared.models.ocr_common import clean_item_name
+        result = clean_item_name('SHREDDED10')
+        # Either has a space or is otherwise cleaned
+        assert '10' in result

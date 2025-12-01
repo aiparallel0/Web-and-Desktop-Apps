@@ -33,7 +33,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             dependencies=["shared.circular_exchange"],
             exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
                     "extract_line_items", "parse_receipt_text", "get_detection_config",
-                    "record_detection_result"]
+                    "record_detection_result", "fix_concatenated_text", "clean_item_name",
+                    "is_garbage_text", "MAX_REALISTIC_ITEM_PRICE"]
         ))
     except Exception:
         pass  # Ignore registration errors during import
@@ -108,6 +109,17 @@ def record_detection_result(text_regions_count: int, avg_confidence: float,
 # Price validation constants
 PRICE_MIN = Decimal('0')
 PRICE_MAX = Decimal('9999')
+# Maximum realistic price for a single grocery/retail item
+# Items priced above this threshold are likely OCR errors
+MAX_REALISTIC_ITEM_PRICE = Decimal('99.99')
+
+# Garbage text detection thresholds
+MIN_UNIQUE_CHAR_RATIO = 0.5  # Minimum ratio of unique chars to detect repeated char noise
+MAX_SPECIAL_CHAR_RATIO = 0.2  # Maximum ratio of special chars in valid text
+MIN_ALPHA_RATIO = 0.5  # Minimum ratio of alpha chars in non-space text
+MIN_ALPHAS_FOR_CASE_CHECK = 6  # Minimum alpha count before checking case transitions
+MAX_CASE_TRANSITIONS = 3  # Maximum case transitions before flagging as garbage
+MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK = 5  # Minimum text length before special char ratio check
 
 # Keywords to skip when extracting line items
 SKIP_KEYWORDS = frozenset({
@@ -217,6 +229,7 @@ OCR_CORRECTIONS = {
 WORD_CORRECTIONS = {
     'tota1': 'total',
     't0tal': 'total',
+    'fotal': 'total',  # F misread as T
     'subt0tal': 'subtotal',
     'subtota1': 'subtotal',
     'ca5h': 'cash',
@@ -409,6 +422,8 @@ def should_skip_line(line: str) -> bool:
     """
     Check if a line should be skipped when extracting items.
     
+    Applies OCR corrections before checking for skip keywords.
+    
     Args:
         line: Text line to check
         
@@ -416,8 +431,15 @@ def should_skip_line(line: str) -> bool:
         True if line should be skipped
     """
     line_lower = line.lower()
-    # Skip lines with common keywords
-    if any(kw in line_lower for kw in SKIP_KEYWORDS):
+    
+    # Apply word corrections to catch OCR-misread keywords like FOTAL -> TOTAL
+    corrected_line = line_lower
+    for wrong, correct in WORD_CORRECTIONS.items():
+        if wrong in corrected_line:
+            corrected_line = corrected_line.replace(wrong, correct)
+    
+    # Skip lines with common keywords (using corrected line)
+    if any(kw in corrected_line for kw in SKIP_KEYWORDS):
         return True
     # Skip quantity lines like "2 @ 0.49" or "3FA @.0.29/EA"
     if re.match(r'^\d+\s*@', line) or re.match(r'^\d+[A-Z]*\s*[@—-]', line):
@@ -452,11 +474,153 @@ def should_skip_item_name(name: str) -> bool:
     return False
 
 
+def fix_concatenated_text(text: str) -> str:
+    """
+    Fix text where OCR has concatenated words without spaces.
+    
+    This handles common OCR errors where adjacent text regions are merged:
+    - "SHREDDED10" -> "SHREDDED 10" (number stuck to word)
+    - "10OZ" -> "10 OZ" (unit stuck to number)
+    - "TOMATOESWHOLE" patterns are harder - we try to split at case transitions
+    
+    Args:
+        text: Raw OCR text with potential concatenation issues
+        
+    Returns:
+        Text with spaces inserted at likely word boundaries
+    """
+    if not text:
+        return text
+    
+    result = text
+    
+    # Insert space between letters and numbers: "SHREDDED10" -> "SHREDDED 10"
+    # But avoid breaking things like "2%" or "A1" at the start
+    result = re.sub(r'([A-Za-z]{2,})(\d)', r'\1 \2', result)
+    
+    # Insert space between numbers and letters: "10OZ" -> "10 OZ"
+    # Common for units like OZ, LB, CT, EA
+    result = re.sub(r'(\d)(OZ|LB|CT|EA|PK|BAG|DOZ)\b', r'\1 \2', result, flags=re.IGNORECASE)
+    
+    # Handle common OCR artifacts at word boundaries
+    # Pattern: lowercase followed immediately by uppercase (likely word boundary)
+    # "aTOMATOES" pattern - OCR picking up first letter incorrectly
+    result = re.sub(r'^([a-z]{1,2})([A-Z]{2,})', r'\2', result)  # Strip leading lowercase noise
+    
+    # Insert spaces at case transitions that look like word boundaries
+    # "TOMATOESWHOLE" - this is hard without a dictionary
+    # We'll be conservative and only handle specific known patterns
+    
+    return result
+
+
+def is_garbage_text(text: str) -> bool:
+    """
+    Detect if OCR text appears to be garbage/unreadable.
+    
+    This helps filter out low-quality OCR output that would result
+    in meaningless item names like "oo )sprauteDCaSTYLE" or "eee -".
+    
+    Detection patterns:
+    - Very short text (single characters that aren't valid items)
+    - Excessive punctuation/special characters
+    - No recognizable word patterns (random character sequences)
+    - Mixed case chaos (not following normal word patterns)
+    - Repeated characters suggesting OCR noise
+    
+    Args:
+        text: Cleaned text to analyze
+        
+    Returns:
+        True if text appears to be garbage, False if it seems valid
+    """
+    if not text:
+        return True
+    
+    # Strip and normalize
+    clean = text.strip()
+    
+    # Very short text (2 chars) is likely garbage - valid items are 3+ chars
+    if len(clean) <= 2:
+        return True
+    
+    # Calculate character type ratios
+    total_chars = len(clean)
+    alphas = sum(1 for c in clean if c.isalpha())
+    specials = sum(1 for c in clean if not c.isalnum() and not c.isspace())
+    spaces = sum(1 for c in clean if c.isspace())
+    
+    # Very short text with punctuation is likely garbage (e.g., ".- %", "eee -")
+    if len(clean) <= MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK:
+        # Allow short valid items like "TEA", "GUM", "EGG" (3+ letters, all alpha)
+        if clean.isalpha() and len(clean) >= 3:
+            # Check for repeated characters (like "eee")
+            if len(set(clean.lower())) < len(clean) * MIN_UNIQUE_CHAR_RATIO:
+                return True  # Too many repeated chars
+            return False
+        # Otherwise too short with mixed chars is garbage
+        if alphas < 3 or specials > 0:
+            return True
+    
+    # Garbage detection: excessive special characters
+    if total_chars > MIN_TEXT_LENGTH_FOR_SPECIAL_CHECK and specials > total_chars * MAX_SPECIAL_CHAR_RATIO:
+        return True
+    
+    # Garbage detection: no letters at all (except for numbers with units)
+    if alphas == 0:
+        return True
+    
+    # Garbage detection: too few letters compared to total
+    non_space_chars = total_chars - spaces
+    if non_space_chars > 0 and alphas < non_space_chars * MIN_ALPHA_RATIO:
+        return True
+    
+    # Garbage detection: isolated single letters like "LY" or "eet"
+    # that aren't valid abbreviations
+    words = clean.split()
+    if words:
+        short_words = [w for w in words if len(w) <= 2 and w.isalpha()]
+        # If all words are very short alphabetic, likely garbage
+        if len(words) <= 2 and len(short_words) == len(words):
+            return True
+    
+    # Garbage detection: random mixed case without word structure
+    # E.g., "oo )sprauteDCaSTYLE" - lowercase-uppercase transitions that don't make sense
+    # Normal text has case transitions at word boundaries, not mid-word
+    case_transitions = 0
+    prev_upper = None
+    for c in clean:
+        if c.isalpha():
+            is_upper = c.isupper()
+            if prev_upper is not None and prev_upper != is_upper:
+                case_transitions += 1
+            prev_upper = is_upper
+    
+    # Too many case transitions for the length suggests OCR noise
+    # Normal text: "TOMATOES WHOLE" has 0 mid-word transitions
+    # Garbage: "oo )sprauteDCaSTYLE" has many mid-word transitions
+    if alphas >= MIN_ALPHAS_FOR_CASE_CHECK and case_transitions >= MAX_CASE_TRANSITIONS:
+        # More than threshold case transitions in text with sufficient letters is suspicious
+        # Additionally check for words starting with lowercase followed by uppercase
+        for word in words:
+            if len(word) >= 4:
+                letters_only = ''.join(c for c in word if c.isalpha())
+                if letters_only and letters_only[0].islower():
+                    # Word starts lowercase - check for uppercase later
+                    has_upper = any(c.isupper() for c in letters_only[1:])
+                    if has_upper:
+                        return True
+        return True
+    
+    return False
+
+
 def clean_item_name(name: str) -> str:
     """
     Clean and correct common OCR errors in item names.
     
     Applies:
+    - Fix concatenated text (OCR joining words without spaces)
     - Word-level corrections (e.g., FASHIUNED -> FASHIONED)
     - Unit abbreviation fixes (e.g., "10 02" -> "10 OZ")
     - Removes trailing periods and extra punctuation
@@ -474,6 +638,9 @@ def clean_item_name(name: str) -> str:
     
     cleaned = name.strip()
     
+    # First, fix concatenated text issues from OCR
+    cleaned = fix_concatenated_text(cleaned)
+    
     # Apply unit corrections FIRST (before removing trailing letters)
     for wrong, correct in UNIT_CORRECTIONS.items():
         cleaned = cleaned.replace(wrong, correct)
@@ -482,6 +649,10 @@ def clean_item_name(name: str) -> str:
     # Pattern like "oo2igogqggi6" - mostly lowercase with occasional digits
     cleaned = re.sub(r'\s+[a-z0-9]{8,}\s*$', '', cleaned)  # Trailing noise
     cleaned = re.sub(r'\s+[oO0]+[a-z0-9]{6,}\s*$', '', cleaned)  # OCR O/0 confusion noise (min 6 chars)
+    
+    # Remove leading OCR noise (lowercase letters before uppercase words)
+    # E.g., "f-Reasals" where "f-" is noise before "CARROTS"
+    cleaned = re.sub(r'^[a-z][^A-Za-z]*(?=[A-Z])', '', cleaned)
     
     # Remove trailing single tax code letters (but not OZ, LB, CT etc.)
     cleaned = re.sub(r'\s+[FTNXD0]\s*$', '', cleaned, flags=re.IGNORECASE)
@@ -1038,6 +1209,10 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
     max_price = config.max_price if config else 1000.0
     max_digit_ratio = config.max_digit_ratio if config else 2.0
     
+    # Use realistic item price limit to filter out OCR errors
+    # Prices like 200.49 are unrealistic for individual grocery items
+    realistic_max_price = min(max_price, float(MAX_REALISTIC_ITEM_PRICE))
+    
     items = []
     seen = set()
     
@@ -1089,6 +1264,10 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                     if alphas < len(name.replace(' ', '')) / 2:
                         continue
                 
+                # Check for garbage OCR text (unreadable/random characters)
+                if is_garbage_text(name):
+                    continue
+                
                 # Check confidence if metadata provided - use configurable threshold
                 if text_metadata and i < len(text_metadata):
                     conf = text_metadata[i].get('confidence')
@@ -1096,7 +1275,8 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                         continue
                 
                 price = normalize_price(price_str)
-                if not price or price <= 0 or price > max_price:
+                # Use realistic item price limit to filter OCR errors
+                if not price or price <= 0 or price > Decimal(str(realistic_max_price)):
                     continue
                 
                 if should_skip_item_name(name):
@@ -1122,7 +1302,8 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                     price_str = pm.group(1).replace(',', '.')
                     price = normalize_price(price_str)
                     
-                    if price and price > 0:
+                    # Use realistic item price limit for fallback matches too
+                    if price and price > 0 and price <= Decimal(str(realistic_max_price)):
                         name_part = line[:pm.start()].strip()
                         # Remove quantity prefixes
                         name_part = re.sub(r'^\d+\s*[xX*]\s*', '', name_part).strip()
@@ -1130,6 +1311,10 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                         name_part = re.sub(r'\s+\d{10,14}\s*$', '', name_part).strip()
                         # Apply item name cleaning for OCR corrections
                         name_part = clean_item_name(name_part)
+                        
+                        # Skip garbage text
+                        if is_garbage_text(name_part):
+                            continue
                         
                         if len(name_part) >= min_name_length and name_part not in seen:
                             if not should_skip_line(name_part) and not should_skip_item_name(name_part):
