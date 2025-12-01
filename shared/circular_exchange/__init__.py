@@ -93,6 +93,18 @@ from .data_collector import (
     ExtractionEvent,
     RefactorSuggestion
 )
+from .metrics_analyzer import (
+    METRICS_ANALYZER,
+    MetricsAnalyzer,
+    Pattern,
+    PatternType,
+    Insight,
+    InsightPriority,
+    RefactorCategory,
+    PerformanceBottleneck,
+    TestHealthReport,
+    ModelPerformanceReport
+)
 
 __all__ = [
     # Core
@@ -140,6 +152,17 @@ __all__ = [
     'MetricsSnapshot',
     'ExtractionEvent',
     'RefactorSuggestion',
+    # Metrics Analysis (for pattern detection and insights)
+    'METRICS_ANALYZER',
+    'MetricsAnalyzer',
+    'Pattern',
+    'PatternType',
+    'Insight',
+    'InsightPriority',
+    'RefactorCategory',
+    'PerformanceBottleneck',
+    'TestHealthReport',
+    'ModelPerformanceReport',
 ]
 
 __version__ = '2.0.0'
