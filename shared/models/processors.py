@@ -66,7 +66,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             file_path=__file__,
             description="OCR processor implementations using EasyOCR and PaddleOCR",
             dependencies=["shared.circular_exchange", "shared.models.ocr_common",
-                         "shared.utils.data_structures"],
+                         "shared.utils.data_structures", "shared.utils.image_processing"],
             exports=["BaseProcessor", "EasyOCRProcessor", "PaddleProcessor",
                     "ProcessorInitializationError", "ProcessorHealthCheckError"]
         ))

@@ -30,7 +30,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             module_id="shared.models.ocr_common",
             file_path=__file__,
             description="Common OCR processing utilities with regex patterns and text extraction",
-            dependencies=["shared.circular_exchange", "shared.models.ocr_config"],
+            dependencies=["shared.circular_exchange"],
             exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
                     "extract_line_items", "parse_receipt_text", "get_detection_config",
                     "record_detection_result"]

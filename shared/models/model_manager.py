@@ -99,8 +99,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             module_id="shared.models.model_manager",
             file_path=__file__,
             description="Enterprise ML model management with LRU caching and GPU detection",
-            dependencies=["shared.circular_exchange", "shared.models.ai_models", 
-                         "shared.models.processors", "shared.models.ocr_processor"],
+            dependencies=["shared.circular_exchange"],
             exports=["ModelManager", "ModelType", "GPUInfo", "ModelInfo", 
                     "ConfigValidator", "GPUDetector", "ProcessorFactory"]
         ))
