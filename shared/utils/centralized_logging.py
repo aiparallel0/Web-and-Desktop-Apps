@@ -67,6 +67,7 @@ def _register_logging_module():
             PROJECT_CONFIG.register_module(ModuleRegistration(
                 module_id="shared.utils.centralized_logging",
                 file_path=__file__,
+                description="Centralized logging with automatic logger injection and structured JSON output",
                 dependencies=["shared.circular_exchange"],
                 exports=["get_module_logger", "log_errors", "set_request_context", "LoggingConfig"]
             ))

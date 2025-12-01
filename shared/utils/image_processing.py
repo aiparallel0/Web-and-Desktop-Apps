@@ -75,11 +75,16 @@ def get_image_config():
             'enhancement_factor': 1.2
         }
     
+    def _get_pkg_value(name: str, default):
+        """Helper to get package value with fallback."""
+        pkg = _image_config_registry.get_package(name)
+        return pkg.get() if pkg else default
+    
     return {
-        'brightness_threshold': _image_config_registry.get_package('image.brightness_threshold').get() if _image_config_registry.get_package('image.brightness_threshold') else 100,
-        'contrast_threshold': _image_config_registry.get_package('image.contrast_threshold').get() if _image_config_registry.get_package('image.contrast_threshold') else 40,
-        'upscale_threshold': _image_config_registry.get_package('image.upscale_threshold').get() if _image_config_registry.get_package('image.upscale_threshold') else 1000,
-        'enhancement_factor': _image_config_registry.get_package('image.enhancement_factor').get() if _image_config_registry.get_package('image.enhancement_factor') else 1.2
+        'brightness_threshold': _get_pkg_value('image.brightness_threshold', 100),
+        'contrast_threshold': _get_pkg_value('image.contrast_threshold', 40),
+        'upscale_threshold': _get_pkg_value('image.upscale_threshold', 1000),
+        'enhancement_factor': _get_pkg_value('image.enhancement_factor', 1.2)
     }
 
 # Get config values (with fallback for backward compatibility)
