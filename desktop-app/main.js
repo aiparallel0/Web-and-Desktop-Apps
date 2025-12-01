@@ -7,6 +7,17 @@
  * Author:     Receipt Extractor Team
  * Platform:   Electron (Cross-platform Desktop)
  * 
+ * Circular Exchange Framework Integration:
+ * -----------------------------------------
+ * Module ID: desktop-app.main
+ * Description: Electron main process for desktop app with Python integration
+ * Dependencies: [shared.models.model_manager, shared.config.settings]
+ * Exports: [createWindow, runPythonExtraction, IPC handlers]
+ * 
+ * Note: The main process integrates with the Circular Exchange Framework
+ * by spawning Python processes that are registered with the framework.
+ * Configuration is shared via the electron-store and IPC messages.
+ * 
  * Architecture:
  *   - Main Process: Node.js backend for file operations and Python integration
  *   - Renderer Process: HTML/CSS/JS frontend for user interface

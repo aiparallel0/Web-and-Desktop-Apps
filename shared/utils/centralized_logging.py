@@ -203,6 +203,69 @@ class ColoredTextFormatter(logging.Formatter):
         return formatted
 
 
+class DataCollectorHandler(logging.Handler):
+    """
+    Logging handler that sends log entries to the DataCollector for analysis.
+    
+    This handler captures log entries and forwards them to the centralized
+    data collection system for:
+    - Pattern analysis
+    - Error tracking
+    - Continuous improvement insights
+    - Model fine-tuning data
+    """
+    
+    def __init__(self):
+        super().__init__()
+        self._data_collector = None
+        self._initialized = False
+    
+    def _lazy_init(self):
+        """Lazy initialization to avoid circular imports."""
+        if self._initialized:
+            return
+        try:
+            from shared.circular_exchange.data_collector import DATA_COLLECTOR, LogEntry
+            self._data_collector = DATA_COLLECTOR
+            self._log_entry_class = LogEntry
+            self._initialized = True
+        except ImportError:
+            self._initialized = True  # Mark as initialized to avoid repeated attempts
+    
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record to the data collector."""
+        self._lazy_init()
+        
+        if self._data_collector is None:
+            return
+        
+        try:
+            # Get context
+            context = get_context()
+            
+            # Create LogEntry
+            entry = self._log_entry_class(
+                log_id=str(uuid.uuid4()),
+                level=record.levelname,
+                message=record.getMessage(),
+                module=record.module,
+                function=record.funcName,
+                line_number=record.lineno,
+                correlation_id=context.get('correlation_id'),
+                user_id=context.get('user_id'),
+                request_id=context.get('request_id'),
+                exception_info=self.formatException(record.exc_info) if record.exc_info else None,
+                extra_data=context.copy()
+            )
+            
+            # Record to data collector
+            self._data_collector.record_log_entry(entry)
+            
+        except Exception:
+            # Never let data collection errors affect the application
+            pass
+
+
 class CentralizedLoggingManager:
     """
     Singleton manager for centralized logging configuration.
@@ -275,6 +338,15 @@ class CentralizedLoggingManager:
                 )
                 file_handler.setFormatter(file_formatter)
                 root_logger.addHandler(file_handler)
+            
+            # Add data collector handler for continuous improvement
+            if os.getenv('ENABLE_DATA_COLLECTION', 'true').lower() == 'true':
+                try:
+                    data_collector_handler = DataCollectorHandler()
+                    data_collector_handler.setLevel(logging.INFO)  # Collect INFO and above
+                    root_logger.addHandler(data_collector_handler)
+                except Exception as e:
+                    pass  # Silently skip if data collector is not available
             
             self._configured = True
     

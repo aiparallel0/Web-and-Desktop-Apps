@@ -1,0 +1,272 @@
+# =============================================================================
+# CEF CI/CD Pipeline - Continuous Integration with Circular Exchange Framework
+# =============================================================================
+#
+# This workflow runs the CEF analysis pipeline on every push and PR:
+# 1. Collects test results
+# 2. Analyzes patterns and generates insights
+# 3. Creates refactoring suggestions
+# 4. Runs feedback loop for auto-tuning decisions
+#
+# Results are stored as artifacts and optionally sent via webhooks.
+# =============================================================================
+
+name: CEF Analysis Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at midnight UTC for continuous monitoring
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      run_full_analysis:
+        description: 'Run full CEF analysis cycle'
+        type: boolean
+        default: true
+      cleanup_old_data:
+        description: 'Clean up data older than 30 days'
+        type: boolean
+        default: false
+
+jobs:
+  test-and-collect:
+    name: Run Tests & Collect Data
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-json-report pytest-cov
+      
+      - name: Run tests with CEF data collection
+        env:
+          DATA_COLLECTOR_AUTO_PERSIST: 'true'
+          DATA_COLLECTOR_DIR: 'data/collected'
+          ENABLE_DATA_COLLECTION: 'true'
+        run: |
+          mkdir -p data/collected
+          python -m pytest tests/ \
+            --json-report \
+            --json-report-file=data/collected/test_results.json \
+            --cov=shared \
+            --cov-report=json:data/collected/coverage.json \
+            -v || true
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: data/collected/
+          retention-days: 30
+
+  cef-analysis:
+    name: CEF Analysis Cycle
+    runs-on: ubuntu-latest
+    needs: test-and-collect
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: data/collected/
+      
+      - name: Run CEF Analysis Pipeline
+        env:
+          CEF_DB_PATH: 'data/cef_data.db'
+          DATA_COLLECTOR_DIR: 'data/collected'
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, '.')
+          
+          from datetime import datetime
+          from pathlib import Path
+          
+          # Import CEF components
+          from shared.circular_exchange.data_collector import DATA_COLLECTOR, TestResult, TestStatus
+          from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
+          from shared.circular_exchange.refactoring_engine import REFACTORING_ENGINE
+          from shared.circular_exchange.feedback_loop import FEEDBACK_LOOP
+          
+          print('=' * 60)
+          print('CEF ANALYSIS PIPELINE')
+          print('=' * 60)
+          
+          # Step 1: Load test results into data collector
+          print('\n📊 Step 1: Loading test results...')
+          test_file = Path('data/collected/test_results.json')
+          if test_file.exists():
+              with open(test_file) as f:
+                  report = json.load(f)
+              
+              for test in report.get('tests', []):
+                  status = TestStatus.PASSED if test.get('outcome') == 'passed' else TestStatus.FAILED
+                  result = TestResult(
+                      test_id=test.get('nodeid', 'unknown'),
+                      test_name=test.get('nodeid', 'unknown').split('::')[-1],
+                      module_path=test.get('nodeid', 'unknown').split('::')[0],
+                      status=status,
+                      duration_ms=test.get('duration', 0) * 1000,
+                      error_message=test.get('call', {}).get('longrepr') if status == TestStatus.FAILED else None
+                  )
+                  DATA_COLLECTOR.record_test_result(result)
+              
+              stats = DATA_COLLECTOR.get_statistics()
+              print(f'   Loaded {stats[\"total_tests\"]} tests')
+              print(f'   Pass rate: {stats[\"test_pass_rate\"]:.1%}')
+          else:
+              print('   No test results found')
+          
+          # Step 2: Run metrics analysis
+          print('\n🔍 Step 2: Analyzing patterns...')
+          patterns = METRICS_ANALYZER.analyze_error_patterns()
+          health_report = METRICS_ANALYZER.analyze_test_health()
+          insights = METRICS_ANALYZER.generate_refactoring_insights()
+          
+          summary = METRICS_ANALYZER.get_summary()
+          print(f'   Detected {summary[\"total_patterns\"]} patterns')
+          print(f'   Generated {summary[\"total_insights\"]} insights')
+          
+          # Step 3: Generate refactoring suggestions
+          print('\n💡 Step 3: Generating suggestions...')
+          suggestions = REFACTORING_ENGINE.analyze_all()
+          print(f'   Generated {len(suggestions)} suggestions')
+          
+          # Step 4: Run feedback loop
+          print('\n🔄 Step 4: Running feedback loop...')
+          FEEDBACK_LOOP.run_cycle()
+          state = FEEDBACK_LOOP.export_state()
+          print(f'   Processed {state[\"auto_tuner\"][\"total_signals\"]} signals')
+          print(f'   Made {state[\"auto_tuner\"][\"total_decisions\"]} tuning decisions')
+          
+          # Save analysis results
+          print('\n💾 Saving analysis results...')
+          results = {
+              'timestamp': datetime.now().isoformat(),
+              'statistics': DATA_COLLECTOR.get_statistics(),
+              'analysis_summary': summary,
+              'test_health': health_report.to_dict() if health_report else None,
+              'feedback_state': state
+          }
+          
+          with open('data/collected/cef_analysis.json', 'w') as f:
+              json.dump(results, f, indent=2)
+          
+          print('\n✅ CEF Analysis Complete!')
+          print('=' * 60)
+          "
+      
+      - name: Upload analysis results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cef-analysis
+          path: data/collected/cef_analysis.json
+          retention-days: 30
+      
+      - name: Generate summary
+        run: |
+          if [ -f data/collected/cef_analysis.json ]; then
+            echo "## CEF Analysis Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            python -c "
+          import json
+          with open('data/collected/cef_analysis.json') as f:
+              data = json.load(f)
+          
+          stats = data.get('statistics', {})
+          summary = data.get('analysis_summary', {})
+          
+          print(f'- **Test Pass Rate**: {stats.get(\"test_pass_rate\", 0):.1%}')
+          print(f'- **Total Tests**: {stats.get(\"total_tests\", 0)}')
+          print(f'- **Patterns Detected**: {summary.get(\"total_patterns\", 0)}')
+          print(f'- **Insights Generated**: {summary.get(\"total_insights\", 0)}')
+          " >> $GITHUB_STEP_SUMMARY
+          fi
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: cef-analysis
+    if: always()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download analysis results
+        uses: actions/download-artifact@v4
+        with:
+          name: cef-analysis
+          path: data/collected/
+        continue-on-error: true
+      
+      - name: Send webhook notification
+        if: env.WEBHOOK_ENDPOINT_CEF != ''
+        env:
+          WEBHOOK_ENDPOINT_CEF: ${{ secrets.WEBHOOK_ENDPOINT_CEF }}
+        run: |
+          if [ -f data/collected/cef_analysis.json ]; then
+            curl -X POST "$WEBHOOK_ENDPOINT_CEF" \
+              -H "Content-Type: application/json" \
+              -d @data/collected/cef_analysis.json \
+              || echo "Webhook notification failed (non-critical)"
+          fi
+
+  cleanup:
+    name: Cleanup Old Data
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_old_data == 'true' || github.event.schedule
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Cleanup old data
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          
+          try:
+              from shared.circular_exchange.persistence import PERSISTENCE_LAYER
+              result = PERSISTENCE_LAYER.cleanup_old_data(days=30)
+              print('Cleaned up old data:', result)
+          except Exception as e:
+              print(f'Cleanup skipped: {e}')
+          "

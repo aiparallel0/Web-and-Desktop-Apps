@@ -350,3 +350,86 @@ class TestMyProcessor:
 5. Include tests verifying the integration
 
 **AI Agents: This is not optional. Follow this guide for all code contributions.**
+
+---
+
+## Non-Python File Integration
+
+For non-Python files (HTML, CSS, JS, Shell scripts, Markdown), use comment-based registration:
+
+### JavaScript Files
+
+```javascript
+/**
+ * Circular Exchange Framework Integration:
+ * -----------------------------------------
+ * Module ID: web-app.frontend.app
+ * Description: Frontend SPA for receipt extraction
+ * Dependencies: [API backend, shared.models.model_manager]
+ * Exports: [init, loadModels, selectModel, handleExtract]
+ * 
+ * Note: JavaScript modules integrate with the Circular Exchange Framework
+ * through the backend API. Configuration changes are received via API calls.
+ */
+```
+
+### HTML Files
+
+```html
+<!--
+================================================================================
+Circular Exchange Framework Integration:
+-----------------------------------------
+Module ID: web-app.frontend.index
+Description: Main HTML entry point
+Dependencies: [web-app.frontend.styles, web-app.frontend.app]
+Exports: [DOM Structure, Semantic Elements]
+================================================================================
+-->
+```
+
+### CSS Files
+
+```css
+/**
+ * Circular Exchange Framework Integration:
+ * -----------------------------------------
+ * Module ID: web-app.frontend.styles
+ * Description: CSS design system with custom properties
+ * Dependencies: []
+ * Exports: [CSS Custom Properties, Component Styles]
+ * 
+ * Note: CSS integrates via CSS Custom Properties that can be dynamically
+ * updated via JavaScript when configuration changes.
+ */
+```
+
+### Shell Scripts
+
+```bash
+###############################################################################
+# Circular Exchange Framework Integration:
+# -----------------------------------------
+# Module ID: scripts.launch
+# Description: Unified launcher with server management
+# Dependencies: [check_dependencies.py, run_all_tests.py]
+# Exports: [quick_launch, full_launch, run_tests]
+###############################################################################
+```
+
+### Markdown Files
+
+```markdown
+<!--
+================================================================================
+CIRCULAR EXCHANGE FRAMEWORK - Module Documentation
+================================================================================
+Module ID: web-app.frontend
+Description: Browser-based interface for receipt extraction
+Dependencies: [web-app.backend.app, shared.models.model_manager]
+Exports: [index.html, styles.css, app.js]
+================================================================================
+-->
+```
+
+**Key Principle:** Even non-Python files should document their role in the architecture, their dependencies, and what they export/provide to other modules.

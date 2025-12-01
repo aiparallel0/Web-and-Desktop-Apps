@@ -14,7 +14,29 @@ import logging
 from decimal import Decimal
 from typing import Optional, List, Tuple
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.ocr_common",
+            file_path=__file__,
+            description="Common OCR processing utilities with regex patterns and text extraction",
+            dependencies=["shared.circular_exchange"],
+            exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
+                    "extract_line_items", "parse_receipt_text", "get_detection_config",
+                    "record_detection_result"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
 
 # Lazy import of OCRConfig to avoid circular imports
 _ocr_config = None

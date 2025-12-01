@@ -2,6 +2,17 @@
 ###############################################################################
 # Receipt Extractor - Unified Launcher Script
 # 
+# Circular Exchange Framework Integration:
+# -----------------------------------------
+# Module ID: scripts.launch
+# Description: Unified launcher with cache cleaning, dependency checking, and server management
+# Dependencies: [check_dependencies.py, run_all_tests.py]
+# Exports: [quick_launch, full_launch, run_tests, check_gpu_status, clean_python_cache]
+#
+# Note: Shell scripts integrate with the Circular Exchange Framework by
+# invoking Python scripts that are properly registered with the framework.
+# Configuration is passed via environment variables and command-line arguments.
+#
 # This script combines all launcher functionality into one coherent script with:
 # - Automatic cache cleaning (Python bytecode, pytest cache)
 # - Dependency checking and installation

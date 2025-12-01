@@ -8,6 +8,17 @@
  * 
  * Architecture: Module-based Single Page Application
  * 
+ * Circular Exchange Framework Integration:
+ * -----------------------------------------
+ * Module ID: web-app.frontend.app
+ * Description: Frontend SPA for receipt extraction with batch processing and model finetuning
+ * Dependencies: [API_BASE_URL backend, shared.models.model_manager]
+ * Exports: [init, loadModels, selectModel, handleExtract, exportData]
+ * 
+ * Note: JavaScript modules integrate with the Circular Exchange Framework
+ * through the backend API. Configuration changes are received via API polling
+ * or WebSocket connections (when implemented).
+ * 
  * Table of Contents:
  *   1. Configuration & Constants
  *   2. State Management

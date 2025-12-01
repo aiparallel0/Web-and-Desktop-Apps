@@ -76,6 +76,7 @@ import gc
 import json
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, List, Any, Protocol, TypeVar, runtime_checkable
 from pathlib import Path
 from datetime import datetime
@@ -83,7 +84,80 @@ from dataclasses import dataclass, field
 from enum import Enum
 from abc import ABC, abstractmethod
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.model_manager",
+            file_path=__file__,
+            description="Enterprise ML model management with LRU caching and GPU detection",
+            dependencies=["shared.circular_exchange"],
+            exports=["ModelManager", "ModelType", "GPUInfo", "ModelInfo", 
+                    "ConfigValidator", "GPUDetector", "ProcessorFactory"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
+
+
+# =============================================================================
+# THREAD POOL MANAGEMENT - Added based on CEF Round 2 analysis
+# =============================================================================
+
+# CEF Round 2: Configurable thread pool settings to prevent exhaustion
+THREAD_POOL_SIZE = int(os.environ.get('MODEL_MANAGER_THREAD_POOL_SIZE', '4'))
+THREAD_POOL_TIMEOUT = int(os.environ.get('MODEL_MANAGER_THREAD_POOL_TIMEOUT', '30'))
+
+# Global thread pool for model loading operations
+_model_executor: Optional[ThreadPoolExecutor] = None
+_executor_lock = threading.Lock()
+
+
+def get_model_executor() -> ThreadPoolExecutor:
+    """
+    Get the shared thread pool executor for model loading operations.
+    
+    CEF Round 2: Added to prevent thread pool exhaustion by using a shared,
+    bounded thread pool instead of creating unlimited threads.
+    """
+    global _model_executor
+    
+    with _executor_lock:
+        if _model_executor is None:
+            logger.info(
+                f"Initializing model loading thread pool (size: {THREAD_POOL_SIZE}, "
+                f"timeout: {THREAD_POOL_TIMEOUT}s)"
+            )
+            _model_executor = ThreadPoolExecutor(
+                max_workers=THREAD_POOL_SIZE,
+                thread_name_prefix="model_loader"
+            )
+    
+    return _model_executor
+
+
+def shutdown_model_executor():
+    """
+    Shutdown the model loading thread pool gracefully.
+    
+    CEF Round 2: Added for proper resource cleanup.
+    """
+    global _model_executor
+    
+    with _executor_lock:
+        if _model_executor is not None:
+            logger.info("Shutting down model loading thread pool...")
+            _model_executor.shutdown(wait=True, cancel_futures=False)
+            _model_executor = None
+            logger.info("Model loading thread pool shutdown complete")
 
 
 # =============================================================================

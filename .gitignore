@@ -88,5 +88,11 @@ receipt_extractor.db
 # Logs directory
 logs/
 
+# Data collection and training artifacts
+data/training/
+data/collected/
+data/*.db
+*.db
+
 # AI analysis reports (generated)
 ai-analysis-report_*.md

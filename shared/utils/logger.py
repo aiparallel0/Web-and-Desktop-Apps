@@ -50,6 +50,27 @@ from contextlib import contextmanager
 from functools import wraps
 from enum import Enum
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.utils.logger",
+            file_path=__file__,
+            description="Enterprise logging framework with structured JSON output and correlation IDs",
+            dependencies=["shared.circular_exchange"],
+            exports=["setup_logger", "get_logger", "LogContext", "LogLevel", 
+                    "log_with_context", "log_operation", "generate_correlation_id"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
+
 
 class LogLevel(Enum):
     """Standardized log levels."""

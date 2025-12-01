@@ -19,10 +19,38 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 import threading
 
-# Import circular exchange components using relative import
-from ..circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    from shared.circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    try:
+        # Fallback to relative imports when running as a package
+        from ..circular_exchange import PROJECT_CONFIG, ModuleRegistration
+        from ..circular_exchange.variable_package import VariablePackage, PackageRegistry, PackageChange
+        CIRCULAR_EXCHANGE_AVAILABLE = True
+    except ImportError:
+        CIRCULAR_EXCHANGE_AVAILABLE = False
+        # Define stubs for when circular exchange is not available
+        VariablePackage = None
+        PackageRegistry = None
+        PackageChange = None
 
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange
+if CIRCULAR_EXCHANGE_AVAILABLE:
+    try:
+        PROJECT_CONFIG.register_module(ModuleRegistration(
+            module_id="shared.models.ocr_config",
+            file_path=__file__,
+            description="Variable-based OCR configuration with auto-tuning and pipeline stages",
+            dependencies=["shared.circular_exchange"],
+            exports=["OCRConfig", "OCRPipelineStage", "get_ocr_config", "reset_ocr_config"]
+        ))
+    except Exception:
+        pass  # Ignore registration errors during import
 
 
 # Auto-tuning configuration constants

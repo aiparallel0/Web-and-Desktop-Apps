@@ -13,6 +13,17 @@ Components:
   - Model Selection & Extraction
   - Batch Processing Pipeline  
   - Model Finetuning Interface
+
+Circular Exchange Framework Integration:
+-----------------------------------------
+Module ID: web-app.frontend.index
+Description: Main HTML entry point for the Receipt Extractor SPA
+Dependencies: [web-app.frontend.styles, web-app.frontend.app]
+Exports: [DOM Structure, Semantic Elements, ARIA Accessibility]
+
+Note: HTML integrates with the Circular Exchange Framework by providing
+the DOM structure that JavaScript modules manipulate. Data attributes
+can be used to pass configuration values from the backend.
 ================================================================================
 -->
 <html lang="en">

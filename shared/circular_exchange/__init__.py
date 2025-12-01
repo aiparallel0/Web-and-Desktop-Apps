@@ -82,6 +82,95 @@ from .module_container import (
     check_compatibility,
     standardize_code
 )
+from .data_collector import (
+    DATA_COLLECTOR,
+    DataCollector,
+    DataCategory,
+    TestStatus,
+    TestResult,
+    LogEntry,
+    MetricsSnapshot,
+    ExtractionEvent,
+    RefactorSuggestion
+)
+from .metrics_analyzer import (
+    METRICS_ANALYZER,
+    MetricsAnalyzer,
+    Pattern,
+    PatternType,
+    Insight,
+    InsightPriority,
+    RefactorCategory,
+    PerformanceBottleneck,
+    TestHealthReport,
+    ModelPerformanceReport
+)
+from .refactoring_engine import (
+    REFACTORING_ENGINE,
+    RefactoringEngine,
+    CodeSuggestion,
+    RefactoringPlan,
+    SuggestionType,
+    ImpactLevel,
+    EffortLevel,
+    CodeLocation
+)
+from .feedback_loop import (
+    FEEDBACK_LOOP,
+    FeedbackLoop,
+    AutoTuner,
+    ModelTrainingPipeline,
+    TuningDecision,
+    TrainingJob,
+    TuningAction,
+    FeedbackType,
+    TrainingStatus
+)
+from .webhook_notifier import (
+    WEBHOOK_NOTIFIER,
+    WebhookNotifier,
+    NotificationConfig,
+    NotificationLevel,
+    NotificationChannel,
+    Notification
+)
+from .persistence import (
+    PERSISTENCE_LAYER,
+    PersistenceLayer,
+    DBConfig,
+    ConnectionPool
+)
+from .intelligent_analyzer import (
+    INTELLIGENT_ANALYZER,
+    IntelligentAnalyzer,
+    PatternClusterer,
+    AnomalyDetector,
+    TrendAnalyzer,
+    CodeEmbeddings,
+    PatternCluster,
+    Anomaly,
+    TrendAnalysis,
+    CodeSimilarity,
+    AnomalyType,
+    TrendDirection,
+    ClusterQuality
+)
+from .autonomous_refactor import (
+    AutonomousRefactor,
+    RefactorRisk,
+    RefactorStatus,
+    RefactorResult,
+    ABTest,
+    ABTestVariant,
+    ABTestResult,
+    ABTestManager,
+    RollbackManager,
+    RollbackTrigger,
+    RollbackAction,
+    CodeTransformer,
+    PRGenerator,
+    get_autonomous_refactor
+)
 
 __all__ = [
     # Core
@@ -118,7 +207,88 @@ __all__ = [
     'CompatibilityReport',
     'create_container',
     'check_compatibility',
-    'standardize_code'
+    'standardize_code',
+    # Data Collection (for continuous improvement)
+    'DATA_COLLECTOR',
+    'DataCollector',
+    'DataCategory',
+    'TestStatus',
+    'TestResult',
+    'LogEntry',
+    'MetricsSnapshot',
+    'ExtractionEvent',
+    'RefactorSuggestion',
+    # Metrics Analysis (for pattern detection and insights)
+    'METRICS_ANALYZER',
+    'MetricsAnalyzer',
+    'Pattern',
+    'PatternType',
+    'Insight',
+    'InsightPriority',
+    'RefactorCategory',
+    'PerformanceBottleneck',
+    'TestHealthReport',
+    'ModelPerformanceReport',
+    # Refactoring Engine (for automated code improvement)
+    'REFACTORING_ENGINE',
+    'RefactoringEngine',
+    'CodeSuggestion',
+    'RefactoringPlan',
+    'SuggestionType',
+    'ImpactLevel',
+    'EffortLevel',
+    'CodeLocation',
+    # Feedback Loop (for continuous auto-tuning and model fine-tuning)
+    'FEEDBACK_LOOP',
+    'FeedbackLoop',
+    'AutoTuner',
+    'ModelTrainingPipeline',
+    'TuningDecision',
+    'TrainingJob',
+    'TuningAction',
+    'FeedbackType',
+    'TrainingStatus',
+    # Webhook Notifications (for real-time alerts)
+    'WEBHOOK_NOTIFIER',
+    'WebhookNotifier',
+    'NotificationConfig',
+    'NotificationLevel',
+    'NotificationChannel',
+    'Notification',
+    # Persistence Layer (for data storage)
+    'PERSISTENCE_LAYER',
+    'PersistenceLayer',
+    'DBConfig',
+    'ConnectionPool',
+    # Intelligent Analyzer (for ML-powered analysis - Phase 2)
+    'INTELLIGENT_ANALYZER',
+    'IntelligentAnalyzer',
+    'PatternClusterer',
+    'AnomalyDetector',
+    'TrendAnalyzer',
+    'CodeEmbeddings',
+    'PatternCluster',
+    'Anomaly',
+    'TrendAnalysis',
+    'CodeSimilarity',
+    'AnomalyType',
+    'TrendDirection',
+    'ClusterQuality',
+    # Autonomous Refactor (for auto-apply and rollback - Phase 3)
+    'AutonomousRefactor',
+    'RefactorRisk',
+    'RefactorStatus',
+    'RefactorResult',
+    'ABTest',
+    'ABTestVariant',
+    'ABTestResult',
+    'ABTestManager',
+    'RollbackManager',
+    'RollbackTrigger',
+    'RollbackAction',
+    'CodeTransformer',
+    'PRGenerator',
+    'get_autonomous_refactor',
 ]
 
-__version__ = '2.0.0'
+__version__ = '3.0.0'
