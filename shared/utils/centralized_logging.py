@@ -600,6 +600,173 @@ def _init_module():
 _init_module()
 
 
+# Additional utilities from logger.py (consolidated)
+def generate_correlation_id() -> str:
+    """Generate a unique correlation ID for request tracing."""
+    return str(uuid.uuid4())
+
+
+def log_function_call(logger: Optional[logging.Logger] = None, level: str = 'DEBUG'):
+    """
+    Decorator to log function entry and exit.
+    
+    Args:
+        logger: Logger instance. If None, uses module's logger.
+        level: Log level for the messages
+    """
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            _logger = logger or get_module_logger(func.__module__)
+            func_name = func.__name__
+            log_method = getattr(_logger, level.lower())
+            log_method(f"Entering {func_name}")
+            try:
+                result = func(*args, **kwargs)
+                log_method(f"Exiting {func_name} successfully")
+                return result
+            except Exception as e:
+                _logger.exception(f"Exception in {func_name}: {e}")
+                raise
+        return wrapper
+    return decorator
+
+
+@contextmanager
+def log_operation(
+    logger: logging.Logger,
+    operation: str,
+    level: str = 'INFO',
+    **context
+):
+    """
+    Context manager for logging operations with timing.
+    
+    Args:
+        logger: Logger instance
+        operation: Operation name/description
+        level: Log level
+        **context: Additional context to include
+    """
+    from datetime import datetime
+    start_time = datetime.now()
+    log_method = getattr(logger, level.lower())
+    correlation_id = get_context().get('correlation_id')
+    if not correlation_id:
+        set_context(correlation_id=generate_correlation_id())
+    log_method(f"Starting: {operation}", extra={'extra_fields': context})
+    try:
+        yield
+        duration = (datetime.now() - start_time).total_seconds()
+        log_method(
+            f"Completed: {operation}",
+            extra={'extra_fields': {**context, 'duration_seconds': duration}}
+        )
+    except Exception as e:
+        duration = (datetime.now() - start_time).total_seconds()
+        logger.error(
+            f"Failed: {operation} - {e}",
+            extra={'extra_fields': {**context, 'duration_seconds': duration, 'error': str(e)}}
+        )
+        raise
+
+
+class LogContext:
+    """
+    Context manager for adding contextual information to logs.
+    Backward compatibility wrapper for logging_context.
+    
+    Example:
+        with LogContext(request_id='abc123', user_id='user456'):
+            logger.info('Processing request')
+    """
+    def __init__(self, **kwargs):
+        self.context = kwargs
+        self._previous_context = None
+    
+    def __enter__(self):
+        self._previous_context = getattr(_context, 'data', {}).copy()
+        set_context(**self.context)
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _context.data = self._previous_context if self._previous_context else {}
+        return False
+    
+    @staticmethod
+    def get(key, default=None):
+        """Get a value from the current log context."""
+        return get_context().get(key, default)
+    
+    @staticmethod
+    def get_all():
+        """Get all current context values."""
+        return get_context()
+    
+    @staticmethod
+    def set(key, value):
+        """Set a value in the current log context."""
+        set_context(**{key: value})
+    
+    @staticmethod
+    def clear():
+        """Clear all context data."""
+        clear_context()
+
+
+def setup_logger(
+    name: str,
+    level: str = 'INFO',
+    log_dir: str = 'logs',
+    use_json: bool = False,
+    console_output: bool = True,
+    file_output: bool = True,
+    max_bytes: int = 10 * 1024 * 1024,
+    backup_count: int = 5,
+) -> logging.Logger:
+    """
+    Create and configure a production-ready logger.
+    Wrapper for compatibility with logger.py API.
+    """
+    import logging.handlers
+    from pathlib import Path
+    logger = logging.getLogger(name)
+    logger.setLevel(getattr(logging, level.upper()))
+    if logger.handlers:
+        return logger
+    log_path = Path(log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+    if file_output:
+        log_file = log_path / f'{name.replace(".", "_")}.log'
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_file, maxBytes=max_bytes, backupCount=backup_count, encoding='utf-8'
+        )
+        if use_json:
+            file_handler.setFormatter(StructuredJSONFormatter())
+        else:
+            file_handler.setFormatter(logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S'
+            ))
+        logger.addHandler(file_handler)
+    if console_output:
+        console_handler = logging.StreamHandler(sys.stdout)
+        if use_json:
+            console_handler.setFormatter(StructuredJSONFormatter())
+        else:
+            console_handler.setFormatter(ColoredTextFormatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%H:%M:%S'
+            ))
+        logger.addHandler(console_handler)
+    return logger
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Get an existing logger by name. Alias for compatibility."""
+    return logging.getLogger(name)
+
+
 # Export public API
 __all__ = [
     'get_module_logger',
@@ -612,4 +779,11 @@ __all__ = [
     'ErrorHandler',
     'StructuredJSONFormatter',
     'ColoredTextFormatter',
+    # Added from logger.py consolidation
+    'generate_correlation_id',
+    'log_function_call',
+    'log_operation',
+    'LogContext',
+    'setup_logger',
+    'get_logger',
 ]
