@@ -3,7 +3,7 @@
 ENTERPRISE LOGGING FRAMEWORK - Observability & Telemetry
 =============================================================================
 
-This module implements enterprise-grade logging infrastructure following
+This module implements production-ready logging infrastructure following
 patterns from high-scale distributed systems.
 
 Architecture Features:
@@ -303,7 +303,7 @@ def setup_logger(
     add_metrics: bool = False
 ) -> logging.Logger:
     """
-    Create and configure an enterprise-grade logger.
+    Create and configure a production-ready logger.
     
     Args:
         name: Logger name (typically module name)

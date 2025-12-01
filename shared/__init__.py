@@ -26,7 +26,7 @@ AI AGENT INSTRUCTIONS:
 SHARED CORE MODULE - Enterprise Architecture Foundation
 
 This module serves as the foundational layer for the Receipt Extraction System,
-implementing enterprise-grade patterns used by top-tier technology companies.
+implementing production-proven patterns for scalable OCR processing.
 
 Architecture Principles:
 - Circular Information Exchange: Automatic dependency tracking and update propagation
@@ -137,7 +137,7 @@ _UTIL_IMPORTS = {
 
 def __getattr__(name: str):
     """
-    Lazy import handler for enterprise-grade module loading.
+    Lazy import handler for optimized module loading.
     
     This pattern provides:
     - Faster initial import times

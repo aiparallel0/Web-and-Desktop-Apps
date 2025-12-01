@@ -25,8 +25,8 @@ AI AGENT INSTRUCTIONS:
 
 OCR MODELS PACKAGE - AI/ML Model Management Infrastructure
 
-This package implements enterprise-grade AI/ML model management following
-patterns from production machine learning systems at scale.
+This package implements production-ready AI/ML model management following
+patterns from high-scale machine learning systems.
 
 Architecture:
 ┌─────────────────────────────────────────────────────────────────────────┐
