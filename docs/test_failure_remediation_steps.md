@@ -24,12 +24,12 @@ The test provides OCR results with very low confidence values (0.05 and 0.08) ex
 ### Technical Details
 
 1. **Dual Caching Issue**
-   - `ocr_config.py` uses a singleton pattern with `OCRConfig._instance` (line 109)
-   - `ocr_common.py` has its own module-level cache `_ocr_config` (line 43)
+   - `ocr_config.py` uses a singleton pattern with `OCRConfig._instance` in the class definition
+   - `ocr_common.py` has its own module-level cache `_ocr_config` at the top of the module
    - The test only resets `OCRConfig._instance`, but NOT the `_ocr_config` cache in `ocr_common.py`
 
 2. **Auto-Tuning Impact**
-   - The `OCRConfig` class has auto-tuning that can lower `detection_min_confidence` to as low as 0.1 (constant `AUTO_TUNE_CONFIDENCE_MIN` in ocr_config.py line 60)
+   - The `OCRConfig` class has auto-tuning that can lower `detection_min_confidence` to as low as 0.1 (via `AUTO_TUNE_CONFIDENCE_MIN` constant)
    - With auto-retry, the threshold becomes `min_confidence * 0.5`
    - If `min_confidence` is 0.1 (auto-tuned), retry threshold is 0.05
    - This allows text with 0.05 and 0.08 confidence to pass through
@@ -45,9 +45,9 @@ The test provides OCR results with very low confidence values (0.05 and 0.08) ex
    ```
 
 ### Evidence
-- Test setup resets only `OCRConfig._instance = None` (line 727)
+- Test setup resets only `OCRConfig._instance = None`
 - Does NOT call `reset_ocr_config()` which would reset both caches
-- The `reset_ocr_config()` function in `ocr_config.py` (lines 902-911) properly resets both the global `_ocr_config` and the singleton instance
+- The `reset_ocr_config()` function in `ocr_config.py` properly resets both the global `_ocr_config` and the singleton instance
 
 ---
 
@@ -55,7 +55,7 @@ The test provides OCR results with very low confidence values (0.05 and 0.08) ex
 
 ### Step 1: Update Test Setup
 **File:** `tests/shared/test_processors.py`  
-**Location:** Lines 721-742
+**Location:** `test_extract_empty_text_lines` function
 
 **Current Code:**
 ```python
@@ -96,7 +96,7 @@ If the above fix doesn't fully resolve the issue, add a comprehensive reset in `
 
 **File:** `shared/models/ocr_common.py`
 
-Add after line 55:
+Add after the `get_config()` function:
 ```python
 def reset_config_cache():
     """Reset the module-level config cache for test isolation."""
@@ -140,11 +140,11 @@ After making the changes:
 
 ## Files to Modify
 
-| File | Action | Lines |
-|------|--------|-------|
-| `tests/shared/test_processors.py` | Modify | 725-728 |
-| `shared/models/ocr_common.py` | Optional Add | After line 55 |
-| `shared/models/ocr_config.py` | Optional Modify | 902-911 |
+| File | Action | Location |
+|------|--------|----------|
+| `tests/shared/test_processors.py` | Modify | `test_extract_empty_text_lines` function setup |
+| `shared/models/ocr_common.py` | Optional Add | After `get_config()` function |
+| `shared/models/ocr_config.py` | Optional Modify | `reset_ocr_config()` function |
 
 ---
 
