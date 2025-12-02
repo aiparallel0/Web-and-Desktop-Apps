@@ -17,6 +17,10 @@ markers = [
     "web: Web app tests"
 ]
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
+filterwarnings = [
+    "ignore::DeprecationWarning:.*SwigPy.*",
+    "ignore::DeprecationWarning:.*swigvarlink.*"
+]
 
 [tool.coverage.run]
 source = ["shared", "web/backend"]

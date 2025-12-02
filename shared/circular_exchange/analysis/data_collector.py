@@ -20,7 +20,7 @@ Circular Exchange Framework Integration:
 Module ID: shared.circular_exchange.data_collector
 Description: Centralized data collection for tests, logs, and continuous improvement
 Dependencies: [shared.circular_exchange.variable_package, shared.circular_exchange.change_notifier]
-Exports: [DataCollector, TestResult, LogEntry, MetricsSnapshot, DATA_COLLECTOR]
+Exports: [DataCollector, ExecutionResult, ExecutionStatus, LogEntry, MetricsSnapshot, DATA_COLLECTOR]
 
 =============================================================================
 """
@@ -50,7 +50,7 @@ class DataCategory(Enum):
     REFACTOR_SUGGESTION = "refactor_suggestion"
 
 
-class TestStatus(Enum):
+class ExecutionStatus(Enum):
     """Status of a test execution."""
     PASSED = "passed"
     FAILED = "failed"
@@ -58,13 +58,17 @@ class TestStatus(Enum):
     ERROR = "error"
 
 
+# Backward compatibility aliases (deprecated, use ExecutionStatus/ExecutionResult)
+TestStatus = ExecutionStatus
+
+
 @dataclass
-class TestResult:
+class ExecutionResult:
     """Represents a test execution result."""
     test_id: str
     test_name: str
     module_path: str
-    status: TestStatus
+    status: ExecutionStatus
     duration_ms: float
     timestamp: datetime = field(default_factory=datetime.now)
     error_message: Optional[str] = None
@@ -79,6 +83,10 @@ class TestResult:
         data['status'] = self.status.value
         data['timestamp'] = self.timestamp.isoformat()
         return data
+
+
+# Backward compatibility alias (deprecated, use ExecutionResult)
+TestResult = ExecutionResult
 
 
 @dataclass
@@ -198,7 +206,7 @@ class DataCollector:
         self._lock = threading.RLock()
         
         # Data stores
-        self._test_results: List[TestResult] = []
+        self._test_results: List[ExecutionResult] = []
         self._log_entries: List[LogEntry] = []
         self._metrics_snapshots: List[MetricsSnapshot] = []
         self._extraction_events: List[ExtractionEvent] = []
@@ -236,20 +244,20 @@ class DataCollector:
     # TEST RESULT COLLECTION
     # =========================================================================
     
-    def record_test_result(self, result: TestResult) -> None:
+    def record_test_result(self, result: ExecutionResult) -> None:
         """
         Record a test execution result.
         
         Args:
-            result: TestResult object containing test execution data
+            result: ExecutionResult object containing test execution data
         """
         with self._lock:
             self._test_results.append(result)
             self._stats['total_tests'] += 1
             
-            if result.status == TestStatus.PASSED:
+            if result.status == ExecutionStatus.PASSED:
                 self._stats['passed_tests'] += 1
-            elif result.status == TestStatus.FAILED:
+            elif result.status == ExecutionStatus.FAILED:
                 self._stats['failed_tests'] += 1
             
             # Trim if over limit
@@ -265,11 +273,11 @@ class DataCollector:
     
     def get_test_results(
         self,
-        status: Optional[TestStatus] = None,
+        status: Optional[ExecutionStatus] = None,
         module_path: Optional[str] = None,
         since: Optional[datetime] = None,
         limit: int = 100
-    ) -> List[TestResult]:
+    ) -> List[ExecutionResult]:
         """
         Query test results with optional filters.
         
@@ -280,7 +288,7 @@ class DataCollector:
             limit: Maximum number of results
             
         Returns:
-            List of matching TestResult objects
+            List of matching ExecutionResult objects
         """
         with self._lock:
             results = self._test_results.copy()
@@ -675,8 +683,9 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             file_path=__file__,
             description="Centralized data collection for tests, logs, and continuous improvement",
             dependencies=["shared.circular_exchange.variable_package", "shared.circular_exchange.change_notifier"],
-            exports=["DataCollector", "TestResult", "LogEntry", "MetricsSnapshot", 
-                    "ExtractionEvent", "RefactorSuggestion", "DATA_COLLECTOR", "DataCategory", "TestStatus"]
+            exports=["DataCollector", "ExecutionResult", "ExecutionStatus", "LogEntry", "MetricsSnapshot", 
+                    "ExtractionEvent", "RefactorSuggestion", "DATA_COLLECTOR", "DataCategory",
+                    "TestResult", "TestStatus"]  # Include backward compatibility aliases
         ))
     except Exception:
         pass  # Ignore registration errors during import
