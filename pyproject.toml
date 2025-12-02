@@ -7,8 +7,8 @@ description = "AI-powered receipt extraction application"
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-testpaths = ["tests"]
-addopts = "-v --tb=short --strict-markers --cov=shared --cov=web-app/backend --cov-report=html --cov-report=term-missing"
+testpaths = ["tools/tests"]
+addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
@@ -19,7 +19,7 @@ markers = [
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
 
 [tool.coverage.run]
-source = ["shared", "web-app/backend"]
+source = ["shared", "web/backend"]
 omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*"]
 
 [tool.coverage.report]
