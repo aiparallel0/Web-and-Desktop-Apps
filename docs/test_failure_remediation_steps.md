@@ -5,6 +5,8 @@
 **Test Name:** `test_extract_empty_text_lines`  
 **Line:** 741
 
+**Note:** The same issue may affect other tests in the file that use `OCRConfig._instance = None` instead of `reset_ocr_config()`, such as `test_paddle_processor_initialization_success`.
+
 ## Failure Summary
 
 ```
