@@ -476,7 +476,7 @@ class CircularExchange:
             return import_name
 
         # Try with common prefixes
-        for prefix in ['shared.', 'web-app.', 'desktop-app.']:
+        for prefix in ['shared.', 'web.', 'desktop.']:
             full_name = prefix + import_name
             if full_name in self._dependency_registry._modules:
                 return full_name

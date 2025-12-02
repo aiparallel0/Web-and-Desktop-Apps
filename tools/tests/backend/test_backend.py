@@ -138,7 +138,7 @@ from PIL import Image
 from unittest.mock import Mock, patch, MagicMock
 
 # Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'web-app', 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'web', 'backend'))
 
 class TestHealthEndpoint:
     """Test health check endpoint"""

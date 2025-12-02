@@ -329,7 +329,7 @@ def check_and_install(auto_install=False, install_ai=False, silent=False):
         if not silent:
             print("\n[SUCCESS] All required dependencies are installed!")
             print("\nYou can now run the application:")
-            print("  cd web-app/backend")
+            print("  cd web/backend")
             print("  python app.py")
             print("\n" + "=" * 60)
             print("Setup complete - you can close this window")
@@ -351,7 +351,7 @@ def check_and_install(auto_install=False, install_ai=False, silent=False):
         if not silent:
             print("\n[ERROR] Some core dependencies are still missing")
             print("\nPlease install manually:")
-            print("  pip install -r web-app/backend/requirements.txt")
+            print("  pip install -r web/backend/requirements.txt")
             print("\n" + "=" * 60)
             print("Setup failed - please install dependencies manually")
             print("=" * 60)

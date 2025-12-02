@@ -291,7 +291,7 @@ class ProjectConfiguration:
                 "utils": "shared/utils",
                 "config": "shared/config",
                 "circular_exchange": "shared/circular_exchange",
-                "web_backend": "web-app/backend",
+                "web_backend": "web/backend",
                 "tests": "tests"
             },
             source_module="project_config"
@@ -380,10 +380,10 @@ class ProjectConfiguration:
                 "shared.config": 2.0,
                 "shared.config.settings": 1.5,
                 # Backend modules (medium connectivity)
-                "web-app.backend": 2.5,
-                "web-app.backend.app": 2.0,
-                "web-app.backend.auth": 1.5,
-                "web-app.backend.database": 1.5,
+                "web.backend": 2.5,
+                "web.backend.app": 2.0,
+                "web.backend.auth": 1.5,
+                "web.backend.database": 1.5,
                 # Test modules (low connectivity)
                 "tests": 1.0,
             },
@@ -412,10 +412,10 @@ class ProjectConfiguration:
                 "shared.config": 0.8,
                 "shared.config.settings": 0.7,
                 # Backend modules
-                "web-app.backend": 0.85,
-                "web-app.backend.app": 0.8,
-                "web-app.backend.auth": 0.7,
-                "web-app.backend.database": 0.7,
+                "web.backend": 0.85,
+                "web.backend.app": 0.8,
+                "web.backend.auth": 0.7,
+                "web.backend.database": 0.7,
                 # Test modules (low impact on production)
                 "tests": 0.3,
             },

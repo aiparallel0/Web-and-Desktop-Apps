@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / 'shared'))
-sys.path.insert(0, str(project_root / 'web-app' / 'backend'))
+sys.path.insert(0, str(project_root / 'web' / 'backend'))
 
 # Original fixtures
 @pytest.fixture

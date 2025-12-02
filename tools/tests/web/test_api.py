@@ -23,7 +23,7 @@ def test_api_health_check():
     try:
         # Import Flask app module dynamically to handle hyphenated directory name
         import importlib.util
-        app_path = project_root / 'web-app' / 'backend' / 'app.py'
+        app_path = project_root / 'web' / 'backend' / 'app.py'
         spec = importlib.util.spec_from_file_location("app", app_path)
         app_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(app_module)
@@ -46,7 +46,7 @@ def test_api_get_models():
     try:
         # Import Flask app module dynamically to handle hyphenated directory name
         import importlib.util
-        app_path = project_root / 'web-app' / 'backend' / 'app.py'
+        app_path = project_root / 'web' / 'backend' / 'app.py'
         spec = importlib.util.spec_from_file_location("app", app_path)
         app_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(app_module)
@@ -70,7 +70,7 @@ def test_api_extract_receipt():
     try:
         # Import Flask app module dynamically to handle hyphenated directory name
         import importlib.util
-        app_path = project_root / 'web-app' / 'backend' / 'app.py'
+        app_path = project_root / 'web' / 'backend' / 'app.py'
         spec = importlib.util.spec_from_file_location("app", app_path)
         app_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(app_module)
@@ -104,7 +104,7 @@ def test_api_invalid_image():
     try:
         # Import Flask app module dynamically to handle hyphenated directory name
         import importlib.util
-        app_path = project_root / 'web-app' / 'backend' / 'app.py'
+        app_path = project_root / 'web' / 'backend' / 'app.py'
         spec = importlib.util.spec_from_file_location("app", app_path)
         app_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(app_module)

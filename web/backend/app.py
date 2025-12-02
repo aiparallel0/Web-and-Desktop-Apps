@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
         PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web-app.backend.app",
+            module_id="web.backend.app",
             file_path=__file__,
             description="Flask REST API backend for receipt extraction with multi-model OCR processing",
             dependencies=["shared.models.model_manager", "shared.models.ocr_config", 

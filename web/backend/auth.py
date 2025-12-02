@@ -21,7 +21,7 @@ except ImportError:
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
         PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web-app.backend.auth",
+            module_id="web.backend.auth",
             file_path=__file__,
             description="Authentication and authorization with JWT tokens and password hashing",
             dependencies=["shared.circular_exchange"],

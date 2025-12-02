@@ -15,7 +15,7 @@ except ImportError:
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
         PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web-app.backend.database",
+            module_id="web.backend.database",
             file_path=__file__,
             description="Database models and connection management for SQLAlchemy",
             dependencies=["shared.circular_exchange"],
