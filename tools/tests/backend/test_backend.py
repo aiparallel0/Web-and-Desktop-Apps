@@ -127,7 +127,7 @@ class TestReceiptStats:
         assert response.status_code in [401, 404]
 """
 Test suite for Flask application endpoints
-Tests coverage for web-app/backend/app.py
+Tests coverage for web/backend/app.py
 """
 import pytest
 import sys
@@ -589,7 +589,7 @@ class TestErrorResponseFormat:
             assert data['error']['details'] == details
 """
 Test suite for password hashing and verification
-Tests coverage for web-app/backend/auth/password.py
+Tests coverage for web/backend/auth/password.py
 
 NOTE: These tests are skipped because the auth.password module
 doesn't exist as a separate file in the current structure.
