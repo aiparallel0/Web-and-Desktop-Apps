@@ -1136,8 +1136,8 @@ def test_normalize_price_invalid():
 def test_extract_empty_text_lines(mock_easyocr, easyocr_config):
     """Test parsing with empty text lines after filtering"""
     # Reset OCRConfig before test to ensure clean state
-    from shared.models.config import OCRConfig
-    OCRConfig._instance = None
+    from shared.models.config import reset_ocr_config
+    reset_ocr_config()
     
     mock_reader = Mock()
     mock_easyocr.Reader.return_value = mock_reader
@@ -1209,10 +1209,10 @@ def mock_paddle_ocr():
 def test_paddle_processor_initialization_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test successful initialization of Paddle processor with circular exchange config"""
     from shared.models.engine import PaddleProcessor
-    from shared.models.config import OCRConfig
+    from shared.models.config import reset_ocr_config, OCRConfig
     
     # Reset OCRConfig to ensure default values
-    OCRConfig._instance = None
+    reset_ocr_config()
     config = OCRConfig()
     
     # Get the expected box_threshold from the config
