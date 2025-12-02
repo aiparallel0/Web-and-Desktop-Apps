@@ -1,4 +1,13 @@
-# Test Failure Remediation Steps
+# Test Failure and Warnings Remediation Steps
+
+This document covers all issues from the test run output, including:
+1. **Test Failure**: `test_extract_empty_text_lines` assertion failure
+2. **Warnings**: PytestCollectionWarning for TestResult/TestStatus classes
+3. **Warnings**: DeprecationWarning for SWIG types
+
+---
+
+# Issue 1: Test Failure - test_extract_empty_text_lines
 
 ## Failing Test
 **File:** `tests/shared/test_processors.py`  
@@ -166,3 +175,136 @@ After making the changes:
 2. Optional: Configuration reset functions (defensive enhancement)
 
 The fix addresses proper test isolation without changing production logic.
+
+---
+
+# Additional Issues: Pytest Warnings
+
+## Issue 2: PytestCollectionWarning for TestResult and TestStatus
+
+### Problem
+```
+PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor
+PytestCollectionWarning: cannot collect test class 'TestStatus' because it has a __init__ constructor
+```
+
+### Files Affected
+- `shared/circular_exchange/data_collector.py` (line 53: `TestStatus`, line 61: `TestResult`)
+
+### Root Cause
+The classes `TestResult` and `TestStatus` in `data_collector.py` are named with the prefix "Test", which pytest interprets as test classes. However, these are data classes/enums used for storing test execution results, not actual pytest test cases.
+
+### Remediation Options
+
+**Option A: Rename the Classes (Recommended)**
+```python
+# Before:
+class TestStatus(Enum):
+    ...
+
+@dataclass
+class TestResult:
+    ...
+
+# After:
+class ExecutionStatus(Enum):
+    ...
+
+@dataclass
+class ExecutionResult:
+    ...
+```
+
+**Option B: Add pytest Configuration**
+Add to `pyproject.toml`:
+```toml
+[tool.pytest.ini_options]
+python_classes = ["Test*", "!TestResult", "!TestStatus"]
+```
+
+Or add to `pytest.ini`:
+```ini
+[pytest]
+python_classes = Test* !TestResult !TestStatus
+```
+
+**Option C: Use pytest's norecursedirs**
+If the classes are in a non-test directory, ensure pytest isn't scanning it for tests.
+
+### Risk Assessment
+- **Low Risk** for Option A (simple rename)
+- **Medium Risk** for Option B (may have side effects on test discovery)
+
+---
+
+## Issue 3: DeprecationWarning for SWIG Types
+
+### Problem
+```
+DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+```
+
+### Root Cause
+These warnings come from SWIG-generated Python bindings (likely from a dependency like `paddleocr` or image processing libraries). This is a known issue with older SWIG versions when used with Python 3.10+.
+
+### Remediation Options
+
+**Option A: Suppress the Warning (Recommended for now)**
+Add to `pyproject.toml`:
+```toml
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning:.*SwigPy.*"
+]
+```
+
+Or add to `pytest.ini`:
+```ini
+[pytest]
+filterwarnings =
+    ignore::DeprecationWarning:.*SwigPy.*
+```
+
+**Option B: Update Dependencies**
+Check if newer versions of the affected package (likely `paddleocr` or related) have fixed this SWIG issue.
+
+**Option C: No Action**
+These warnings don't affect functionality and will be fixed upstream eventually.
+
+### Risk Assessment
+- **None** - These are external dependency warnings that don't affect test functionality
+
+---
+
+## Issue 4: Additional DeprecationWarning at System Exit
+
+### Problem
+```
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+```
+
+### Root Cause
+Same as Issue 3 - SWIG-related warning that appears at interpreter shutdown.
+
+### Remediation
+Same as Issue 3 - suppress or wait for upstream fix.
+
+---
+
+# Summary of All Issues
+
+| Issue | Type | Severity | Action Required |
+|-------|------|----------|-----------------|
+| `test_extract_empty_text_lines` failure | Test Failure | **High** | Yes - Fix config reset |
+| `TestResult`/`TestStatus` naming | Warning | **Low** | Optional - Rename classes |
+| SWIG DeprecationWarnings | Warning | **None** | Optional - Suppress warnings |
+
+---
+
+## Complete Verification Checklist
+
+- [ ] Test `test_extract_empty_text_lines` passes
+- [ ] All 878 other tests continue to pass
+- [ ] PytestCollectionWarnings resolved (if renamed)
+- [ ] Configuration isolation works correctly between tests
