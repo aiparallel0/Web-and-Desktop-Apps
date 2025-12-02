@@ -767,6 +767,30 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
+# Module-level default logger
+_default_logger = None
+
+
+def get_default_logger() -> logging.Logger:
+    """Get or create the default application logger."""
+    global _default_logger
+    if _default_logger is None:
+        _default_logger = setup_logger('receipt_extractor', level='INFO')
+    return _default_logger
+
+
+from enum import Enum as _Enum
+
+
+class LogLevel(_Enum):
+    """Standardized log levels. Use logging module constants directly when possible."""
+    DEBUG = 'DEBUG'
+    INFO = 'INFO'
+    WARNING = 'WARNING'
+    ERROR = 'ERROR'
+    CRITICAL = 'CRITICAL'
+
+
 # Export public API
 __all__ = [
     'get_module_logger',
@@ -779,11 +803,12 @@ __all__ = [
     'ErrorHandler',
     'StructuredJSONFormatter',
     'ColoredTextFormatter',
-    # Added from logger.py consolidation
     'generate_correlation_id',
     'log_function_call',
     'log_operation',
     'LogContext',
     'setup_logger',
     'get_logger',
+    'get_default_logger',
+    'LogLevel',
 ]

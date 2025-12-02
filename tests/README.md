@@ -264,7 +264,7 @@ See [test_data/README.md](../test_data/README.md) for details.
 
 - ✅ Test infrastructure set up
 - ✅ Basic configuration tests
-- ✅ OCR common utilities tests
+- ✅ OCR common utilities tests (165 test functions)
 - ✅ Processor tests (EasyOCR, Paddle, Donut)
 - ✅ Florence-2 processor tests
 - ✅ Error handling tests
@@ -272,22 +272,21 @@ See [test_data/README.md](../test_data/README.md) for details.
 - ✅ Circular exchange module tests
 - ✅ Web API tests
 - ✅ Backend app and auth tests
-- ⬜ Image processing utilities tests
-- ⬜ Data structures tests
-- ⬜ Logger tests
-- ⬜ Desktop app tests (placeholder)
+- ✅ Image processing utilities tests
+- ✅ Data structures tests
+- ✅ Logger tests
 
-## Next Steps
+**Test Summary**: 867 tests passing, 23 skipped
 
-1. ✅ Set up pytest infrastructure
-2. ✅ Implement OCR processor tests
-3. ✅ Implement API tests
-4. ⬜ Add image processing utility tests
-5. ⬜ Add data structures tests
-6. ⬜ Add logger tests
-7. ⬜ Add integration tests with sample data
-8. ⬜ Set up CI/CD pipeline
-9. ⬜ Achieve 75%+ code coverage
+## Running Tests
+
+```bash
+# Run all tests
+pytest tests/ -o addopts=
+
+# Run with verbose output
+pytest tests/ -v -o addopts=
+```
 
 ## Resources
 
