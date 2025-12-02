@@ -13,7 +13,7 @@ class TestLoadAndValidateImage:
     """Tests for load_and_validate_image function."""
 
     def test_load_valid_rgb_image(self, tmp_path):
-        from shared.utils.image_processing import load_and_validate_image
+        from shared.utils.image import load_and_validate_image
         
         # Create a test image
         img = Image.new('RGB', (100, 100), color='red')
@@ -25,7 +25,7 @@ class TestLoadAndValidateImage:
         assert result.mode == 'RGB'
 
     def test_load_grayscale_image(self, tmp_path):
-        from shared.utils.image_processing import load_and_validate_image
+        from shared.utils.image import load_and_validate_image
         
         img = Image.new('L', (100, 100), color=128)
         image_path = tmp_path / "test_gray.png"
@@ -36,7 +36,7 @@ class TestLoadAndValidateImage:
         assert result.mode == 'L'
 
     def test_load_rgba_converts_to_rgb(self, tmp_path):
-        from shared.utils.image_processing import load_and_validate_image
+        from shared.utils.image import load_and_validate_image
         
         img = Image.new('RGBA', (100, 100), color=(255, 0, 0, 128))
         image_path = tmp_path / "test_rgba.png"
@@ -47,13 +47,13 @@ class TestLoadAndValidateImage:
         assert result.mode == 'RGB'
 
     def test_file_not_found_raises_error(self):
-        from shared.utils.image_processing import load_and_validate_image
+        from shared.utils.image import load_and_validate_image
         
         with pytest.raises(FileNotFoundError):
             load_and_validate_image("/nonexistent/path/image.png")
 
     def test_empty_file_raises_error(self, tmp_path):
-        from shared.utils.image_processing import load_and_validate_image
+        from shared.utils.image import load_and_validate_image
         
         empty_file = tmp_path / "empty.png"
         empty_file.touch()
@@ -66,7 +66,7 @@ class TestEnhanceImage:
     """Tests for enhance_image function."""
 
     def test_enhance_with_defaults(self):
-        from shared.utils.image_processing import enhance_image
+        from shared.utils.image import enhance_image
         
         img = Image.new('RGB', (100, 100), color='gray')
         result = enhance_image(img)
@@ -75,7 +75,7 @@ class TestEnhanceImage:
         assert result.size == img.size
 
     def test_enhance_brightness_only(self):
-        from shared.utils.image_processing import enhance_image
+        from shared.utils.image import enhance_image
         
         img = Image.new('RGB', (100, 100), color='gray')
         result = enhance_image(img, enhance_brightness=True, enhance_contrast=False, sharpen=False)
@@ -83,7 +83,7 @@ class TestEnhanceImage:
         assert isinstance(result, Image.Image)
 
     def test_enhance_contrast_only(self):
-        from shared.utils.image_processing import enhance_image
+        from shared.utils.image import enhance_image
         
         img = Image.new('RGB', (100, 100), color='gray')
         result = enhance_image(img, enhance_brightness=False, enhance_contrast=True, sharpen=False)
@@ -91,7 +91,7 @@ class TestEnhanceImage:
         assert isinstance(result, Image.Image)
 
     def test_enhance_sharpen_only(self):
-        from shared.utils.image_processing import enhance_image
+        from shared.utils.image import enhance_image
         
         img = Image.new('RGB', (100, 100), color='gray')
         result = enhance_image(img, enhance_brightness=False, enhance_contrast=False, sharpen=True)
@@ -99,7 +99,7 @@ class TestEnhanceImage:
         assert isinstance(result, Image.Image)
 
     def test_enhance_no_enhancement(self):
-        from shared.utils.image_processing import enhance_image
+        from shared.utils.image import enhance_image
         
         img = Image.new('RGB', (100, 100), color='red')
         result = enhance_image(img, enhance_brightness=False, enhance_contrast=False, sharpen=False)
@@ -113,7 +113,7 @@ class TestAssessImageQuality:
     @patch('shared.utils.image_processing._estimate_blur')
     @patch('shared.utils.image_processing._estimate_noise')
     def test_assess_bright_image(self, mock_noise, mock_blur):
-        from shared.utils.image_processing import assess_image_quality
+        from shared.utils.image import assess_image_quality
         
         mock_blur.return_value = 150.0
         mock_noise.return_value = 10.0
@@ -129,7 +129,7 @@ class TestAssessImageQuality:
     @patch('shared.utils.image_processing._estimate_blur')
     @patch('shared.utils.image_processing._estimate_noise')
     def test_assess_dark_image(self, mock_noise, mock_blur):
-        from shared.utils.image_processing import assess_image_quality
+        from shared.utils.image import assess_image_quality
         
         mock_blur.return_value = 150.0
         mock_noise.return_value = 10.0
@@ -143,7 +143,7 @@ class TestAssessImageQuality:
     @patch('shared.utils.image_processing._estimate_blur')
     @patch('shared.utils.image_processing._estimate_noise')
     def test_quality_overall_good(self, mock_noise, mock_blur):
-        from shared.utils.image_processing import assess_image_quality
+        from shared.utils.image import assess_image_quality
         
         mock_blur.return_value = 150.0
         mock_noise.return_value = 10.0
@@ -168,7 +168,7 @@ class TestPreprocessForOcr:
     @patch('cv2.adaptiveThreshold')
     @patch('cv2.fastNlMeansDenoising')
     def test_non_aggressive_mode(self, mock_denoise, mock_thresh, mock_cvt, mock_lap):
-        from shared.utils.image_processing import preprocess_for_ocr
+        from shared.utils.image import preprocess_for_ocr
         
         img = Image.new('RGB', (100, 100), color='white')
         mock_cvt.return_value = np.ones((100, 100), dtype=np.uint8) * 255
@@ -183,7 +183,7 @@ class TestBrightnessThreshold:
     """Tests for brightness threshold constant."""
 
     def test_brightness_threshold_defined(self):
-        from shared.utils.image_processing import BRIGHTNESS_THRESHOLD
+        from shared.utils.image import BRIGHTNESS_THRESHOLD
         assert BRIGHTNESS_THRESHOLD == 100
 
 
@@ -191,7 +191,7 @@ class TestContrastThreshold:
     """Tests for contrast threshold constant."""
 
     def test_contrast_threshold_defined(self):
-        from shared.utils.image_processing import CONTRAST_THRESHOLD
+        from shared.utils.image import CONTRAST_THRESHOLD
         assert CONTRAST_THRESHOLD == 40
 """
 Test suite for centralized logging system
@@ -212,7 +212,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / 'shared'))
 
-from shared.utils.centralized_logging import (
+from shared.utils.logging import (
     get_module_logger,
     set_context,
     get_context,

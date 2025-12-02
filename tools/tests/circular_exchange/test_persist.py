@@ -8,13 +8,13 @@ import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from shared.circular_exchange.persistence import (
+from shared.circular_exchange.persist.persistence import (
     PersistenceLayer,
     ConnectionPool,
     DBConfig,
     PERSISTENCE_LAYER
 )
-from shared.circular_exchange.data_collector import (
+from shared.circular_exchange.analysis.data_collector import (
     TestResult,
     TestStatus,
     LogEntry,
@@ -340,7 +340,7 @@ from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 import json
 
-from shared.circular_exchange.webhook_notifier import (
+from shared.circular_exchange.persist.webhook_notifier import (
     WebhookNotifier,
     NotificationConfig,
     NotificationChannel,

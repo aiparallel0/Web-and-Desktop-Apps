@@ -15,7 +15,7 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from circular_exchange.variable_package import (
+from shared.circular_exchange.core.variable_package import (
     VariablePackage, PackageChange, PackageRegistry
 )
 
@@ -452,14 +452,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from circular_exchange.project_config import (
+from shared.circular_exchange.core.project_config import (
     PROJECT_CONFIG,
     ProjectConfiguration,
     ModuleRegistration,
     SecurityPolicy,
     CodingStandards
 )
-from circular_exchange.variable_package import PackageChange
+from shared.circular_exchange.core.variable_package import PackageChange
 
 
 class TestProjectConfiguration:
@@ -666,7 +666,7 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from circular_exchange.dependency_registry import DependencyRegistry, ModuleInfo
+from shared.circular_exchange.core.dependency_registry import DependencyRegistry, ModuleInfo
 
 
 class TestModuleInfo:
@@ -1107,10 +1107,10 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from circular_exchange.change_notifier import (
+from shared.circular_exchange.core.change_notifier import (
     ChangeNotifier, ChangeType, ChangeEvent, NotificationResult
 )
-from circular_exchange.dependency_registry import DependencyRegistry
+from shared.circular_exchange.core.dependency_registry import DependencyRegistry
 
 
 class TestChangeEvent:
@@ -1465,10 +1465,10 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from circular_exchange.circular_exchange import (
+from shared.circular_exchange.core.circular_exchange import (
     CircularExchange, ModuleExport, ModuleImport
 )
-from circular_exchange.variable_package import VariablePackage
+from shared.circular_exchange.core.variable_package import VariablePackage
 
 
 class TestModuleExport:

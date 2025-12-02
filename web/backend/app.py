@@ -37,8 +37,8 @@ import zipfile
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from shared.models.model_manager import ModelManager
-from shared.models.ai_models import ModelTrainer, DataAugmenter
+from shared.models.manager import ModelManager
+from shared.models.engine import ModelTrainer, DataAugmenter
 
 # Circular Exchange Framework Integration
 try:

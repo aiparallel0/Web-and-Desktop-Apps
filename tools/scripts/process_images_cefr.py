@@ -154,8 +154,8 @@ def process_images(project_root: Path, verbose: bool = False) -> List[Dict[str, 
     Returns:
         List of extraction results for each image
     """
-    from shared.models.ocr_processor import OCRProcessor
-    from shared.models.ocr_config import get_ocr_config, reset_ocr_config
+    from shared.models.config import OCRProcessor
+    from shared.models.config import get_ocr_config, reset_ocr_config
     
     # Reset config to defaults for clean testing
     reset_ocr_config()
@@ -304,7 +304,7 @@ def analyze_results(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     
     # Get detection stats from OCR config
     try:
-        from shared.models.ocr_config import get_ocr_config
+        from shared.models.config import get_ocr_config
         config = get_ocr_config()
         analysis['detection_stats'] = config.get_detection_stats()
     except Exception:

@@ -19,7 +19,7 @@ class TestDataCollector:
     def setup_method(self):
         """Reset the data collector before each test."""
         # Import here to avoid issues
-        from shared.circular_exchange.data_collector import (
+        from shared.circular_exchange.analysis.data_collector import (
             DATA_COLLECTOR, DataCategory, TestStatus, TestResult,
             LogEntry, ExtractionEvent, RefactorSuggestion
         )
@@ -37,7 +37,7 @@ class TestDataCollector:
     
     def test_singleton_pattern(self):
         """Test that DataCollector is a singleton."""
-        from shared.circular_exchange.data_collector import DataCollector
+        from shared.circular_exchange.analysis.data_collector import DataCollector
         
         collector1 = DataCollector()
         collector2 = DataCollector()
@@ -304,7 +304,7 @@ class TestDataCollectorIntegration:
     
     def test_data_category_enum(self):
         """Test DataCategory enum values."""
-        from shared.circular_exchange.data_collector import DataCategory
+        from shared.circular_exchange.analysis.data_collector import DataCategory
         
         assert DataCategory.TEST_RESULT.value == "test_result"
         assert DataCategory.USER_LOG.value == "user_log"
@@ -313,7 +313,7 @@ class TestDataCollectorIntegration:
     
     def test_test_status_enum(self):
         """Test TestStatus enum values."""
-        from shared.circular_exchange.data_collector import TestStatus
+        from shared.circular_exchange.analysis.data_collector import TestStatus
         
         assert TestStatus.PASSED.value == "passed"
         assert TestStatus.FAILED.value == "failed"
@@ -335,10 +335,10 @@ class TestMetricsAnalyzer:
     
     def setup_method(self):
         """Reset the analyzers and collectors before each test."""
-        from shared.circular_exchange.data_collector import (
+        from shared.circular_exchange.analysis.data_collector import (
             DATA_COLLECTOR, TestStatus, TestResult, LogEntry, ExtractionEvent
         )
-        from shared.circular_exchange.metrics_analyzer import (
+        from shared.circular_exchange.analysis.metrics_analyzer import (
             METRICS_ANALYZER, PatternType, InsightPriority, RefactorCategory
         )
         
@@ -358,7 +358,7 @@ class TestMetricsAnalyzer:
     
     def test_singleton_pattern(self):
         """Test that MetricsAnalyzer is a singleton."""
-        from shared.circular_exchange.metrics_analyzer import MetricsAnalyzer
+        from shared.circular_exchange.analysis.metrics_analyzer import MetricsAnalyzer
         
         analyzer1 = MetricsAnalyzer()
         analyzer2 = MetricsAnalyzer()
@@ -594,7 +594,7 @@ class TestPatternNormalization:
     """Tests for error message normalization."""
     
     def setup_method(self):
-        from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
+        from shared.circular_exchange.analysis.metrics_analyzer import METRICS_ANALYZER
         self.analyzer = METRICS_ANALYZER
     
     def test_normalize_timestamps(self):
@@ -632,7 +632,7 @@ class TestIntegration:
     
     def test_pattern_type_enum(self):
         """Test PatternType enum values."""
-        from shared.circular_exchange.metrics_analyzer import PatternType
+        from shared.circular_exchange.analysis.metrics_analyzer import PatternType
         
         assert PatternType.ERROR_RECURRING.value == "error_recurring"
         assert PatternType.TEST_FLAKY.value == "test_flaky"
@@ -640,7 +640,7 @@ class TestIntegration:
     
     def test_insight_priority_enum(self):
         """Test InsightPriority enum values."""
-        from shared.circular_exchange.metrics_analyzer import InsightPriority
+        from shared.circular_exchange.analysis.metrics_analyzer import InsightPriority
         
         assert InsightPriority.CRITICAL.value == 1
         assert InsightPriority.HIGH.value == 2
@@ -648,7 +648,7 @@ class TestIntegration:
     
     def test_refactor_category_enum(self):
         """Test RefactorCategory enum values."""
-        from shared.circular_exchange.metrics_analyzer import RefactorCategory
+        from shared.circular_exchange.analysis.metrics_analyzer import RefactorCategory
         
         assert RefactorCategory.PERFORMANCE.value == "performance"
         assert RefactorCategory.RELIABILITY.value == "reliability"
@@ -662,7 +662,7 @@ import math
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from shared.circular_exchange.intelligent_analyzer import (
+from shared.circular_exchange.analysis.intelligent_analyzer import (
     IntelligentAnalyzer,
     PatternClusterer,
     AnomalyDetector,

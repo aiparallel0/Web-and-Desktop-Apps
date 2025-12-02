@@ -17,11 +17,11 @@ class TestRefactoringEngine:
     
     def setup_method(self):
         """Reset the engine and related components before each test."""
-        from shared.circular_exchange.data_collector import (
+        from shared.circular_exchange.analysis.data_collector import (
             DATA_COLLECTOR, TestStatus, TestResult, LogEntry, ExtractionEvent
         )
-        from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
-        from shared.circular_exchange.refactoring_engine import (
+        from shared.circular_exchange.analysis.metrics_analyzer import METRICS_ANALYZER
+        from shared.circular_exchange.refactor.refactoring_engine import (
             REFACTORING_ENGINE, SuggestionType, ImpactLevel, EffortLevel
         )
         
@@ -44,7 +44,7 @@ class TestRefactoringEngine:
     
     def test_singleton_pattern(self):
         """Test that RefactoringEngine is a singleton."""
-        from shared.circular_exchange.refactoring_engine import RefactoringEngine
+        from shared.circular_exchange.refactor.refactoring_engine import RefactoringEngine
         
         engine1 = RefactoringEngine()
         engine2 = RefactoringEngine()
@@ -121,7 +121,7 @@ class TestRefactoringEngine:
     
     def test_code_suggestion_priority_score(self):
         """Test CodeSuggestion priority score calculation."""
-        from shared.circular_exchange.refactoring_engine import CodeSuggestion, CodeLocation
+        from shared.circular_exchange.refactor.refactoring_engine import CodeSuggestion, CodeLocation
         
         high_priority = CodeSuggestion(
             suggestion_id="high",
@@ -357,7 +357,7 @@ class TestCodeLocation:
     
     def test_code_location_to_dict(self):
         """Test CodeLocation serialization."""
-        from shared.circular_exchange.refactoring_engine import CodeLocation
+        from shared.circular_exchange.refactor.refactoring_engine import CodeLocation
         
         location = CodeLocation(
             file_path="path/to/file.py",
@@ -379,7 +379,7 @@ class TestEnums:
     
     def test_suggestion_type_values(self):
         """Test SuggestionType enum values."""
-        from shared.circular_exchange.refactoring_engine import SuggestionType
+        from shared.circular_exchange.refactor.refactoring_engine import SuggestionType
         
         assert SuggestionType.ERROR_HANDLING.value == "error_handling"
         assert SuggestionType.PERFORMANCE.value == "performance"
@@ -387,7 +387,7 @@ class TestEnums:
     
     def test_effort_level_ordering(self):
         """Test EffortLevel enum ordering."""
-        from shared.circular_exchange.refactoring_engine import EffortLevel
+        from shared.circular_exchange.refactor.refactoring_engine import EffortLevel
         
         assert EffortLevel.TRIVIAL.value < EffortLevel.LOW.value
         assert EffortLevel.LOW.value < EffortLevel.MEDIUM.value
@@ -396,7 +396,7 @@ class TestEnums:
     
     def test_impact_level_ordering(self):
         """Test ImpactLevel enum ordering."""
-        from shared.circular_exchange.refactoring_engine import ImpactLevel
+        from shared.circular_exchange.refactor.refactoring_engine import ImpactLevel
         
         assert ImpactLevel.CRITICAL.value < ImpactLevel.HIGH.value
         assert ImpactLevel.HIGH.value < ImpactLevel.MEDIUM.value
@@ -463,7 +463,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from shared.circular_exchange.autonomous_refactor import (
+from shared.circular_exchange.refactor.autonomous_refactor import (
     AutonomousRefactor,
     RefactorRisk,
     RefactorStatus,
@@ -888,7 +888,7 @@ class TestAutoTuner:
     
     def setup_method(self):
         """Reset components before each test."""
-        from shared.circular_exchange.feedback_loop import (
+        from shared.circular_exchange.refactor.feedback_loop import (
             AutoTuner, FeedbackType, TuningAction
         )
         
@@ -947,7 +947,7 @@ class TestAutoTuner:
     
     def test_apply_decision(self):
         """Test applying a tuning decision."""
-        from shared.circular_exchange.feedback_loop import TuningDecision, TuningAction
+        from shared.circular_exchange.refactor.feedback_loop import TuningDecision, TuningAction
         
         decision = TuningDecision(
             decision_id="test_decision",
@@ -987,7 +987,7 @@ class TestModelTrainingPipeline:
     
     def setup_method(self):
         """Reset pipeline before each test."""
-        from shared.circular_exchange.feedback_loop import (
+        from shared.circular_exchange.refactor.feedback_loop import (
             ModelTrainingPipeline, TrainingStatus
         )
         
@@ -1120,10 +1120,10 @@ class TestFeedbackLoop:
     
     def setup_method(self):
         """Reset feedback loop before each test."""
-        from shared.circular_exchange.feedback_loop import FEEDBACK_LOOP
-        from shared.circular_exchange.data_collector import DATA_COLLECTOR
-        from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
-        from shared.circular_exchange.refactoring_engine import REFACTORING_ENGINE
+        from shared.circular_exchange.refactor.feedback_loop import FEEDBACK_LOOP
+        from shared.circular_exchange.analysis.data_collector import DATA_COLLECTOR
+        from shared.circular_exchange.analysis.metrics_analyzer import METRICS_ANALYZER
+        from shared.circular_exchange.refactor.refactoring_engine import REFACTORING_ENGINE
         
         # Clear all components
         DATA_COLLECTOR.clear()
@@ -1142,7 +1142,7 @@ class TestFeedbackLoop:
     
     def test_singleton_pattern(self):
         """Test that FeedbackLoop is a singleton."""
-        from shared.circular_exchange.feedback_loop import FeedbackLoop
+        from shared.circular_exchange.refactor.feedback_loop import FeedbackLoop
         
         loop1 = FeedbackLoop()
         loop2 = FeedbackLoop()
@@ -1272,7 +1272,7 @@ class TestEnums:
     
     def test_tuning_action_values(self):
         """Test TuningAction enum values."""
-        from shared.circular_exchange.feedback_loop import TuningAction
+        from shared.circular_exchange.refactor.feedback_loop import TuningAction
         
         assert TuningAction.INCREASE_THRESHOLD.value == "increase_threshold"
         assert TuningAction.DECREASE_THRESHOLD.value == "decrease_threshold"
@@ -1280,7 +1280,7 @@ class TestEnums:
     
     def test_feedback_type_values(self):
         """Test FeedbackType enum values."""
-        from shared.circular_exchange.feedback_loop import FeedbackType
+        from shared.circular_exchange.refactor.feedback_loop import FeedbackType
         
         assert FeedbackType.TEST_RESULT.value == "test_result"
         assert FeedbackType.EXTRACTION_SUCCESS.value == "extraction_success"
@@ -1288,7 +1288,7 @@ class TestEnums:
     
     def test_training_status_values(self):
         """Test TrainingStatus enum values."""
-        from shared.circular_exchange.feedback_loop import TrainingStatus
+        from shared.circular_exchange.refactor.feedback_loop import TrainingStatus
         
         assert TrainingStatus.PENDING.value == "pending"
         assert TrainingStatus.TRAINING.value == "training"

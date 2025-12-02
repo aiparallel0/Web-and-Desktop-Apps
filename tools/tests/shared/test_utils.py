@@ -9,26 +9,26 @@ class TestLineItem:
     """Tests for LineItem class."""
 
     def test_create_basic_line_item(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Coffee", total_price=Decimal("3.50"))
         assert item.name == "Coffee"
         assert item.total_price == Decimal("3.50")
         assert item.quantity == 1
 
     def test_line_item_with_quantity(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Apple", quantity=3, unit_price=Decimal("0.50"), total_price=Decimal("1.50"))
         assert item.quantity == 3
         assert item.unit_price == Decimal("0.50")
 
     def test_line_item_calculate_total(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Banana", quantity=5, unit_price=Decimal("0.30"), total_price=Decimal("0"))
         calculated = item.calculate_total()
         assert calculated == Decimal("1.50")
 
     def test_line_item_to_dict(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Milk", total_price=Decimal("2.99"), category="Dairy")
         result = item.to_dict()
         assert result['name'] == "Milk"
@@ -36,7 +36,7 @@ class TestLineItem:
         assert result['category'] == "Dairy"
 
     def test_line_item_from_dict(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         data = {
             'name': 'Bread',
             'quantity': 2,
@@ -49,12 +49,12 @@ class TestLineItem:
         assert item.total_price == Decimal('4.50')
 
     def test_line_item_normalizes_string_price(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Test", total_price="5.99")
         assert item.total_price == Decimal("5.99")
 
     def test_line_item_handles_invalid_price(self):
-        from shared.utils.data_structures import LineItem
+        from shared.utils.data import LineItem
         item = LineItem(name="Test", total_price="invalid")
         assert item.total_price == Decimal("0")
 
@@ -63,14 +63,14 @@ class TestReceiptData:
     """Tests for ReceiptData class."""
 
     def test_create_empty_receipt(self):
-        from shared.utils.data_structures import ReceiptData
+        from shared.utils.data import ReceiptData
         receipt = ReceiptData()
         assert receipt.store_name is None
         assert receipt.items == []
         assert receipt.total is None
 
     def test_receipt_with_store_info(self):
-        from shared.utils.data_structures import ReceiptData
+        from shared.utils.data import ReceiptData
         receipt = ReceiptData(
             store_name="Test Store",
             store_address="123 Main St",
@@ -81,7 +81,7 @@ class TestReceiptData:
         assert receipt.store_phone == "555-1234"
 
     def test_receipt_with_totals(self):
-        from shared.utils.data_structures import ReceiptData
+        from shared.utils.data import ReceiptData
         receipt = ReceiptData(
             subtotal=Decimal("10.00"),
             tax=Decimal("0.80"),
@@ -92,7 +92,7 @@ class TestReceiptData:
         assert receipt.total == Decimal("10.80")
 
     def test_receipt_with_items(self):
-        from shared.utils.data_structures import ReceiptData, LineItem
+        from shared.utils.data import ReceiptData, LineItem
         items = [
             LineItem(name="Item 1", total_price=Decimal("5.00")),
             LineItem(name="Item 2", total_price=Decimal("3.00"))
@@ -101,7 +101,7 @@ class TestReceiptData:
         assert len(receipt.items) == 2
 
     def test_receipt_to_dict(self):
-        from shared.utils.data_structures import ReceiptData
+        from shared.utils.data import ReceiptData
         receipt = ReceiptData(
             store_name="Test Store",
             total=Decimal("25.00")
@@ -110,7 +110,7 @@ class TestReceiptData:
         assert result['store']['name'] == "Test Store"
 
     def test_receipt_add_item(self):
-        from shared.utils.data_structures import ReceiptData, LineItem
+        from shared.utils.data import ReceiptData, LineItem
         receipt = ReceiptData()
         item = LineItem(name="Coffee", total_price=Decimal("4.50"))
         receipt.add_item(item)
@@ -122,7 +122,7 @@ class TestExtractionResult:
     """Tests for ExtractionResult class."""
 
     def test_successful_result(self):
-        from shared.utils.data_structures import ExtractionResult, ReceiptData
+        from shared.utils.data import ExtractionResult, ReceiptData
         receipt = ReceiptData(store_name="Test")
         result = ExtractionResult(success=True, data=receipt)
         assert result.success is True
@@ -130,14 +130,14 @@ class TestExtractionResult:
         assert result.error is None
 
     def test_failed_result(self):
-        from shared.utils.data_structures import ExtractionResult
+        from shared.utils.data import ExtractionResult
         result = ExtractionResult(success=False, error="Image processing failed")
         assert result.success is False
         assert result.error == "Image processing failed"
         assert result.data is None
 
     def test_result_with_warnings(self):
-        from shared.utils.data_structures import ExtractionResult, ReceiptData
+        from shared.utils.data import ExtractionResult, ReceiptData
         receipt = ReceiptData()
         result = ExtractionResult(
             success=True,
@@ -151,7 +151,7 @@ class TestStoreInfo:
     """Tests for StoreInfo class."""
 
     def test_create_store_info(self):
-        from shared.utils.data_structures import StoreInfo
+        from shared.utils.data import StoreInfo
         store = StoreInfo(
             name="Walmart",
             address="123 Main St",
@@ -161,7 +161,7 @@ class TestStoreInfo:
         assert store.address == "123 Main St"
 
     def test_store_info_to_dict(self):
-        from shared.utils.data_structures import StoreInfo
+        from shared.utils.data import StoreInfo
         store = StoreInfo(name="Target", phone="555-5678")
         result = store.to_dict()
         assert result['name'] == "Target"
@@ -173,7 +173,7 @@ class TestTransactionTotals:
     """Tests for TransactionTotals class."""
 
     def test_create_totals(self):
-        from shared.utils.data_structures import TransactionTotals
+        from shared.utils.data import TransactionTotals
         totals = TransactionTotals(
             subtotal=Decimal("50.00"),
             tax=Decimal("4.00"),
@@ -184,7 +184,7 @@ class TestTransactionTotals:
         assert totals.total == Decimal("54.00")
 
     def test_totals_with_payment(self):
-        from shared.utils.data_structures import TransactionTotals
+        from shared.utils.data import TransactionTotals
         totals = TransactionTotals(
             total=Decimal("54.00"),
             cash_tendered=Decimal("60.00"),
@@ -194,7 +194,7 @@ class TestTransactionTotals:
         assert totals.change_given == Decimal("6.00")
 
     def test_totals_to_dict(self):
-        from shared.utils.data_structures import TransactionTotals
+        from shared.utils.data import TransactionTotals
         totals = TransactionTotals(
             subtotal=Decimal("100.00"),
             discount=Decimal("10.00"),
@@ -209,7 +209,7 @@ class TestExtractionStatus:
     """Tests for ExtractionStatus enum."""
 
     def test_status_values(self):
-        from shared.utils.data_structures import ExtractionStatus
+        from shared.utils.data import ExtractionStatus
         assert ExtractionStatus.SUCCESS.value == "success"
         assert ExtractionStatus.PARTIAL.value == "partial"
         assert ExtractionStatus.FAILED.value == "failed"
@@ -225,7 +225,7 @@ class TestErrorCategory:
     """Tests for ErrorCategory enum."""
 
     def test_all_categories_exist(self):
-        from shared.utils.errors import ErrorCategory
+        from shared.utils.helpers import ErrorCategory
         assert hasattr(ErrorCategory, 'VALIDATION')
         assert hasattr(ErrorCategory, 'AUTHENTICATION')
         assert hasattr(ErrorCategory, 'AUTHORIZATION')
@@ -238,18 +238,18 @@ class TestErrorCode:
     """Tests for ErrorCode enum."""
 
     def test_validation_codes(self):
-        from shared.utils.errors import ErrorCode
+        from shared.utils.helpers import ErrorCode
         assert ErrorCode.INVALID_INPUT.value.startswith('E1')
         assert ErrorCode.MISSING_REQUIRED_FIELD.value.startswith('E1')
         assert ErrorCode.FILE_TOO_LARGE.value.startswith('E1')
 
     def test_authentication_codes(self):
-        from shared.utils.errors import ErrorCode
+        from shared.utils.helpers import ErrorCode
         assert ErrorCode.INVALID_CREDENTIALS.value.startswith('E2')
         assert ErrorCode.TOKEN_EXPIRED.value.startswith('E2')
 
     def test_internal_codes(self):
-        from shared.utils.errors import ErrorCode
+        from shared.utils.helpers import ErrorCode
         assert ErrorCode.INTERNAL_ERROR.value.startswith('E9')
 
 
@@ -257,7 +257,7 @@ class TestReceiptExtractorError:
     """Tests for base ReceiptExtractorError."""
 
     def test_basic_error(self):
-        from shared.utils.errors import ReceiptExtractorError, ErrorCode, ErrorCategory
+        from shared.utils.helpers import ReceiptExtractorError, ErrorCode, ErrorCategory
         error = ReceiptExtractorError("Test error")
         assert error.message == "Test error"
         assert error.code == ErrorCode.INTERNAL_ERROR
@@ -265,7 +265,7 @@ class TestReceiptExtractorError:
         assert error.http_status == 500
 
     def test_custom_error(self):
-        from shared.utils.errors import ReceiptExtractorError, ErrorCode, ErrorCategory
+        from shared.utils.helpers import ReceiptExtractorError, ErrorCode, ErrorCategory
         error = ReceiptExtractorError(
             message="Custom error",
             code=ErrorCode.INVALID_INPUT,
@@ -276,7 +276,7 @@ class TestReceiptExtractorError:
         assert error.code == ErrorCode.INVALID_INPUT
 
     def test_to_dict(self):
-        from shared.utils.errors import ReceiptExtractorError
+        from shared.utils.helpers import ReceiptExtractorError
         error = ReceiptExtractorError("Test error", details={'field': 'value'})
         result = error.to_dict()
         
@@ -287,7 +287,7 @@ class TestReceiptExtractorError:
         assert result['error']['details'] == {'field': 'value'}
 
     def test_to_dict_with_suggestion(self):
-        from shared.utils.errors import ReceiptExtractorError
+        from shared.utils.helpers import ReceiptExtractorError
         error = ReceiptExtractorError(
             "Test error",
             suggestion="Try again later"
@@ -300,13 +300,13 @@ class TestValidationError:
     """Tests for ValidationError."""
 
     def test_default_values(self):
-        from shared.utils.errors import ValidationError, ErrorCode, ErrorCategory
+        from shared.utils.helpers import ValidationError, ErrorCode, ErrorCategory
         error = ValidationError("Invalid input")
         assert error.http_status == 400
         assert error.category == ErrorCategory.VALIDATION
 
     def test_with_details(self):
-        from shared.utils.errors import ValidationError
+        from shared.utils.helpers import ValidationError
         error = ValidationError(
             "Invalid email",
             details={'field': 'email', 'reason': 'format'}
@@ -319,7 +319,7 @@ class TestAuthenticationError:
     """Tests for AuthenticationError."""
 
     def test_default_values(self):
-        from shared.utils.errors import AuthenticationError, ErrorCategory
+        from shared.utils.helpers import AuthenticationError, ErrorCategory
         error = AuthenticationError()
         assert error.http_status == 401
         assert error.category == ErrorCategory.AUTHENTICATION
@@ -330,7 +330,7 @@ class TestAuthorizationError:
     """Tests for AuthorizationError."""
 
     def test_default_values(self):
-        from shared.utils.errors import AuthorizationError, ErrorCategory
+        from shared.utils.helpers import AuthorizationError, ErrorCategory
         error = AuthorizationError()
         assert error.http_status == 403
         assert error.category == ErrorCategory.AUTHORIZATION
@@ -340,13 +340,13 @@ class TestNotFoundError:
     """Tests for NotFoundError."""
 
     def test_default_values(self):
-        from shared.utils.errors import NotFoundError, ErrorCategory
+        from shared.utils.helpers import NotFoundError, ErrorCategory
         error = NotFoundError()
         assert error.http_status == 404
         assert error.category == ErrorCategory.NOT_FOUND
 
     def test_with_resource_info(self):
-        from shared.utils.errors import NotFoundError
+        from shared.utils.helpers import NotFoundError
         error = NotFoundError(
             message="User not found",
             resource_type="user",
@@ -361,7 +361,7 @@ class TestProcessingError:
     """Tests for ProcessingError."""
 
     def test_default_values(self):
-        from shared.utils.errors import ProcessingError, ErrorCategory
+        from shared.utils.helpers import ProcessingError, ErrorCategory
         error = ProcessingError("OCR failed")
         assert error.http_status == 500
         assert error.category == ErrorCategory.PROCESSING
@@ -371,13 +371,13 @@ class TestRateLimitError:
     """Tests for RateLimitError."""
 
     def test_default_values(self):
-        from shared.utils.errors import RateLimitError, ErrorCategory
+        from shared.utils.helpers import RateLimitError, ErrorCategory
         error = RateLimitError()
         assert error.http_status == 429
         assert error.category == ErrorCategory.RATE_LIMIT
 
     def test_with_retry_info(self):
-        from shared.utils.errors import RateLimitError
+        from shared.utils.helpers import RateLimitError
         error = RateLimitError(
             retry_after=60,
             limit=100,
@@ -393,13 +393,13 @@ class TestExternalServiceError:
     """Tests for ExternalServiceError."""
 
     def test_default_values(self):
-        from shared.utils.errors import ExternalServiceError, ErrorCategory
+        from shared.utils.helpers import ExternalServiceError, ErrorCategory
         error = ExternalServiceError("Service unavailable")
         assert error.http_status == 503
         assert error.category == ErrorCategory.EXTERNAL_SERVICE
 
     def test_with_service_name(self):
-        from shared.utils.errors import ExternalServiceError
+        from shared.utils.helpers import ExternalServiceError
         error = ExternalServiceError(
             message="Cloud storage error",
             service_name="AWS S3"
@@ -412,7 +412,7 @@ class TestErrorResponseUtilities:
     """Tests for error response utility functions."""
 
     def test_create_error_response(self):
-        from shared.utils.errors import ValidationError, create_error_response
+        from shared.utils.helpers import ValidationError, create_error_response
         error = ValidationError("Test error")
         response, status_code = create_error_response(error)
         
@@ -421,7 +421,7 @@ class TestErrorResponseUtilities:
         assert 'error' in response
 
     def test_create_simple_error_response(self):
-        from shared.utils.errors import create_simple_error_response
+        from shared.utils.helpers import create_simple_error_response
         response, status_code = create_simple_error_response(
             "Simple error",
             status_code=500
@@ -432,7 +432,7 @@ class TestErrorResponseUtilities:
         assert response['error']['message'] == "Simple error"
 
     def test_handle_exception_custom_error(self):
-        from shared.utils.errors import ValidationError, handle_exception
+        from shared.utils.helpers import ValidationError, handle_exception
         error = ValidationError("Test validation error")
         response, status_code = handle_exception(error)
         
@@ -440,7 +440,7 @@ class TestErrorResponseUtilities:
         assert 'validation' in response['error']['type']
 
     def test_handle_exception_generic_error(self):
-        from shared.utils.errors import handle_exception
+        from shared.utils.helpers import handle_exception
         error = ValueError("Generic Python error")
         response, status_code = handle_exception(error)
         
@@ -619,7 +619,7 @@ class TestGetConfig:
 import pytest
 from pathlib import Path
 import json
-from shared.models.model_manager import ModelManager
+from shared.models.manager import ModelManager
 
 @pytest.mark.unit
 def test_models_config_exists():
@@ -1087,7 +1087,7 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root / 'shared'))
 
-from shared.models.model_manager import ModelManager
+from shared.models.manager import ModelManager
 
 
 class TestModelManager:
@@ -1118,7 +1118,7 @@ class TestModelTrainer:
     
     def test_model_trainer_initialization(self):
         """Test ModelTrainer initialization"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         config = {'param1': 'value1', 'param2': 'value2'}
         trainer = ModelTrainer('test_model', config)
@@ -1130,7 +1130,7 @@ class TestModelTrainer:
     
     def test_add_training_sample(self):
         """Test adding training samples"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('test_model', {})
         trainer.add_training_sample('/path/to/image.jpg', {'store': 'Test Store', 'total': 25.00})
@@ -1141,7 +1141,7 @@ class TestModelTrainer:
     
     def test_add_validation_sample(self):
         """Test adding validation samples"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('test_model', {})
         trainer.add_validation_sample('/path/to/image.jpg', {'store': 'Test Store'})
@@ -1151,7 +1151,7 @@ class TestModelTrainer:
     
     def test_fine_tune_paddle_with_data(self):
         """Test fine_tune_paddle with training data"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('paddle', {})
         trainer.add_training_sample('/path/to/image.jpg', {'total': 25.00})
@@ -1161,7 +1161,7 @@ class TestModelTrainer:
     
     def test_fine_tune_paddle_without_data(self):
         """Test fine_tune_paddle without data raises error"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('paddle', {})
         
@@ -1170,7 +1170,7 @@ class TestModelTrainer:
     
     def test_evaluate_model_with_data(self):
         """Test evaluate_model with validation data"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('test_model', {})
         trainer.add_validation_sample('/path/to/image.jpg', {'total': 25.00})
@@ -1183,7 +1183,7 @@ class TestModelTrainer:
     
     def test_evaluate_model_without_data(self):
         """Test evaluate_model without validation data returns empty dict"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('test_model', {})
         results = trainer.evaluate_model()
@@ -1192,7 +1192,7 @@ class TestModelTrainer:
     
     def test_save_model(self):
         """Test save_model creates file"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         with tempfile.TemporaryDirectory() as tmpdir:
             trainer = ModelTrainer('test_model', {'key': 'value'})
@@ -1212,7 +1212,7 @@ class TestModelTrainer:
     
     def test_incremental_learn(self):
         """Test incremental_learn adds corrections to training data"""
-        from shared.models.ai_models import ModelTrainer
+        from shared.models.engine import ModelTrainer
         
         trainer = ModelTrainer('test_model', {})
         
@@ -1235,7 +1235,7 @@ class TestDataAugmenter:
     @pytest.mark.skipif(not pytest.importorskip("cv2", reason="cv2 not installed"), reason="cv2 required")
     def test_augment_image(self):
         """Test augment_image generates augmented images"""
-        from shared.models.ai_models import DataAugmenter
+        from shared.models.engine import DataAugmenter
         from PIL import Image
         
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1263,7 +1263,7 @@ class TestIncrementalModelDevelopment:
     
     def test_initialization(self):
         """Test initialization"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model_v1')
         
@@ -1273,7 +1273,7 @@ class TestIncrementalModelDevelopment:
     
     def test_create_iteration(self):
         """Test creating iterations"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model')
         
@@ -1288,7 +1288,7 @@ class TestIncrementalModelDevelopment:
     
     def test_log_performance(self):
         """Test logging performance metrics"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model')
         dev.create_iteration('Test', {})
@@ -1300,7 +1300,7 @@ class TestIncrementalModelDevelopment:
     
     def test_get_best_iteration_with_data(self):
         """Test getting best iteration"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model')
         dev.create_iteration('v1', {})
@@ -1314,14 +1314,14 @@ class TestIncrementalModelDevelopment:
     
     def test_get_best_iteration_empty(self):
         """Test getting best iteration with no data"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model')
         assert dev.get_best_iteration() is None
     
     def test_export_iteration(self):
         """Test exporting an iteration"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         with tempfile.TemporaryDirectory() as tmpdir:
             dev = IncrementalModelDevelopment('base_model')
@@ -1339,7 +1339,7 @@ class TestIncrementalModelDevelopment:
     
     def test_export_iteration_not_found(self):
         """Test exporting non-existent iteration raises error"""
-        from shared.models.ai_models import IncrementalModelDevelopment
+        from shared.models.engine import IncrementalModelDevelopment
         
         dev = IncrementalModelDevelopment('base_model')
         
@@ -1349,7 +1349,7 @@ import pytest
 from PIL import Image
 import io
 import numpy as np
-from shared.utils.image_processing import (
+from shared.utils.image import (
     load_and_validate_image,
     enhance_image,
     assess_image_quality,

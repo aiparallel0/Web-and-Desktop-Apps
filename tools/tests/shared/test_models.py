@@ -270,7 +270,7 @@ class TestFlorenceConfidenceCalculation:
 
     def test_confidence_with_all_fields(self, mock_florence_processor):
         """Test confidence with all fields populated."""
-        from shared.utils.data_structures import ReceiptData, LineItem
+        from shared.utils.data import ReceiptData, LineItem
         
         receipt = ReceiptData()
         receipt.store_name = "Test Store"
@@ -289,7 +289,7 @@ class TestFlorenceConfidenceCalculation:
 
     def test_confidence_with_minimal_fields(self, mock_florence_processor):
         """Test confidence with minimal fields."""
-        from shared.utils.data_structures import ReceiptData
+        from shared.utils.data import ReceiptData
         
         receipt = ReceiptData()
         # No fields populated
@@ -414,7 +414,7 @@ class TestFlorenceNullChecks:
 import pytest
 import time
 from unittest.mock import Mock, patch, MagicMock
-from shared.models.processors import (
+from shared.models.engine import (
     BaseProcessor,
     ProcessorInitializationError,
     ProcessorHealthCheckError
@@ -759,7 +759,7 @@ def test_health_check_count(mock_processor):
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from decimal import Decimal
-from shared.models.processors import EasyOCRProcessor
+from shared.models.engine import EasyOCRProcessor
 
 
 @pytest.fixture
@@ -1136,7 +1136,7 @@ def test_normalize_price_invalid():
 def test_extract_empty_text_lines(mock_easyocr, easyocr_config):
     """Test parsing with empty text lines after filtering"""
     # Reset OCRConfig before test to ensure clean state
-    from shared.models.ocr_config import OCRConfig
+    from shared.models.config import OCRConfig
     OCRConfig._instance = None
     
     mock_reader = Mock()
@@ -1208,8 +1208,8 @@ def mock_paddle_ocr():
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_paddle_processor_initialization_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test successful initialization of Paddle processor with circular exchange config"""
-    from shared.models.processors import PaddleProcessor
-    from shared.models.ocr_config import OCRConfig
+    from shared.models.engine import PaddleProcessor
+    from shared.models.config import OCRConfig
     
     # Reset OCRConfig to ensure default values
     OCRConfig._instance = None
@@ -1238,7 +1238,7 @@ def test_paddle_processor_initialization_success(mock_preprocess, mock_load, moc
 @patch('shared.models.processors.PaddleOCR')
 def test_paddle_processor_initialization_failure(mock_paddle_cls, paddle_config):
     """Test initialization fails when PaddleOCR creation fails"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_paddle_cls.side_effect = RuntimeError("PaddleOCR creation failed")
 
@@ -1252,7 +1252,7 @@ def test_paddle_processor_initialization_failure(mock_paddle_cls, paddle_config)
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test successful extraction with PaddleOCR"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1289,7 +1289,7 @@ def test_extract_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_con
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_no_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction when no text is detected"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1314,7 +1314,7 @@ def test_extract_no_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_empty_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction with empty results"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1339,7 +1339,7 @@ def test_extract_empty_results(mock_preprocess, mock_load, mock_paddle_cls, padd
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_retry_with_original_image(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that extraction retries with original image if preprocessed fails"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1370,7 +1370,7 @@ def test_extract_retry_with_original_image(mock_preprocess, mock_load, mock_padd
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_grayscale_to_rgb_conversion(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that grayscale images are converted to RGB"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1397,7 +1397,7 @@ def test_extract_grayscale_to_rgb_conversion(mock_preprocess, mock_load, mock_pa
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_exception_handling(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction handles exceptions gracefully"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1417,7 +1417,7 @@ def test_extract_exception_handling(mock_preprocess, mock_load, mock_paddle_cls,
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_low_confidence_filtered(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that low confidence results are filtered out"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1445,7 +1445,7 @@ def test_extract_low_confidence_filtered(mock_preprocess, mock_load, mock_paddle
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_date_patterns(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test various date pattern detection"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1480,7 +1480,7 @@ def test_extract_date_patterns(mock_preprocess, mock_load, mock_paddle_cls, padd
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_total_patterns(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test various total pattern detection"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1516,7 +1516,7 @@ def test_extract_total_patterns(mock_preprocess, mock_load, mock_paddle_cls, pad
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_line_items(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test line item extraction"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1551,7 +1551,7 @@ def test_extract_line_items(mock_preprocess, mock_load, mock_paddle_cls, paddle_
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_skip_keywords(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that lines with skip keywords are not extracted as items"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1583,7 +1583,7 @@ def test_extract_skip_keywords(mock_preprocess, mock_load, mock_paddle_cls, padd
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_address_detection(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test address detection"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1611,7 +1611,7 @@ def test_extract_address_detection(mock_preprocess, mock_load, mock_paddle_cls, 
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_phone_detection(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test phone number detection"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1643,7 +1643,7 @@ def test_extract_phone_detection(mock_preprocess, mock_load, mock_paddle_cls, pa
 @pytest.mark.unit
 def test_normalize_price_valid():
     """Test price normalization with valid values"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     assert PaddleProcessor._normalize_price('12.99') == Decimal('12.99')
     assert PaddleProcessor._normalize_price('$5.50') == Decimal('5.50')
@@ -1655,7 +1655,7 @@ def test_normalize_price_valid():
 @pytest.mark.unit
 def test_normalize_price_invalid():
     """Test price normalization with invalid values"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     assert PaddleProcessor._normalize_price(None) is None
     assert PaddleProcessor._normalize_price('-5.00') is None
@@ -1669,7 +1669,7 @@ def test_normalize_price_invalid():
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_confidence_score_calculation(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that confidence score is calculated correctly"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1699,7 +1699,7 @@ def test_extract_confidence_score_calculation(mock_preprocess, mock_load, mock_p
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_malformed_result_handling(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test handling of malformed OCR results"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1728,7 +1728,7 @@ def test_extract_malformed_result_handling(mock_preprocess, mock_load, mock_padd
 @patch('shared.models.processors.preprocess_for_ocr')
 def test_extract_quantity_parsing(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test parsing of quantity in line items"""
-    from shared.models.processors import PaddleProcessor
+    from shared.models.engine import PaddleProcessor
 
     mock_ocr = Mock()
     mock_paddle_cls.return_value = mock_ocr
@@ -1806,7 +1806,7 @@ def test_donut_processor_initialization(donut_config):
     
     with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
         with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
-            from shared.models.ai_models import DonutProcessor
+            from shared.models.engine import DonutProcessor
             processor = DonutProcessor(donut_config)
     
             assert processor.model_config == donut_config
@@ -1838,7 +1838,7 @@ def test_donut_processor_gpu_detection(donut_config):
     
     with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
         with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
-            from shared.models.ai_models import DonutProcessor
+            from shared.models.engine import DonutProcessor
             processor = DonutProcessor(donut_config)
     
             assert processor.device == 'cuda'
@@ -1872,7 +1872,7 @@ def test_donut_processor_load_retry(donut_config):
     with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
         with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             with patch('time.sleep'):  # Don't actually sleep in tests
-                from shared.models.ai_models import DonutProcessor
+                from shared.models.engine import DonutProcessor
                 processor = DonutProcessor(donut_config)
     
             # Should succeed after retry
@@ -1895,7 +1895,7 @@ def test_donut_processor_load_failure(donut_config):
     with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
         with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             with patch('time.sleep'):  # Don't actually sleep in tests
-                from shared.models.ai_models import DonutProcessor
+                from shared.models.engine import DonutProcessor
                 with pytest.raises(RuntimeError) as exc_info:
                     processor = DonutProcessor(donut_config)
     
@@ -1905,7 +1905,7 @@ def test_donut_processor_load_failure(donut_config):
 @pytest.mark.unit
 def test_normalize_price_valid():
     """Test price normalization with valid values"""
-    from shared.models.ai_models import BaseDonutProcessor
+    from shared.models.engine import BaseDonutProcessor
 
     assert BaseDonutProcessor.normalize_price('12.99') == Decimal('12.99')
     assert BaseDonutProcessor.normalize_price('$5.50') == Decimal('5.50')
@@ -1917,7 +1917,7 @@ def test_normalize_price_valid():
 @pytest.mark.unit
 def test_normalize_price_invalid():
     """Test price normalization with invalid values"""
-    from shared.models.ai_models import BaseDonutProcessor
+    from shared.models.engine import BaseDonutProcessor
 
     assert BaseDonutProcessor.normalize_price(None) is None
     assert BaseDonutProcessor.normalize_price('') is None
@@ -1930,7 +1930,7 @@ def test_normalize_price_invalid():
 @pytest.mark.unit
 def test_parse_json_output_valid():
     """Test parsing valid JSON output"""
-    from shared.models.ai_models import BaseDonutProcessor
+    from shared.models.engine import BaseDonutProcessor
 
     test_cases = [
         ('{"store": "Test"}', {"store": "Test"}),
@@ -1946,7 +1946,7 @@ def test_parse_json_output_valid():
 @pytest.mark.unit
 def test_parse_json_output_invalid():
     """Test parsing invalid JSON output"""
-    from shared.models.ai_models import BaseDonutProcessor
+    from shared.models.engine import BaseDonutProcessor
 
     test_cases = [
         '',
@@ -1966,7 +1966,7 @@ def test_donut_extract_success(donut_config):
     pytest.importorskip('transformers')
     pytest.importorskip('torch')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     from PIL import Image
     
     mock_torch = Mock()
@@ -2028,7 +2028,7 @@ def test_donut_extract_fallback_text(donut_config):
     pytest.importorskip('transformers')
     pytest.importorskip('torch')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     from PIL import Image
     
     mock_torch = Mock()
@@ -2083,7 +2083,7 @@ def test_donut_extract_exception(donut_config):
     """Test extraction handles exceptions"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False
@@ -2113,7 +2113,7 @@ def test_donut_extract_exception(donut_config):
 @pytest.mark.unit
 def test_safe_extract_string():
     """Test safe string extraction from various data types"""
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     from unittest.mock import MagicMock
 
     # Create a mock processor instance just for testing the method
@@ -2138,8 +2138,8 @@ def test_safe_extract_string():
 @pytest.mark.unit
 def test_calculate_confidence_sroie():
     """Test confidence calculation for SROIE model"""
-    from shared.models.ai_models import DonutProcessor
-    from shared.utils.data_structures import ReceiptData
+    from shared.models.engine import DonutProcessor
+    from shared.utils.data import ReceiptData
     from unittest.mock import MagicMock
 
     processor = MagicMock()
@@ -2165,7 +2165,7 @@ def test_calculate_confidence_sroie():
 @pytest.mark.unit
 def test_extract_from_text():
     """Test text extraction fallback"""
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     from unittest.mock import MagicMock
 
     processor = MagicMock()
@@ -2189,7 +2189,7 @@ Total: $4.48"""
 @pytest.mark.unit
 def test_extract_from_text_cord():
     """Test CORD-specific text extraction"""
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     from unittest.mock import MagicMock
 
     processor = MagicMock()
@@ -2219,7 +2219,7 @@ def test_florence_processor_initialization(florence_config):
     """Test FlorenceProcessor initialization"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import FlorenceProcessor
+    from shared.models.engine import FlorenceProcessor
     
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False
@@ -2246,7 +2246,7 @@ def test_florence_processor_load_failure(florence_config):
     """Test FlorenceProcessor loading fails after retries"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import FlorenceProcessor
+    from shared.models.engine import FlorenceProcessor
     
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False
@@ -2270,7 +2270,7 @@ def test_build_receipt_data():
     """Test building receipt data from parsed JSON"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
     
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False
@@ -2325,7 +2325,7 @@ def test_build_receipt_data_complex_total():
     """Test building receipt data with complex total structure"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
 
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False
@@ -2378,7 +2378,7 @@ def test_build_receipt_data_alternate_fields():
     """Test building receipt data with alternate field names"""
     pytest.importorskip('transformers')
     
-    from shared.models.ai_models import DonutProcessor
+    from shared.models.engine import DonutProcessor
 
     mock_torch = Mock()
     mock_torch.cuda.is_available.return_value = False

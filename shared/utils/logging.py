@@ -19,7 +19,7 @@ Environment Variables:
     LOG_BACKUP_COUNT: Backup files to keep (default: 5)
 
 Usage:
-    from shared.utils.centralized_logging import get_module_logger
+    from shared.utils.logging import get_module_logger
     logger = get_module_logger()
     logger.info("Processing...")
 """
@@ -295,15 +295,15 @@ class CentralizedLoggingManager:
             log_format = _CONFIG['format'].lower()
             
             if log_format == 'syslog':
-                from shared.utils.standard_logging import SyslogFormatter
+                from shared.utils.logging import SyslogFormatter
                 file_formatter = SyslogFormatter(app_name=app_name)
                 console_formatter = SyslogFormatter(app_name=app_name)
             elif log_format == 'clf':
-                from shared.utils.standard_logging import CLFFormatter
+                from shared.utils.logging import CLFFormatter
                 file_formatter = CLFFormatter()
                 console_formatter = CLFFormatter()
             elif log_format == 'cisco':
-                from shared.utils.standard_logging import CiscoFormatter
+                from shared.utils.logging import CiscoFormatter
                 file_formatter = CiscoFormatter(facility=app_name[:3].upper())
                 console_formatter = CiscoFormatter(facility=app_name[:3].upper())
             elif log_format == 'json':
@@ -381,7 +381,7 @@ def get_module_logger(name: Optional[str] = None) -> logging.Logger:
     and returns a properly configured logger.
     
     Usage:
-        from shared.utils.centralized_logging import get_module_logger
+        from shared.utils.logging import get_module_logger
         logger = get_module_logger()
         logger.info("This is logged with the correct module name")
     

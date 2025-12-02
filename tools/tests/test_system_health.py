@@ -51,7 +51,7 @@ def test_config_files():
     print(f"[OK] Configuration file valid ({len(config['available_models'])} models)")
 
 def test_model_manager_initialization():
-    from shared.models.model_manager import ModelManager
+    from shared.models.manager import ModelManager
     try:
         manager = ModelManager()
         models = manager.get_available_models()
