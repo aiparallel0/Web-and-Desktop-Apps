@@ -122,12 +122,13 @@ show_menu() {
     echo -e "  ${GREEN}5)${NC} Check GPU Status"
     echo -e "  ${GREEN}6)${NC} System Health Report"
     echo -e "  ${GREEN}7)${NC} Clean Cache (Python bytecode & pytest)"
-    echo -e "  ${GREEN}8)${NC} View Logs"
-    echo -e "  ${GREEN}9)${NC} Help & Documentation"
+    echo -e "  ${GREEN}8)${NC} Run Database Migrations"
+    echo -e "  ${GREEN}9)${NC} View Logs"
+    echo -e "  ${GREEN}H)${NC} Help & Documentation"
     echo -e "  ${CYAN}E)${NC} Export System Report for AI Analysis"
     echo -e "  ${RED}0)${NC} Exit"
     echo ""
-    echo -ne "${BOLD}Select an option [0-9/E]:${NC} "
+    echo -ne "${BOLD}Select an option [0-9/H/E]:${NC} "
 }
 
 ###############################################################################
@@ -607,6 +608,38 @@ show_help() {
 }
 
 ###############################################################################
+# Database Migration Functions
+###############################################################################
+
+run_migrations() {
+    print_section "Database Migrations"
+
+    print_info "Running database migrations with Alembic..."
+
+    # Export USE_SQLITE for development/testing
+    export USE_SQLITE=true
+
+    # Check if alembic is installed
+    if ! command -v alembic &> /dev/null; then
+        print_warning "Alembic not found, installing..."
+        pip3 install -q alembic
+    fi
+
+    # Run migrations from the migrations directory
+    cd migrations
+    if alembic upgrade head 2>&1 | tee "$SCRIPT_DIR/$LOG_DIR/migrations.log"; then
+        print_success "Database migrations completed"
+        cd "$SCRIPT_DIR"
+        return 0
+    else
+        print_error "Database migrations failed"
+        echo "Check logs/migrations.log for details"
+        cd "$SCRIPT_DIR"
+        return 1
+    fi
+}
+
+###############################################################################
 # Launch Functions
 ###############################################################################
 
@@ -633,11 +666,18 @@ start_servers() {
         fi
     fi
 
+    # Run database migrations
+    run_migrations || {
+        print_warning "Migrations failed, but continuing..."
+    }
+
     print_section "Starting Services"
 
     # Start backend
     print_info "Starting backend API server..."
     cd "$BACKEND_DIR"
+    # Export USE_SQLITE for development/testing
+    export USE_SQLITE=true
     $PYTHON_CMD app.py > "$SCRIPT_DIR/$LOG_DIR/backend.log" 2>&1 &
     BACKEND_PID=$!
     cd "$SCRIPT_DIR"
@@ -946,9 +986,16 @@ main() {
                 read -r
                 ;;
             8)
-                view_logs
+                print_banner
+                run_migrations
+                echo ""
+                echo -ne "Press Enter to continue..."
+                read -r
                 ;;
             9)
+                view_logs
+                ;;
+            [Hh])
                 print_banner
                 show_help
                 ;;
