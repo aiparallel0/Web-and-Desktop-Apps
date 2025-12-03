@@ -431,22 +431,60 @@ def start_finetune(job_id):
        finetuner.save_model(str(output_dir))
        job['model_path']=str(output_dir)
       elif model_type=='florence':
-       logger.warning(f"Florence-2 finetuning is not yet fully implemented. This requires additional training code.")
-       raise Exception(f"Florence-2 model finetuning not yet implemented. Currently only Donut models support finetuning. To add Florence-2 support, create a florence_finetuner.py similar to donut_finetuner.py.")
+       from shared.models.florence_finetuner import FlorenceFinetuner
+       finetuner=FlorenceFinetuner(job['model_id'])
+       job['progress']=20
+       metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
+       job['progress']=90
+       output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
+       output_dir.mkdir(exist_ok=True)
+       finetuner.save_model(str(output_dir))
+       job['model_path']=str(output_dir)
       elif model_type=='ocr':
-       logger.warning(f"OCR model finetuning requires custom implementation for {job['model_id']}")
-       raise Exception(f"OCR model finetuning not yet implemented for {job['model_id']}. Traditional OCR models (EasyOCR, PaddleOCR) use pre-trained weights and typically don't support direct finetuning in the same way as transformer models.")
+       ocr_type=job['model_id'].lower()
+       if 'easy' in ocr_type:
+        from shared.models.ocr_finetuner import EasyOCRFinetuner
+        finetuner=EasyOCRFinetuner(job['model_id'])
+       else:
+        from shared.models.ocr_finetuner import PaddleOCRFinetuner
+        finetuner=PaddleOCRFinetuner(job['model_id'])
+       job['progress']=20
+       metrics=finetuner.train(job['training_data'],epochs=epochs,batch_size=batch_size,learning_rate=learning_rate,progress_callback=lambda p:job.update({'progress':20+int(p*0.7)}))
+       job['progress']=90
+       output_dir=Path(tempfile.gettempdir())/f"{job_id}_model"
+       output_dir.mkdir(exist_ok=True)
+       finetuner.save_model(str(output_dir))
+       job['model_path']=str(output_dir)
       else:
        raise Exception(f"Unknown model type '{model_type}' for model '{job['model_id']}'. Supported for finetuning: Donut models. To add support for other models, create appropriate finetuner classes.")
      except ImportError as e:
       raise Exception(f"Finetuning dependencies not installed: {e}. Run: pip install torch transformers accelerate sentencepiece")
     elif job['mode']=='cloud':
      job['progress']=30
-     logger.warning(f"Cloud finetuning is not yet implemented. This is a placeholder. Please integrate with HuggingFace Spaces, Replicate, or RunPod APIs.")
-     return jsonify({'success':False,'error':'Cloud finetuning not yet implemented. Please use local mode or integrate cloud APIs.'}),501
-     time.sleep(2)
-     metrics={'accuracy':0.92,'loss':0.15}
-     job['cloud_url']='https://api.replicate.com/v1/predictions/example'
+     cloud_provider=job['config'].get('cloud_provider','huggingface')
+     cloud_api_key=job['config'].get('cloud_api_key')
+     if not cloud_api_key:
+      raise Exception(f"Cloud API key required for {cloud_provider} training. Please provide the API key in the configuration.")
+     try:
+      from shared.services.cloud_finetuning import CloudFinetuningService
+      if cloud_provider=='huggingface':
+       from shared.services.cloud_finetuning import HuggingFaceTrainer
+       trainer=HuggingFaceTrainer(token=cloud_api_key)
+      elif cloud_provider=='replicate':
+       from shared.services.cloud_finetuning import ReplicateTrainer
+       trainer=ReplicateTrainer(token=cloud_api_key)
+      elif cloud_provider=='runpod':
+       from shared.services.cloud_finetuning import RunPodTrainer
+       trainer=RunPodTrainer(api_key=cloud_api_key)
+      else:
+       raise Exception(f"Unsupported cloud provider: {cloud_provider}. Supported: huggingface, replicate, runpod")
+      cloud_job=trainer.start_training(job['model_id'],job['training_data'],{'epochs':epochs,'batch_size':batch_size,'learning_rate':learning_rate})
+      job['cloud_job_id']=cloud_job.job_id
+      job['cloud_url']=f"https://{cloud_provider}.com/jobs/{cloud_job.job_id}"
+      job['progress']=50
+      metrics={'cloud_provider':cloud_provider,'cloud_job_id':cloud_job.job_id,'status':'submitted'}
+     except ImportError as e:
+      raise Exception(f"Cloud finetuning dependencies not installed: {e}. Run: pip install requests huggingface_hub")
     job['progress']=100
     job['status']='completed'
     job['metrics']=metrics
@@ -487,17 +525,81 @@ def list_finetune_jobs():
 @app.route('/api/cloud/list',methods=['POST'])
 def list_cloud_files():
  try:
-  logger.warning("⚠️  Cloud storage integration is a PLACEHOLDER - requires actual API implementation")
   data=request.get_json()
   provider=data.get('provider')
   credentials=data.get('credentials',{})
   path=data.get('path','/')
-  return jsonify({'success':False,'error':'Cloud storage not implemented. This is a placeholder feature. To use cloud storage, implement actual API integration for Google Drive, Dropbox, or S3.','is_placeholder':True}),501
+  if not provider:
+   return jsonify({'success':False,'error':'Provider is required. Supported: google_drive, dropbox, s3'}),400
+  from shared.services.cloud_storage import CloudStorageService,GoogleDriveProvider,DropboxProvider,S3Provider
+  storage_service=CloudStorageService()
+  if provider=='google_drive':
+   if not credentials.get('access_token')and not credentials.get('client_id'):
+    return jsonify({'success':False,'error':'Google Drive requires OAuth credentials. Provide access_token or client_id/client_secret.'}),400
+   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'),client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
+  elif provider=='dropbox':
+   if not credentials.get('access_token'):
+    return jsonify({'success':False,'error':'Dropbox access_token required.'}),400
+   storage_service.configure_dropbox(access_token=credentials.get('access_token'),app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
+  elif provider=='s3':
+   if not credentials.get('access_key_id')or not credentials.get('secret_access_key'):
+    return jsonify({'success':False,'error':'S3 requires access_key_id and secret_access_key.'}),400
+   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'),region=credentials.get('region'))
+  else:
+   return jsonify({'success':False,'error':f'Unsupported provider: {provider}. Supported: google_drive, dropbox, s3'}),400
+  files=storage_service.list_files(provider,path)
+  files_list=[{'id':f.id,'name':f.name,'path':f.path,'size':f.size,'mime_type':f.mime_type,'modified_at':f.modified_at.isoformat()if f.modified_at else None,'is_folder':f.is_folder,'download_url':f.download_url}for f in files]
+  return jsonify({'success':True,'files':files_list,'provider':provider,'path':path})
+ except ImportError as e:
+  logger.error(f"Cloud storage import error: {e}")
+  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}. See documentation for required packages.'}),500
  except Exception as e:logger.error(f"Error listing cloud files: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/cloud/download',methods=['POST'])
 def download_cloud_file():
  try:
-  logger.warning("⚠️  Cloud storage download is a PLACEHOLDER - requires actual API implementation")
-  return jsonify({'success':False,'error':'Cloud storage download not implemented. This is a placeholder feature.','is_placeholder':True}),501
+  data=request.get_json()
+  provider=data.get('provider')
+  file_id=data.get('file_id')
+  credentials=data.get('credentials',{})
+  if not provider or not file_id:
+   return jsonify({'success':False,'error':'Provider and file_id are required.'}),400
+  from shared.services.cloud_storage import CloudStorageService
+  storage_service=CloudStorageService()
+  if provider=='google_drive':
+   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'))
+  elif provider=='dropbox':
+   storage_service.configure_dropbox(access_token=credentials.get('access_token'))
+  elif provider=='s3':
+   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'))
+  else:
+   return jsonify({'success':False,'error':f'Unsupported provider: {provider}'}),400
+  with tempfile.NamedTemporaryFile(delete=False)as temp_file:
+   local_path=temp_file.name
+  storage_service.download_file(provider,file_id,local_path)
+  return send_file(local_path,as_attachment=True)
+ except ImportError as e:
+  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}'}),500
  except Exception as e:logger.error(f"Error downloading cloud file: {e}");return jsonify({'success':False,'error':str(e)}),500
+@app.route('/api/cloud/auth',methods=['POST'])
+def cloud_auth():
+ try:
+  data=request.get_json()
+  provider=data.get('provider')
+  auth_code=data.get('auth_code')
+  credentials=data.get('credentials',{})
+  if not provider:
+   return jsonify({'success':False,'error':'Provider is required.'}),400
+  from shared.services.cloud_storage import CloudStorageService
+  storage_service=CloudStorageService()
+  if provider=='google_drive':
+   storage_service.configure_google_drive(client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
+   result=storage_service.authenticate(provider,auth_code)
+   return jsonify({'success':True,'auth':result})
+  elif provider=='dropbox':
+   storage_service.configure_dropbox(app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
+   result=storage_service.authenticate(provider,auth_code)
+   return jsonify({'success':True,'auth':result})
+  else:
+   return jsonify({'success':False,'error':f'OAuth not supported for provider: {provider}'}),400
+ except Exception as e:logger.error(f"Error in cloud auth: {e}");return jsonify({'success':False,'error':str(e)}),500
 if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(model_manager.get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)
