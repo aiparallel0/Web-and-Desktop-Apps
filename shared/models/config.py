@@ -934,6 +934,7 @@ try:
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
+sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 from shared.utils.image import load_and_validate_image, preprocess_for_ocr
 from .ocr_common import (
