@@ -405,6 +405,19 @@ The desktop app provides:
 - Verify `STRIPE_WEBHOOK_SECRET` matches Stripe Dashboard
 - Ensure raw request body is passed to webhook handler
 
+### Test Failures
+
+**OCR Config Test Isolation Issues**
+- If tests involving OCR configuration fail unexpectedly, ensure proper config reset:
+  ```python
+  from shared.models.config import reset_ocr_config
+  reset_ocr_config()
+  
+  import shared.models.ocr as ocr_module
+  ocr_module._ocr_config = None
+  ```
+- The OCR config uses dual caching (singleton + module-level), both must be reset for test isolation
+
 ---
 
 ## 📚 Additional Resources

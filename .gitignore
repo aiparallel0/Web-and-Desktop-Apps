@@ -98,3 +98,10 @@ data/*.db
 
 # AI analysis reports (generated)
 ai-analysis-report_*.md
+
+# Receipt images in test data (prevent large files in repo)
+tools/data/receipts/*.jpg
+tools/data/receipts/*.jpeg
+tools/data/receipts/*.png
+tools/data/receipts/*.tiff
+tools/data/receipts/*.tif

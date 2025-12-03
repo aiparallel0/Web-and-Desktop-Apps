@@ -404,20 +404,23 @@ Deploy the application to production servers with proper scaling and monitoring.
 
 8. **CI/CD Pipeline Enhancement**
 
-   Modify `.github/workflows/cef-pipeline.yml` to add deployment:
+   Create `.github/workflows/deploy.yml` for deployment:
    ```yaml
-   deploy:
-     needs: test-and-collect
-     runs-on: ubuntu-latest
-     if: github.ref == 'refs/heads/main'
-     steps:
-       - uses: actions/checkout@v3
-       - name: Deploy to Railway
-         run: |
-           npm i -g @railway/cli
-           railway up --service receipt-extractor-api
-         env:
-           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+   name: Deploy
+   on:
+     push:
+       branches: [main]
+   jobs:
+     deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - name: Deploy to Railway
+           run: |
+             npm i -g @railway/cli
+             railway up --service receipt-extractor-api
+           env:
+             RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
    ```
 
 **Files to Create:**
@@ -425,9 +428,9 @@ Deploy the application to production servers with proper scaling and monitoring.
 - `railway.json` (new)
 - `Dockerfile` (optional - for containerized deployment)
 - `.dockerignore` (optional)
+- `.github/workflows/deploy.yml` (new - for CI/CD)
 
 **Files to Modify:**
-- `.github/workflows/cef-pipeline.yml` (add deployment step)
 - `requirements.txt` (add gunicorn, gevent)
 - `web/backend/app.py` (add production config check)
 
@@ -1410,6 +1413,58 @@ Convert web app to PWA for offline capabilities and mobile installation.
 - Pro tier: $19/month × users
 - Business tier: $49/month × users
 - Break-even: ~5-10 Pro users or 2 Business users
+
+---
+
+## 📜 Development History
+
+This section documents completed optimization work and improvements made to the repository. Metrics reflect the state at the time of each optimization phase.
+
+### Repository Optimization - Phase 1 (Completed)
+
+**Date:** December 3, 2025
+
+#### Achievements
+- **File Cleanup:** Removed 7 unnecessary files (`.gitkeep` placeholders, `.cursorrules`, redundant `requirements.txt`)
+- **Documentation Restructuring:** Reduced README.md from 1,844 lines to 455 lines (75% reduction)
+- **Created ROADMAP.md:** Extracted external integration roadmap (1,415 lines) to dedicated file
+- **Utility Module Creation:**
+  - `shared/utils/pricing.py` - Consolidated price normalization function
+  - `shared/utils/decorators.py` - Circular Exchange Framework decorators to reduce boilerplate
+
+#### Metrics (at time of Phase 1)
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Files | 93 | 88 | -5 files |
+| Directories | 30 | 29 | -1 directory |
+| README Size | 57 KB | 15 KB | -74% |
+
+---
+
+### Repository Optimization - Phase 2 (Completed)
+
+**Date:** December 3, 2025
+
+#### Achievements
+- **Code Consolidation:** Eliminated 91 lines of duplicate/boilerplate code
+- **Fixed Silent Import Failure:** Removed non-existent `receipts.py` import in `app.py`
+- **Created `.env.example`:** Comprehensive environment configuration template (267 lines)
+- **Decorator Application:** Applied `@circular_exchange_module` decorator to 3 high-impact modules
+- **Duplicate Code Removal:**
+  - Consolidated `normalize_price()` from `engine.py` and `ocr.py` into `shared/utils/pricing.py`
+
+#### Files Modified
+| Component | Lines Changed |
+|-----------|---------------|
+| `normalize_price()` consolidation | -70 lines |
+| Decorator application (3 files) | -21 lines |
+| **Total Code Reduction** | **-91 lines** |
+
+#### Benefits
+- Single source of truth for pricing logic
+- Reduced maintenance burden
+- Improved code quality and testability
+- Better developer onboarding with comprehensive `.env.example`
 
 ---
 
