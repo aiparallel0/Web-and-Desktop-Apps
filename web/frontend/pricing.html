@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+PRICING PAGE - Subscription Plans & Pricing
+================================================================================
+Platform: AI-Powered OCR & Data Extraction System
+Version:  2.0.0
+Author:   Receipt Extractor Team
+License:  MIT
+
+This page displays subscription plans and integrates with Stripe for payments.
+================================================================================
+-->
+<html lang="en">
+<head>
+    <!-- Document Metadata -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Choose the perfect plan for your receipt extraction needs">
+    <meta name="theme-color" content="#0066cc">
+    
+    <!-- Application Title -->
+    <title>Pricing - Receipt Extractor Pro</title>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
+    <!-- Additional Pricing Styles -->
+    <style>
+        .pricing-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .pricing-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #00ff00;
+        }
+        
+        .pricing-header p {
+            font-size: 1.2rem;
+            color: #888;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .pricing-toggle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .pricing-toggle span {
+            color: #888;
+        }
+        
+        .pricing-toggle span.active {
+            color: #00ff00;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: #00ff00;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.annual::after {
+            transform: translateX(30px);
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .pricing-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff00;
+        }
+        
+        .pricing-card.popular {
+            border-color: #00ff00;
+        }
+        
+        .pricing-card.popular::before {
+            content: 'Most Popular';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #00ff00;
+            color: #000;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-description {
+            color: #888;
+            margin-bottom: 1.5rem;
+        }
+        
+        .plan-price {
+            margin-bottom: 1.5rem;
+        }
+        
+        .price-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .price-period {
+            color: #888;
+        }
+        
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+        }
+        
+        .plan-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .plan-features li::before {
+            content: '✓';
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .plan-features li.disabled {
+            color: #666;
+        }
+        
+        .plan-features li.disabled::before {
+            content: '✗';
+            color: #666;
+        }
+        
+        .plan-cta {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .plan-cta.primary {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .plan-cta.primary:hover {
+            background: #00cc00;
+        }
+        
+        .plan-cta.secondary {
+            background: #333;
+            color: #fff;
+            border: 1px solid #00ff00;
+        }
+        
+        .plan-cta.secondary:hover {
+            background: #444;
+        }
+        
+        .faq-section {
+            margin-top: 4rem;
+        }
+        
+        .faq-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #00ff00;
+        }
+        
+        .faq-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .faq-question:hover {
+            background: #222;
+        }
+        
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s, padding 0.3s;
+        }
+        
+        .faq-item.open .faq-answer {
+            max-height: 500px;
+            padding: 1rem 1.5rem;
+        }
+        
+        .faq-item.open .faq-toggle {
+            transform: rotate(45deg);
+        }
+        
+        .faq-toggle {
+            font-size: 1.5rem;
+            color: #00ff00;
+            transition: transform 0.3s;
+        }
+        
+        .guarantee-section {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem;
+            background: #1a1a1a;
+            border-radius: 12px;
+        }
+        
+        .guarantee-section h3 {
+            color: #00ff00;
+            margin-bottom: 1rem;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #00ff00;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Receipt Extractor Pro</h1>
+            <p>Professional OCR & AI-Powered Data Extraction Platform</p>
+        </header>
+        
+        <!-- Pricing Section -->
+        <div class="pricing-container">
+            <div class="pricing-header">
+                <h1>Simple, Transparent Pricing</h1>
+                <p>Choose the plan that fits your needs. All plans include our core AI-powered extraction technology.</p>
+            </div>
+            
+            <!-- Billing Toggle -->
+            <div class="pricing-toggle">
+                <span id="monthlyLabel" class="active">Monthly</span>
+                <div class="toggle-switch" id="billingToggle" onclick="toggleBilling()"></div>
+                <span id="annualLabel">Annual <span style="color: #00ff00;">(Save 20%)</span></span>
+            </div>
+            
+            <!-- Pricing Cards -->
+            <div class="pricing-grid">
+                <!-- Free Plan -->
+                <div class="pricing-card" data-plan="free">
+                    <div class="plan-name">Free</div>
+                    <div class="plan-description">Get started with basic receipt extraction</div>
+                    <div class="plan-price">
+                        <span class="price-amount">$0</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>10 receipts per month</li>
+                        <li>100 MB storage</li>
+                        <li>Basic OCR models</li>
+                        <li>JSON export</li>
+                        <li>Community support</li>
+                        <li class="disabled">Cloud training</li>
+                        <li class="disabled">API access</li>
+                        <li class="disabled">Priority support</li>
+                    </ul>
+                    <button class="plan-cta secondary" onclick="selectPlan('free')">
+                        Get Started Free
+                    </button>
+                </div>
+                
+                <!-- Pro Plan -->
+                <div class="pricing-card popular" data-plan="pro">
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-description">For power users who need more extractions</div>
+                    <div class="plan-price">
+                        <span class="price-amount" id="proPrice">$19</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>500 receipts per month</li>
+                        <li>5 GB storage</li>
+                        <li>All AI models</li>
+                        <li>JSON, CSV, Excel export</li>
+                        <li>Email support</li>
+                        <li>Cloud training</li>
+                        <li>API access</li>
+                        <li>Batch processing</li>
+                    </ul>
+                    <button class="plan-cta primary" onclick="selectPlan('pro')">
+                        Subscribe to Pro
+                    </button>
+                </div>
+                
+                <!-- Business Plan -->
+                <div class="pricing-card" data-plan="business">
+                    <div class="plan-name">Business</div>
+                    <div class="plan-description">For teams and businesses with high volume needs</div>
+                    <div class="plan-price">
+                        <span class="price-amount" id="businessPrice">$49</span>
+                        <span class="price-period">/month</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>2,000 receipts per month</li>
+                        <li>20 GB storage</li>
+                        <li>All AI models</li>
+                        <li>All export formats + PDF</li>
+                        <li>Priority support</li>
+                        <li>Cloud training</li>
+                        <li>API access</li>
+                        <li>Custom models</li>
+                    </ul>
+                    <button class="plan-cta secondary" onclick="selectPlan('business')">
+                        Subscribe to Business
+                    </button>
+                </div>
+                
+                <!-- Enterprise Plan -->
+                <div class="pricing-card" data-plan="enterprise">
+                    <div class="plan-name">Enterprise</div>
+                    <div class="plan-description">Custom solutions for large organizations</div>
+                    <div class="plan-price">
+                        <span class="price-amount">Custom</span>
+                        <span class="price-period"></span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>Unlimited receipts</li>
+                        <li>100+ GB storage</li>
+                        <li>All AI models</li>
+                        <li>All export formats</li>
+                        <li>Dedicated support</li>
+                        <li>Cloud training</li>
+                        <li>Full API access</li>
+                        <li>Custom integrations</li>
+                        <li>On-premise deployment</li>
+                        <li>SLA guarantee</li>
+                    </ul>
+                    <button class="plan-cta secondary" onclick="contactSales()">
+                        Contact Sales
+                    </button>
+                </div>
+            </div>
+            
+            <!-- FAQ Section -->
+            <div class="faq-section">
+                <h2>Frequently Asked Questions</h2>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Can I change my plan at any time?
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Yes! You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged the prorated difference. When downgrading, the change takes effect at the end of your current billing period.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        What payment methods do you accept?
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        We accept all major credit cards (Visa, Mastercard, American Express) through Stripe. Enterprise customers can also pay via invoice.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        What happens if I exceed my monthly limit?
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        When you reach your monthly limit, you'll be notified and can either wait until the next billing cycle or upgrade your plan for immediate access to more extractions.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Do you offer refunds?
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        We offer a 14-day money-back guarantee for all paid plans. If you're not satisfied, contact our support team for a full refund.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Is my data secure?
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        Absolutely. We use industry-standard encryption for all data in transit and at rest. Your receipt images and extracted data are stored securely and never shared with third parties.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Money-Back Guarantee -->
+            <div class="guarantee-section">
+                <h3>🛡️ 14-Day Money-Back Guarantee</h3>
+                <p>Try any paid plan risk-free. If you're not completely satisfied, we'll refund your payment—no questions asked.</p>
+            </div>
+            
+            <!-- Back Link -->
+            <a href="/" class="back-link">← Back to Application</a>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>Receipt Extractor Pro © 2024 | Secure Payments by Stripe</p>
+        </footer>
+    </div>
+    
+    <!-- Pricing JavaScript -->
+    <script>
+        // Stripe configuration
+        const STRIPE_PUBLISHABLE_KEY = ''; // Set from environment
+        let stripe = null;
+        
+        // Pricing data
+        const pricing = {
+            monthly: {
+                pro: 19,
+                business: 49
+            },
+            annual: {
+                pro: 15, // 20% discount
+                business: 39 // 20% discount
+            }
+        };
+        
+        let billingCycle = 'monthly';
+        
+        // Initialize Stripe
+        function initStripe() {
+            if (STRIPE_PUBLISHABLE_KEY) {
+                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+            }
+        }
+        
+        // Toggle billing cycle
+        function toggleBilling() {
+            const toggle = document.getElementById('billingToggle');
+            const monthlyLabel = document.getElementById('monthlyLabel');
+            const annualLabel = document.getElementById('annualLabel');
+            
+            if (billingCycle === 'monthly') {
+                billingCycle = 'annual';
+                toggle.classList.add('annual');
+                monthlyLabel.classList.remove('active');
+                annualLabel.classList.add('active');
+            } else {
+                billingCycle = 'monthly';
+                toggle.classList.remove('annual');
+                monthlyLabel.classList.add('active');
+                annualLabel.classList.remove('active');
+            }
+            
+            updatePrices();
+        }
+        
+        // Update displayed prices
+        function updatePrices() {
+            const proPrice = document.getElementById('proPrice');
+            const businessPrice = document.getElementById('businessPrice');
+            
+            proPrice.textContent = '$' + pricing[billingCycle].pro;
+            businessPrice.textContent = '$' + pricing[billingCycle].business;
+        }
+        
+        // Select a plan
+        async function selectPlan(plan) {
+            if (plan === 'free') {
+                // Redirect to signup
+                window.location.href = '/signup?plan=free';
+                return;
+            }
+            
+            // For paid plans, create checkout session
+            try {
+                const response = await fetch('/api/billing/create-checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plan: plan,
+                        billing_cycle: billingCycle
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.checkout_url) {
+                    // Redirect to Stripe Checkout
+                    window.location.href = data.checkout_url;
+                } else if (data.redirect) {
+                    // Redirect to login if not authenticated
+                    window.location.href = data.redirect;
+                } else {
+                    alert('Error creating checkout session. Please try again.');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Error creating checkout session. Please try again.');
+            }
+        }
+        
+        // Contact sales
+        function contactSales() {
+            window.location.href = 'mailto:sales@receiptextractor.com?subject=Enterprise%20Inquiry';
+        }
+        
+        // Toggle FAQ item
+        function toggleFaq(element) {
+            const item = element.parentElement;
+            item.classList.toggle('open');
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initStripe();
+        });
+    </script>
+</body>
+</html>
