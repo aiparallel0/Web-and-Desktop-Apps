@@ -777,7 +777,7 @@ def mock_easyocr_reader():
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_easyocr_processor_initialization_success(mock_easyocr, easyocr_config):
     """Test successful initialization of EasyOCR processor"""
     mock_reader = Mock()
@@ -792,7 +792,7 @@ def test_easyocr_processor_initialization_success(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr', None)
+@patch('shared.models.engine.easyocr', None)
 def test_easyocr_processor_initialization_no_module(easyocr_config):
     """Test initialization fails when easyocr is not installed"""
     with pytest.raises(ImportError) as exc_info:
@@ -802,7 +802,7 @@ def test_easyocr_processor_initialization_no_module(easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_easyocr_processor_initialization_failure(mock_easyocr, easyocr_config):
     """Test initialization fails when Reader creation fails"""
     mock_easyocr.Reader.side_effect = RuntimeError("Reader creation failed")
@@ -814,7 +814,7 @@ def test_easyocr_processor_initialization_failure(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_success(mock_easyocr, easyocr_config):
     """Test successful extraction with EasyOCR"""
     mock_reader = Mock()
@@ -844,7 +844,7 @@ def test_extract_success(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_no_text_detected(mock_easyocr, easyocr_config):
     """Test extraction when no text is detected"""
     mock_reader = Mock()
@@ -859,7 +859,7 @@ def test_extract_no_text_detected(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_low_confidence_filtered(mock_easyocr, easyocr_config):
     """Test that low confidence detections are filtered out"""
     mock_reader = Mock()
@@ -882,7 +882,7 @@ def test_extract_low_confidence_filtered(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr', None)
+@patch('shared.models.engine.easyocr', None)
 def test_extract_no_easyocr_module(easyocr_config):
     """Test extraction when easyocr module is not available"""
     # Can't create processor without easyocr, so test the extract logic directly
@@ -903,7 +903,7 @@ def test_extract_no_easyocr_module(easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_reader_not_initialized(mock_easyocr, easyocr_config):
     """Test extraction when reader is not initialized"""
     mock_easyocr.Reader.return_value = None
@@ -918,7 +918,7 @@ def test_extract_reader_not_initialized(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_exception_handling(mock_easyocr, easyocr_config):
     """Test extraction handles exceptions gracefully"""
     mock_reader = Mock()
@@ -933,7 +933,7 @@ def test_extract_exception_handling(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_parse_receipt_store_name_detection(mock_easyocr, easyocr_config):
     """Test store name detection logic"""
     mock_reader = Mock()
@@ -954,7 +954,7 @@ def test_parse_receipt_store_name_detection(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_parse_receipt_date_patterns(mock_easyocr, easyocr_config):
     """Test various date pattern detection"""
     mock_reader = Mock()
@@ -981,7 +981,7 @@ def test_parse_receipt_date_patterns(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_parse_receipt_total_patterns(mock_easyocr, easyocr_config):
     """Test various total amount pattern detection"""
     mock_reader = Mock()
@@ -1008,7 +1008,7 @@ def test_parse_receipt_total_patterns(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_line_items(mock_easyocr, easyocr_config):
     """Test line item extraction"""
     mock_reader = Mock()
@@ -1036,7 +1036,7 @@ def test_extract_line_items(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_skip_keywords(mock_easyocr, easyocr_config):
     """Test that lines with skip keywords are not extracted as items"""
     mock_reader = Mock()
@@ -1061,7 +1061,7 @@ def test_extract_skip_keywords(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_address_detection(mock_easyocr, easyocr_config):
     """Test address detection"""
     mock_reader = Mock()
@@ -1081,7 +1081,7 @@ def test_extract_address_detection(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_phone_detection(mock_easyocr, easyocr_config):
     """Test phone number detection"""
     mock_reader = Mock()
@@ -1127,7 +1127,7 @@ def test_normalize_price_invalid():
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_extract_empty_text_lines(mock_easyocr, easyocr_config):
     """Test parsing with empty text lines after filtering"""
     # Reset OCRConfig before test to ensure clean state
@@ -1151,7 +1151,7 @@ def test_extract_empty_text_lines(mock_easyocr, easyocr_config):
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.easyocr')
+@patch('shared.models.engine.easyocr')
 def test_duplicate_items_filtered(mock_easyocr, easyocr_config):
     """Test that duplicate items are not added twice"""
     mock_reader = Mock()
@@ -1198,9 +1198,9 @@ def mock_paddle_ocr():
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_paddle_processor_initialization_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test successful initialization of Paddle processor with circular exchange config"""
     from shared.models.engine import PaddleProcessor
@@ -1230,7 +1230,7 @@ def test_paddle_processor_initialization_success(mock_preprocess, mock_load, moc
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
+@patch('shared.models.engine.PaddleOCR')
 def test_paddle_processor_initialization_failure(mock_paddle_cls, paddle_config):
     """Test initialization fails when PaddleOCR creation fails"""
     from shared.models.engine import PaddleProcessor
@@ -1242,9 +1242,9 @@ def test_paddle_processor_initialization_failure(mock_paddle_cls, paddle_config)
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test successful extraction with PaddleOCR"""
     from shared.models.engine import PaddleProcessor
@@ -1279,9 +1279,9 @@ def test_extract_success(mock_preprocess, mock_load, mock_paddle_cls, paddle_con
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_no_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction when no text is detected"""
     from shared.models.engine import PaddleProcessor
@@ -1304,9 +1304,9 @@ def test_extract_no_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_empty_results(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction with empty results"""
     from shared.models.engine import PaddleProcessor
@@ -1329,9 +1329,9 @@ def test_extract_empty_results(mock_preprocess, mock_load, mock_paddle_cls, padd
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_retry_with_original_image(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that extraction retries with original image if preprocessed fails"""
     from shared.models.engine import PaddleProcessor
@@ -1360,9 +1360,9 @@ def test_extract_retry_with_original_image(mock_preprocess, mock_load, mock_padd
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_grayscale_to_rgb_conversion(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that grayscale images are converted to RGB"""
     from shared.models.engine import PaddleProcessor
@@ -1387,9 +1387,9 @@ def test_extract_grayscale_to_rgb_conversion(mock_preprocess, mock_load, mock_pa
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_exception_handling(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test extraction handles exceptions gracefully"""
     from shared.models.engine import PaddleProcessor
@@ -1407,9 +1407,9 @@ def test_extract_exception_handling(mock_preprocess, mock_load, mock_paddle_cls,
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_low_confidence_filtered(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that low confidence results are filtered out"""
     from shared.models.engine import PaddleProcessor
@@ -1435,9 +1435,9 @@ def test_extract_low_confidence_filtered(mock_preprocess, mock_load, mock_paddle
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_date_patterns(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test various date pattern detection"""
     from shared.models.engine import PaddleProcessor
@@ -1470,9 +1470,9 @@ def test_extract_date_patterns(mock_preprocess, mock_load, mock_paddle_cls, padd
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_total_patterns(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test various total pattern detection"""
     from shared.models.engine import PaddleProcessor
@@ -1506,9 +1506,9 @@ def test_extract_total_patterns(mock_preprocess, mock_load, mock_paddle_cls, pad
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_line_items(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test line item extraction"""
     from shared.models.engine import PaddleProcessor
@@ -1541,9 +1541,9 @@ def test_extract_line_items(mock_preprocess, mock_load, mock_paddle_cls, paddle_
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_skip_keywords(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that lines with skip keywords are not extracted as items"""
     from shared.models.engine import PaddleProcessor
@@ -1573,9 +1573,9 @@ def test_extract_skip_keywords(mock_preprocess, mock_load, mock_paddle_cls, padd
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_address_detection(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test address detection"""
     from shared.models.engine import PaddleProcessor
@@ -1601,9 +1601,9 @@ def test_extract_address_detection(mock_preprocess, mock_load, mock_paddle_cls, 
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_phone_detection(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test phone number detection"""
     from shared.models.engine import PaddleProcessor
@@ -1659,9 +1659,9 @@ def test_normalize_price_invalid():
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_confidence_score_calculation(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test that confidence score is calculated correctly"""
     from shared.models.engine import PaddleProcessor
@@ -1689,9 +1689,9 @@ def test_extract_confidence_score_calculation(mock_preprocess, mock_load, mock_p
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_malformed_result_handling(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test handling of malformed OCR results"""
     from shared.models.engine import PaddleProcessor
@@ -1718,9 +1718,9 @@ def test_extract_malformed_result_handling(mock_preprocess, mock_load, mock_padd
 
 
 @pytest.mark.unit
-@patch('shared.models.processors.PaddleOCR')
-@patch('shared.models.processors.load_and_validate_image')
-@patch('shared.models.processors.preprocess_for_ocr')
+@patch('shared.models.engine.PaddleOCR')
+@patch('shared.models.engine.load_and_validate_image')
+@patch('shared.models.engine.preprocess_for_ocr')
 def test_extract_quantity_parsing(mock_preprocess, mock_load, mock_paddle_cls, paddle_config):
     """Test parsing of quantity in line items"""
     from shared.models.engine import PaddleProcessor
@@ -1799,8 +1799,8 @@ def test_donut_processor_initialization(donut_config):
     mock_model_cls = Mock(return_value=mock_model)
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             from shared.models.engine import DonutProcessor
             processor = DonutProcessor(donut_config)
     
@@ -1831,8 +1831,8 @@ def test_donut_processor_gpu_detection(donut_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             from shared.models.engine import DonutProcessor
             processor = DonutProcessor(donut_config)
     
@@ -1864,8 +1864,8 @@ def test_donut_processor_load_retry(donut_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             with patch('time.sleep'):  # Don't actually sleep in tests
                 from shared.models.engine import DonutProcessor
                 processor = DonutProcessor(donut_config)
@@ -1887,8 +1887,8 @@ def test_donut_processor_load_failure(donut_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.side_effect = RuntimeError("Network error")
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             with patch('time.sleep'):  # Don't actually sleep in tests
                 from shared.models.engine import DonutProcessor
                 with pytest.raises(RuntimeError) as exc_info:
@@ -2006,10 +2006,10 @@ def test_donut_extract_success(donut_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
-            with patch('shared.models.ai_models.load_and_validate_image', return_value=mock_image):
-                with patch('shared.models.ai_models.enhance_image', return_value=mock_image):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+            with patch('shared.models.engine.load_and_validate_image', return_value=mock_image):
+                with patch('shared.models.engine.enhance_image', return_value=mock_image):
                     processor = DonutProcessor(donut_config)
                     result = processor.extract('/path/to/test/image.jpg')
     
@@ -2062,10 +2062,10 @@ Total: $12.99"""
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
-            with patch('shared.models.ai_models.load_and_validate_image', return_value=mock_image):
-                with patch('shared.models.ai_models.enhance_image', return_value=mock_image):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+            with patch('shared.models.engine.load_and_validate_image', return_value=mock_image):
+                with patch('shared.models.engine.enhance_image', return_value=mock_image):
                     processor = DonutProcessor(donut_config)
                     result = processor.extract('/path/to/test/image.jpg')
     
@@ -2095,9 +2095,9 @@ def test_donut_extract_exception(donut_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
-            with patch('shared.models.ai_models.load_and_validate_image', side_effect=RuntimeError("Image load failed")):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+            with patch('shared.models.engine.load_and_validate_image', side_effect=RuntimeError("Image load failed")):
                 processor = DonutProcessor(donut_config)
                 result = processor.extract('/path/to/test/image.jpg')
     
@@ -2226,8 +2226,8 @@ def test_florence_processor_initialization(florence_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.return_value = mock_model
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(None, None, mock_proc_cls, mock_model_cls)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(None, None, mock_proc_cls, mock_model_cls)):
             processor = FlorenceProcessor(florence_config)
     
             assert processor.model_config == florence_config
@@ -2251,8 +2251,8 @@ def test_florence_processor_load_failure(florence_config):
     mock_model_cls = Mock()
     mock_model_cls.from_pretrained.side_effect = RuntimeError("Network error")
     
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(None, None, mock_proc_cls, mock_model_cls)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(None, None, mock_proc_cls, mock_model_cls)):
             with patch('time.sleep'):  # Don't actually sleep
                 with pytest.raises(RuntimeError) as exc_info:
                     processor = FlorenceProcessor(florence_config)
@@ -2289,8 +2289,8 @@ def test_build_receipt_data():
         'task_prompt': '<s_cord-v2>'
     }
 
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             processor = DonutProcessor(donut_config)
 
             parsed_data = {
@@ -2344,8 +2344,8 @@ def test_build_receipt_data_complex_total():
         'task_prompt': '<s_cord-v2>'
     }
 
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             processor = DonutProcessor(donut_config)
 
             parsed_data = {
@@ -2397,8 +2397,8 @@ def test_build_receipt_data_alternate_fields():
         'task_prompt': '<s_cord-v2>'
     }
 
-    with patch('shared.models.ai_models._get_torch', return_value=mock_torch):
-        with patch('shared.models.ai_models._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
+    with patch('shared.models.engine._get_torch', return_value=mock_torch):
+        with patch('shared.models.engine._get_transformers', return_value=(mock_proc_cls, mock_model_cls, None, None)):
             processor = DonutProcessor(donut_config)
 
             parsed_data = {

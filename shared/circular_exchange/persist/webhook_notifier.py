@@ -444,8 +444,8 @@ class WebhookNotifier:
     def setup_cef_subscriptions(self) -> None:
         """Set up automatic notifications for CEF events."""
         try:
-            from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
-            from shared.circular_exchange.data_collector import DATA_COLLECTOR, DataCategory
+            from shared.circular_exchange.analysis.metrics_analyzer import METRICS_ANALYZER
+            from shared.circular_exchange.analysis.data_collector import DATA_COLLECTOR, DataCategory
             
             # Subscribe to patterns
             METRICS_ANALYZER.subscribe_to_patterns(self._on_pattern_detected)
@@ -463,7 +463,7 @@ class WebhookNotifier:
     
     def _on_pattern_detected(self, pattern) -> None:
         """Handle pattern detection."""
-        from shared.circular_exchange.metrics_analyzer import PatternType
+        from shared.circular_exchange.analysis.metrics_analyzer import PatternType
         
         if pattern.occurrences >= 10 or pattern.pattern_type == PatternType.ERROR_RECURRING:
             self.notify_warning(
@@ -476,7 +476,7 @@ class WebhookNotifier:
     
     def _on_insight_generated(self, insight) -> None:
         """Handle insight generation."""
-        from shared.circular_exchange.metrics_analyzer import InsightPriority
+        from shared.circular_exchange.analysis.metrics_analyzer import InsightPriority
         
         if insight.priority in (InsightPriority.CRITICAL, InsightPriority.HIGH):
             level = NotificationLevel.CRITICAL if insight.priority == InsightPriority.CRITICAL else NotificationLevel.WARNING
@@ -492,7 +492,7 @@ class WebhookNotifier:
     
     def _on_test_result(self, result) -> None:
         """Handle test result - notify on failures."""
-        from shared.circular_exchange.data_collector import TestStatus
+        from shared.circular_exchange.analysis.data_collector import TestStatus
         
         if result.status == TestStatus.FAILED and result.error_message:
             # Only notify on first failure (avoid spam)
