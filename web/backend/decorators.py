@@ -203,11 +203,13 @@ def require_plan(required_plan: str) -> Callable:
         @wraps(f)
         def decorated_function(*args, **kwargs):
             user_plan = getattr(g, 'user_plan', 'free')
+            # Handle both string and enum with .value attribute
+            plan_value = user_plan.value if hasattr(user_plan, 'value') else str(user_plan)
 
-            if plan_hierarchy.get(user_plan.value, 0) < plan_hierarchy.get(required_plan, 999):
+            if plan_hierarchy.get(plan_value, 0) < plan_hierarchy.get(required_plan, 999):
                 return jsonify({
                     'error': f'This feature requires {required_plan} plan or higher',
-                    'current_plan': user_plan.value,
+                    'current_plan': plan_value,
                     'required_plan': required_plan
                 }), 403
 
@@ -245,6 +247,8 @@ def check_usage_limit(f: Callable) -> Callable:
 
         user_id = g.user_id
         user_plan = g.user_plan
+        # Handle both string and enum with .value attribute
+        plan_value = user_plan.value if hasattr(user_plan, 'value') else str(user_plan)
 
         with get_db_context() as db:
             user = db.query(User).filter(User.id == user_id).first()
@@ -252,14 +256,14 @@ def check_usage_limit(f: Callable) -> Callable:
             if not user:
                 return jsonify({'error': 'User not found'}), 404
 
-            limit = PLAN_LIMITS.get(user_plan.value, PLAN_LIMITS['free'])
+            limit = PLAN_LIMITS.get(plan_value, PLAN_LIMITS['free'])
 
             if user.receipts_processed_month >= limit:
                 return jsonify({
                     'error': 'Monthly usage limit exceeded',
                     'limit': limit,
                     'used': user.receipts_processed_month,
-                    'plan': user_plan.value,
+                    'plan': plan_value,
                     'message': 'Please upgrade your plan to process more receipts'
                 }), 429
 
