@@ -72,6 +72,8 @@ Thumbs.db
 !tests/**/*.json
 !test_data/**/*.json
 !docs/**/*.json
+!railway.json
+!web/frontend/manifest.json
 
 # Test artifacts and coverage
 .coverage
