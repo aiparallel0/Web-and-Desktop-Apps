@@ -2,7 +2,9 @@ import sys
 import os
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Path is set by conftest.py
+# project_root is tools/tests/.. -> tools/ -> project_root
+project_root = Path(__file__).parent.parent.parent
 
 def test_python_version():
     version = sys.version_info

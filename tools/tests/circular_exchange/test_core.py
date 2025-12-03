@@ -11,10 +11,6 @@ import threading
 from pathlib import Path
 from datetime import datetime
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
-
 from shared.circular_exchange.core.variable_package import (
     VariablePackage, PackageChange, PackageRegistry
 )
@@ -448,10 +444,6 @@ import pytest
 import sys
 from pathlib import Path
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
-
 from shared.circular_exchange.core.project_config import (
     PROJECT_CONFIG,
     ProjectConfiguration,
@@ -661,10 +653,6 @@ import pytest
 import sys
 from pathlib import Path
 from datetime import datetime
-
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
 
 from shared.circular_exchange.core.dependency_registry import DependencyRegistry, ModuleInfo
 
@@ -1103,10 +1091,6 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
-
 from shared.circular_exchange.core.change_notifier import (
     ChangeNotifier, ChangeType, ChangeEvent, NotificationResult
 )
@@ -1460,10 +1444,6 @@ import os
 import tempfile
 from pathlib import Path
 from datetime import datetime
-
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
 
 from shared.circular_exchange.core.circular_exchange import (
     CircularExchange, ModuleExport, ModuleImport

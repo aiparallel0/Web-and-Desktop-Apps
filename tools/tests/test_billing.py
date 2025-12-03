@@ -22,9 +22,7 @@ import json
 import os
 import sys
 
-# Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'web', 'backend'))
+# Paths are handled by conftest.py
 
 
 class TestSubscriptionPlans:

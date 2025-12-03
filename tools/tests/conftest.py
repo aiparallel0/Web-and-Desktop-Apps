@@ -7,9 +7,11 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-project_root = Path(__file__).parent.parent
+# Fix: Navigate up 3 levels from tests/ -> tools/ -> project_root
+# Structure: project_root/tools/tests/conftest.py
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / 'shared'))
+# Add web/backend for database and auth imports (backwards compatibility)
 sys.path.insert(0, str(project_root / 'web' / 'backend'))
 
 # Original fixtures

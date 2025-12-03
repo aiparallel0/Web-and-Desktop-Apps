@@ -8,6 +8,7 @@ Provides comprehensive logging and telemetry for the application:
 - Custom metrics for receipt extraction
 - Analytics tracking
 - Structured JSON logging
+- CEFR (Circular Exchange Framework) integration
 
 Environment Variables:
 - OTEL_EXPORTER_OTLP_ENDPOINT: OpenTelemetry collector endpoint
@@ -25,6 +26,12 @@ from .custom_metrics import (
 )
 from .analytics import AnalyticsTracker, track_event, track_user_action
 from .logging_config import setup_logging, get_json_logger, JSONFormatter
+from .cefr_bridge import (
+    CEFRBridge,
+    get_cefr_bridge,
+    report_to_cefr,
+    report_feedback_to_cefr
+)
 
 __all__ = [
     # OpenTelemetry
@@ -44,4 +51,9 @@ __all__ = [
     'setup_logging',
     'get_json_logger',
     'JSONFormatter',
+    # CEFR
+    'CEFRBridge',
+    'get_cefr_bridge',
+    'report_to_cefr',
+    'report_feedback_to_cefr',
 ]

@@ -1083,9 +1083,7 @@ import pytest
 from pathlib import Path
 import sys
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
+# Paths handled by conftest.py
 
 from shared.models.manager import ModelManager
 
@@ -1512,11 +1510,9 @@ import json
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
+# Paths handled by conftest.py
 
-from utils.logger import (
+from shared.utils.logger import (
     setup_logger,
     get_logger,
     log_with_context,
@@ -2031,11 +2027,9 @@ from decimal import Decimal
 from pathlib import Path
 import sys
 
-# Add shared to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root / 'shared'))
+# Paths handled by conftest.py
 
-from utils.data_structures import LineItem, ReceiptData, ExtractionResult
+from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 
 
 class TestLineItem:
