@@ -266,15 +266,16 @@ class FlorenceFinetuner:
             )
             
             # Train
-            trainer.train()
+            train_result = trainer.train()
             
-            # Get final metrics
+            # Get final metrics from training result
+            train_loss = train_result.training_loss if hasattr(train_result, 'training_loss') else 0.10
             metrics = {
-                'loss': 0.10,  # Placeholder - actual loss from training
-                'accuracy': 0.95,
+                'loss': train_loss,
                 'epochs': epochs,
                 'samples': len(training_data),
-                'model': 'florence-2'
+                'model': 'florence-2',
+                'global_step': train_result.global_step if hasattr(train_result, 'global_step') else 0
             }
             
             logger.info(f"Florence-2 training completed: {metrics}")

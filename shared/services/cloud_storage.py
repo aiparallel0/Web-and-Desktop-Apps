@@ -249,7 +249,7 @@ class GoogleDriveProvider:
                     path=f"{folder_path}/{item['name']}",
                     size=int(item.get('size', 0)),
                     mime_type=item['mimeType'],
-                    modified_at=datetime.fromisoformat(item['modifiedTime'].replace('Z', '+00:00')),
+                    modified_at=datetime.fromisoformat(item['modifiedTime'].replace('Z', '+00:00')) if item.get('modifiedTime') else datetime.now(),
                     provider=StorageProvider.GOOGLE_DRIVE,
                     is_folder=is_folder,
                     download_url=item.get('webContentLink'),
