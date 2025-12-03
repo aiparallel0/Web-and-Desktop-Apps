@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Restrict permissions for security
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -73,6 +77,7 @@ jobs:
           from shared.circular_exchange import (
               PROJECT_CONFIG, METRICS_ANALYZER, REFACTORING_ENGINE
           )
+          from shared.circular_exchange import __version__ as cef_version
           import json
           from datetime import datetime
 
@@ -89,7 +94,7 @@ jobs:
           # Create CEF analysis report
           report = {
               'timestamp': datetime.utcnow().isoformat(),
-              'version': '3.1.0',
+              'version': cef_version,
               'registered_modules': len(modules) if modules else 0,
               'module_ids': list(modules.keys()) if modules else [],
               'metrics_summary': metrics_summary,
