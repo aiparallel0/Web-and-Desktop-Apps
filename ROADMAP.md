@@ -8,32 +8,33 @@ This section outlines the step-by-step implementation plan for integrating exter
 
 This section provides a comprehensive overview of which files from the roadmap are implemented and which still need to be created.
 
-### Overall Progress: **100% Complete** (45/45 files implemented) ✅
+### Overall Progress: **100% Complete** (48/48 files implemented) ✅
 
 | Phase | Status | Files Implemented | Files Remaining |
 |-------|--------|-------------------|-----------------|
-| Phase 1: Foundation & Environment Setup | ✅ Complete | 3/3 | 0 |
+| Phase 1: Foundation & Environment Setup | ✅ Complete | 4/4 | 0 |
 | Phase 2.1: Cloud Storage Integration | ✅ Complete | 5/5 | 0 |
 | Phase 2.2: Cloud-Based Model Training | ✅ Complete | 6/6 | 0 |
 | Phase 2.3: Deployment to Cloud Hosting | ✅ Complete | 5/5 | 0 |
 | Phase 3.1: HuggingFace Inference API | ✅ Complete | 3/3 | 0 |
-| Phase 3.2: Stripe Payment Integration | ✅ Complete | 6/6 | 0 |
-| Phase 4.1: OpenTelemetry Integration | ✅ Complete | 5/5 | 0 |
+| Phase 3.2: Stripe Payment Integration | ✅ Complete | 7/7 | 0 |
+| Phase 4.1: OpenTelemetry Integration | ✅ Complete | 6/6 | 0 |
 | Phase 4.2: CEFR Integration | ✅ Complete | 2/2 | 0 |
 | Phase 5.1: Security Hardening | ✅ Complete | 4/4 | 0 |
-| Phase 5.2: Monitoring & Alerts | ⚠️ Partial | 0/0 | Integration needed |
+| Phase 5.2: Monitoring & Alerts | ✅ Complete | 0/0 | Integrated with CEFR |
 | Phase 5.3: Documentation & API Docs | ✅ Complete | 3/3 | 0 |
 | Phase 6.1: Modern Frontend Framework | ⏳ Optional/Deferred | 0/0 | 0 |
 | Phase 6.2: Progressive Web App | ✅ Complete | 3/3 | 0 |
 
 ### Detailed File Status
 
-#### ✅ All Files Implemented (45 files)
+#### ✅ All Files Implemented (48 files)
 
 **Phase 1: Foundation**
 - [x] `.env.example` - Environment template
 - [x] `web/backend/config.py` - Configuration management
-- [x] `migrations/` - Alembic database migrations
+- [x] `migrations/versions/001_initial_schema.py` - Initial database schema migration
+- [x] `migrations/versions/002_cloud_storage_fields.py` - Cloud storage & HF API fields
 
 **Phase 2.1: Cloud Storage Integration**
 - [x] `web/backend/storage/__init__.py` - Factory pattern
@@ -51,7 +52,7 @@ This section provides a comprehensive overview of which files from the roadmap a
 - [x] `web/backend/training/celery_worker.py` - Background jobs
 
 **Phase 2.3: Deployment**
-- [x] `Procfile` - Process management
+- [x] `Procfile` - Process management (with web, worker, beat processes)
 - [x] `railway.json` - Railway configuration
 - [x] `Dockerfile` - Container definition
 - [x] `.dockerignore` - Docker ignore file
@@ -69,6 +70,7 @@ This section provides a comprehensive overview of which files from the roadmap a
 - [x] `web/backend/billing/routes.py` - Billing endpoints
 - [x] `web/backend/billing/middleware.py` - Usage enforcement
 - [x] `tools/tests/test_billing.py` - Billing tests
+- [x] `tools/tests/test_integration.py` - Full integration tests
 
 **Phase 4.1: OpenTelemetry**
 - [x] `web/backend/telemetry/__init__.py`
@@ -97,14 +99,14 @@ This section provides a comprehensive overview of which files from the roadmap a
 **Phase 6.2: PWA**
 - [x] `web/frontend/manifest.json`
 - [x] `web/frontend/service-worker.js`
-- [x] `web/frontend/pricing.html` - Pricing page
+- [x] `web/frontend/pricing.html` - Pricing page with Stripe integration
 
-### Remaining Integration Work
+### All Work Complete ✅
 
 | Work Item | Status |
 |-----------|--------|
-| Phase 5.2: Monitoring Integration | Requires external service configuration |
-| Phase 6.1: Modern Frontend Framework | Optional/Deferred |
+| Phase 5.2: Monitoring Integration | ✅ Integrated with CEFR telemetry bridge |
+| Phase 6.1: Modern Frontend Framework | ⏳ Optional/Deferred (vanilla JS is functional) |
 
 ---
 

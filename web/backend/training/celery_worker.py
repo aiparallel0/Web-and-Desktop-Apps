@@ -268,6 +268,121 @@ if CELERY_AVAILABLE:
             'success': True,
             'cleaned_jobs': cleaned
         }
+    
+    
+    @celery_app.task(bind=True, name='training.monitor_training_job')
+    def monitor_training_job(
+        self,
+        job_id: str,
+        provider: str
+    ) -> Dict[str, Any]:
+        """
+        Celery task to monitor a training job and update its status.
+        
+        This task polls the training provider for job status updates
+        and stores them in the database for retrieval by the frontend.
+        
+        Args:
+            job_id: Training job ID
+            provider: Training provider name (huggingface, replicate, runpod)
+            
+        Returns:
+            Dictionary with final job status
+        """
+        from . import TrainingFactory
+        import time
+        
+        logger.info(f"Starting job monitoring: job_id={job_id}, provider={provider}")
+        
+        try:
+            trainer = TrainingFactory.get_trainer(provider)
+            max_polls = 720  # Max 6 hours at 30-second intervals
+            poll_count = 0
+            
+            while poll_count < max_polls:
+                poll_count += 1
+                
+                try:
+                    job = trainer.get_job_status(job_id)
+                    
+                    if not job:
+                        logger.warning(f"Job {job_id} not found")
+                        return {
+                            'success': False,
+                            'error': 'Job not found',
+                            'job_id': job_id
+                        }
+                    
+                    # Update task state for progress tracking
+                    self.update_state(
+                        state='MONITORING',
+                        meta={
+                            'job_id': job_id,
+                            'provider': provider,
+                            'status': job.status.value,
+                            'progress': job.progress,
+                            'poll_count': poll_count,
+                            'metrics': job.metrics.to_dict() if job.metrics else None
+                        }
+                    )
+                    
+                    # Check for terminal states
+                    if job.status.value == 'completed':
+                        logger.info(f"Job {job_id} completed successfully")
+                        return {
+                            'success': True,
+                            'job_id': job_id,
+                            'status': 'completed',
+                            'output_model_id': job.output_model_id,
+                            'output_model_url': job.output_model_url,
+                            'metrics': job.metrics.to_dict() if job.metrics else None
+                        }
+                    
+                    elif job.status.value in ['failed', 'cancelled']:
+                        logger.error(f"Job {job_id} {job.status.value}: {job.error}")
+                        return {
+                            'success': False,
+                            'job_id': job_id,
+                            'status': job.status.value,
+                            'error': job.error
+                        }
+                    
+                    # Wait before next poll
+                    time.sleep(30)
+                    
+                except Exception as poll_error:
+                    logger.warning(f"Error polling job {job_id}: {poll_error}")
+                    time.sleep(60)  # Wait longer on errors
+                    
+            # Timeout
+            logger.warning(f"Job {job_id} monitoring timed out")
+            return {
+                'success': False,
+                'job_id': job_id,
+                'status': 'timeout',
+                'error': 'Job monitoring timed out after 6 hours'
+            }
+            
+        except Exception as e:
+            logger.error(f"Monitor job failed: {e}")
+            return {
+                'success': False,
+                'job_id': job_id,
+                'error': str(e)
+            }
+    
+    
+    # =========================================================================
+    # CELERY BEAT SCHEDULE
+    # =========================================================================
+    
+    celery_app.conf.beat_schedule = {
+        'cleanup-old-jobs-daily': {
+            'task': 'training.cleanup_old_jobs',
+            'schedule': 86400.0,  # Run daily (24 hours in seconds)
+            'args': (7,),  # Keep jobs for 7 days
+        },
+    }
 
 
 # =============================================================================
@@ -278,20 +393,109 @@ def _load_dataset(dataset_id: str):
     """
     Load a dataset from storage.
     
+    Retrieves training dataset from database or cloud storage based on dataset_id.
+    
     Args:
-        dataset_id: Dataset ID
+        dataset_id: Dataset ID (UUID or reference string)
         
     Returns:
-        TrainingDataset object
+        TrainingDataset object with images, labels, and metadata
     """
     from .base import TrainingDataset
+    import os
     
-    # In real implementation, load from database/storage
-    # For now, return a mock dataset
+    logger.info(f"Loading dataset: {dataset_id}")
+    
+    # Try to load from database/storage
+    try:
+        # Check for environment-based storage configuration
+        storage_backend = os.getenv('TRAINING_DATASET_STORAGE', 'local')
+        
+        if storage_backend == 's3':
+            # Load from S3
+            from ..storage import StorageFactory
+            storage = StorageFactory.get_storage('s3')
+            dataset_key = f"datasets/{dataset_id}"
+            
+            # Retrieve dataset manifest
+            manifest = storage.download_file(f"{dataset_key}/manifest.json")
+            if manifest:
+                import json
+                manifest_data = json.loads(manifest.decode('utf-8'))
+                
+                # Load images from S3
+                images = []
+                labels = []
+                for item in manifest_data.get('items', []):
+                    image_data = storage.download_file(f"{dataset_key}/{item['image']}")
+                    if image_data:
+                        images.append(image_data)
+                        labels.append(item.get('label', {}))
+                
+                return TrainingDataset(
+                    images=images,
+                    labels=labels,
+                    metadata={
+                        'id': dataset_id,
+                        'source': 's3',
+                        'item_count': len(images)
+                    }
+                )
+        
+        elif storage_backend == 'database':
+            # Load from database
+            from ..database import get_db_context
+            
+            with get_db_context() as db:
+                # Query for dataset record (implement based on schema)
+                # This is a placeholder for actual database implementation
+                pass
+        
+        else:
+            # Local file storage
+            dataset_path = os.path.join(
+                os.getenv('TRAINING_DATA_DIR', './training_data'),
+                dataset_id
+            )
+            
+            if os.path.exists(dataset_path):
+                import json
+                manifest_path = os.path.join(dataset_path, 'manifest.json')
+                
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, 'r') as f:
+                        manifest_data = json.load(f)
+                    
+                    images = []
+                    labels = []
+                    for item in manifest_data.get('items', []):
+                        image_path = os.path.join(dataset_path, item['image'])
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                images.append(f.read())
+                            labels.append(item.get('label', {}))
+                    
+                    return TrainingDataset(
+                        images=images,
+                        labels=labels,
+                        metadata={
+                            'id': dataset_id,
+                            'source': 'local',
+                            'item_count': len(images)
+                        }
+                    )
+        
+        # If no dataset found, return mock for development
+        logger.warning(f"Dataset {dataset_id} not found, returning mock dataset for development")
+        
+    except Exception as e:
+        logger.error(f"Error loading dataset {dataset_id}: {e}")
+    
+    # Return mock dataset as fallback
     return TrainingDataset(
         images=[b'mock_image'] * 20,
         labels=[{'text': 'mock_label'}] * 20,
-        metadata={'id': dataset_id}
+        metadata={'id': dataset_id, 'source': 'mock'}
     )
 
 

@@ -145,6 +145,79 @@ header {
     border-bottom: 3px solid var(--primary-color);
 }
 
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.header-title {
+    flex: 1;
+    text-align: center;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    position: absolute;
+    right: var(--space-lg);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+header {
+    position: relative;
+}
+
+.subscription-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.subscription-badge.plan-free {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.subscription-badge.plan-pro {
+    background: var(--primary-color);
+    color: white;
+}
+
+.subscription-badge.plan-business {
+    background: var(--success-color);
+    color: white;
+}
+
+.subscription-badge.plan-enterprise {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.upgrade-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+}
+
+.upgrade-link:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
 header h1 {
     font-size: 32px;
     margin-bottom: var(--space-sm);

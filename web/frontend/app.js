@@ -91,6 +91,29 @@ async function init() {
     setupBatchProcessing();
     setupFinetuning();
     await loadModels();
+    
+    // Check subscription status and update header badge
+    await initSubscriptionStatus();
+}
+
+/**
+ * Initialize subscription status display
+ */
+async function initSubscriptionStatus() {
+    try {
+        const subscription = await checkSubscriptionStatus();
+        if (subscription) {
+            updateSubscriptionBadge(subscription);
+            
+            // Hide upgrade link for paid plans
+            const upgradeLink = document.getElementById('upgradeLink');
+            if (upgradeLink && subscription.plan !== 'free') {
+                upgradeLink.textContent = 'Manage Plan';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to check subscription status:', error);
+    }
 }
 
 /* =============================================================================
@@ -1115,6 +1138,107 @@ function showSuccess(message) {
  */
 function hideError() {
     elements.errorSection.classList.add('hidden');
+}
+
+/* =============================================================================
+   15. AUTHENTICATION & SUBSCRIPTION
+   ============================================================================= */
+
+/**
+ * Check if user is authenticated
+ * @returns {Promise<Object|null>} User object or null if not authenticated
+ */
+async function checkAuthentication() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        return null;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                return data.user;
+            }
+        }
+        
+        // Token invalid, clear it
+        localStorage.removeItem('access_token');
+        return null;
+    } catch (error) {
+        console.error('Auth check error:', error);
+        return null;
+    }
+}
+
+/**
+ * Check current subscription status
+ * @returns {Promise<Object|null>} Subscription object or null
+ */
+async function checkSubscriptionStatus() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        return null;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/billing/subscription`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                return {
+                    plan: data.subscription?.plan || 'free',
+                    status: data.subscription?.status || 'active',
+                    currentPeriodEnd: data.subscription?.current_period_end,
+                    receiptsUsed: data.usage?.receipts_processed_month || 0,
+                    receiptsLimit: data.usage?.receipts_limit || 10,
+                    storageUsed: data.usage?.storage_used_bytes || 0,
+                    storageLimit: data.usage?.storage_limit_bytes || 100 * 1024 * 1024 // 100MB default
+                };
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('Subscription check error:', error);
+        return null;
+    }
+}
+
+/**
+ * Update subscription status badge in header
+ * @param {Object} subscription - Subscription object
+ */
+function updateSubscriptionBadge(subscription) {
+    const badge = document.getElementById('subscriptionBadge');
+    if (badge && subscription) {
+        badge.textContent = subscription.plan.toUpperCase();
+        badge.className = `subscription-badge plan-${subscription.plan}`;
+        badge.classList.remove('hidden');
+    }
+}
+
+/**
+ * Format bytes to human-readable string
+ * @param {number} bytes - Bytes to format
+ * @returns {string} Formatted string
+ */
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /* =============================================================================

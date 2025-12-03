@@ -1,8 +1,16 @@
 """Initial migration - create all tables
 
-Revision ID: 001_initial
+Revision ID: 001_initial_schema
 Revises: 
 Create Date: 2024-12-03
+
+Creates base tables for the Receipt Extractor SaaS platform:
+- users: User accounts with authentication and subscription info
+- receipts: Receipt extraction records
+- subscriptions: Stripe subscription records
+- api_keys: API keys for programmatic access
+- refresh_tokens: JWT refresh tokens for authentication
+- audit_logs: Audit log for security and compliance
 
 """
 from alembic import op
@@ -10,7 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '001_initial'
+revision = '001_initial_schema'
 down_revision = None
 branch_labels = None
 depends_on = None
