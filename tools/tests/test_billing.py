@@ -239,25 +239,32 @@ class TestBillingMiddleware:
     def test_usage_limit_exceeded_exception(self):
         """Test UsageLimitExceeded exception."""
         from web.backend.billing.middleware import UsageLimitExceeded
-        
-        exc = UsageLimitExceeded('Monthly limit reached')
+
+        exc = UsageLimitExceeded('Monthly limit reached', 'monthly_extractions', 1000, 1050)
         assert str(exc) == 'Monthly limit reached'
+        assert exc.limit_type == 'monthly_extractions'
+        assert exc.limit == 1000
+        assert exc.used == 1050
     
-    @patch('web.backend.billing.middleware.get_current_user')
-    def test_require_subscription_decorator(self, mock_get_user):
+    def test_require_subscription_decorator(self):
         """Test require_subscription decorator."""
         from web.backend.billing.middleware import require_subscription
-        
-        # Create a mock user with pro plan
-        mock_user = Mock()
-        mock_user.has_active_subscription.return_value = True
-        mock_get_user.return_value = mock_user
-        
-        @require_subscription('pro')
-        def protected_function():
-            return 'success'
-        
-        # The decorator should allow access for users with sufficient plans
+        from flask import g
+        from unittest.mock import MagicMock
+
+        # Create a mock Flask app context
+        app = MagicMock()
+        with app.app_context():
+            # Set user plan in g object
+            g.user_plan = 'pro'
+
+            @require_subscription('pro')
+            def protected_function():
+                return 'success'
+
+            # The decorator should allow access for users with sufficient plans
+            result = protected_function()
+            assert result == 'success'
 
 
 class TestBillingRoutes:

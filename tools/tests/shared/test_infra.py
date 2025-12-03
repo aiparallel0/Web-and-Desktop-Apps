@@ -110,8 +110,8 @@ class TestEnhanceImage:
 class TestAssessImageQuality:
     """Tests for assess_image_quality function."""
 
-    @patch('shared.utils.image_processing._estimate_blur')
-    @patch('shared.utils.image_processing._estimate_noise')
+    @patch('shared.utils.image._estimate_blur')
+    @patch('shared.utils.image._estimate_noise')
     def test_assess_bright_image(self, mock_noise, mock_blur):
         from shared.utils.image import assess_image_quality
         
@@ -126,8 +126,8 @@ class TestAssessImageQuality:
         assert 'is_bright_enough' in result
         assert result['brightness'] > 200  # White image should be bright
 
-    @patch('shared.utils.image_processing._estimate_blur')
-    @patch('shared.utils.image_processing._estimate_noise')
+    @patch('shared.utils.image._estimate_blur')
+    @patch('shared.utils.image._estimate_noise')
     def test_assess_dark_image(self, mock_noise, mock_blur):
         from shared.utils.image import assess_image_quality
         
@@ -140,8 +140,8 @@ class TestAssessImageQuality:
         assert result['brightness'] < 10  # Black image should be dark
         assert result['is_bright_enough'] == False
 
-    @patch('shared.utils.image_processing._estimate_blur')
-    @patch('shared.utils.image_processing._estimate_noise')
+    @patch('shared.utils.image._estimate_blur')
+    @patch('shared.utils.image._estimate_noise')
     def test_quality_overall_good(self, mock_noise, mock_blur):
         from shared.utils.image import assess_image_quality
         
@@ -658,7 +658,7 @@ class TestIntegration:
     def test_full_logging_workflow(self, tmp_path):
         """Test complete logging workflow"""
         # Override log directory for testing
-        import shared.utils.centralized_logging as cl
+        import shared.utils.logging as cl
         original_config = cl._CONFIG.copy()
         cl._CONFIG['log_dir'] = str(tmp_path)
         cl._CONFIG['file_output'] = True
@@ -725,7 +725,7 @@ class TestEnvironmentConfiguration:
 
     def test_default_configuration(self):
         """Test default configuration values"""
-        import shared.utils.centralized_logging as cl
+        import shared.utils.logging as cl
         
         # These are the defaults if env vars are not set
         assert cl._CONFIG['level'] in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -734,7 +734,7 @@ class TestEnvironmentConfiguration:
     def test_log_level_setting(self):
         """Test that log level can be set via environment"""
         # This tests the configuration structure
-        import shared.utils.centralized_logging as cl
+        import shared.utils.logging as cl
         
         # The level should be a valid log level
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -742,7 +742,7 @@ class TestEnvironmentConfiguration:
 
     def test_app_name_is_configurable(self):
         """Test that app name can be configured via LOG_APP_NAME"""
-        import shared.utils.centralized_logging as cl
+        import shared.utils.logging as cl
         
         # Default app name should be set
         assert 'app_name' in cl._CONFIG

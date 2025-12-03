@@ -600,27 +600,27 @@ class FeedbackLoop:
         """Lazy-load the data collector."""
         if self._data_collector is None:
             try:
-                from shared.circular_exchange.data_collector import DATA_COLLECTOR
+                from shared.circular_exchange.analysis.data_collector import DATA_COLLECTOR
                 self._data_collector = DATA_COLLECTOR
             except ImportError:
                 logger.warning("Could not import DATA_COLLECTOR")
         return self._data_collector
-    
+
     def _get_metrics_analyzer(self):
         """Lazy-load the metrics analyzer."""
         if self._metrics_analyzer is None:
             try:
-                from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
+                from shared.circular_exchange.analysis.metrics_analyzer import METRICS_ANALYZER
                 self._metrics_analyzer = METRICS_ANALYZER
             except ImportError:
                 logger.warning("Could not import METRICS_ANALYZER")
         return self._metrics_analyzer
-    
+
     def _get_refactoring_engine(self):
         """Lazy-load the refactoring engine."""
         if self._refactoring_engine is None:
             try:
-                from shared.circular_exchange.refactoring_engine import REFACTORING_ENGINE
+                from shared.circular_exchange.refactor.refactoring_engine import REFACTORING_ENGINE
                 self._refactoring_engine = REFACTORING_ENGINE
             except ImportError:
                 logger.warning("Could not import REFACTORING_ENGINE")

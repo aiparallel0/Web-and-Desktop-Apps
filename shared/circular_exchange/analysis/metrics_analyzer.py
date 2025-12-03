@@ -237,7 +237,7 @@ class MetricsAnalyzer:
         """Lazy-load the data collector to avoid circular imports."""
         if self._data_collector is None:
             try:
-                from shared.circular_exchange.data_collector import DATA_COLLECTOR
+                from shared.circular_exchange.analysis.data_collector import DATA_COLLECTOR
                 self._data_collector = DATA_COLLECTOR
             except ImportError:
                 logger.warning("Could not import DATA_COLLECTOR")
