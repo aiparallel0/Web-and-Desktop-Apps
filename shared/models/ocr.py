@@ -4,15 +4,19 @@ Common OCR processing utilities shared across all OCR processors.
 This module provides:
 - Pre-compiled regex patterns for efficient matching
 - Shared constants like SKIP_KEYWORDS
-- Common price normalization function
 - Reusable text extraction utilities
 - Text post-processing and cleaning utilities
 - Integration with circular exchange framework via OCRConfig
+
+Note: Price normalization (normalize_price) now imported from shared.utils.pricing
 """
 import re
 import logging
 from decimal import Decimal
 from typing import Optional, List, Tuple
+
+# Import centralized pricing utilities
+from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
 
 # Circular Exchange Framework Integration
 try:
@@ -30,11 +34,11 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             module_id="shared.models.ocr_common",
             file_path=__file__,
             description="Common OCR processing utilities with regex patterns and text extraction",
-            dependencies=["shared.circular_exchange"],
+            dependencies=["shared.circular_exchange", "shared.utils.pricing"],
             exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
                     "extract_line_items", "parse_receipt_text", "get_detection_config",
                     "record_detection_result", "fix_concatenated_text", "clean_item_name",
-                    "is_garbage_text", "MAX_REALISTIC_ITEM_PRICE"]
+                    "is_garbage_text", "MAX_REALISTIC_ITEM_PRICE", "PRICE_MIN", "PRICE_MAX"]
         ))
     except Exception:
         pass  # Ignore registration errors during import
@@ -106,9 +110,7 @@ def record_detection_result(text_regions_count: int, avg_confidence: float,
             processing_time=processing_time
         )
 
-# Price validation constants
-PRICE_MIN = Decimal('0')
-PRICE_MAX = Decimal('9999')
+# Note: PRICE_MIN, PRICE_MAX now imported from shared.utils.pricing
 # Maximum realistic price for a single grocery/retail item
 # Items priced above this threshold are likely OCR errors
 MAX_REALISTIC_ITEM_PRICE = Decimal('99.99')
@@ -275,66 +277,7 @@ STORE_NAME_CORRECTIONS = {
     'pub1ix': 'PUBLIX',
     'publix': 'PUBLIX',
 }
-
-
-def normalize_price(value) -> Optional[Decimal]:
-    """
-    Normalize a price value to a Decimal.
-    
-    Handles various price formats:
-    - $25.99
-    - 1,234.56 (US format with comma as thousand separator)
-    - 12,50 (European format with comma as decimal separator)
-    
-    Args:
-        value: Price value (string, number, or None)
-        
-    Returns:
-        Decimal price or None if invalid
-    """
-    if value is None:
-        return None
-    try:
-        price_str = str(value).replace('$', '').replace(' ', '').strip()
-        if not price_str or price_str.startswith('-'):
-            return None
-        # Handle thousands separator vs decimal separator
-        # If string has format like "1,234.56" - comma is thousands separator
-        # If string has format like "12,50" - comma is decimal separator (European)
-        if ',' in price_str and '.' in price_str:
-            # Both present: assume comma is thousands separator, remove all commas
-            price_str = price_str.replace(',', '')
-        elif ',' in price_str:
-            # Only comma: could be thousands or decimal separator
-            comma_count = price_str.count(',')
-            parts = price_str.split(',')
-            
-            # Validate proper thousands separator format (groups of 3)
-            if comma_count > 1:
-                # Multiple commas: validate each segment has 3 digits
-                # e.g., "1,234,567" -> valid, "1,23,4" -> invalid
-                is_valid_thousands = (
-                    len(parts[0]) >= 1 and 
-                    all(len(p) == 3 for p in parts[1:])
-                )
-                if is_valid_thousands:
-                    price_str = price_str.replace(',', '')
-                else:
-                    return None  # Invalid format
-            # If single comma with exactly 2 digits after, treat as decimal (e.g., "12,50")
-            elif len(parts) == 2 and len(parts[1]) == 2:
-                price_str = price_str.replace(',', '.')
-            # If single comma with exactly 3 digits after, treat as thousands separator (e.g., "1,234")
-            elif len(parts) == 2 and len(parts[1]) == 3:
-                price_str = price_str.replace(',', '')
-            else:
-                # Ambiguous format - could be European decimal or invalid thousands
-                # Default: treat as invalid to avoid incorrect conversions
-                return None
-        val = Decimal(price_str)
-        return val if PRICE_MIN <= val <= PRICE_MAX else None
-    except (ValueError, ArithmeticError):
-        return None
+# Note: normalize_price() function removed - now imported from shared.utils.pricing at top of file
 
 
 def extract_date(lines: list) -> Optional[str]:

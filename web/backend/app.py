@@ -89,15 +89,14 @@ model_manager = ModelManager(max_loaded_models=3)
 # Storage for finetuning jobs
 finetune_jobs = {}
 
-# Register additional routes (auth, receipts)
+# Register additional routes (auth)
+# Note: Receipt routes are defined inline in this file (extract_receipt, extract_batch)
 try:
     from auth import register_auth_routes
-    from receipts import register_receipts_routes
     register_auth_routes(app)
-    register_receipts_routes(app)
-    logger.info("Auth and Receipts API routes registered")
+    logger.info("Auth API routes registered")
 except ImportError as e:
-    logger.warning(f"Could not register additional routes: {e}")
+    logger.warning(f"Could not register auth routes: {e}")
 
 
 # =============================================================================
