@@ -436,8 +436,15 @@ def validate_config(config: Config) -> list:
     return warnings
 
 
-# Run validation on import for development
-_config = get_config()
-_warnings = validate_config(_config)
-for warning in _warnings:
-    logger.warning(f"Configuration warning: {warning}")
+def validate_on_startup():
+    """
+    Run configuration validation and log warnings.
+    
+    Call this during application startup rather than on import
+    to avoid performance issues during testing.
+    """
+    config = get_config()
+    warnings = validate_config(config)
+    for warning in warnings:
+        logger.warning(f"Configuration warning: {warning}")
+    return warnings
