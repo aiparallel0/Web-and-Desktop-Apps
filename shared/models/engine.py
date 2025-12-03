@@ -14,6 +14,9 @@ sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from utils.data_structures import LineItem,ReceiptData,ExtractionResult
 from utils.image_processing import load_and_validate_image,enhance_image
 
+# Import centralized pricing utilities
+from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
+
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
@@ -65,7 +68,7 @@ def _get_transformers():
         AutoModelForCausalLM = _AutoModelForCausalLM
     return TransformersDonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
 
-PRICE_MIN,PRICE_MAX=0,9999
+# Note: PRICE_MIN, PRICE_MAX now imported from shared.utils.pricing
 class BaseDonutProcessor:
     def __init__(self,model_config:Dict):
         self.model_config,self.model_id,self.task_prompt,self.model_name=model_config,model_config['huggingface_id'],model_config['task_prompt'],model_config['name']
@@ -77,15 +80,7 @@ class BaseDonutProcessor:
         raise NotImplementedError("Subclasses must implement _load_model")
     def extract(self,image_path:str)->ExtractionResult:
         raise NotImplementedError("Subclasses must implement extract")
-    @staticmethod
-    def normalize_price(value)->Optional[Decimal]:
-        if value is None:return None
-        try:
-            price_str=str(value).replace('$','').replace(',','').strip()
-            if price_str.startswith('-')or re.match(r'^\d{5}(-?\d{4})?$',price_str):return None
-            val=Decimal(price_str)
-            return val if PRICE_MIN<=val<=PRICE_MAX else None
-        except(ValueError,ArithmeticError):return None
+    # Note: normalize_price() now imported from shared.utils.pricing
     @staticmethod
     def parse_json_output(json_str:str)->Dict:
         if not json_str or not json_str.strip():
@@ -193,16 +188,16 @@ class DonutProcessor(BaseDonutProcessor):
         total_str=None
         if'total'in parsed_data and isinstance(parsed_data['total'],dict):total_str=parsed_data['total'].get('total_price')
         if not total_str:total_str=parsed_data.get('total')if isinstance(parsed_data.get('total'),str)else None
-        if total_str:receipt.total=self.normalize_price(total_str)
+        if total_str:receipt.total=normalize_price(total_str)
         if'sub_total'in parsed_data and isinstance(parsed_data['sub_total'],dict):
             subtotal_str=parsed_data['sub_total'].get('subtotal_price')
-            if subtotal_str:receipt.subtotal=self.normalize_price(subtotal_str)
+            if subtotal_str:receipt.subtotal=normalize_price(subtotal_str)
         if'total'in parsed_data and isinstance(parsed_data['total'],dict):
             total_dict=parsed_data['total']
             cash_str=total_dict.get('cashprice')
-            if cash_str:receipt.cash_tendered=self.normalize_price(cash_str)
+            if cash_str:receipt.cash_tendered=normalize_price(cash_str)
             change_str=total_dict.get('changeprice')
-            if change_str:receipt.change_given=self.normalize_price(change_str)
+            if change_str:receipt.change_given=normalize_price(change_str)
         items_data=parsed_data.get('menu',[])or parsed_data.get('items',[])
         for item_data in items_data:
             if isinstance(item_data,dict):
@@ -211,7 +206,7 @@ class DonutProcessor(BaseDonutProcessor):
                 name=self._safe_extract_string(name_raw)
                 price=self._safe_extract_string(price_raw)
                 if name and isinstance(name,str)and price and isinstance(price,str):
-                    normalized_price=self.normalize_price(price)
+                    normalized_price=normalize_price(price)
                     if normalized_price:receipt.items.append(LineItem(name=name,total_price=normalized_price))
         return receipt
     def _extract_from_text(self,text:str)->Dict:
@@ -594,7 +589,7 @@ class FlorenceProcessor(BaseDonutProcessor):
                 for pattern in total_patterns:
                     match = re.search(pattern, text, re.IGNORECASE)
                     if match:
-                        total = self.normalize_price(match.group(1))
+                        total = normalize_price(match.group(1))
                         break
             
             # Look for subtotal
@@ -602,7 +597,7 @@ class FlorenceProcessor(BaseDonutProcessor):
                 for pattern in subtotal_patterns:
                     match = re.search(pattern, text, re.IGNORECASE)
                     if match:
-                        subtotal = self.normalize_price(match.group(1))
+                        subtotal = normalize_price(match.group(1))
                         break
         
         # Fallback to full text search
@@ -610,7 +605,7 @@ class FlorenceProcessor(BaseDonutProcessor):
             for pattern in total_patterns:
                 match = re.search(pattern, full_text, re.IGNORECASE)
                 if match:
-                    total = self.normalize_price(match.group(1))
+                    total = normalize_price(match.group(1))
                     break
         
         return total, subtotal
@@ -656,7 +651,7 @@ class FlorenceProcessor(BaseDonutProcessor):
                     if len(name) < 2 or name in seen_names:
                         continue
                     
-                    price = self.normalize_price(price_str)
+                    price = normalize_price(price_str)
                     if price and PRICE_MIN <= float(price) <= PRICE_MAX:
                         items.append(LineItem(name=name, total_price=price, quantity=quantity))
                         seen_names.add(name)

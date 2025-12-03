@@ -38,22 +38,23 @@ from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-    
-    PROJECT_CONFIG.register_module(ModuleRegistration(
-        module_id="shared.services.cloud_finetuning",
-        file_path=__file__,
-        description="Cloud ML platform integration for model finetuning",
-        dependencies=["shared.circular_exchange"],
-        exports=["CloudFinetuningService", "HuggingFaceTrainer", "ReplicateTrainer", "RunPodTrainer"]
-    ))
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
+# Import circular exchange decorator to reduce boilerplate
+from shared.utils.decorators import circular_exchange_module
 
 logger = logging.getLogger(__name__)
+
+# Register module with Circular Exchange Framework using decorator
+@circular_exchange_module(
+    module_id="shared.services.cloud_finetuning",
+    description="Cloud ML platform integration for model finetuning",
+    dependencies=["shared.circular_exchange"],
+    exports=["CloudFinetuningService", "HuggingFaceTrainer", "ReplicateTrainer", "RunPodTrainer"]
+)
+def _register_module():
+    """Module registration placeholder for decorator."""
+    pass
+
+_register_module()
 
 
 class CloudProvider(Enum):
