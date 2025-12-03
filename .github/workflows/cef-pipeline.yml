@@ -129,11 +129,11 @@ jobs:
           from datetime import datetime
           from pathlib import Path
           
-          # Import CEF components
-          from shared.circular_exchange.data_collector import DATA_COLLECTOR, TestResult, TestStatus
-          from shared.circular_exchange.metrics_analyzer import METRICS_ANALYZER
-          from shared.circular_exchange.refactoring_engine import REFACTORING_ENGINE
-          from shared.circular_exchange.feedback_loop import FEEDBACK_LOOP
+          # Import CEF components from package-level exports
+          from shared.circular_exchange import DATA_COLLECTOR, TestResult, TestStatus
+          from shared.circular_exchange import METRICS_ANALYZER
+          from shared.circular_exchange import REFACTORING_ENGINE
+          from shared.circular_exchange import FEEDBACK_LOOP
           
           print('=' * 60)
           print('CEF ANALYSIS PIPELINE')
@@ -280,7 +280,7 @@ jobs:
           sys.path.insert(0, '.')
           
           try:
-              from shared.circular_exchange.persistence import PERSISTENCE_LAYER
+              from shared.circular_exchange import PERSISTENCE_LAYER
               result = PERSISTENCE_LAYER.cleanup_old_data(days=30)
               print('Cleaned up old data:', result)
           except Exception as e:
