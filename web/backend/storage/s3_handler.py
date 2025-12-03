@@ -41,6 +41,7 @@ try:
     from botocore.exceptions import ClientError, NoCredentialsError
     BOTO3_AVAILABLE = True
 except ImportError:
+    boto3 = None  # Make boto3 available at module level for mocking
     BOTO3_AVAILABLE = False
     logger.warning("boto3 not installed. Run: pip install boto3>=1.34.0")
 

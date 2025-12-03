@@ -338,10 +338,10 @@ class TestBillingIntegration:
     def test_billing_middleware_usage_limit(self):
         """Test usage limit enforcement middleware."""
         from web.backend.billing.middleware import UsageLimitExceeded
-        
+
         # Test exception can be raised
         with pytest.raises(UsageLimitExceeded):
-            raise UsageLimitExceeded('Monthly limit reached')
+            raise UsageLimitExceeded('Monthly limit reached', 'monthly_extractions', 100, 101)
     
     def test_plan_comparison(self):
         """Test plan comparison and upgrade recommendations."""
@@ -461,29 +461,42 @@ class TestMigrationsIntegration:
             db_path = f.name
         
         yield f'sqlite:///{db_path}'
-        
-        # Cleanup
-        if os.path.exists(db_path):
-            os.unlink(db_path)
+
+        # Cleanup - try multiple times in case of file locking on Windows
+        import time
+        for attempt in range(5):
+            try:
+                if os.path.exists(db_path):
+                    os.unlink(db_path)
+                    break
+            except PermissionError:
+                if attempt < 4:
+                    time.sleep(0.1)  # Wait a bit for connections to close
+                # If last attempt fails, ignore the error (file will be cleaned up by OS)
+                pass
     
     def test_create_all_tables(self, sqlite_db):
         """Test all tables can be created from models."""
         from sqlalchemy import create_engine, inspect
         from web.backend.database import Base
-        
+
         engine = create_engine(sqlite_db)
-        Base.metadata.create_all(bind=engine)
-        
-        # Verify tables were created
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-        
-        assert 'users' in tables
-        assert 'receipts' in tables
-        assert 'subscriptions' in tables
-        assert 'api_keys' in tables
-        assert 'refresh_tokens' in tables
-        assert 'audit_logs' in tables
+        try:
+            Base.metadata.create_all(bind=engine)
+
+            # Verify tables were created
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+
+            assert 'users' in tables
+            assert 'receipts' in tables
+            assert 'subscriptions' in tables
+            assert 'api_keys' in tables
+            assert 'refresh_tokens' in tables
+            assert 'audit_logs' in tables
+        finally:
+            # Properly dispose engine to release database connections
+            engine.dispose()
 
 
 # =============================================================================

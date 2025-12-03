@@ -82,6 +82,11 @@ class BaseDonutProcessor:
         raise NotImplementedError("Subclasses must implement extract")
     # Note: normalize_price() now imported from shared.utils.pricing
     @staticmethod
+    def normalize_price(value):
+        """Normalize price value using shared utility function."""
+        from shared.utils.pricing import normalize_price as _normalize_price
+        return _normalize_price(value)
+    @staticmethod
     def parse_json_output(json_str:str)->Dict:
         if not json_str or not json_str.strip():
             logger.warning("Empty output from model")
