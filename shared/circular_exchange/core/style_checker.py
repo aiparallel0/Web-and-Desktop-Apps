@@ -59,7 +59,7 @@ class StyleChecker:
         "shared/models/__init__.py": ["shared/circular_exchange"],
         "shared/utils/__init__.py": ["shared/circular_exchange"],
         "shared/__init__.py": ["shared/circular_exchange/project_config"],
-        "web-app/backend/app.py": ["shared"],
+        "web/backend/app.py": ["shared"],
     }
     
     def __init__(self, project_root: str):
