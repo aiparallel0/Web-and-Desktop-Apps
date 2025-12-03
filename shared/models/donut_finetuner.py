@@ -18,12 +18,6 @@ Exports: DonutFinetuner
 =============================================================================
 """
 
-import os
-import sys
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
@@ -40,13 +34,7 @@ except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
 # Re-export DonutFinetuner from engine module
-# Using try/except for both absolute and relative imports
-try:
-    from .engine import DonutFinetuner
-except ImportError:
-    try:
-        from shared.models.engine import DonutFinetuner
-    except ImportError:
-        from engine import DonutFinetuner
+# Use relative import since this module is part of the shared.models package
+from .engine import DonutFinetuner
 
 __all__ = ['DonutFinetuner']

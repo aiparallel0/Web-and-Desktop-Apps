@@ -52,7 +52,7 @@ try:
         module_id="desktop.process_receipt",
         file_path=__file__,
         description="Desktop app CLI script for receipt extraction",
-        dependencies=["shared.models.model_manager", "shared.circular_exchange"],
+        dependencies=["shared.models.manager", "shared.circular_exchange"],
         exports=["main", "extract_receipt"]
     ))
 except ImportError:
