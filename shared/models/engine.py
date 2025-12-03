@@ -11,8 +11,8 @@ from decimal import Decimal
 from typing import Dict,List,Optional
 from PIL import Image
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
-from utils.data_structures import LineItem,ReceiptData,ExtractionResult
-from utils.image_processing import load_and_validate_image,enhance_image
+from shared.utils.data import LineItem,ReceiptData,ExtractionResult
+from shared.utils.image import load_and_validate_image,enhance_image
 
 # Import centralized pricing utilities
 from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
@@ -1038,7 +1038,7 @@ try:
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
-from utils.data_structures import LineItem, ReceiptData, ExtractionResult
+from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
@@ -1453,7 +1453,7 @@ class EasyOCRProcessor:
 
 import numpy as np
 from PIL import Image
-from utils.image_processing import load_and_validate_image, preprocess_for_ocr
+from shared.utils.image import load_and_validate_image, preprocess_for_ocr
 
 # Lazy import to allow mocking in tests
 PaddleOCR = None
