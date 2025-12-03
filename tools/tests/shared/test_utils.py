@@ -1512,12 +1512,12 @@ from unittest.mock import Mock, patch
 
 # Paths handled by conftest.py
 
-from shared.utils.logger import (
+from shared.utils.logging import (
     setup_logger,
     get_logger,
     log_with_context,
-    StructuredFormatter,
-    ColoredFormatter
+    StructuredJSONFormatter as StructuredFormatter,
+    ColoredTextFormatter as ColoredFormatter
 )
 
 

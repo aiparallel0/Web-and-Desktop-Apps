@@ -935,8 +935,8 @@ except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
-from utils.data_structures import LineItem,ReceiptData,ExtractionResult
-from utils.image_processing import load_and_validate_image,preprocess_for_ocr
+from shared.utils.data import LineItem, ReceiptData, ExtractionResult
+from shared.utils.image import load_and_validate_image, preprocess_for_ocr
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
