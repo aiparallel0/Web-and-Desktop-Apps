@@ -98,6 +98,31 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register auth routes: {e}")
 
+# Register billing routes
+try:
+    from billing import register_billing_routes
+    register_billing_routes(app)
+    logger.info("Billing API routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register billing routes: {e}")
+
+# Initialize telemetry (OpenTelemetry tracing and metrics)
+try:
+    from telemetry import setup_telemetry
+    telemetry_enabled = setup_telemetry(app)
+    if telemetry_enabled:
+        logger.info("OpenTelemetry initialized")
+except ImportError as e:
+    logger.info(f"Telemetry not available: {e}")
+
+# Initialize security headers
+try:
+    from security.headers import init_security_headers
+    init_security_headers(app)
+    logger.info("Security headers enabled")
+except ImportError as e:
+    logger.warning(f"Security headers not available: {e}")
+
 
 # =============================================================================
 # UTILITY FUNCTIONS
