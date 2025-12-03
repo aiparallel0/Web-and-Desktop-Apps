@@ -13,12 +13,18 @@ on:
 env:
   PYTHON_VERSION: '3.11'
 
+# Restrict permissions for security
+permissions:
+  contents: read
+
 jobs:
   # ============================================================================
   # Test Job - Run tests before deployment
   # ============================================================================
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       
@@ -53,6 +59,8 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       
@@ -75,6 +83,8 @@ jobs:
     needs: [test, build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +111,7 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: always()
+    permissions: {}
     
     steps:
       - name: Deployment notification
