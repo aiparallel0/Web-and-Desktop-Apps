@@ -1,0 +1,113 @@
+# =============================================================================
+# Receipt Extractor - Deployment Workflow
+# =============================================================================
+# Deploys the application to Railway on push to main branch
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ============================================================================
+  # Test Job - Run tests before deployment
+  # ============================================================================
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      
+      - name: Run tests
+        run: |
+          pytest tools/tests/ -v --cov=web --cov=shared --cov-report=xml
+        env:
+          TESTING: 'true'
+          USE_SQLITE: 'true'
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ============================================================================
+  # Build Job - Build Docker image
+  # ============================================================================
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: receipt-extractor:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # Deploy Job - Deploy to Railway
+  # ============================================================================
+  deploy:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+      
+      - name: Deploy to Railway
+        run: railway up --service receipt-extractor-api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      
+      - name: Run database migrations
+        run: |
+          railway run alembic upgrade head
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        continue-on-error: true
+
+  # ============================================================================
+  # Notify Job - Send deployment notification
+  # ============================================================================
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Deployment notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
