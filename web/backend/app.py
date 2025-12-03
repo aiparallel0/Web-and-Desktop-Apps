@@ -320,7 +320,7 @@ def cefr_suggestions():
                 'suggestions': [
                     {
                         'model_id': s.model_id,
-                        'type': s.improvement_type,
+                        'improvement_type': s.improvement_type,
                         'description': s.description,
                         'priority': s.priority,
                         'estimated_impact': s.estimated_impact

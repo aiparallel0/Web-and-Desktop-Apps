@@ -2029,7 +2029,7 @@ import sys
 
 # Paths handled by conftest.py
 
-from shared.utils.data_structures import LineItem, ReceiptData, ExtractionResult
+from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 
 
 class TestLineItem:
