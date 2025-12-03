@@ -49,8 +49,8 @@ NC='\033[0m' # No Color
 # Configuration
 BACKEND_PORT=5000
 FRONTEND_PORT=3000
-BACKEND_DIR="web-app/backend"
-FRONTEND_DIR="web-app/frontend"
+BACKEND_DIR="web/backend"
+FRONTEND_DIR="web/frontend"
 LOG_DIR="logs"
 
 # Get script directory
@@ -329,7 +329,7 @@ run_dependency_check() {
             echo ""
             echo "You can:"
             echo "  1. Run 'python3 check_dependencies.py' interactively for more control"
-            echo "  2. Install manually: pip install -r web-app/backend/requirements.txt"
+            echo "  2. Install manually: pip install -r web/backend/requirements.txt"
             return 1
         fi
     else
@@ -409,7 +409,7 @@ run_tests() {
         print_info "Including: circular_exchange framework, shared modules, backend tests"
         
         $PYTHON_CMD -m pytest tests/ \
-            --cov=shared --cov=web-app/backend \
+            --cov=shared --cov=web/backend \
             --cov-report=term-missing \
             --cov-report=html \
             -v --tb=short \

@@ -10,7 +10,7 @@
  * 
  * Circular Exchange Framework Integration:
  * -----------------------------------------
- * Module ID: web-app.frontend.app
+ * Module ID: web.frontend.app
  * Description: Frontend SPA for receipt extraction with batch processing and model finetuning
  * Dependencies: [API_BASE_URL backend, shared.models.model_manager]
  * Exports: [init, loadModels, selectModel, handleExtract, exportData]
