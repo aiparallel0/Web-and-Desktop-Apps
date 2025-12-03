@@ -76,10 +76,12 @@ This section provides a comprehensive overview of which files from the roadmap a
 - [x] `web/backend/telemetry/custom_metrics.py`
 - [x] `web/backend/telemetry/analytics.py`
 - [x] `web/backend/telemetry/logging_config.py`
+- [x] `web/backend/telemetry/cefr_bridge.py` - CEFR integration bridge
 
 **Phase 4.2: CEFR Integration**
 - [x] `shared/circular_exchange/production_integration.py`
 - [x] `shared/circular_exchange/auto_tuning.py`
+- [x] CEFR API endpoints in `web/backend/app.py`
 
 **Phase 5.1: Security**
 - [x] `web/backend/security/__init__.py`

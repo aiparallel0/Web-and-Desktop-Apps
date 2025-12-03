@@ -115,6 +115,16 @@ try:
 except ImportError as e:
     logger.info(f"Telemetry not available: {e}")
 
+# Initialize CEFR bridge for production integration
+cefr_bridge = None
+try:
+    from telemetry.cefr_bridge import get_cefr_bridge
+    cefr_bridge = get_cefr_bridge()
+    if cefr_bridge.is_enabled():
+        logger.info("CEFR bridge initialized")
+except ImportError as e:
+    logger.info(f"CEFR bridge not available: {e}")
+
 # Initialize security headers
 try:
     from security.headers import init_security_headers
@@ -265,6 +275,92 @@ def health_check():
   return jsonify(health_data)
  except ImportError:return jsonify({'status':'healthy','service':'receipt-extraction-api','version':'2.0','note':'Install psutil for detailed system metrics'})
  except Exception as e:logger.error(f"Health check error: {e}");return jsonify({'status':'unhealthy','service':'receipt-extraction-api','error':str(e)}),500
+
+@app.route('/api/cefr/dashboard', methods=['GET'])
+def cefr_dashboard():
+    """Get CEFR dashboard data with model performance insights."""
+    try:
+        if cefr_bridge and cefr_bridge.is_enabled():
+            data = cefr_bridge.get_dashboard_data()
+            return jsonify({'success': True, **data})
+        else:
+            return jsonify({
+                'success': True,
+                'enabled': False,
+                'message': 'CEFR integration not available'
+            })
+    except Exception as e:
+        logger.error(f"CEFR dashboard error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/cefr/model/<model_id>/health', methods=['GET'])
+def cefr_model_health(model_id):
+    """Get CEFR health status for a specific model."""
+    try:
+        if cefr_bridge and cefr_bridge.is_enabled():
+            health = cefr_bridge.get_model_health(model_id)
+            if health:
+                return jsonify({'success': True, 'health': health})
+            else:
+                return jsonify({'success': True, 'health': None, 'message': 'No data available'})
+        else:
+            return jsonify({'success': False, 'error': 'CEFR not available'}), 503
+    except Exception as e:
+        logger.error(f"CEFR model health error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/cefr/suggestions', methods=['GET'])
+def cefr_suggestions():
+    """Get improvement suggestions from CEFR."""
+    try:
+        if cefr_bridge and cefr_bridge.is_enabled():
+            suggestions = cefr_bridge.get_improvement_suggestions()
+            return jsonify({
+                'success': True,
+                'suggestions': [
+                    {
+                        'model_id': s.model_id,
+                        'type': s.improvement_type,
+                        'description': s.description,
+                        'priority': s.priority,
+                        'estimated_impact': s.estimated_impact
+                    }
+                    for s in suggestions
+                ]
+            })
+        else:
+            return jsonify({'success': False, 'error': 'CEFR not available'}), 503
+    except Exception as e:
+        logger.error(f"CEFR suggestions error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/cefr/feedback', methods=['POST'])
+def cefr_feedback():
+    """Submit user feedback to CEFR for model improvement."""
+    try:
+        data = request.get_json()
+        extraction_id = data.get('extraction_id')
+        model_id = data.get('model_id')
+        is_correct = data.get('is_correct', True)
+        corrections = data.get('corrections')
+        
+        if not extraction_id or not model_id:
+            return jsonify({'success': False, 'error': 'extraction_id and model_id required'}), 400
+        
+        if cefr_bridge and cefr_bridge.is_enabled():
+            cefr_bridge.report_feedback(
+                extraction_id=extraction_id,
+                model_id=model_id,
+                is_correct=is_correct,
+                corrections=corrections
+            )
+            return jsonify({'success': True, 'message': 'Feedback recorded'})
+        else:
+            return jsonify({'success': True, 'message': 'Feedback recorded (CEFR not available)'})
+    except Exception as e:
+        logger.error(f"CEFR feedback error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/models',methods=['GET'])
 def get_models():
  try:models=model_manager.get_available_models();current_model=model_manager.get_current_model();default_model=model_manager.get_default_model();return jsonify({'success':True,'models':models,'current_model':current_model,'default_model':default_model})
