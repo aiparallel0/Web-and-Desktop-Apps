@@ -12,11 +12,6 @@ class TestFlorenceProcessorEnhancements:
     @pytest.fixture
     def mock_florence_processor(self):
         """Create a mock Florence processor for testing extraction methods."""
-        # Import at test time to avoid dependencies
-        import sys
-        import os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-        
         # Mock the transformers and torch imports
         with patch.dict('sys.modules', {
             'torch': MagicMock(),
@@ -27,7 +22,7 @@ class TestFlorenceProcessorEnhancements:
             mock_processor.normalize_price = lambda x: Decimal(str(x).replace(',', '.').replace('$', '')) if x else None
             
             # Add the enhanced extraction methods
-            from ai_models import FlorenceProcessor
+            from shared.models.engine import FlorenceProcessor
             
             # Create instance without loading model
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
@@ -141,8 +136,8 @@ class TestFlorenceItemExtraction:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)
@@ -202,8 +197,8 @@ class TestFlorenceTotalExtraction:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)
@@ -252,8 +247,8 @@ class TestFlorenceConfidenceCalculation:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             from utils.data_structures import ReceiptData, LineItem
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
@@ -311,8 +306,8 @@ class TestFlorenceTaskPrompts:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             assert hasattr(FlorenceProcessor, 'TASK_OCR')
             assert hasattr(FlorenceProcessor, 'TASK_OCR_WITH_REGION')
@@ -335,8 +330,8 @@ class TestFlorenceNullChecks:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)
@@ -370,8 +365,8 @@ class TestFlorenceNullChecks:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)
@@ -395,8 +390,8 @@ class TestFlorenceNullChecks:
         }):
             import sys
             import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'models'))
-            from ai_models import FlorenceProcessor
+            
+            from shared.models.engine import FlorenceProcessor
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)

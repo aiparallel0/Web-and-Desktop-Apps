@@ -137,8 +137,7 @@ import json
 from PIL import Image
 from unittest.mock import Mock, patch, MagicMock
 
-# Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'web', 'backend'))
+# Paths are handled by conftest.py
 
 class TestHealthEndpoint:
     """Test health check endpoint"""
