@@ -292,6 +292,25 @@ class S3StorageHandler(BaseStorageHandler):
             logger.error(f"URL generation error: {e}")
             return None
     
+    def get_download_url(
+        self,
+        key: str,
+        expires_in: int = 3600
+    ) -> Optional[str]:
+        """
+        Generate a presigned download URL for the file.
+        
+        This is an alias for get_file_url for API compatibility.
+        
+        Args:
+            key: S3 object key
+            expires_in: URL expiration time in seconds (default 1 hour)
+            
+        Returns:
+            Presigned URL string
+        """
+        return self.get_file_url(key, expires_in)
+    
     def list_files(
         self,
         prefix: str = '',
