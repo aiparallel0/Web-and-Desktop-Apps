@@ -1,8 +1,15 @@
 """
-Database package initialization
+Database module - Models and connection management
 
 Integrated with Circular Exchange Framework for dynamic configuration.
 """
+
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import NullPool
+from contextlib import contextmanager
+import logging
 
 # Circular Exchange Framework Integration
 try:
@@ -20,49 +27,14 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             description="Database models and connection management for SQLAlchemy",
             dependencies=["shared.circular_exchange"],
             exports=["Base", "User", "Receipt", "Subscription", "APIKey", 
-                    "RefreshToken", "AuditLog", "get_db", "init_db"]
+                    "RefreshToken", "AuditLog", "get_db", "init_db", "CloudStorageProvider"]
         ))
     except Exception:
         pass  # Ignore registration errors during import
 
-from .models import (
-    Base,
-    User,
-    Receipt,
-    Subscription,
-    APIKey,
-    RefreshToken,
-    AuditLog,
-    SubscriptionPlan,
-    SubscriptionStatus
-)
-from .connection import get_db, init_db, engine
-
-__all__ = [
-    'Base',
-    'User',
-    'Receipt',
-    'Subscription',
-    'APIKey',
-    'RefreshToken',
-    'AuditLog',
-    'SubscriptionPlan',
-    'SubscriptionStatus',
-    'get_db',
-    'init_db',
-    'engine'
-]
 """
 Database connection and session management
 """
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.pool import NullPool
-from contextlib import contextmanager
-import logging
-
-from .models import Base
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +331,14 @@ class SubscriptionStatus(str, enum.Enum):
     TRIALING = "trialing"
 
 
+class CloudStorageProvider(str, enum.Enum):
+    """Cloud storage provider options for user data storage"""
+    NONE = "none"
+    S3 = "s3"
+    GDRIVE = "gdrive"
+    DROPBOX = "dropbox"
+
+
 class User(Base):
     """User model with authentication and subscription info"""
     __tablename__ = "users"
@@ -387,6 +367,10 @@ class User(Base):
     # Usage Tracking
     receipts_processed_month = Column(Integer, default=0)
     storage_used_bytes = Column(Integer, default=0)
+
+    # Cloud Storage Integration (Phase 1.2 - ROADMAP.md)
+    cloud_storage_provider = Column(SQLEnum(CloudStorageProvider), default=CloudStorageProvider.NONE, nullable=False)
+    cloud_storage_credentials = Column(Text, nullable=True)  # Encrypted JSON credentials
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -431,6 +415,10 @@ class Receipt(Base):
     file_size_bytes = Column(Integer, nullable=True)
     mime_type = Column(String(100), nullable=True)
 
+    # Cloud Storage Integration (Phase 1.2 - ROADMAP.md)
+    cloud_storage_key = Column(String(512), nullable=True)  # S3 key or cloud file ID
+    thumbnail_url = Column(String(512), nullable=True)  # Quick preview URL
+
     # Extraction Results
     extracted_data = Column(JSONBCompatible, nullable=True)  # Full receipt data as JSON
     store_name = Column(String(255), nullable=True, index=True)  # For searching
@@ -460,6 +448,7 @@ class Receipt(Base):
         Index('idx_receipt_store_name', 'store_name'),
         Index('idx_receipt_transaction_date', 'transaction_date'),
         Index('idx_receipt_status', 'status'),
+        Index('idx_receipt_cloud_key', 'cloud_storage_key'),  # For cloud storage queries
     )
 
     def __repr__(self):
@@ -615,6 +604,26 @@ class AuditLog(Base):
 
     def __repr__(self):
         return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id})>"
+
+
+# Module exports
+__all__ = [
+    'Base',
+    'User',
+    'Receipt',
+    'Subscription',
+    'APIKey',
+    'RefreshToken',
+    'AuditLog',
+    'SubscriptionPlan',
+    'SubscriptionStatus',
+    'CloudStorageProvider',
+    'get_db',
+    'init_db',
+    'engine',
+]
+
+
 """
 Receipts API routes for managing user receipts.
 
