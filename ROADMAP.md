@@ -404,20 +404,23 @@ Deploy the application to production servers with proper scaling and monitoring.
 
 8. **CI/CD Pipeline Enhancement**
 
-   Modify `.github/workflows/cef-pipeline.yml` to add deployment:
+   Create `.github/workflows/deploy.yml` for deployment:
    ```yaml
-   deploy:
-     needs: test-and-collect
-     runs-on: ubuntu-latest
-     if: github.ref == 'refs/heads/main'
-     steps:
-       - uses: actions/checkout@v3
-       - name: Deploy to Railway
-         run: |
-           npm i -g @railway/cli
-           railway up --service receipt-extractor-api
-         env:
-           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+   name: Deploy
+   on:
+     push:
+       branches: [main]
+   jobs:
+     deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - name: Deploy to Railway
+           run: |
+             npm i -g @railway/cli
+             railway up --service receipt-extractor-api
+           env:
+             RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
    ```
 
 **Files to Create:**
@@ -425,9 +428,9 @@ Deploy the application to production servers with proper scaling and monitoring.
 - `railway.json` (new)
 - `Dockerfile` (optional - for containerized deployment)
 - `.dockerignore` (optional)
+- `.github/workflows/deploy.yml` (new - for CI/CD)
 
 **Files to Modify:**
-- `.github/workflows/cef-pipeline.yml` (add deployment step)
 - `requirements.txt` (add gunicorn, gevent)
 - `web/backend/app.py` (add production config check)
 
