@@ -270,7 +270,9 @@ if CELERY_AVAILABLE:
         }
     
     
-    @celery_app.task(bind=True, name='training.monitor_training_job')
+    @celery_app.task(bind=True, name='training.monitor_training_job', 
+                     autoretry_for=(Exception,),
+                     retry_kwargs={'max_retries': 3, 'countdown': 60})
     def monitor_training_job(
         self,
         job_id: str,
@@ -282,6 +284,14 @@ if CELERY_AVAILABLE:
         This task polls the training provider for job status updates
         and stores them in the database for retrieval by the frontend.
         
+        Note: This task uses Celery's countdown feature for polling instead of
+        time.sleep() to avoid blocking the worker thread.
+        
+        Environment Variables:
+            TRAINING_POLL_INTERVAL: Seconds between polls (default: 30)
+            TRAINING_MAX_POLL_COUNT: Maximum number of polls (default: 720, ~6 hours)
+            TRAINING_ERROR_POLL_INTERVAL: Seconds to wait after error (default: 60)
+        
         Args:
             job_id: Training job ID
             provider: Training provider name (huggingface, replicate, runpod)
@@ -290,86 +300,92 @@ if CELERY_AVAILABLE:
             Dictionary with final job status
         """
         from . import TrainingFactory
-        import time
+        
+        # Configurable timeout settings via environment variables
+        poll_interval = int(os.getenv('TRAINING_POLL_INTERVAL', '30'))
+        max_polls = int(os.getenv('TRAINING_MAX_POLL_COUNT', '720'))
+        error_poll_interval = int(os.getenv('TRAINING_ERROR_POLL_INTERVAL', '60'))
         
         logger.info(f"Starting job monitoring: job_id={job_id}, provider={provider}")
         
         try:
             trainer = TrainingFactory.get_trainer(provider)
-            max_polls = 720  # Max 6 hours at 30-second intervals
-            poll_count = 0
             
-            while poll_count < max_polls:
-                poll_count += 1
+            try:
+                job = trainer.get_job_status(job_id)
                 
-                try:
-                    job = trainer.get_job_status(job_id)
-                    
-                    if not job:
-                        logger.warning(f"Job {job_id} not found")
-                        return {
-                            'success': False,
-                            'error': 'Job not found',
-                            'job_id': job_id
-                        }
-                    
-                    # Update task state for progress tracking
-                    self.update_state(
-                        state='MONITORING',
-                        meta={
-                            'job_id': job_id,
-                            'provider': provider,
-                            'status': job.status.value,
-                            'progress': job.progress,
-                            'poll_count': poll_count,
-                            'metrics': job.metrics.to_dict() if job.metrics else None
-                        }
-                    )
-                    
-                    # Check for terminal states
-                    if job.status.value == 'completed':
-                        logger.info(f"Job {job_id} completed successfully")
-                        return {
-                            'success': True,
-                            'job_id': job_id,
-                            'status': 'completed',
-                            'output_model_id': job.output_model_id,
-                            'output_model_url': job.output_model_url,
-                            'metrics': job.metrics.to_dict() if job.metrics else None
-                        }
-                    
-                    elif job.status.value in ['failed', 'cancelled']:
-                        logger.error(f"Job {job_id} {job.status.value}: {job.error}")
-                        return {
-                            'success': False,
-                            'job_id': job_id,
-                            'status': job.status.value,
-                            'error': job.error
-                        }
-                    
-                    # Wait before next poll
-                    time.sleep(30)
-                    
-                except Exception as poll_error:
-                    logger.warning(f"Error polling job {job_id}: {poll_error}")
-                    time.sleep(60)  # Wait longer on errors
-                    
-            # Timeout
-            logger.warning(f"Job {job_id} monitoring timed out")
-            return {
-                'success': False,
-                'job_id': job_id,
-                'status': 'timeout',
-                'error': 'Job monitoring timed out after 6 hours'
-            }
-            
+                if not job:
+                    logger.warning(f"Job {job_id} not found")
+                    return {
+                        'success': False,
+                        'error': 'Job not found',
+                        'job_id': job_id
+                    }
+                
+                # Update task state for progress tracking
+                poll_count = self.request.retries + 1
+                self.update_state(
+                    state='MONITORING',
+                    meta={
+                        'job_id': job_id,
+                        'provider': provider,
+                        'status': job.status.value,
+                        'progress': job.progress,
+                        'poll_count': poll_count,
+                        'metrics': job.metrics.to_dict() if job.metrics else None
+                    }
+                )
+                
+                # Check for terminal states
+                if job.status.value == 'completed':
+                    logger.info(f"Job {job_id} completed successfully")
+                    return {
+                        'success': True,
+                        'job_id': job_id,
+                        'status': 'completed',
+                        'output_model_id': job.output_model_id,
+                        'output_model_url': job.output_model_url,
+                        'metrics': job.metrics.to_dict() if job.metrics else None
+                    }
+                
+                elif job.status.value in ['failed', 'cancelled']:
+                    logger.error(f"Job {job_id} {job.status.value}: {job.error}")
+                    return {
+                        'success': False,
+                        'job_id': job_id,
+                        'status': job.status.value,
+                        'error': job.error
+                    }
+                
+                # Check if we've exceeded max polls
+                if poll_count >= max_polls:
+                    logger.warning(f"Job {job_id} monitoring timed out after {poll_count} polls")
+                    return {
+                        'success': False,
+                        'job_id': job_id,
+                        'status': 'timeout',
+                        'error': f'Job monitoring timed out after {poll_count * poll_interval} seconds'
+                    }
+                
+                # Schedule next poll using Celery retry with countdown
+                # This releases the worker thread instead of blocking with sleep()
+                raise self.retry(countdown=poll_interval, max_retries=max_polls)
+                
+            except self.MaxRetriesExceededError:
+                logger.warning(f"Job {job_id} monitoring exceeded max retries")
+                return {
+                    'success': False,
+                    'job_id': job_id,
+                    'status': 'timeout',
+                    'error': 'Job monitoring exceeded maximum polling attempts'
+                }
+                
         except Exception as e:
+            if isinstance(e, self.MaxRetriesExceededError):
+                raise
             logger.error(f"Monitor job failed: {e}")
-            return {
-                'success': False,
-                'job_id': job_id,
-                'error': str(e)
-            }
+            # Retry with longer interval on errors
+            raise self.retry(countdown=error_poll_interval, exc=e)
     
     
     # =========================================================================

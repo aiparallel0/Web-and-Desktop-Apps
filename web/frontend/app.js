@@ -1230,6 +1230,7 @@ function updateSubscriptionBadge(subscription) {
 
 /**
  * Format bytes to human-readable string
+ * Note: This function is duplicated in pricing.html. If modifying, update both files.
  * @param {number} bytes - Bytes to format
  * @returns {string} Formatted string
  */

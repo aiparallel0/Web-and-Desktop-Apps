@@ -512,13 +512,33 @@ This page displays subscription plans and integrates with Stripe for payments.
         
         let billingCycle = 'monthly';
         
+        /**
+         * Validate Stripe publishable key format
+         * @param {string} key - The Stripe publishable key
+         * @returns {boolean} True if key format is valid
+         */
+        function isValidStripeKey(key) {
+            if (!key || typeof key !== 'string') return false;
+            
+            // Stripe publishable keys should:
+            // - Start with 'pk_' followed by 'test_' or 'live_'
+            // - Be at least 32 characters long
+            const stripeKeyPattern = /^pk_(test|live)_[a-zA-Z0-9]{24,}$/;
+            return stripeKeyPattern.test(key);
+        }
+        
         // Initialize Stripe
         function initStripe() {
-            if (STRIPE_PUBLISHABLE_KEY && STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+            if (isValidStripeKey(STRIPE_PUBLISHABLE_KEY)) {
                 stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-                console.log('Stripe initialized');
+                const environment = STRIPE_PUBLISHABLE_KEY.includes('_test_') ? 'test' : 'live';
+                console.log(`Stripe initialized in ${environment} mode`);
+            } else if (STRIPE_PUBLISHABLE_KEY && STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+                // Fallback: accept key if it starts with pk_ even if format doesn't match exactly
+                console.warn('Stripe key format not fully validated, proceeding anyway');
+                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
             } else {
-                console.warn('Stripe publishable key not configured');
+                console.warn('Stripe publishable key not configured or invalid');
             }
         }
         
@@ -626,7 +646,12 @@ This page displays subscription plans and integrates with Stripe for payments.
             }
         }
         
-        // Format bytes to human readable
+        /**
+         * Format bytes to human readable
+         * Note: This function is duplicated in app.js. If modifying, update both files.
+         * @param {number} bytes - Bytes to format
+         * @returns {string} Formatted string
+         */
         function formatBytes(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
