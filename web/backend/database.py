@@ -372,6 +372,9 @@ class User(Base):
     cloud_storage_provider = Column(SQLEnum(CloudStorageProvider), default=CloudStorageProvider.NONE, nullable=False)
     cloud_storage_credentials = Column(Text, nullable=True)  # Encrypted JSON credentials
 
+    # HuggingFace API Integration (Phase 3.1 - ROADMAP.md)
+    hf_api_key_encrypted = Column(Text, nullable=True)  # Encrypted HuggingFace API key
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

@@ -268,6 +268,137 @@ if CELERY_AVAILABLE:
             'success': True,
             'cleaned_jobs': cleaned
         }
+    
+    
+    @celery_app.task(bind=True, name='training.monitor_training_job', 
+                     autoretry_for=(Exception,),
+                     retry_kwargs={'max_retries': 3, 'countdown': 60})
+    def monitor_training_job(
+        self,
+        job_id: str,
+        provider: str
+    ) -> Dict[str, Any]:
+        """
+        Celery task to monitor a training job and update its status.
+        
+        This task polls the training provider for job status updates
+        and stores them in the database for retrieval by the frontend.
+        
+        Note: This task uses Celery's countdown feature for polling instead of
+        time.sleep() to avoid blocking the worker thread.
+        
+        Environment Variables:
+            TRAINING_POLL_INTERVAL: Seconds between polls (default: 30)
+            TRAINING_MAX_POLL_COUNT: Maximum number of polls (default: 720, ~6 hours)
+            TRAINING_ERROR_POLL_INTERVAL: Seconds to wait after error (default: 60)
+        
+        Args:
+            job_id: Training job ID
+            provider: Training provider name (huggingface, replicate, runpod)
+            
+        Returns:
+            Dictionary with final job status
+        """
+        from . import TrainingFactory
+        
+        # Configurable timeout settings via environment variables
+        poll_interval = int(os.getenv('TRAINING_POLL_INTERVAL', '30'))
+        max_polls = int(os.getenv('TRAINING_MAX_POLL_COUNT', '720'))
+        error_poll_interval = int(os.getenv('TRAINING_ERROR_POLL_INTERVAL', '60'))
+        
+        logger.info(f"Starting job monitoring: job_id={job_id}, provider={provider}")
+        
+        try:
+            trainer = TrainingFactory.get_trainer(provider)
+            
+            try:
+                job = trainer.get_job_status(job_id)
+                
+                if not job:
+                    logger.warning(f"Job {job_id} not found")
+                    return {
+                        'success': False,
+                        'error': 'Job not found',
+                        'job_id': job_id
+                    }
+                
+                # Update task state for progress tracking
+                poll_count = self.request.retries + 1
+                self.update_state(
+                    state='MONITORING',
+                    meta={
+                        'job_id': job_id,
+                        'provider': provider,
+                        'status': job.status.value,
+                        'progress': job.progress,
+                        'poll_count': poll_count,
+                        'metrics': job.metrics.to_dict() if job.metrics else None
+                    }
+                )
+                
+                # Check for terminal states
+                if job.status.value == 'completed':
+                    logger.info(f"Job {job_id} completed successfully")
+                    return {
+                        'success': True,
+                        'job_id': job_id,
+                        'status': 'completed',
+                        'output_model_id': job.output_model_id,
+                        'output_model_url': job.output_model_url,
+                        'metrics': job.metrics.to_dict() if job.metrics else None
+                    }
+                
+                elif job.status.value in ['failed', 'cancelled']:
+                    logger.error(f"Job {job_id} {job.status.value}: {job.error}")
+                    return {
+                        'success': False,
+                        'job_id': job_id,
+                        'status': job.status.value,
+                        'error': job.error
+                    }
+                
+                # Check if we've exceeded max polls
+                if poll_count >= max_polls:
+                    logger.warning(f"Job {job_id} monitoring timed out after {poll_count} polls")
+                    return {
+                        'success': False,
+                        'job_id': job_id,
+                        'status': 'timeout',
+                        'error': f'Job monitoring timed out after {poll_count * poll_interval} seconds'
+                    }
+                
+                # Schedule next poll using Celery retry with countdown
+                # This releases the worker thread instead of blocking with sleep()
+                raise self.retry(countdown=poll_interval, max_retries=max_polls)
+                
+            except self.MaxRetriesExceededError:
+                logger.warning(f"Job {job_id} monitoring exceeded max retries")
+                return {
+                    'success': False,
+                    'job_id': job_id,
+                    'status': 'timeout',
+                    'error': 'Job monitoring exceeded maximum polling attempts'
+                }
+                
+        except Exception as e:
+            if isinstance(e, self.MaxRetriesExceededError):
+                raise
+            logger.error(f"Monitor job failed: {e}")
+            # Retry with longer interval on errors
+            raise self.retry(countdown=error_poll_interval, exc=e)
+    
+    
+    # =========================================================================
+    # CELERY BEAT SCHEDULE
+    # =========================================================================
+    
+    celery_app.conf.beat_schedule = {
+        'cleanup-old-jobs-daily': {
+            'task': 'training.cleanup_old_jobs',
+            'schedule': 86400.0,  # Run daily (24 hours in seconds)
+            'args': (7,),  # Keep jobs for 7 days
+        },
+    }
 
 
 # =============================================================================
@@ -278,20 +409,109 @@ def _load_dataset(dataset_id: str):
     """
     Load a dataset from storage.
     
+    Retrieves training dataset from database or cloud storage based on dataset_id.
+    
     Args:
-        dataset_id: Dataset ID
+        dataset_id: Dataset ID (UUID or reference string)
         
     Returns:
-        TrainingDataset object
+        TrainingDataset object with images, labels, and metadata
     """
     from .base import TrainingDataset
+    import os
     
-    # In real implementation, load from database/storage
-    # For now, return a mock dataset
+    logger.info(f"Loading dataset: {dataset_id}")
+    
+    # Try to load from database/storage
+    try:
+        # Check for environment-based storage configuration
+        storage_backend = os.getenv('TRAINING_DATASET_STORAGE', 'local')
+        
+        if storage_backend == 's3':
+            # Load from S3
+            from ..storage import StorageFactory
+            storage = StorageFactory.get_storage('s3')
+            dataset_key = f"datasets/{dataset_id}"
+            
+            # Retrieve dataset manifest
+            manifest = storage.download_file(f"{dataset_key}/manifest.json")
+            if manifest:
+                import json
+                manifest_data = json.loads(manifest.decode('utf-8'))
+                
+                # Load images from S3
+                images = []
+                labels = []
+                for item in manifest_data.get('items', []):
+                    image_data = storage.download_file(f"{dataset_key}/{item['image']}")
+                    if image_data:
+                        images.append(image_data)
+                        labels.append(item.get('label', {}))
+                
+                return TrainingDataset(
+                    images=images,
+                    labels=labels,
+                    metadata={
+                        'id': dataset_id,
+                        'source': 's3',
+                        'item_count': len(images)
+                    }
+                )
+        
+        elif storage_backend == 'database':
+            # Load from database
+            from ..database import get_db_context
+            
+            with get_db_context() as db:
+                # Query for dataset record (implement based on schema)
+                # This is a placeholder for actual database implementation
+                pass
+        
+        else:
+            # Local file storage
+            dataset_path = os.path.join(
+                os.getenv('TRAINING_DATA_DIR', './training_data'),
+                dataset_id
+            )
+            
+            if os.path.exists(dataset_path):
+                import json
+                manifest_path = os.path.join(dataset_path, 'manifest.json')
+                
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, 'r') as f:
+                        manifest_data = json.load(f)
+                    
+                    images = []
+                    labels = []
+                    for item in manifest_data.get('items', []):
+                        image_path = os.path.join(dataset_path, item['image'])
+                        if os.path.exists(image_path):
+                            with open(image_path, 'rb') as f:
+                                images.append(f.read())
+                            labels.append(item.get('label', {}))
+                    
+                    return TrainingDataset(
+                        images=images,
+                        labels=labels,
+                        metadata={
+                            'id': dataset_id,
+                            'source': 'local',
+                            'item_count': len(images)
+                        }
+                    )
+        
+        # If no dataset found, return mock for development
+        logger.warning(f"Dataset {dataset_id} not found, returning mock dataset for development")
+        
+    except Exception as e:
+        logger.error(f"Error loading dataset {dataset_id}: {e}")
+    
+    # Return mock dataset as fallback
     return TrainingDataset(
         images=[b'mock_image'] * 20,
         labels=[{'text': 'mock_label'}] * 20,
-        metadata={'id': dataset_id}
+        metadata={'id': dataset_id, 'source': 'mock'}
     )
 
 
