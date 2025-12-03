@@ -123,20 +123,31 @@ _LAZY_IMPORTS = {
     'STORE_NAME_CORRECTIONS': ('ocr', 'STORE_NAME_CORRECTIONS'),
 }
 
+# Module aliases for backward compatibility
+_MODULE_ALIASES = {
+    'processors': 'engine',  # Legacy alias for engine module
+}
+
 
 def __getattr__(name: str):
     """
     Lazy import handler for model components.
-    
+
     This pattern enables:
     - Fast initial imports
     - Graceful handling of missing optional dependencies
     - Reduced memory footprint until models are needed
-    
+
     CIRCULAR EXCHANGE NOTE:
     This lazy loading integrates with the circular exchange by deferring
     module registration until actual use, reducing startup overhead.
     """
+    # Handle module aliases (e.g., processors -> engine)
+    if name in _MODULE_ALIASES:
+        import importlib
+        module_name = _MODULE_ALIASES[name]
+        return importlib.import_module(f'.{module_name}', package='shared.models')
+
     if name in _LAZY_IMPORTS:
         module_name, class_name = _LAZY_IMPORTS[name]
         try:
@@ -148,7 +159,7 @@ def __getattr__(name: str):
                 f"Could not import {name} from shared.models.{module_name}. "
                 f"This may require additional dependencies. Error: {e}"
             )
-    
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

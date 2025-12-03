@@ -246,15 +246,16 @@ class TestBillingMiddleware:
         assert exc.limit == 1000
         assert exc.used == 1050
     
-    def test_require_subscription_decorator(self):
+    def test_require_subscription_decorator(self, flask_app):
         """Test require_subscription decorator."""
         from web.backend.billing.middleware import require_subscription
         from flask import g
-        from unittest.mock import MagicMock
 
-        # Create a mock Flask app context
-        app = MagicMock()
-        with app.app_context():
+        if not flask_app:
+            pytest.skip("Flask app not available")
+
+        # Create a real Flask app context
+        with flask_app.app_context():
             # Set user plan in g object
             g.user_plan = 'pro'
 

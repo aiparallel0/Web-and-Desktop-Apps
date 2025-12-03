@@ -56,7 +56,7 @@ def require_auth_billing(f):
     
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        from auth import verify_access_token
+        from web.backend.auth import verify_access_token
         
         auth_header = request.headers.get('Authorization')
         if not auth_header:

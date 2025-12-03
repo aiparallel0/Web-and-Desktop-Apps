@@ -249,7 +249,7 @@ class TestFlorenceConfidenceCalculation:
             import os
             
             from shared.models.engine import FlorenceProcessor
-            from utils.data_structures import ReceiptData, LineItem
+            from shared.utils.data import ReceiptData, LineItem
             
             with patch.object(FlorenceProcessor, '_load_model', return_value=None):
                 processor = FlorenceProcessor.__new__(FlorenceProcessor)

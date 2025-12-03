@@ -50,7 +50,7 @@ class TrainingProvider(Enum):
 @dataclass
 class TrainingConfig:
     """Configuration for a training job."""
-    model_id: str
+    model_id: str = 'default_model'
     epochs: int = 3
     batch_size: int = 4
     learning_rate: float = 5e-5
