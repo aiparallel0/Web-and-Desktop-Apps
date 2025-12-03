@@ -41,6 +41,13 @@ except ImportError:
 # Get database URL from environment
 def get_url():
     """Get database URL from environment or config."""
+    # Check for SQLite development/testing mode (matching web/backend/database.py logic)
+    if os.getenv('USE_SQLITE', 'false').lower() == 'true' or os.getenv('TESTING', 'false').lower() == 'true':
+        url = os.getenv('DATABASE_URL', 'sqlite:///./receipt_extractor.db')
+        if not url.startswith('sqlite'):
+            url = 'sqlite:///./receipt_extractor.db'
+        return url
+    
     url = os.getenv('DATABASE_URL')
     if url:
         # Handle postgres:// vs postgresql:// for SQLAlchemy 2.0
