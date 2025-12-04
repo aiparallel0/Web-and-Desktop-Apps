@@ -98,8 +98,9 @@ temp/
 tmp/
 receipt_extractor.db
 
-# Logs directory
-logs/
+# Logs directory (but keep structure)
+logs/*
+!logs/.gitkeep
 
 # Data collection and training artifacts
 data/training/
