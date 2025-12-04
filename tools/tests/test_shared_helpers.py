@@ -397,7 +397,7 @@ class TestLoggingModule:
         try:
             from shared.utils.logging import log_function_call
 
-            @log_function_call
+            @log_function_call()
             def test_function(x, y):
                 return x + y
 

@@ -70,9 +70,12 @@ class TestWebBackendConfig:
         import importlib
 
         # Dynamically import to get the function
+        # Build path relative to test file location
+        test_dir = Path(__file__).parent.parent.parent
+        config_path = test_dir / "web" / "backend" / "config.py"
         spec = importlib.util.spec_from_file_location(
             "config",
-            "/home/user/Web-and-Desktop-Apps/web/backend/config.py"
+            str(config_path)
         )
         if spec and spec.loader:
             config_module = importlib.util.module_from_spec(spec)
@@ -102,9 +105,12 @@ class TestWebBackendConfig:
         import sys
         import importlib
 
+        # Build path relative to test file location
+        test_dir = Path(__file__).parent.parent.parent
+        config_path = test_dir / "web" / "backend" / "config.py"
         spec = importlib.util.spec_from_file_location(
             "config",
-            "/home/user/Web-and-Desktop-Apps/web/backend/config.py"
+            str(config_path)
         )
         if spec and spec.loader:
             config_module = importlib.util.module_from_spec(spec)
@@ -133,9 +139,12 @@ class TestWebBackendConfig:
         import sys
         import importlib
 
+        # Build path relative to test file location
+        test_dir = Path(__file__).parent.parent.parent
+        config_path = test_dir / "web" / "backend" / "config.py"
         spec = importlib.util.spec_from_file_location(
             "config",
-            "/home/user/Web-and-Desktop-Apps/web/backend/config.py"
+            str(config_path)
         )
         if spec and spec.loader:
             config_module = importlib.util.module_from_spec(spec)
