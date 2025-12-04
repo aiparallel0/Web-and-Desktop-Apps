@@ -8,19 +8,23 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 testpaths = ["tools/tests"]
-addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing"
+addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing --no-header -ra"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "model: Model tests",
     "slow: Slow tests",
-    "web: Web app tests"
+    "web: Web app tests",
+    "cosmetic: Cosmetic enhancement tests"
 ]
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
 filterwarnings = [
     "ignore::DeprecationWarning:.*SwigPy.*",
-    "ignore::DeprecationWarning:.*swigvarlink.*"
+    "ignore::DeprecationWarning:.*swigvarlink.*",
+    "ignore::pytest.PytestCollectionWarning",
+    "ignore::DeprecationWarning:datetime.datetime.utcnow"
 ]
+plugins = ["tools.tests.pytest_custom_output"]
 
 [tool.coverage.run]
 source = ["shared", "web/backend"]
@@ -29,3 +33,4 @@ omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*"]
 [tool.coverage.report]
 precision = 2
 show_missing = true
+skip_empty = true

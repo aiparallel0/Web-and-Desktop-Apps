@@ -52,6 +52,7 @@ class DataCategory(Enum):
 
 class ExecutionStatus(Enum):
     """Status of a test execution."""
+    __test__ = False  # Tell pytest to ignore this class
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
@@ -65,6 +66,7 @@ TestStatus = ExecutionStatus
 @dataclass
 class ExecutionResult:
     """Represents a test execution result."""
+    __test__ = False  # Tell pytest to ignore this class
     test_id: str
     test_name: str
     module_path: str

@@ -13,7 +13,7 @@ import logging
 import time
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class AnalyticsTracker:
             session_id: User session identifier
         """
         event = AnalyticsEvent(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             user_id=user_id,
             event_name=event_name,
             properties=properties or {},
@@ -83,7 +83,7 @@ class AnalyticsTracker:
         
         # Update session tracking
         if user_id:
-            self._user_sessions[user_id] = datetime.utcnow()
+            self._user_sessions[user_id] = datetime.now(timezone.utc)
         
         logger.debug(f"Event tracked: {event_name} for user {user_id}")
     
@@ -191,7 +191,7 @@ class AnalyticsTracker:
         Returns:
             Number of active users
         """
-        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
         return sum(1 for ts in self._user_sessions.values() if ts > cutoff)
     
     def get_recent_events(
@@ -255,7 +255,7 @@ class AnalyticsTracker:
         Returns:
             Summary statistics
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         last_hour = now - timedelta(hours=1)
         last_day = now - timedelta(days=1)
         
@@ -323,7 +323,7 @@ class AnalyticsTracker:
             error_patterns[error_type] += 1
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "period_events": len(self._events),
             "model_performance": dict(model_stats),
             "error_patterns": dict(error_patterns),
