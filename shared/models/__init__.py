@@ -113,7 +113,7 @@ _LAZY_IMPORTS = {
     'FlorenceProcessor': ('engine', 'FlorenceProcessor'),
     'BaseDonutProcessor': ('engine', 'BaseDonutProcessor'),
     'ModelManager': ('manager', 'ModelManager'),
-    'OCRProcessor': ('config', 'OCRProcessor'),
+    'OCRProcessor': ('ocr_processor', 'OCRProcessor'),
     'normalize_price': ('ocr', 'normalize_price'),
     'SKIP_KEYWORDS': ('ocr', 'SKIP_KEYWORDS'),
     'clean_item_name': ('ocr', 'clean_item_name'),
@@ -126,6 +126,7 @@ _LAZY_IMPORTS = {
 # Module aliases for backward compatibility
 _MODULE_ALIASES = {
     'processors': 'engine',  # Legacy alias for engine module
+    'ai_models': 'engine',   # AI models are in engine module
 }
 
 
