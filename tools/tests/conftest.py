@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -145,8 +145,8 @@ def test_user(db_session):
         email_verified=True,
         receipts_processed_month=0,
         storage_used_bytes=0,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
     )
     db_session.add(user)
     db_session.commit()
@@ -175,8 +175,8 @@ def test_admin_user(db_session):
         is_active=True,
         is_admin=True,
         email_verified=True,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
     )
     db_session.add(user)
     db_session.commit()
@@ -207,8 +207,8 @@ def test_receipt(db_session, test_user):
         processing_time_seconds=2.5,
         confidence_score=0.95,
         status="completed",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
     )
     db_session.add(receipt)
     db_session.commit()

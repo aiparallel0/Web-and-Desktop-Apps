@@ -212,12 +212,12 @@ def cleanup_expired_tokens():
 
     Should be run periodically (e.g., daily cron job)
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     from .models import RefreshToken
 
     with get_db_context() as db:
         expired_count = db.query(RefreshToken).filter(
-            RefreshToken.expires_at < datetime.utcnow()
+            RefreshToken.expires_at < datetime.now(timezone.utc)
         ).delete()
 
         logger.info(f"Cleaned up {expired_count} expired refresh tokens")
@@ -243,15 +243,14 @@ def reset_monthly_usage():
 Database models for Receipt Extractor SaaS Platform
 Implements Priority 1: MVP Backend Infrastructure
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid as uuid_module
 from sqlalchemy import (
     Column, String, DateTime, Boolean, Integer, Float,
     ForeignKey, Text, JSON, Enum as SQLEnum, Index
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.types import TypeDecorator, CHAR
 import enum
 import json
@@ -937,8 +936,8 @@ def update_receipt(receipt_id):
             
             if 'extracted_data' in data and isinstance(data['extracted_data'], dict):
                 receipt.extracted_data = data['extracted_data']
-            
-            receipt.updated_at = datetime.utcnow()
+
+            receipt.updated_at = datetime.now(timezone.utc)
             db.commit()
             
             logger.info(f"Receipt updated: {receipt_id}")
@@ -979,9 +978,9 @@ def get_receipt_stats():
         
         with _get_db_context()() as db:
             query = db.query(Receipt).filter(Receipt.user_id == g.user_id)
-            
+
             # Apply time filter
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             if period == 'month':
                 start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 query = query.filter(Receipt.created_at >= start_date)
