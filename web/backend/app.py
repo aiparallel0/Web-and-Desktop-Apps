@@ -106,6 +106,14 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register billing routes: {e}")
 
+# Register quick extract routes (no auth required)
+try:
+    from api import quick_extract_bp
+    app.register_blueprint(quick_extract_bp)
+    logger.info("Quick extract API routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register quick extract routes: {e}")
+
 # Initialize telemetry (OpenTelemetry tracing and metrics)
 try:
     from telemetry import setup_telemetry

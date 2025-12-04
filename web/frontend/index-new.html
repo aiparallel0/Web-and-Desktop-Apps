@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Extract text from receipts instantly with AI-powered OCR. 98% accuracy, no signup required.">
+    <meta name="theme-color" content="#3B82F6">
+
+    <title>Extract Text from Any Receipt in Seconds | Receipt Extractor</title>
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="styles-new.css" as="style">
+    <link rel="preload" href="app-new.js" as="script">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles-new.css">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 2l7 7-7 7"></path>
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                </svg>
+                <span class="nav-title">Receipt Extractor</span>
+            </div>
+            <div class="nav-actions">
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#features" class="nav-link">Features</a>
+                <button class="btn btn-outline" id="signInBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Extract Text from Any Receipt in Seconds</h1>
+                <p class="hero-subtitle">AI-powered OCR with 98% accuracy. No signup required.</p>
+
+                <!-- Trust Signals -->
+                <div class="trust-signals">
+                    <div class="trust-item">
+                        <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>10,000+ receipts processed today</span>
+                    </div>
+                    <div class="trust-item">
+                        <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <span>Files auto-deleted after processing</span>
+                    </div>
+                    <div class="trust-item">
+                        <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                        <span>No credit card required for trial</span>
+                    </div>
+                </div>
+
+                <!-- Upload Zone Component -->
+                <div class="upload-zone-wrapper">
+                    <upload-zone id="mainUploadZone"></upload-zone>
+                </div>
+
+                <!-- 3-Step Visual Flow -->
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Upload</h3>
+                        <p class="step-desc">Drag & drop or click to select</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Extract</h3>
+                        <p class="step-desc">AI processes in seconds</p>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Export</h3>
+                        <p class="step-desc">JSON, CSV, or TXT</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Processing View (Hidden by default) -->
+    <section class="processing-section hidden" id="processingSection">
+        <div class="container">
+            <progress-bar id="extractProgress"></progress-bar>
+        </div>
+    </section>
+
+    <!-- Results View (Hidden by default) -->
+    <section class="results-section hidden" id="resultsSection">
+        <div class="container">
+            <results-view id="extractResults"></results-view>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">Why Choose Receipt Extractor?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Extract receipt data in under 3 seconds with our optimized AI models.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>98% Accuracy</h3>
+                    <p>Advanced OCR handles blurry images, handwriting, and complex layouts.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>Your files are automatically deleted after processing. Zero data retention.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile Ready</h3>
+                    <p>Works perfectly on any device - desktop, tablet, or smartphone.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>50+ Languages</h3>
+                    <p>Extract text from receipts in multiple languages worldwide.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Batch Processing</h3>
+                    <p>Process multiple receipts at once with our Pro plan.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <h2 class="section-title">Simple, Transparent Pricing</h2>
+            <div class="pricing-grid">
+                <!-- Free Tier -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Free</h3>
+                        <div class="price">
+                            <span class="price-amount">$0</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ 10 receipts/month</li>
+                        <li>✓ Basic models (Tesseract, EasyOCR)</li>
+                        <li>✓ Single file upload</li>
+                        <li>✓ Export: TXT, JSON</li>
+                        <li>✓ Email support</li>
+                    </ul>
+                    <button class="btn btn-outline btn-full">Start Free</button>
+                </div>
+
+                <!-- Pro Tier (Highlighted) -->
+                <div class="pricing-card pricing-card-featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Pro</h3>
+                        <div class="price">
+                            <span class="price-amount">$19</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ 500 receipts/month</li>
+                        <li>✓ All AI models (Donut, Florence)</li>
+                        <li>✓ Batch processing</li>
+                        <li>✓ Export: CSV, Excel, API</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ Real-time preview</li>
+                    </ul>
+                    <button class="btn btn-primary btn-full">Try Free 14 Days</button>
+                </div>
+
+                <!-- Business Tier -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Business</h3>
+                        <div class="price">
+                            <span class="price-amount">$49</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ 2,000 receipts/month</li>
+                        <li>✓ Custom model training</li>
+                        <li>✓ API access with webhooks</li>
+                        <li>✓ Dedicated support</li>
+                        <li>✓ SLA guarantee</li>
+                        <li>✓ Team collaboration</li>
+                    </ul>
+                    <button class="btn btn-outline btn-full">Schedule Demo</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="testimonials">
+        <div class="container">
+            <h2 class="section-title">Trusted by Thousands</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"Saved me hours of manual data entry. The accuracy is incredible!"</p>
+                    <div class="testimonial-author">
+                        <strong>Sarah M.</strong>
+                        <span>Small Business Owner</span>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"Finally, an OCR tool that actually works with blurry receipt photos."</p>
+                    <div class="testimonial-author">
+                        <strong>James L.</strong>
+                        <span>Accountant</span>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"The batch processing feature is a game-changer for our team."</p>
+                    <div class="testimonial-author">
+                        <strong>Emily R.</strong>
+                        <span>Finance Manager</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Receipt Extractor</h4>
+                    <p>AI-powered OCR for modern businesses</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#api">API</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="#about">About</a>
+                    <a href="#privacy">Privacy</a>
+                    <a href="#terms">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="#help">Help Center</a>
+                    <a href="#contact">Contact</a>
+                    <a href="#status">Status</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Upgrade Prompt (Shown after 3 extractions) -->
+    <div class="upgrade-banner hidden" id="upgradeBanner">
+        <div class="upgrade-content">
+            <span class="upgrade-emoji">🎉</span>
+            <div class="upgrade-text">
+                <strong>You've extracted 3 receipts!</strong>
+                <span>Upgrade to Pro for batch processing, priority AI models, and more.</span>
+            </div>
+            <button class="btn btn-primary btn-sm" id="upgradeBtn">See Plans →</button>
+            <button class="upgrade-close" id="closeUpgradeBtn" aria-label="Close">×</button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="components/upload-zone.js" defer></script>
+    <script src="components/progress-bar.js" defer></script>
+    <script src="components/results-view.js" defer></script>
+    <script src="app-new.js" defer></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
