@@ -16,9 +16,9 @@ This document describes the **radical frontend redesign** that transforms the re
 
 ```
 web/frontend/
-├── index-new.html              # New conversion-optimized landing page
-├── styles-new.css              # Mobile-first CSS with design system
-├── app-new.js                  # Modular JavaScript controller
+├── index.html                  # Conversion-optimized landing page (REDESIGNED)
+├── styles.css                  # Mobile-first CSS with design system (REDESIGNED)
+├── app.js                      # Modular JavaScript controller (REDESIGNED)
 ├── components/
 │   ├── upload-zone.js          # Drag-drop upload component
 │   ├── progress-bar.js         # Real-time progress indicator
@@ -426,23 +426,28 @@ def add_cache_headers(response):
 
 ---
 
-## 🔄 Migration Plan
+## 🔄 Migration Status
 
-### Phase 1: Parallel Deployment (Current)
-- New frontend: `/index-new.html`
-- Old frontend: `/index.html` (unchanged)
-- Both coexist, user can choose
+### ✅ Complete - Files Consolidated
+- Old `index.html` → Replaced with new design
+- Old `styles.css` → Replaced with new design
+- Old `app.js` → Replaced with new design
+- Backup files created: `*.backup` (can be deleted after testing)
 
-### Phase 2: A/B Testing (Recommended)
-- 50% traffic to new frontend
-- 50% traffic to old frontend
+### Rollback Instructions (if needed)
+If you need to revert to the old design:
+```bash
+cd web/frontend
+cp index.html.backup index.html
+cp styles.css.backup styles.css
+cp app.js.backup app.js
+```
+
+### A/B Testing (Optional Future Enhancement)
+If you want to test both versions:
+- Serve different versions based on URL parameter
 - Track conversion metrics
-- Duration: 2 weeks
-
-### Phase 3: Full Rollover
-- Replace `/index.html` with new design
-- Redirect old URL to new experience
-- Deprecate old code
+- Duration: 2 weeks recommended
 
 ---
 

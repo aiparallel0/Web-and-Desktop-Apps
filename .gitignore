@@ -107,3 +107,4 @@ tools/data/receipts/*.jpeg
 tools/data/receipts/*.png
 tools/data/receipts/*.tiff
 tools/data/receipts/*.tif
+*.backup
