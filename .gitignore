@@ -23,6 +23,17 @@ venv/
 env/
 ENV/
 
+# Environment variables
+.env
+.env.local
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+data/
+uploads/
+
 # Electron / Node.js
 node_modules/
 dist/

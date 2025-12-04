@@ -23,7 +23,7 @@ import warnings
 warnings.simplefilter("ignore")
 
 # Register our custom pytest plugin for Windows cleanup fix
-pytest_plugins = ["pytest_windows_cleanup_fix"]
+# pytest_plugins = ["pytest_windows_cleanup_fix"]  # DISABLED - not needed, hooks below handle cleanup
 
 # Fix: Navigate up 3 levels from tests/ -> tools/ -> project_root
 # Structure: project_root/tools/tests/conftest.py
