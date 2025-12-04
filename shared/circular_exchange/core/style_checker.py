@@ -114,6 +114,9 @@ class StyleChecker:
                             suggestion="Expand with specific details"
                         ))
             
+            # Check for missing module files (import validation)
+            issues.extend(self._check_module_imports(file_path, content))
+            
         except Exception as e:
             issues.append(StyleIssue(
                 file_path=str(file_path),
@@ -122,6 +125,60 @@ class StyleChecker:
                 message=str(e),
                 suggestion="Fix syntax error"
             ))
+        
+        return issues
+    
+    def _check_module_imports(self, file_path: Path, content: str) -> List[StyleIssue]:
+        """
+        Check for imports from non-existent module files.
+        
+        This prevents the issue where code imports from modules that don't exist,
+        which causes 'No module named...' errors at runtime.
+        """
+        issues = []
+        
+        try:
+            tree = ast.parse(content)
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    if node.module and node.module.startswith('shared.models.'):
+                        parts = node.module.split('.')
+                        if len(parts) >= 3:
+                            module_name = parts[2]
+                            models_dir = self.project_root / 'shared' / 'models'
+                            expected_path = models_dir / f'{module_name}.py'
+                            
+                            if not expected_path.exists():
+                                issues.append(StyleIssue(
+                                    file_path=str(file_path),
+                                    line_number=node.lineno,
+                                    issue_type="missing_module_file",
+                                    message=f"Import from '{node.module}' but file '{expected_path.name}' does not exist",
+                                    suggestion=f"Create {expected_path.name} or update import to use existing module"
+                                ))
+                
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.startswith('shared.models.'):
+                            parts = alias.name.split('.')
+                            if len(parts) >= 3:
+                                module_name = parts[2]
+                                models_dir = self.project_root / 'shared' / 'models'
+                                expected_path = models_dir / f'{module_name}.py'
+                                
+                                if not expected_path.exists():
+                                    issues.append(StyleIssue(
+                                        file_path=str(file_path),
+                                        line_number=node.lineno,
+                                        issue_type="missing_module_file",
+                                        message=f"Import '{alias.name}' but file '{expected_path.name}' does not exist",
+                                        suggestion=f"Create {expected_path.name} or update import to use existing module"
+                                    ))
+        
+        except SyntaxError:
+            # Already handled by parse_error above
+            pass
         
         return issues
     
