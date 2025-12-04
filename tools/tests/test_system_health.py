@@ -43,7 +43,9 @@ def test_tesseract_installation():
         print("  Install from: https://github.com/tesseract-ocr/tesseract")
 
 def test_config_files():
-    config_path = Path(__file__).parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (3 levels up from tools/tests/test_system_health.py)
+    project_root = Path(__file__).resolve().parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     assert config_path.exists(), f"Config file not found: {config_path}"
     import json
     with open(config_path) as f:
