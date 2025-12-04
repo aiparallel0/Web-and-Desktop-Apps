@@ -134,7 +134,8 @@ capture_resource_snapshot() {
     if command -v top &> /dev/null; then
         cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}' 2>/dev/null || echo "N/A")
     elif command -v ps &> /dev/null; then
-        cpu_usage=$(ps -A -o %cpu | awk '{s+=$1} END {print s"%"}' 2>/dev/null || echo "N/A")
+        # Use lowercase -a for better cross-platform compatibility (Linux/macOS/BSD)
+        cpu_usage=$(ps -a -o %cpu 2>/dev/null | awk 'NR>1 {s+=$1} END {print s"%"}' 2>/dev/null || echo "N/A")
     else
         cpu_usage="N/A"
     fi
@@ -838,9 +839,10 @@ run_dependency_check() {
         fi
     else
         print_warning "check_dependencies.py not found, using pip install"
+        local current_dir=$(pwd)
         cd "$BACKEND_DIR"
-        pip3 install -q -r requirements.txt 2>"../$LOG_DIR/pip-install.log"
-        cd -
+        pip3 install -q -r requirements.txt 2>"$current_dir/$LOG_DIR/pip-install.log"
+        cd "$current_dir"
         DEPS_CHECKED=true
         end_operation "dependency_check" "SUCCESS"
         return 0
