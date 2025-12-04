@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Path is set by conftest.py
 # project_root is tools/tests/.. -> tools/ -> project_root
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent
 
 def test_python_version():
     version = sys.version_info
@@ -43,7 +43,7 @@ def test_tesseract_installation():
         print("  Install from: https://github.com/tesseract-ocr/tesseract")
 
 def test_config_files():
-    config_path = Path(__file__).parent.parent / 'shared' / 'config' / 'models_config.json'
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     assert config_path.exists(), f"Config file not found: {config_path}"
     import json
     with open(config_path) as f:

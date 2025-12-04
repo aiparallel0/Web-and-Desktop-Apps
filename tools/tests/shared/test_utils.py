@@ -623,12 +623,16 @@ from shared.models.manager import ModelManager
 
 @pytest.mark.unit
 def test_models_config_exists():
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     assert config_path.exists(), "models_config.json should exist"
 
 @pytest.mark.unit
 def test_models_config_valid_json():
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
     assert isinstance(config, dict), "Config should be a dictionary"
@@ -637,7 +641,9 @@ def test_models_config_valid_json():
 
 @pytest.mark.unit
 def test_models_config_has_required_models():
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
     models = config['available_models']
@@ -647,7 +653,9 @@ def test_models_config_has_required_models():
 
 @pytest.mark.unit
 def test_default_model_exists():
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
     default_model = config['default_model']
@@ -657,7 +665,9 @@ def test_default_model_exists():
 
 @pytest.mark.unit
 def test_model_schema():
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
     required_fields = ['id', 'name', 'type', 'description']
@@ -793,7 +803,9 @@ def test_model_manager_config_validation_model_schema():
 @pytest.mark.unit
 def test_model_manager_default_model_validation():
     """Test that default model exists in available models"""
-    config_path = Path(__file__).parent.parent.parent / 'shared' / 'config' / 'models_config.json'
+    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
 
