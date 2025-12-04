@@ -21,7 +21,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 
@@ -167,17 +167,17 @@ class TrainingJob:
     
     def add_log(self, message: str) -> None:
         """Add a log message."""
-        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         self.logs.append(f"[{timestamp}] {message}")
     
     def update_status(self, status: TrainingStatus) -> None:
         """Update job status with timestamps."""
         self.status = status
-        
+
         if status == TrainingStatus.TRAINING and not self.started_at:
-            self.started_at = datetime.utcnow()
+            self.started_at = datetime.now(timezone.utc)
         elif status in [TrainingStatus.COMPLETED, TrainingStatus.FAILED, TrainingStatus.CANCELLED]:
-            self.completed_at = datetime.utcnow()
+            self.completed_at = datetime.now(timezone.utc)
 
 
 @dataclass

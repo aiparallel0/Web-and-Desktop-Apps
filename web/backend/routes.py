@@ -5,7 +5,7 @@ These routes integrate the auth module with the database and provide a complete
 authentication system for the Receipt Extractor application.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, g
 from functools import wraps
 
@@ -104,8 +104,8 @@ def register():
                 company=company or None,
                 is_active=True,
                 email_verified=False,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db.add(user)
             db.flush()  # Get the user ID
@@ -119,7 +119,7 @@ def register():
                 id=uuid.uuid4(),
                 user_id=user.id,
                 token_hash=token_hash,
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
                 device_info=request.headers.get('User-Agent', '')[:255],
                 ip_address=request.remote_addr
             )
@@ -191,8 +191,8 @@ def login():
                 return jsonify({'success': False, 'error': 'Account is disabled'}), 401
             
             # Update last login
-            user.last_login_at = datetime.utcnow()
-            
+            user.last_login_at = datetime.now(timezone.utc)
+
             # Create tokens
             access_token = create_access_token(str(user.id), user.email, user.is_admin)
             refresh_token, token_hash = create_refresh_token()
@@ -203,7 +203,7 @@ def login():
                 id=uuid.uuid4(),
                 user_id=user.id,
                 token_hash=token_hash,
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
                 device_info=request.headers.get('User-Agent', '')[:255],
                 ip_address=request.remote_addr
             )
@@ -268,7 +268,7 @@ def refresh_token():
             refresh_record = db.query(RefreshToken).filter(
                 RefreshToken.token_hash == token_hash,
                 RefreshToken.revoked.is_(False),
-                RefreshToken.expires_at > datetime.utcnow()
+                RefreshToken.expires_at > datetime.now(timezone.utc)
             ).first()
             
             if not refresh_record:
@@ -462,7 +462,7 @@ def change_password():
             
             # Update password
             user.password_hash = hash_password(new_password)
-            user.updated_at = datetime.utcnow()
+            user.updated_at = datetime.now(timezone.utc)
             db.commit()
             
             logger.info(f"Password changed for user: {user.email}")

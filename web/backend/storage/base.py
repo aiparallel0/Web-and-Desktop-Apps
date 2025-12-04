@@ -21,7 +21,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List, Union, BinaryIO
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -240,7 +240,7 @@ class BaseStorageHandler(ABC):
         
         safe_name = secure_filename(filename)
         unique_id = str(uuid.uuid4())[:8]
-        timestamp = datetime.utcnow().strftime('%Y%m%d')
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d')
         
         if user_id:
             return f"{prefix}/{user_id}/{timestamp}/{unique_id}_{safe_name}"

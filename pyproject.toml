@@ -24,7 +24,6 @@ filterwarnings = [
     "ignore::pytest.PytestCollectionWarning",
     "ignore::DeprecationWarning:datetime.datetime.utcnow"
 ]
-plugins = ["tools.tests.pytest_custom_output"]
 
 [tool.coverage.run]
 source = ["shared", "web/backend"]
