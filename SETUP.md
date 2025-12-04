@@ -4,29 +4,33 @@ Complete setup guide for Windows, macOS, and Linux.
 
 ## Quick Start
 
-### Automated Setup (Recommended)
-
-**Windows (Command Prompt with Admin):**
-```cmd
-setup_windows.bat
-```
-
-**Linux/macOS/Windows (Git Bash):**
 ```bash
-bash setup.sh
-```
+# 1. Clone the repository
+git clone https://github.com/yourusername/Web-and-Desktop-Apps.git
+cd Web-and-Desktop-Apps
 
-The setup script will:
-- ✅ Create Python virtual environment
-- ✅ Install all dependencies
-- ✅ Fix Windows symlink issues
-- ✅ Create `.env` configuration file
-- ✅ Set up Alembic for database migrations
-- ✅ Check for PostgreSQL and Tesseract
+# 2. Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# or: venv\Scripts\activate  # Windows
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# 5. Run tests
+pytest tools/tests -v
+
+# 6. Start the application
+python web/backend/app.py
+```
 
 ---
 
-## Manual Setup
+## Detailed Setup
 
 ### Prerequisites
 
@@ -141,23 +145,7 @@ STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
 
-#### 5. Fix Windows Symlink Issues (Windows Only)
-
-If you're on Windows and tests are failing with "models_config.json not found":
-
-**Option A: Run as Administrator**
-```cmd
-mklink /J tools\shared shared
-```
-
-**Option B: Enable Developer Mode**
-1. Open Settings → Update & Security → For Developers
-2. Enable "Developer Mode"
-3. Run: `bash setup.sh`
-
-**Option C: The setup scripts handle this automatically**
-
-#### 6. Set Up Database
+#### 5. Set Up Database
 
 **Option A: PostgreSQL (Production)**
 
@@ -181,7 +169,7 @@ alembic upgrade head
 
 The SQLite database file will be created at `./receipts.db`
 
-#### 7. Run Tests
+#### 6. Run Tests
 
 ```bash
 # Run all tests
@@ -208,7 +196,7 @@ xdg-open htmlcov/index.html  # Linux
 start htmlcov/index.html  # Windows
 ```
 
-#### 8. Run the Application
+#### 7. Run the Application
 
 **Web Backend:**
 ```bash
@@ -240,23 +228,11 @@ npm start
 **Solution:** Alembic configuration file missing in project root.
 
 ```bash
-# The setup.sh script creates this automatically, or:
+# Copy migrations alembic.ini or create one:
 cp migrations/alembic.ini alembic.ini
 
 # Edit alembic.ini to set:
 script_location = migrations
-```
-
-### Issue: `models_config.json should exist` test failure
-
-**Solution:** Windows symlink issue.
-
-```bash
-# Run setup script as Administrator:
-setup_windows.bat
-
-# Or manually:
-mklink /J tools\shared shared
 ```
 
 ### Issue: `boto3 not available` in S3 tests
@@ -381,11 +357,8 @@ Web-and-Desktop-Apps/
 │   │   ├── shared/          # Shared module tests
 │   │   ├── backend/         # Backend tests
 │   │   └── circular_exchange/
-│   ├── scripts/             # Utility scripts
-│   └── shared -> ../shared  # Symlink (created by setup)
+│   └── scripts/             # Utility scripts
 ├── alembic.ini              # Database migration config
-├── setup.sh                 # Linux/macOS/Git Bash setup
-├── setup_windows.bat        # Windows setup
 └── .env                     # Environment configuration
 ```
 
@@ -393,11 +366,12 @@ Web-and-Desktop-Apps/
 
 ## Next Steps
 
-1. ✅ Run the setup script
-2. ✅ Configure your `.env` file
-3. ✅ Run tests to verify installation
-4. 📖 Read the [API Documentation](docs/API.md)
-5. 🚀 Start building!
+1. ✅ Clone the repository
+2. ✅ Install dependencies
+3. ✅ Configure your `.env` file
+4. ✅ Run tests to verify installation
+5. 📖 Read the [API Documentation](docs/API.md)
+6. 🚀 Start building!
 
 For more information:
 - **API Docs**: See `docs/API.md`
