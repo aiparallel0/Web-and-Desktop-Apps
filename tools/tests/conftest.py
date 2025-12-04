@@ -9,10 +9,13 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 
 # Fix: Navigate up 3 levels from tests/ -> tools/ -> project_root
 # Structure: project_root/tools/tests/conftest.py
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 # Add web/backend for database and auth imports (backwards compatibility)
 sys.path.insert(0, str(project_root / 'web' / 'backend'))
+
+# Export project_root for use in all test modules (fixes Windows path issues)
+pytest.project_root = project_root
 
 # Original fixtures
 @pytest.fixture(autouse=True)

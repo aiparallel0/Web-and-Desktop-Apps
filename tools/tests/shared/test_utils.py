@@ -3,6 +3,14 @@ Tests for the shared data structures module.
 """
 import pytest
 from decimal import Decimal
+from pathlib import Path
+
+# Use shared project_root from conftest.py (fixes Windows path resolution issues)
+try:
+    project_root = pytest.project_root
+except AttributeError:
+    # Fallback if conftest.py hasn't set it yet
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class TestLineItem:
@@ -616,22 +624,18 @@ class TestGetConfig:
         # After reload, should be a new instance
         # (in current implementation they may be different objects)
         assert config2 is not None
-import pytest
-from pathlib import Path
+
+# Additional imports for config tests
 import json
 from shared.models.manager import ModelManager
 
 @pytest.mark.unit
 def test_models_config_exists():
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
-    assert config_path.exists(), "models_config.json should exist"
+    assert config_path.exists(), f"models_config.json should exist at {config_path}"
 
 @pytest.mark.unit
 def test_models_config_valid_json():
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -641,8 +645,6 @@ def test_models_config_valid_json():
 
 @pytest.mark.unit
 def test_models_config_has_required_models():
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -653,8 +655,6 @@ def test_models_config_has_required_models():
 
 @pytest.mark.unit
 def test_default_model_exists():
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -665,8 +665,6 @@ def test_default_model_exists():
 
 @pytest.mark.unit
 def test_model_schema():
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -803,8 +801,6 @@ def test_model_manager_config_validation_model_schema():
 @pytest.mark.unit
 def test_model_manager_default_model_validation():
     """Test that default model exists in available models"""
-    # Get project root (4 levels up from tools/tests/shared/test_utils.py)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
     config_path = project_root / 'shared' / 'config' / 'models_config.json'
     with open(config_path, 'r') as f:
         config = json.load(f)

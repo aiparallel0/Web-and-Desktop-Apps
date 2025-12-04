@@ -1,10 +1,14 @@
 import sys
 import os
+import pytest
 from pathlib import Path
 
-# Path is set by conftest.py
-# project_root is tools/tests/.. -> tools/ -> project_root
-project_root = Path(__file__).resolve().parent.parent.parent
+# Use shared project_root from conftest.py (fixes Windows path resolution issues)
+try:
+    project_root = pytest.project_root
+except AttributeError:
+    # Fallback if conftest.py hasn't set it yet
+    project_root = Path(__file__).resolve().parent.parent.parent
 
 def test_python_version():
     version = sys.version_info
