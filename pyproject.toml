@@ -8,7 +8,7 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 testpaths = ["tools/tests"]
-addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing --no-header -ra"
+addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing --no-header -ra -p no:cacheprovider"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
@@ -18,12 +18,19 @@ markers = [
     "cosmetic: Cosmetic enhancement tests"
 ]
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
+# Aggressive warning suppression - eliminate ALL noise from test output
 filterwarnings = [
-    "ignore::DeprecationWarning:.*SwigPy.*",
-    "ignore::DeprecationWarning:.*swigvarlink.*",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::FutureWarning",
+    "ignore::UserWarning:.*swigvarlink.*",
     "ignore::pytest.PytestCollectionWarning",
-    "ignore::DeprecationWarning:datetime.datetime.utcnow"
+    "ignore::ResourceWarning",
+    "ignore::ImportWarning"
 ]
+# Disable pytest's temp directory retention to prevent Windows cleanup issues
+tmp_path_retention_count = 0
+tmp_path_retention_policy = "none"
 
 [tool.coverage.run]
 source = ["shared", "web/backend"]
