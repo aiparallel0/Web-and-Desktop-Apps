@@ -23,6 +23,10 @@ venv/
 env/
 ENV/
 
+# Environment variables
+.env
+.env.local
+
 # Electron / Node.js
 node_modules/
 dist/
