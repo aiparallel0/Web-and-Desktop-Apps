@@ -330,7 +330,7 @@ run_dependency_check() {
             echo ""
             echo "You can:"
             echo "  1. Run 'python3 check_dependencies.py' interactively for more control"
-            echo "  2. Install manually: pip install -r web/backend/requirements.txt"
+            echo "  2. Install manually: pip install -r requirements.txt"
             return 1
         fi
     else

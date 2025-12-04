@@ -10,6 +10,7 @@ Key Features:
 - @retry_on_failure: Automatic retry logic with exponential backoff
 - @log_execution_time: Performance monitoring
 - @deprecated: Deprecation warnings for legacy code
+- @handle_errors: Graceful error handling with default return values
 """
 import functools
 import time
@@ -34,7 +35,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             file_path=__file__,
             description="Utility decorators for reducing boilerplate and adding cross-cutting concerns",
             dependencies=[],
-            exports=["circular_exchange_module", "retry_on_failure", "log_execution_time", "deprecated"]
+            exports=["circular_exchange_module", "retry_on_failure", "log_execution_time", "deprecated", "handle_errors"]
         ))
     except Exception:
         pass  # Ignore registration errors
@@ -247,9 +248,46 @@ def deprecated(reason: str = "", alternative: Optional[str] = None):
     return decorator
 
 
+def handle_errors(default_return: Any = None, log_traceback: bool = True):
+    """
+    Decorator to handle errors gracefully with optional default return value.
+
+    Catches all exceptions, logs them, and returns a default value instead of raising.
+    Useful for non-critical operations where failures should not crash the application.
+
+    Args:
+        default_return: Value to return if an exception occurs
+        log_traceback: Whether to log full traceback (default: True)
+
+    Returns:
+        Decorator function
+
+    Example:
+        >>> @handle_errors(default_return={})
+        ... def extract_receipt(image):
+        ...     # May fail, but won't crash
+        ...     return process_with_ocr(image)
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if log_traceback:
+                    logger.exception(f"Error in {func.__name__}: {e}")
+                else:
+                    logger.error(f"Error in {func.__name__}: {e}")
+                return default_return
+
+        return wrapper
+    return decorator
+
+
 __all__ = [
     'circular_exchange_module',
     'retry_on_failure',
     'log_execution_time',
-    'deprecated'
+    'deprecated',
+    'handle_errors'
 ]
