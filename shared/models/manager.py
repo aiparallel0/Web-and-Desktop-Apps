@@ -76,6 +76,7 @@ import gc
 import json
 import logging
 import threading
+import importlib
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, List, Any, Protocol, TypeVar, runtime_checkable
 from pathlib import Path
@@ -436,7 +437,7 @@ class ProcessorFactory:
             ImportError: If dependencies are missing
         """
         try:
-            module = __import__(module_path, fromlist=[class_name], level=1)
+            module = importlib.import_module(module_path, package='shared.models')
             processor_class = getattr(module, class_name)
 
             if not callable(processor_class):
