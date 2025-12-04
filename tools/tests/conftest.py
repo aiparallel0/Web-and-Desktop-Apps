@@ -15,6 +15,36 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / 'web' / 'backend'))
 
 # Original fixtures
+@pytest.fixture(autouse=True)
+def reset_global_state():
+    """
+    Reset all global singletons and module-level caches for test isolation.
+    This fixture runs automatically before each test to ensure clean state.
+    """
+    yield
+
+    # Reset OCR configuration singletons
+    try:
+        from shared.models.config import reset_ocr_config
+        reset_ocr_config()
+    except ImportError:
+        pass
+
+    # Reset OCR module cache
+    try:
+        import shared.models.ocr as ocr_module
+        ocr_module._ocr_config = None
+    except (ImportError, AttributeError):
+        pass
+
+    # Reset engine module cache
+    try:
+        import shared.models.engine as engine_module
+        if hasattr(engine_module, '_finetuning_torch'):
+            engine_module._finetuning_torch = None
+    except (ImportError, AttributeError):
+        pass
+
 @pytest.fixture
 def sample_receipt_data():
     return {

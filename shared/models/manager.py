@@ -364,131 +364,97 @@ class GPUDetector:
 
 class ProcessorFactory:
     """
-    Factory for creating processor instances based on model type.
-    
-    Implements the Factory Pattern for dynamic processor instantiation.
+    Factory for creating processor instances using registry pattern.
+
+    Implements the Factory Pattern with a registry-based approach to eliminate code duplication.
     """
-    
+
+    # Registry: {model_type: (module_path, class_name, optional_error_message)}
+    _REGISTRY = {
+        ModelType.DONUT.value: (
+            '.ai_models', 'DonutProcessor',
+            "Donut models require PyTorch and Transformers. "
+            "Install with: pip install torch transformers accelerate sentencepiece."
+        ),
+        ModelType.FLORENCE.value: (
+            '.ai_models', 'FlorenceProcessor',
+            "Florence models require PyTorch and Transformers. "
+            "Install with: pip install torch transformers accelerate sentencepiece."
+        ),
+        ModelType.OCR.value: ('.ocr_processor', 'OCRProcessor', None),
+        ModelType.EASYOCR.value: ('.processors', 'EasyOCRProcessor', None),
+        ModelType.PADDLE.value: ('.processors', 'PaddleProcessor', None),
+    }
+
     @classmethod
     def create(cls, model_config: Dict[str, Any]) -> Processor:
         """
         Create a processor instance for the given model configuration.
-        
+
         Args:
             model_config: Model configuration dictionary
-            
+
         Returns:
             Processor instance
-            
+
         Raises:
             ImportError: If required dependencies are not installed
             ValueError: If model type is unknown
         """
         model_type = model_config['type']
         model_id = model_config['id']
-        
+
         logger.info(f"Creating processor for {model_id} (type: {model_type})")
-        
-        if model_type == ModelType.DONUT.value:
-            return cls._create_donut_processor(model_config)
-        elif model_type == ModelType.FLORENCE.value:
-            return cls._create_florence_processor(model_config)
-        elif model_type == ModelType.OCR.value:
-            return cls._create_ocr_processor(model_config)
-        elif model_type == ModelType.EASYOCR.value:
-            return cls._create_easyocr_processor(model_config)
-        elif model_type == ModelType.PADDLE.value:
-            return cls._create_paddle_processor(model_config)
-        else:
+
+        if model_type not in cls._REGISTRY:
             raise ValueError(f"Unknown model type: {model_type}")
-    
+
+        module_path, class_name, error_msg = cls._REGISTRY[model_type]
+        return cls._instantiate(module_path, class_name, model_config, error_msg)
+
     @classmethod
-    def _create_donut_processor(cls, config: Dict[str, Any]) -> Processor:
-        """Create a Donut processor."""
+    def _instantiate(
+        cls,
+        module_path: str,
+        class_name: str,
+        config: Dict[str, Any],
+        deps_error_msg: Optional[str] = None
+    ) -> Processor:
+        """
+        Instantiate a processor with unified error handling.
+
+        Args:
+            module_path: Relative import path (e.g., '.ai_models')
+            class_name: Processor class name
+            config: Configuration dictionary
+            deps_error_msg: Optional dependency error message
+
+        Returns:
+            Processor instance
+
+        Raises:
+            ImportError: If dependencies are missing
+        """
         try:
-            from .ai_models import DonutProcessor
-            # Handle case where import succeeds but class is None due to lazy loading
-            if not callable(DonutProcessor):
-                raise ImportError("DonutProcessor is not available")
-            return DonutProcessor(config)
-        except ImportError as e:
-            raise ImportError(
-                "Donut models require PyTorch and Transformers. "
-                "Install with: pip install torch transformers accelerate sentencepiece. "
-                f"Error: {e}"
-            )
-        except TypeError as e:
-            # Handle case where processor class is None or not callable
-            if 'NoneType' in str(e) or 'not callable' in str(e):
-                raise ImportError(
-                    "Donut models require PyTorch and Transformers. "
-                    "Install with: pip install torch transformers accelerate sentencepiece. "
-                    f"Error: {e}"
-                )
+            module = __import__(module_path, fromlist=[class_name], level=1)
+            processor_class = getattr(module, class_name)
+
+            if not callable(processor_class):
+                raise ImportError(f"{class_name} is not available")
+
+            return processor_class(config)
+
+        except (ImportError, TypeError) as e:
+            if deps_error_msg:
+                raise ImportError(f"{deps_error_msg} Error: {e}")
             raise
         except Exception as e:
-            # Catch any other initialization errors that indicate missing dependencies
-            error_msg = str(e).lower()
-            if 'torch' in error_msg or 'transformers' in error_msg or 'cuda' in error_msg:
-                raise ImportError(
-                    "Donut models require PyTorch and Transformers. "
-                    "Install with: pip install torch transformers accelerate sentencepiece. "
-                    f"Error: {e}"
-                )
+            # Detect dependency-related errors
+            if deps_error_msg:
+                error_str = str(e).lower()
+                if any(kw in error_str for kw in ['torch', 'transformers', 'cuda']):
+                    raise ImportError(f"{deps_error_msg} Error: {e}")
             raise
-    
-    @classmethod
-    def _create_florence_processor(cls, config: Dict[str, Any]) -> Processor:
-        """Create a Florence processor."""
-        try:
-            from .ai_models import FlorenceProcessor
-            # Handle case where import succeeds but class is None due to lazy loading
-            if not callable(FlorenceProcessor):
-                raise ImportError("FlorenceProcessor is not available")
-            return FlorenceProcessor(config)
-        except ImportError as e:
-            raise ImportError(
-                "Florence models require PyTorch and Transformers. "
-                "Install with: pip install torch transformers accelerate sentencepiece. "
-                f"Error: {e}"
-            )
-        except TypeError as e:
-            # Handle case where processor class is None or not callable
-            if 'NoneType' in str(e) or 'not callable' in str(e):
-                raise ImportError(
-                    "Florence models require PyTorch and Transformers. "
-                    "Install with: pip install torch transformers accelerate sentencepiece. "
-                    f"Error: {e}"
-                )
-            raise
-        except Exception as e:
-            # Catch any other initialization errors that indicate missing dependencies
-            error_msg = str(e).lower()
-            if 'torch' in error_msg or 'transformers' in error_msg or 'cuda' in error_msg:
-                raise ImportError(
-                    "Florence models require PyTorch and Transformers. "
-                    "Install with: pip install torch transformers accelerate sentencepiece. "
-                    f"Error: {e}"
-                )
-            raise
-    
-    @classmethod
-    def _create_ocr_processor(cls, config: Dict[str, Any]) -> Processor:
-        """Create an OCR processor."""
-        from .ocr_processor import OCRProcessor
-        return OCRProcessor(config)
-    
-    @classmethod
-    def _create_easyocr_processor(cls, config: Dict[str, Any]) -> Processor:
-        """Create an EasyOCR processor."""
-        from .processors import EasyOCRProcessor
-        return EasyOCRProcessor(config)
-    
-    @classmethod
-    def _create_paddle_processor(cls, config: Dict[str, Any]) -> Processor:
-        """Create a PaddleOCR processor."""
-        from .processors import PaddleProcessor
-        return PaddleProcessor(config)
 
 
 # =============================================================================
