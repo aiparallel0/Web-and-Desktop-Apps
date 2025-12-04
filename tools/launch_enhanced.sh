@@ -1235,7 +1235,7 @@ start_servers() {
     cd "$BACKEND_DIR"
     # Export USE_SQLITE for development/testing
     export USE_SQLITE=true
-    $PYTHON_CMD app.py > "../$LOG_DIR/backend.log" 2>&1 &
+    $PYTHON_CMD app.py > "../../$LOG_DIR/backend.log" 2>&1 &
     BACKEND_PID=$!
     cd ..
 
@@ -1254,7 +1254,7 @@ start_servers() {
     # Start frontend
     print_info "Starting frontend web server..."
     cd "$FRONTEND_DIR"
-    $PYTHON_CMD -m http.server $FRONTEND_PORT > "../$LOG_DIR/frontend.log" 2>&1 &
+    $PYTHON_CMD -m http.server $FRONTEND_PORT > "../../$LOG_DIR/frontend.log" 2>&1 &
     FRONTEND_PID=$!
     cd ..
 
