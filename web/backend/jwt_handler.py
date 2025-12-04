@@ -4,7 +4,7 @@ JWT token creation and verification
 import os
 import jwt
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 import logging
 import secrets
@@ -36,7 +36,7 @@ def create_access_token(user_id: str, email: str, is_admin: bool = False) -> str
     Returns:
         Encoded JWT token
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
@@ -145,7 +145,7 @@ def revoke_refresh_token(db, token: str) -> bool:
 
         if refresh_token:
             refresh_token.revoked = True
-            refresh_token.revoked_at = datetime.utcnow()
+            refresh_token.revoked_at = datetime.now(timezone.utc)
             db.commit()
             logger.info(f"Revoked refresh token for user {refresh_token.user_id}")
             return True

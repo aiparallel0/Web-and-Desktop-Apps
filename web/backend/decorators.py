@@ -5,7 +5,7 @@ from functools import wraps
 from flask import request, jsonify, g
 import logging
 from typing import Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ def rate_limit(max_requests: int = 100, window_seconds: int = 3600,
             key = f"{key_prefix}:{identifier}:{f.__name__}"
 
             # Clean up old entries
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             if key in _rate_limit_storage:
                 _rate_limit_storage[key] = [
                     timestamp for timestamp in _rate_limit_storage[key]

@@ -14,7 +14,7 @@ Provides API endpoints for subscription management:
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
 
 from .plans import SUBSCRIPTION_PLANS, get_plan_features
@@ -527,7 +527,7 @@ def _handle_subscription_deleted(db, subscription_data, User, Subscription):
     from database import SubscriptionStatus, SubscriptionPlan
     
     subscription.status = SubscriptionStatus.CANCELED
-    subscription.canceled_at = datetime.utcnow()
+    subscription.canceled_at = datetime.now(timezone.utc)
     
     # Downgrade user to free plan
     user = db.query(User).filter(User.id == subscription.user_id).first()
