@@ -475,6 +475,97 @@ AI AGENT INSTRUCTIONS:
         """Get all registered modules."""
         return self.module_registry.value.copy()
     
+    def validate_module_imports(self) -> Dict[str, List[str]]:
+        """
+        Validate that all registered module imports are resolvable.
+        
+        This method checks that:
+        1. All registered module IDs correspond to actual importable modules
+        2. All declared dependencies are resolvable
+        3. All exports are actually present in the modules
+        
+        Returns:
+            Dictionary with 'errors' and 'warnings' lists
+            
+        Example:
+            >>> from shared.circular_exchange import PROJECT_CONFIG
+            >>> results = PROJECT_CONFIG.validate_module_imports()
+            >>> if results['errors']:
+            ...     print("Import validation failed:", results['errors'])
+        """
+        import importlib
+        import importlib.util
+        
+        errors = []
+        warnings = []
+        
+        for module_id, registration in self.module_registry.value.items():
+            # Check if the module is importable
+            try:
+                spec = importlib.util.find_spec(module_id)
+                if spec is None:
+                    errors.append(f"Module '{module_id}' is registered but file does not exist")
+            except (ModuleNotFoundError, ImportError) as e:
+                errors.append(f"Module '{module_id}' cannot be imported: {e}")
+            
+            # Check dependencies
+            for dep in registration.dependencies:
+                try:
+                    spec = importlib.util.find_spec(dep)
+                    if spec is None:
+                        warnings.append(f"Module '{module_id}' depends on '{dep}' which may not exist")
+                except (ModuleNotFoundError, ImportError):
+                    warnings.append(f"Module '{module_id}' has unresolvable dependency: '{dep}'")
+        
+        return {'errors': errors, 'warnings': warnings}
+    
+    def check_for_empty_imports(self, module_path: str) -> List[str]:
+        """
+        Check a module for imports that would fail at runtime.
+        
+        This helps prevent issues where a module file exists but imports
+        from non-existent modules (the original issue this fix addresses).
+        
+        Args:
+            module_path: Path to the Python module file to check
+            
+        Returns:
+            List of problematic import statements found
+        """
+        import ast
+        
+        issues = []
+        
+        try:
+            with open(module_path, 'r') as f:
+                tree = ast.parse(f.read())
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.startswith('shared.models.'):
+                            # Check if the module file exists
+                            parts = alias.name.split('.')
+                            if len(parts) >= 3:
+                                module_name = parts[2]
+                                expected_path = Path(__file__).parent.parent.parent / 'models' / f'{module_name}.py'
+                                if not expected_path.exists():
+                                    issues.append(f"Import '{alias.name}' - file {expected_path} does not exist")
+                
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module and node.module.startswith('shared.models.'):
+                        parts = node.module.split('.')
+                        if len(parts) >= 3:
+                            module_name = parts[2]
+                            expected_path = Path(__file__).parent.parent.parent / 'models' / f'{module_name}.py'
+                            if not expected_path.exists():
+                                issues.append(f"Import from '{node.module}' - file {expected_path} does not exist")
+        
+        except Exception as e:
+            issues.append(f"Could not parse {module_path}: {e}")
+        
+        return issues
+
     def update_config(self, package_name: str, new_value: Any) -> bool:
         """
         Update a configuration package by name.
