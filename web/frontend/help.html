@@ -241,21 +241,11 @@
     </footer>
 
     <script>
-        // FAQ Toggle functionality
+        // FAQ Toggle functionality - allows multiple FAQs open simultaneously
         document.querySelectorAll('.faq-question').forEach(button => {
             button.addEventListener('click', () => {
                 const item = button.parentElement;
-                const isOpen = item.classList.contains('open');
-                
-                // Close all other FAQs
-                document.querySelectorAll('.faq-item').forEach(faq => {
-                    faq.classList.remove('open');
-                });
-                
-                // Toggle current FAQ
-                if (!isOpen) {
-                    item.classList.add('open');
-                }
+                item.classList.toggle('open');
             });
         });
     </script>
