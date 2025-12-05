@@ -113,6 +113,12 @@ data/*.db
 # AI analysis reports (generated)
 ai-analysis-report_*.md
 
+# Coverage reports
+coverage.xml
+
+# Test reports
+logs/reports/
+
 # Receipt images in test data (prevent large files in repo)
 tools/data/receipts/*.jpg
 tools/data/receipts/*.jpeg
