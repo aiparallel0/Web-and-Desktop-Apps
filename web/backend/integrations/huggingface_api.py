@@ -24,11 +24,20 @@ import os
 import logging
 import base64
 import time
+import re
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Pre-compiled regex patterns for receipt text parsing (performance optimization)
+_TOTAL_PATTERN = re.compile(r'(?:total|sum|amount)[:\s]*\$?(\d+\.?\d*)', re.IGNORECASE)
+_SUBTOTAL_PATTERN = re.compile(r'(?:subtotal|sub-total)[:\s]*\$?(\d+\.?\d*)', re.IGNORECASE)
+_TAX_PATTERN = re.compile(r'(?:tax|vat|gst)[:\s]*\$?(\d+\.?\d*)', re.IGNORECASE)
+_DATE_PATTERN = re.compile(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})')
+_ITEM_PATTERN = re.compile(r'(.+?)\s+\$?(\d+\.?\d*)$')
+_SKIP_KEYWORDS = frozenset(['total', 'tax', 'subtotal', 'change', 'cash', 'card'])
 
 # Try to import huggingface_hub
 try:
@@ -264,8 +273,6 @@ class HuggingFaceInference:
         Returns:
             Structured receipt data
         """
-        import re
-        
         data = {
             'raw_text': text,
             'store': {},
@@ -276,38 +283,41 @@ class HuggingFaceInference:
         
         lines = text.strip().split('\n')
         
-        # Try to extract common patterns
+        # Try to extract common patterns using pre-compiled regex
         for line in lines:
             line = line.strip()
             
             # Look for total patterns
-            total_match = re.search(r'(?:total|sum|amount)[:\s]*\$?(\d+\.?\d*)', line, re.IGNORECASE)
+            total_match = _TOTAL_PATTERN.search(line)
             if total_match:
                 data['totals']['total'] = float(total_match.group(1))
             
             # Look for subtotal
-            subtotal_match = re.search(r'(?:subtotal|sub-total)[:\s]*\$?(\d+\.?\d*)', line, re.IGNORECASE)
+            subtotal_match = _SUBTOTAL_PATTERN.search(line)
             if subtotal_match:
                 data['totals']['subtotal'] = float(subtotal_match.group(1))
             
             # Look for tax
-            tax_match = re.search(r'(?:tax|vat|gst)[:\s]*\$?(\d+\.?\d*)', line, re.IGNORECASE)
+            tax_match = _TAX_PATTERN.search(line)
             if tax_match:
                 data['totals']['tax'] = float(tax_match.group(1))
             
             # Look for date patterns
-            date_match = re.search(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', line)
+            date_match = _DATE_PATTERN.search(line)
             if date_match and 'date' not in data['metadata']:
                 data['metadata']['date'] = date_match.group(1)
             
             # Look for item patterns (name and price)
-            item_match = re.search(r'(.+?)\s+\$?(\d+\.?\d*)$', line)
-            if item_match and not any(kw in line.lower() for kw in ['total', 'tax', 'subtotal', 'change', 'cash', 'card']):
-                data['items'].append({
-                    'name': item_match.group(1).strip(),
-                    'price': float(item_match.group(2)),
-                    'quantity': 1
-                })
+            item_match = _ITEM_PATTERN.search(line)
+            if item_match:
+                # Only compute line_lower when needed for skip keyword check
+                line_lower = line.lower()
+                if not any(kw in line_lower for kw in _SKIP_KEYWORDS):
+                    data['items'].append({
+                        'name': item_match.group(1).strip(),
+                        'price': float(item_match.group(2)),
+                        'quantity': 1
+                    })
         
         # First line is often store name
         if lines and not data['store'].get('name'):
