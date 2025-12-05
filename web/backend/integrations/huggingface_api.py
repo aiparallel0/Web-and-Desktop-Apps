@@ -286,7 +286,6 @@ class HuggingFaceInference:
         # Try to extract common patterns using pre-compiled regex
         for line in lines:
             line = line.strip()
-            line_lower = line.lower()
             
             # Look for total patterns
             total_match = _TOTAL_PATTERN.search(line)
@@ -310,12 +309,15 @@ class HuggingFaceInference:
             
             # Look for item patterns (name and price)
             item_match = _ITEM_PATTERN.search(line)
-            if item_match and not any(kw in line_lower for kw in _SKIP_KEYWORDS):
-                data['items'].append({
-                    'name': item_match.group(1).strip(),
-                    'price': float(item_match.group(2)),
-                    'quantity': 1
-                })
+            if item_match:
+                # Only compute line_lower when needed for skip keyword check
+                line_lower = line.lower()
+                if not any(kw in line_lower for kw in _SKIP_KEYWORDS):
+                    data['items'].append({
+                        'name': item_match.group(1).strip(),
+                        'price': float(item_match.group(2)),
+                        'quantity': 1
+                    })
         
         # First line is often store name
         if lines and not data['store'].get('name'):
