@@ -168,7 +168,22 @@ class DonutProcessor(BaseDonutProcessor):
             elif sequence and not self.parse_json_output(sequence):
                 if'sroie'in self.model_id.lower()or'cord'in self.model_id.lower():receipt.extraction_notes.append("Model produced plain text instead of JSON - used fallback extraction")
             elif not any([receipt.store_name,receipt.store_address,receipt.total,receipt.transaction_date,receipt.items]):receipt.extraction_notes.append("Model output parsed but no fields matched expected format")
-            receipt.confidence_score=self._calculate_confidence(receipt)
+            # Use realistic validation-based confidence calculation
+            try:
+                from .receipt_prompts import get_validated_extraction_with_confidence
+                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                    receipt_data=receipt,
+                    raw_text=sequence if sequence else '',
+                    base_confidence=0.5
+                )
+                receipt.confidence_score = round(realistic_confidence * 100, 1)
+                if validation.math_validated:
+                    receipt.extraction_notes.append("Math validation passed ✓")
+                elif validation.errors:
+                    for error in validation.errors:
+                        receipt.extraction_notes.append(f"ERROR: {error}")
+            except ImportError:
+                receipt.confidence_score=self._calculate_confidence(receipt)
             return ExtractionResult(success=True,data=receipt)
         except Exception as e:
             logger.error(f"Extraction failed: {e}")
@@ -486,8 +501,27 @@ class FlorenceProcessor(BaseDonutProcessor):
         # Extract line items using region analysis
         receipt.items = self._extract_items_from_regions(text_regions)
         
-        # Calculate confidence based on extraction quality
-        receipt.confidence_score = self._calculate_extraction_confidence(receipt, text_regions)
+        # Calculate confidence based on extraction quality with realistic validation
+        try:
+            from .receipt_prompts import get_validated_extraction_with_confidence
+            _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                receipt_data=receipt,
+                raw_text=full_text,
+                base_confidence=0.5  # Start with neutral confidence
+            )
+            receipt.confidence_score = round(realistic_confidence * 100, 1)  # Convert to percentage
+            
+            # Add validation notes
+            if validation.errors:
+                for error in validation.errors:
+                    receipt.extraction_notes.append(f"ERROR: {error}")
+            if not validation.math_validated and receipt.subtotal and receipt.tax:
+                receipt.extraction_notes.append("WARNING: Receipt math could not be validated")
+            if validation.math_validated:
+                receipt.extraction_notes.append("Math validation passed ✓")
+        except ImportError:
+            # Fallback to basic confidence calculation
+            receipt.confidence_score = self._calculate_extraction_confidence(receipt, text_regions)
         
         receipt.extraction_notes.append("Enhanced Florence-2 region-aware extraction")
         
@@ -1400,6 +1434,24 @@ class EasyOCRProcessor:
             receipt.processing_time = time.time() - start_time
             receipt.model_used = self.model_name
             
+            # Apply realistic validation-based confidence
+            try:
+                from .receipt_prompts import get_validated_extraction_with_confidence
+                raw_text = ' '.join(text_lines)
+                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                    receipt_data=receipt,
+                    raw_text=raw_text,
+                    base_confidence=avg_confidence
+                )
+                receipt.confidence_score = round(realistic_confidence * 100, 1)
+                if validation.math_validated:
+                    receipt.extraction_notes.append("Math validation passed ✓")
+                elif validation.errors:
+                    for error in validation.errors:
+                        receipt.extraction_notes.append(f"ERROR: {error}")
+            except ImportError:
+                receipt.confidence_score = round(avg_confidence * 100, 1)
+            
             return ExtractionResult(success=True, data=receipt)
             
         except Exception as e:
@@ -1654,10 +1706,29 @@ class PaddleProcessor:
             receipt.processing_time = time.time() - start_time
             receipt.model_used = self.model_name
             
+            # Calculate base confidence from OCR results
+            base_conf = 0.5
             if text_lines:
-                receipt.confidence_score = round(
-                    sum(l['confidence'] for l in text_lines) / len(text_lines), 2
+                base_conf = sum(l['confidence'] for l in text_lines) / len(text_lines)
+            
+            # Apply realistic validation-based confidence
+            try:
+                from .receipt_prompts import get_validated_extraction_with_confidence
+                raw_text = ' '.join(l['text'] for l in text_lines)
+                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                    receipt_data=receipt,
+                    raw_text=raw_text,
+                    base_confidence=base_conf
                 )
+                receipt.confidence_score = round(realistic_confidence * 100, 1)
+                if validation.math_validated:
+                    receipt.extraction_notes.append("Math validation passed ✓")
+                elif validation.errors:
+                    for error in validation.errors:
+                        receipt.extraction_notes.append(f"ERROR: {error}")
+            except ImportError:
+                if text_lines:
+                    receipt.confidence_score = round(base_conf * 100, 2)
             
             return ExtractionResult(success=True, data=receipt)
             
