@@ -2,6 +2,24 @@
 
 This directory contains the web application components for Receipt Extractor.
 
+## 🚀 ONE-CLICK START
+
+**Go to the repository root and run:**
+
+```bash
+# Windows: Double-click start.bat
+# OR from any terminal:
+cd ..
+python start.py
+```
+
+This automatically:
+- ✅ Creates virtual environment
+- ✅ Installs dependencies  
+- ✅ Clears cache (runs cache-bust.py)
+- ✅ Starts servers
+- ✅ Opens browser
+
 ## Directory Structure
 
 ```
@@ -17,33 +35,30 @@ web/
 
 Most setup and development commands should be run from the **repository root directory**, not from this `web/` subdirectory.
 
-### Setup Instructions
+### Quick Start Options
 
 ```bash
-# Navigate to the repository root (parent of this directory)
+# Navigate to repository root first
 cd ..
 
-# Install dependencies
-pip install -r requirements.txt
+# ONE-CLICK START (recommended)
+python start.py           # Full setup + start servers
 
-# Configure environment
-cp .env.example .env
+# Quick start (skip venv setup)
+python start.py --quick   # Just start servers
 
-# Run database migrations
-./launcher.sh migrate
-
-# Start development servers
-./launcher.sh dev
+# Clean cache only
+python start.py --clean-only
 ```
 
 ### Quick Reference
 
 | Command | Run From | Description |
 |---------|----------|-------------|
-| `./launcher.sh dev` | Repository root | Start both backend and frontend servers |
+| `python start.py` | Repository root | **ONE-CLICK START** - Full setup + servers |
+| `start.bat` | Repository root | Windows double-click start |
+| `./launcher.sh dev` | Repository root | Start servers (Unix/macOS) |
 | `./launcher.sh test` | Repository root | Run full test suite |
-| `./launcher.sh deps` | Repository root | Install/update dependencies |
-| `pip install -r requirements.txt` | Repository root | Install Python dependencies |
 | `python cache-bust.py` | This directory (`web/`) | Update cache-busting version strings |
 
 ## Cache Busting Utility
