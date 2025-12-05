@@ -53,12 +53,18 @@ HTML_FILES = [
 
 # Assets patterns to add version query strings
 ASSET_PATTERNS = [
+    # styles.css patterns
     (r'href="(styles\.css)"', r'href="styles.css?v={version}"'),
     (r'href="styles\.css\?v=[^"]*"', r'href="styles.css?v={version}"'),
+    # app.js patterns (both src and href for preload)
     (r'src="(app\.js)"', r'src="app.js?v={version}"'),
     (r'src="app\.js\?v=[^"]*"', r'src="app.js?v={version}"'),
+    (r'href="(app\.js)"', r'href="app.js?v={version}"'),
+    (r'href="app\.js\?v=[^"]*"', r'href="app.js?v={version}"'),
+    # Component scripts
     (r'src="(components/[^"]+\.js)"', r'src="\1?v={version}"'),
     (r'src="(components/[^"]+\.js)\?v=[^"]*"', r'src="\1?v={version}"'),
+    # manifest.json patterns
     (r'href="(manifest\.json)"', r'href="manifest.json?v={version}"'),
     (r'href="manifest\.json\?v=[^"]*"', r'href="manifest.json?v={version}"'),
 ]

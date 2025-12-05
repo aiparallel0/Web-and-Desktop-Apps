@@ -119,3 +119,57 @@ def test_api_invalid_image():
         pytest.skip(f"Cannot import Flask app: {e}")
     except Exception as e:
         pytest.skip(f"Test requires app dependencies: {e}")
+
+
+@pytest.mark.web
+def test_api_version_endpoint():
+    """Test the version endpoint for cache validation"""
+    try:
+        # Import Flask app module dynamically
+        import importlib.util
+        app_path = project_root / 'web' / 'backend' / 'app.py'
+        spec = importlib.util.spec_from_file_location("app", app_path)
+        app_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(app_module)
+        app = app_module.app
+
+        with app.test_client() as client:
+            response = client.get('/api/version')
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'version' in data
+            assert 'hash' in data or data.get('hash') == 'default'
+    except ImportError as e:
+        pytest.skip(f"Cannot import Flask app: {e}")
+    except Exception as e:
+        pytest.skip(f"Test requires app dependencies: {e}")
+
+
+@pytest.mark.web
+def test_cache_headers():
+    """Test that proper cache headers are set on responses"""
+    try:
+        import importlib.util
+        app_path = project_root / 'web' / 'backend' / 'app.py'
+        spec = importlib.util.spec_from_file_location("app", app_path)
+        app_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(app_module)
+        app = app_module.app
+
+        with app.test_client() as client:
+            # Test API endpoint - should have no-store
+            response = client.get('/api/version')
+            cache_control = response.headers.get('Cache-Control', '')
+            # Version endpoint should not be cached
+            assert 'no-store' in cache_control or 'no-cache' in cache_control
+
+            # Test health endpoint
+            response = client.get('/api/health')
+            cache_control = response.headers.get('Cache-Control', '')
+            # API endpoints should not be cached
+            assert 'no-store' in cache_control or 'no-cache' in cache_control
+    except ImportError as e:
+        pytest.skip(f"Cannot import Flask app: {e}")
+    except Exception as e:
+        pytest.skip(f"Test requires app dependencies: {e}")
