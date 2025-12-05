@@ -7,8 +7,34 @@
 // CONFIGURATION
 // =============================================================================
 
+/**
+ * Detect the backend API URL based on current environment.
+ * In production, frontend and backend are served from the same origin.
+ * In development (start.py), frontend is on port 3000, backend on port 5000.
+ * 
+ * Note: For custom port configuration, set window.RECEIPT_EXTRACTOR_API_URL
+ * before loading this script, or modify the ports below.
+ */
+const detectBackendUrl = () => {
+    // Allow override via global variable for custom deployments
+    if (window.RECEIPT_EXTRACTOR_API_URL) {
+        return window.RECEIPT_EXTRACTOR_API_URL;
+    }
+    
+    // Development mode detection
+    const FRONTEND_DEV_PORT = '3000';
+    const BACKEND_DEV_PORT = '5000';
+    
+    if (window.location.port === FRONTEND_DEV_PORT) {
+        return `${window.location.protocol}//${window.location.hostname}:${BACKEND_DEV_PORT}`;
+    }
+    
+    // Production or same-origin deployment
+    return window.location.origin;
+};
+
 const CONFIG = {
-    API_BASE_URL: window.location.origin,
+    API_BASE_URL: detectBackendUrl(),
     API_ENDPOINTS: {
         quickExtract: '/api/quick-extract',
         extract: '/api/extract',
@@ -301,8 +327,8 @@ function setupEventHandlers() {
     const signInBtn = document.getElementById('signInBtn');
     if (signInBtn) {
         signInBtn.addEventListener('click', () => {
-            // Redirect to existing app with auth
-            window.location.href = '/index.html';
+            // Show coming soon message - authentication feature not yet fully implemented
+            alert('Sign In feature coming soon! For now, try our free extraction above - no account required.');
         });
     }
 
