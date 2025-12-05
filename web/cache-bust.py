@@ -4,19 +4,22 @@
 CACHE BUSTING UTILITY
 =============================================================================
 
-Generates version hashes based on file content and updates HTML files with
-new version strings. Can be run manually or integrated into CI/CD pipelines.
+Generates version hashes based on file content and updates version.json.
+The version.json file is used for runtime version checking in the app.
+
+Cache busting for static assets is handled by the service worker, not by
+version query strings in HTML files. This design prevents merge conflicts
+when developers run this script locally.
 
 Usage:
-    python cache-bust.py                    # Update all HTML files
+    python cache-bust.py                    # Update version.json
     python cache-bust.py --check            # Check current version status
-    python cache-bust.py --generate-only    # Only update version.json
+    python cache-bust.py --generate-only    # Only update version.json (same as default)
 
 =============================================================================
 """
 
 import os
-import re
 import sys
 import json
 import hashlib
@@ -52,36 +55,10 @@ ASSETS_TO_HASH = [
     'service-worker.js'
 ]
 
-# HTML files to update
-HTML_FILES = [
-    'index.html',
-    'about.html',
-    'api.html',
-    'contact.html',
-    'help.html',
-    'pricing.html',
-    'privacy.html',
-    'terms.html',
-    'status.html'
-]
-
-# Assets patterns to add version query strings
-ASSET_PATTERNS = [
-    # styles.css patterns
-    (r'href="(styles\.css)"', r'href="styles.css?v={version}"'),
-    (r'href="styles\.css\?v=[^"]*"', r'href="styles.css?v={version}"'),
-    # app.js patterns (both src and href for preload)
-    (r'src="(app\.js)"', r'src="app.js?v={version}"'),
-    (r'src="app\.js\?v=[^"]*"', r'src="app.js?v={version}"'),
-    (r'href="(app\.js)"', r'href="app.js?v={version}"'),
-    (r'href="app\.js\?v=[^"]*"', r'href="app.js?v={version}"'),
-    # Component scripts
-    (r'src="(components/[^"]+\.js)"', r'src="\1?v={version}"'),
-    (r'src="(components/[^"]+\.js)\?v=[^"]*"', r'src="\1?v={version}"'),
-    # manifest.json patterns
-    (r'href="(manifest\.json)"', r'href="manifest.json?v={version}"'),
-    (r'href="manifest\.json\?v=[^"]*"', r'href="manifest.json?v={version}"'),
-]
+# Note: HTML files are no longer updated with version query strings.
+# Cache busting is now handled by the service worker which uses APP_VERSION.
+# This prevents merge conflicts when developers run cache-bust.py locally.
+# The version.json file provides runtime version checking for the app.
 
 
 def calculate_file_hash(file_path: Path) -> str:
@@ -162,35 +139,6 @@ def update_version_file(version_hash: str) -> dict:
     return version_data
 
 
-def update_html_file(html_path: Path, version: str) -> bool:
-    """Update version query strings in an HTML file."""
-    if not html_path.exists():
-        print(f"  Warning: {html_path.name} not found")
-        return False
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    original_content = content
-    
-    # Update asset references with version query strings
-    for pattern, replacement in ASSET_PATTERNS:
-        replacement_with_version = replacement.format(version=version)
-        # Handle patterns with capture groups
-        if r'\1' in replacement_with_version:
-            content = re.sub(pattern, replacement_with_version, content)
-        else:
-            content = re.sub(pattern, replacement_with_version, content)
-    
-    # Only write if content changed
-    if content != original_content:
-        with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        return True
-    
-    return False
-
-
 def check_status():
     """Check and display current version status."""
     print("Cache Busting Status Check")
@@ -223,7 +171,7 @@ def check_status():
 def main():
     parser = argparse.ArgumentParser(description='Cache busting utility for Receipt Extractor')
     parser.add_argument('--check', action='store_true', help='Check current version status')
-    parser.add_argument('--generate-only', action='store_true', help='Only update version.json')
+    parser.add_argument('--generate-only', action='store_true', help='Only update version.json (same as default behavior)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     
     args = parser.parse_args()
@@ -249,26 +197,13 @@ def main():
     version_data = update_version_file(version_hash)
     print(f"Updated version.json: v{version_data['version']} (build {version_data['build']})")
     
-    if args.generate_only:
-        print("✓ Version file updated (--generate-only mode)")
-        return 0
+    # Note: HTML files are no longer updated to prevent merge conflicts.
+    # Cache busting is handled by the service worker using APP_VERSION.
     
-    # Update HTML files
-    print("\nUpdating HTML files...")
-    updated_count = 0
-    
-    for html_file in HTML_FILES:
-        html_path = FRONTEND_DIR / html_file
-        if update_html_file(html_path, version_data['hash']):
-            print(f"  ✓ Updated: {html_file}")
-            updated_count += 1
-        else:
-            if args.verbose:
-                print(f"  - No changes: {html_file}")
-    
-    print(f"\n✓ Cache busting complete: {updated_count} files updated")
+    print(f"\n✓ Cache busting complete")
     print(f"  Version: {version_data['version']}")
     print(f"  Hash: {version_data['hash']}")
+    print(f"\nNote: HTML files are not modified. Cache busting is handled by the service worker.")
     
     return 0
 
