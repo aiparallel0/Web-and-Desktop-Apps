@@ -24,6 +24,20 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
+# Configure stdout to handle Unicode gracefully on Windows
+# This fixes UnicodeEncodeError on systems with limited encodings (e.g., cp1254)
+if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except AttributeError:
+        # Python < 3.7 fallback: wrap stdout with the same encoding but error handling
+        import io
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer,
+            encoding=sys.stdout.encoding,
+            errors='replace'
+        )
+
 # Configuration
 FRONTEND_DIR = Path(__file__).parent / 'frontend'
 VERSION_FILE = FRONTEND_DIR / 'version.json'
