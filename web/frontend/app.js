@@ -7,8 +7,21 @@
 // CONFIGURATION
 // =============================================================================
 
+// Detect if backend is available at different ports (development mode)
+const detectBackendUrl = () => {
+    // In production, frontend and backend are on same origin
+    // In development, frontend is on port 3000, backend on port 5000
+    const currentPort = window.location.port;
+    if (currentPort === '3000') {
+        // Development mode - backend is on port 5000
+        return `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+    // Production or same-origin deployment
+    return window.location.origin;
+};
+
 const CONFIG = {
-    API_BASE_URL: window.location.origin,
+    API_BASE_URL: detectBackendUrl(),
     API_ENDPOINTS: {
         quickExtract: '/api/quick-extract',
         extract: '/api/extract',
@@ -301,8 +314,8 @@ function setupEventHandlers() {
     const signInBtn = document.getElementById('signInBtn');
     if (signInBtn) {
         signInBtn.addEventListener('click', () => {
-            // Redirect to existing app with auth
-            window.location.href = '/index.html';
+            // Show coming soon message - authentication feature not yet fully implemented
+            alert('Sign In feature coming soon! For now, try our free extraction above - no account required.');
         });
     }
 
