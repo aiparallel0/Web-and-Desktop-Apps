@@ -66,6 +66,12 @@ TEST_DIR="tools/tests"
 LOG_DIR="logs"
 REPORT_DIR="logs/reports"
 
+# Core dependencies for testing (update this list when adding new core deps)
+CORE_DEPENDENCIES="pytest pytest-cov flask flask-cors pillow psutil requests pydantic"
+
+# Test count estimate (dynamically calculated at runtime when needed)
+TEST_COUNT_ESTIMATE=""
+
 # Create directories
 mkdir -p "$LOG_DIR"
 mkdir -p "$REPORT_DIR"
@@ -85,6 +91,7 @@ PIP_CMD=""
 
 print_banner() {
     clear
+    local test_count=$(get_test_count)
     echo -e "${CYAN}${BOLD}"
     echo "╔════════════════════════════════════════════════════════════════════════╗"
     echo "║                                                                        ║"
@@ -95,7 +102,7 @@ print_banner() {
     echo "╚════════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "${DIM}Project Root: $PROJECT_ROOT${NC}"
-    echo -e "${DIM}Tests Available: ~1000+ tests across all modules${NC}"
+    echo -e "${DIM}Tests Available: ~${test_count} tests across all modules${NC}"
     echo ""
 }
 
@@ -125,11 +132,42 @@ print_info() {
     echo -e "${CYAN}[INFO]${NC} $1"
 }
 
+# Calculate test count dynamically
+get_test_count() {
+    if [ -z "$TEST_COUNT_ESTIMATE" ]; then
+        if [ -d "$TEST_DIR" ]; then
+            TEST_COUNT_ESTIMATE=$(find "$TEST_DIR" -name "test_*.py" -type f -exec grep -c "def test_" {} \; 2>/dev/null | awk '{sum+=$1} END {print sum}')
+            if [ -z "$TEST_COUNT_ESTIMATE" ] || [ "$TEST_COUNT_ESTIMATE" -eq 0 ]; then
+                TEST_COUNT_ESTIMATE="1000+"
+            fi
+        else
+            TEST_COUNT_ESTIMATE="N/A"
+        fi
+    fi
+    echo "$TEST_COUNT_ESTIMATE"
+}
+
+# Check if process is running (more reliable than kill -0)
+is_process_running() {
+    local pid=$1
+    if [ -z "$pid" ]; then
+        return 1
+    fi
+    if [ -d "/proc/$pid" ]; then
+        return 0
+    elif ps -p "$pid" > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 show_menu() {
     print_banner
+    local test_count=$(get_test_count)
     echo -e "${BOLD}Main Menu:${NC}"
     echo ""
-    echo -e "  ${GREEN}1)${NC} Run Full Test Suite (~1000+ tests with coverage)"
+    echo -e "  ${GREEN}1)${NC} Run Full Test Suite (~${test_count} tests with coverage)"
     echo -e "  ${GREEN}2)${NC} Run Quick Tests (fast, unit tests only)"
     echo -e "  ${GREEN}3)${NC} Generate Comprehensive Test Report"
     echo -e "  ${GREEN}4)${NC} Start Development Servers"
@@ -180,14 +218,14 @@ cleanup() {
     print_section "Shutting Down"
 
     # Kill backend
-    if [ -n "$BACKEND_PID" ] && kill -0 $BACKEND_PID 2>/dev/null; then
+    if is_process_running "$BACKEND_PID"; then
         kill $BACKEND_PID 2>/dev/null || true
         wait $BACKEND_PID 2>/dev/null || true
         print_success "Backend server stopped"
     fi
 
     # Kill frontend
-    if [ -n "$FRONTEND_PID" ] && kill -0 $FRONTEND_PID 2>/dev/null; then
+    if is_process_running "$FRONTEND_PID"; then
         kill $FRONTEND_PID 2>/dev/null || true
         wait $FRONTEND_PID 2>/dev/null || true
         print_success "Frontend server stopped"
@@ -353,9 +391,10 @@ install_dependencies() {
         return 1
     fi
 
-    # Install core dependencies first
-    print_info "Installing core dependencies..."
-    $PIP_CMD install pytest pytest-cov flask flask-cors pillow psutil requests pydantic 2>&1 | tee "$LOG_DIR/pip-install.log" || true
+    # Install core dependencies first (from CORE_DEPENDENCIES variable)
+    print_info "Installing core dependencies: $CORE_DEPENDENCIES"
+    # shellcheck disable=SC2086
+    $PIP_CMD install $CORE_DEPENDENCIES 2>&1 | tee "$LOG_DIR/pip-install.log" || true
     
     print_info "Installing remaining dependencies from $req_file..."
     if $PIP_CMD install -r "$req_file" 2>&1 | tee -a "$LOG_DIR/pip-install.log"; then
@@ -799,7 +838,7 @@ start_servers() {
 
     sleep 3
 
-    if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    if ! is_process_running "$BACKEND_PID"; then
         print_error "Backend failed to start"
         echo "Check $LOG_DIR/backend.log for details:"
         echo ""
@@ -818,10 +857,13 @@ start_servers() {
 
     sleep 2
 
-    if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+    if ! is_process_running "$FRONTEND_PID"; then
         print_error "Frontend failed to start"
         echo "Check $LOG_DIR/frontend.log for details"
-        kill $BACKEND_PID 2>/dev/null || true
+        # Stop the backend since frontend failed
+        if is_process_running "$BACKEND_PID"; then
+            kill "$BACKEND_PID" 2>/dev/null || true
+        fi
         return 1
     fi
 
@@ -862,14 +904,14 @@ start_servers() {
 
 monitor_services() {
     while true; do
-        if ! kill -0 $BACKEND_PID 2>/dev/null; then
+        if ! is_process_running "$BACKEND_PID"; then
             print_error "Backend process died unexpectedly!"
             echo "Last 20 lines of backend.log:"
             tail -20 "$LOG_DIR/backend.log"
             break
         fi
 
-        if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+        if ! is_process_running "$FRONTEND_PID"; then
             print_error "Frontend process died unexpectedly!"
             echo "Last 20 lines of frontend.log:"
             tail -20 "$LOG_DIR/frontend.log"
@@ -906,8 +948,9 @@ system_health_report() {
     echo -e "${BOLD}Test Statistics:${NC}"
     if [ -d "$TEST_DIR" ]; then
         local test_file_count=$(find "$TEST_DIR" -name "test_*.py" -type f 2>/dev/null | wc -l)
+        local test_count=$(get_test_count)
         echo "  Test Files: $test_file_count"
-        echo "  Expected Tests: ~1000+ (based on collected tests)"
+        echo "  Expected Tests: ~${test_count} (based on collected tests)"
     fi
     echo ""
 
@@ -915,13 +958,13 @@ system_health_report() {
     echo "  Backend Port: $BACKEND_PORT"
     echo "  Frontend Port: $FRONTEND_PORT"
 
-    if [ -n "$BACKEND_PID" ] && kill -0 $BACKEND_PID 2>/dev/null; then
+    if is_process_running "$BACKEND_PID"; then
         echo -e "  Backend Status: ${GREEN}[RUNNING]${NC} (PID: $BACKEND_PID)"
     else
         echo -e "  Backend Status: ${YELLOW}[NOT RUNNING]${NC}"
     fi
 
-    if [ -n "$FRONTEND_PID" ] && kill -0 $FRONTEND_PID 2>/dev/null; then
+    if is_process_running "$FRONTEND_PID"; then
         echo -e "  Frontend Status: ${GREEN}[RUNNING]${NC} (PID: $FRONTEND_PID)"
     else
         echo -e "  Frontend Status: ${YELLOW}[NOT RUNNING]${NC}"
@@ -964,8 +1007,9 @@ show_help() {
     echo "  ./launcher.sh alternatives    Show deployment alternatives"
     echo "  ./launcher.sh help            Show this help"
     echo ""
+    local test_count=$(get_test_count)
     echo -e "${BOLD}Test Suite Information:${NC}"
-    echo "  - Total Tests: ~1000+"
+    echo "  - Total Tests: ~${test_count}"
     echo "  - Categories: unit, integration, model, web, CEFR, AI agents"
     echo "  - Coverage: shared/, web/backend/, tools/tests/"
     echo ""
