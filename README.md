@@ -266,7 +266,77 @@ registry.create_package(name='module.param', initial_value=0.5, source_module='m
 
 ## 🧪 Testing
 
+### ⚠️ CRITICAL: Keeping Tests Up-to-Date
+
+**Tests MUST be synchronized with code changes.** Outdated tests that skip or fail due to missing functions are useless.
+
+#### After Each Code Change:
+
+1. **Run tests immediately:**
+   ```bash
+   ./launcher.sh test-quick    # Quick validation
+   ```
+
+2. **Check for skipped tests:**
+   ```bash
+   pytest tools/tests/ -v 2>&1 | grep SKIPPED
+   ```
+   
+3. **If tests skip due to missing functions:**
+   - **DO NOT** use `pytest.skip()` for functions that don't exist
+   - **DELETE** or **UPDATE** the test to match actual code
+   - Tests should test what EXISTS, not what was planned
+
+4. **Add new tests for new functions:**
+   ```bash
+   # Pattern: Test actual exports
+   from module import actual_function  # NOT hypothetical_function
+   def test_actual_function():
+       result = actual_function()
+       assert result is not None
+   ```
+
+#### Test File Organization:
+
+| File | Tests | Status |
+|------|-------|--------|
+| `test_backend.py` | Backend API routes | ✅ Active |
+| `test_backend_routes.py` | JWT, Password, Billing, Security | ✅ Active |
+| `test_shared_helpers.py` | Utils (data, helpers, logging, decorators) | ✅ Active |
+| `test_coverage_boost.py` | Low-coverage modules | ✅ Active |
+| `test_analysis.py` | CEFR analysis modules | ✅ Active |
+| `test_integration.py` | Integration tests | ⚠️ Requires external deps |
+| `test_billing.py` | Stripe billing | ⚠️ Requires stripe package |
+
+#### Test Principles:
+
+1. **No Skip-for-Missing-Functions** - If a function doesn't exist, remove the test
+2. **Direct Imports Only** - Import actual module exports, not hypothetical ones
+3. **Sync on Rename** - When renaming functions, update all tests immediately
+4. **Coverage-Driven** - Tests should improve coverage, not just exist
+
+#### Verification Commands:
+```bash
+# Check zero skipped (critical tests)
+pytest tools/tests/test_backend_routes.py -v | grep -c SKIPPED  # Should be 0
+
+# Check zero failed
+pytest tools/tests/test_shared_helpers.py -v | grep -c FAILED  # Should be 0
+
+# Full coverage report
+pytest tools/tests/ --cov=shared --cov=web/backend --cov-report=html
+```
+
+### Running Tests
+
 **Using the Unified Launcher (Recommended):**
+```bash
+./launcher.sh test           # Run full test suite (~1000+ tests)
+./launcher.sh test-quick     # Quick tests (faster)
+./launcher.sh report         # Generate comprehensive test report with CEFR analysis
+```
+
+**Direct pytest commands:**
 ```bash
 ./launcher.sh test           # Run full test suite (~1000+ tests)
 ./launcher.sh test-quick     # Quick tests (faster)

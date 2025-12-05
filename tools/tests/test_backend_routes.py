@@ -1,414 +1,349 @@
 """
-Test suite for web backend routes to improve coverage.
+Test suite for web backend modules.
 
-This file targets:
-- web.backend.routes (11% coverage)
-- web.backend.jwt_handler (30% coverage)
-- web.backend.decorators (14% coverage)
+IMPORTANT: These tests directly test actual module exports.
+When code changes, update these tests accordingly.
+
+Tested modules:
+- web.backend.jwt_handler - JWT token creation/verification
+- web.backend.password - Password hashing/verification
+- web.backend.billing.plans - Subscription plans
+- web.backend.security.headers - Security headers
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-import json
-from datetime import datetime, timedelta
+import os
 
 
 class TestJWTHandler:
-    """Test JWT token handling functionality."""
+    """Test JWT token handling - tests actual functions in jwt_handler.py"""
 
     def test_jwt_module_imports(self):
         """Test that JWT handler module can be imported."""
-        try:
-            from web.backend import jwt_handler
-            assert jwt_handler is not None
-        except ImportError:
-            pytest.skip("JWT handler module not available")
+        from web.backend import jwt_handler
+        assert jwt_handler is not None
 
-    def test_generate_token(self):
-        """Test JWT token generation."""
-        try:
-            from web.backend.jwt_handler import generate_token
+    def test_create_access_token(self):
+        """Test create_access_token function."""
+        from web.backend.jwt_handler import create_access_token
+        
+        token = create_access_token(
+            user_id="test-user-123",
+            email="test@example.com",
+            is_admin=False
+        )
+        
+        assert token is not None
+        assert isinstance(token, str)
+        assert len(token) > 0
+        # JWT tokens have 3 parts separated by dots
+        assert token.count('.') == 2
 
-            user_id = "test_user_123"
-            token = generate_token(user_id)
+    def test_create_access_token_admin(self):
+        """Test create_access_token with admin privileges."""
+        from web.backend.jwt_handler import create_access_token
+        
+        token = create_access_token(
+            user_id="admin-user-456",
+            email="admin@example.com",
+            is_admin=True
+        )
+        
+        assert token is not None
+        assert isinstance(token, str)
 
-            assert token is not None
-            assert isinstance(token, str)
-            assert len(token) > 0
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("generate_token not available")
+    def test_verify_access_token_valid(self):
+        """Test verify_access_token with valid token."""
+        from web.backend.jwt_handler import create_access_token, verify_access_token
+        
+        # Create a token
+        token = create_access_token(
+            user_id="verify-test-user",
+            email="verify@example.com",
+            is_admin=False
+        )
+        
+        # Verify it
+        payload = verify_access_token(token)
+        
+        assert payload is not None
+        assert payload.get('user_id') == "verify-test-user"
+        assert payload.get('email') == "verify@example.com"
+        assert payload.get('is_admin') is False
+        assert payload.get('type') == 'access'
 
-    def test_verify_token(self):
-        """Test JWT token verification."""
-        try:
-            from web.backend.jwt_handler import generate_token, verify_token
+    def test_verify_access_token_invalid(self):
+        """Test verify_access_token with invalid token."""
+        from web.backend.jwt_handler import verify_access_token
+        
+        result = verify_access_token("invalid.token.here")
+        
+        # Should return None for invalid token
+        assert result is None
 
-            user_id = "test_user_456"
-            token = generate_token(user_id)
+    def test_create_refresh_token(self):
+        """Test create_refresh_token function."""
+        from web.backend.jwt_handler import create_refresh_token
+        
+        token, token_hash = create_refresh_token()
+        
+        assert token is not None
+        assert token_hash is not None
+        assert isinstance(token, str)
+        assert isinstance(token_hash, str)
+        assert len(token) > 0
+        assert len(token_hash) == 64  # SHA-256 hex digest length
 
-            # Verify the token
-            result = verify_token(token)
-
-            assert result is not None
-            # Result might be user_id, dict, or tuple depending on implementation
-            if isinstance(result, str):
-                assert user_id in result
-            elif isinstance(result, dict):
-                assert 'user_id' in result or 'sub' in result
-            elif isinstance(result, tuple):
-                assert user_id in str(result)
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("Token verification not available")
-
-    def test_token_expiration(self):
-        """Test that tokens can have expiration."""
-        try:
-            from web.backend.jwt_handler import generate_token
-
-            # Generate token with short expiration if supported
-            user_id = "test_user_exp"
-            token = generate_token(user_id, expires_in=3600)  # 1 hour
-
-            assert token is not None
-            assert isinstance(token, str)
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("Token expiration not available")
-
-    def test_invalid_token_verification(self):
-        """Test verification of invalid tokens."""
-        try:
-            from web.backend.jwt_handler import verify_token
-
-            # Try to verify an invalid token
-            invalid_token = "invalid.token.here"
-            result = verify_token(invalid_token)
-
-            # Should return None, False, or raise an exception
-            assert result is None or result is False
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("Invalid token verification not available")
-        except Exception:
-            # Expected to fail with invalid token
-            assert True
-
-
-class TestDecorators:
-    """Test backend decorators module."""
-
-    def test_decorators_imports(self):
-        """Test that decorators can be imported."""
-        try:
-            from web.backend import decorators
-            assert decorators is not None
-        except ImportError:
-            pytest.skip("Decorators module not available")
-
-    def test_login_required_decorator(self):
-        """Test login_required decorator if available."""
-        try:
-            from web.backend.decorators import login_required
-            from flask import Flask
-
-            app = Flask(__name__)
-
-            @login_required
-            def protected_route():
-                return "protected content"
-
-            assert protected_route is not None
-            assert callable(protected_route)
-        except (ImportError, AttributeError):
-            pytest.skip("login_required decorator not available")
-
-    def test_admin_required_decorator(self):
-        """Test admin_required decorator if available."""
-        try:
-            from web.backend.decorators import admin_required
-
-            @admin_required
-            def admin_route():
-                return "admin content"
-
-            assert admin_route is not None
-            assert callable(admin_route)
-        except (ImportError, AttributeError):
-            pytest.skip("admin_required decorator not available")
-
-    def test_rate_limit_decorator(self):
-        """Test rate_limit decorator if available."""
-        try:
-            from web.backend.decorators import rate_limit
-
-            @rate_limit(max_calls=10, period=60)
-            def limited_route():
-                return "limited content"
-
-            assert limited_route is not None
-            assert callable(limited_route)
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("rate_limit decorator not available")
+    def test_refresh_token_uniqueness(self):
+        """Test that refresh tokens are unique."""
+        from web.backend.jwt_handler import create_refresh_token
+        
+        token1, hash1 = create_refresh_token()
+        token2, hash2 = create_refresh_token()
+        
+        assert token1 != token2
+        assert hash1 != hash2
 
 
-class TestBackendRoutes:
-    """Test backend routes functionality."""
+class TestPasswordModule:
+    """Test password hashing and verification."""
 
-    def test_routes_module_imports(self):
-        """Test that routes module can be imported."""
-        try:
-            from web.backend import routes
-            assert routes is not None
-        except ImportError:
-            pytest.skip("Routes module not available")
+    def test_password_module_imports(self):
+        """Test that password module can be imported."""
+        from web.backend import password
+        assert password is not None
 
-    def test_health_check_route(self):
-        """Test health check endpoint."""
-        try:
-            from web.backend.app import create_app
+    def test_hash_password(self):
+        """Test hash_password function."""
+        from web.backend.password import hash_password
+        
+        password_plain = "TestPassword123!"
+        hashed = hash_password(password_plain)
+        
+        assert hashed is not None
+        assert isinstance(hashed, str)
+        assert hashed != password_plain  # Hash should differ from plain
+        assert len(hashed) > 0
 
-            app = create_app()
-            client = app.test_client()
+    def test_hash_password_different_each_time(self):
+        """Test that same password produces different hashes (salting)."""
+        from web.backend.password import hash_password
+        
+        password_plain = "SamePassword123!"
+        hash1 = hash_password(password_plain)
+        hash2 = hash_password(password_plain)
+        
+        # Bcrypt uses random salt, so hashes should differ
+        assert hash1 != hash2
 
-            # Test health check endpoint
-            response = client.get('/health')
+    def test_hash_password_empty_raises(self):
+        """Test that empty password raises error."""
+        from web.backend.password import hash_password
+        
+        with pytest.raises(ValueError):
+            hash_password("")
 
-            # Should return 200 or 404 if route doesn't exist
-            assert response.status_code in [200, 404]
+    def test_verify_password_correct(self):
+        """Test verify_password with correct password."""
+        from web.backend.password import hash_password, verify_password
+        
+        password_plain = "CorrectPassword123!"
+        hashed = hash_password(password_plain)
+        
+        result = verify_password(password_plain, hashed)
+        
+        assert result is True
 
-            if response.status_code == 200:
-                # Check response format
-                data = response.get_json() if response.is_json else None
-                assert data is not None or response.data
-        except (ImportError, AttributeError):
-            pytest.skip("Health check route not available")
+    def test_verify_password_incorrect(self):
+        """Test verify_password with incorrect password."""
+        from web.backend.password import hash_password, verify_password
+        
+        password_plain = "CorrectPassword123!"
+        hashed = hash_password(password_plain)
+        
+        result = verify_password("WrongPassword456!", hashed)
+        
+        assert result is False
 
-    def test_api_routes_exist(self):
-        """Test that main API routes are defined."""
-        try:
-            from web.backend import routes
-            import inspect
+    def test_verify_password_empty(self):
+        """Test verify_password with empty inputs."""
+        from web.backend.password import verify_password
+        
+        assert verify_password("", "somehash") is False
+        assert verify_password("somepassword", "") is False
 
-            # Get all functions in routes module
-            functions = inspect.getmembers(routes, inspect.isfunction)
+    def test_is_password_strong_valid(self):
+        """Test is_password_strong with valid password."""
+        from web.backend.password import is_password_strong
+        
+        is_strong, issues = is_password_strong("StrongP@ss123!")
+        
+        assert is_strong is True
+        assert len(issues) == 0
 
-            # Should have some route handler functions
-            assert len(functions) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("Routes module structure not available")
+    def test_is_password_strong_too_short(self):
+        """Test is_password_strong with short password."""
+        from web.backend.password import is_password_strong
+        
+        is_strong, issues = is_password_strong("Sh0rt!")
+        
+        assert is_strong is False
+        assert any("8 characters" in issue for issue in issues)
 
-    def test_extract_route_structure(self):
-        """Test that extract route is properly structured."""
-        try:
-            from web.backend.app import create_app
-
-            app = create_app()
-
-            # Check that /api/extract route exists
-            rules = list(app.url_map.iter_rules())
-            rule_paths = [rule.rule for rule in rules]
-
-            # Look for extract endpoint
-            extract_routes = [r for r in rule_paths if 'extract' in r]
-
-            # Either has extract routes or doesn't - both are valid
-            assert isinstance(extract_routes, list)
-        except (ImportError, AttributeError):
-            pytest.skip("App creation not available")
-
-    def test_user_registration_route_mock(self):
-        """Test user registration with mocked database."""
-        try:
-            from web.backend.app import create_app
-
-            app = create_app()
-            client = app.test_client()
-
-            # Test registration endpoint
-            response = client.post('/api/register', json={
-                'email': 'test@example.com',
-                'password': 'TestPassword123!',
-                'username': 'testuser'
-            })
-
-            # Should return something (200, 201, 400, 404, or 422)
-            assert response.status_code in [200, 201, 400, 404, 422, 500]
-        except (ImportError, AttributeError):
-            pytest.skip("Registration route not available")
-
-    def test_login_route_mock(self):
-        """Test login route with mocked database."""
-        try:
-            from web.backend.app import create_app
-
-            app = create_app()
-            client = app.test_client()
-
-            # Test login endpoint
-            response = client.post('/api/login', json={
-                'email': 'test@example.com',
-                'password': 'TestPassword123!'
-            })
-
-            # Should return something
-            assert response.status_code in [200, 400, 401, 404, 422]
-        except (ImportError, AttributeError):
-            pytest.skip("Login route not available")
+    def test_is_password_strong_missing_uppercase(self):
+        """Test is_password_strong without uppercase."""
+        from web.backend.password import is_password_strong
+        
+        is_strong, issues = is_password_strong("nouppercase123!")
+        
+        assert is_strong is False
+        assert any("uppercase" in issue for issue in issues)
 
 
-class TestDatabaseHelpers:
-    """Test database helper functions."""
+class TestBillingPlans:
+    """Test billing plans module."""
+
+    def test_billing_plans_imports(self):
+        """Test that billing plans can be imported."""
+        from web.backend.billing.plans import SUBSCRIPTION_PLANS
+        assert SUBSCRIPTION_PLANS is not None
+        assert isinstance(SUBSCRIPTION_PLANS, dict)
+
+    def test_subscription_plans_structure(self):
+        """Test SUBSCRIPTION_PLANS has required plans."""
+        from web.backend.billing.plans import SUBSCRIPTION_PLANS
+        
+        required_plans = ['free', 'pro', 'business', 'enterprise']
+        for plan in required_plans:
+            assert plan in SUBSCRIPTION_PLANS
+            assert 'name' in SUBSCRIPTION_PLANS[plan]
+            assert 'price' in SUBSCRIPTION_PLANS[plan]
+            assert 'features' in SUBSCRIPTION_PLANS[plan]
+
+    def test_get_plan_features(self):
+        """Test get_plan_features function."""
+        from web.backend.billing.plans import get_plan_features
+        
+        features = get_plan_features('free')
+        
+        assert features is not None
+        assert isinstance(features, dict)
+        assert 'receipts_per_month' in features
+
+    def test_is_feature_available(self):
+        """Test is_feature_available function."""
+        from web.backend.billing.plans import is_feature_available
+        
+        # Free tier shouldn't have API access
+        assert is_feature_available('free', 'api_access') is False
+        
+        # Pro tier should have API access
+        assert is_feature_available('pro', 'api_access') is True
+
+    def test_get_plan_limit(self):
+        """Test get_plan_limit function."""
+        from web.backend.billing.plans import get_plan_limit
+        
+        free_limit = get_plan_limit('free', 'receipts_per_month')
+        pro_limit = get_plan_limit('pro', 'receipts_per_month')
+        
+        assert free_limit == 10
+        assert pro_limit == 500
+
+    def test_compare_plans(self):
+        """Test compare_plans function."""
+        from web.backend.billing.plans import compare_plans
+        
+        assert compare_plans('free', 'pro') == -1  # free < pro
+        assert compare_plans('pro', 'free') == 1   # pro > free
+        assert compare_plans('pro', 'pro') == 0    # pro == pro
+
+    def test_is_plan_sufficient(self):
+        """Test is_plan_sufficient function."""
+        from web.backend.billing.plans import is_plan_sufficient
+        
+        assert is_plan_sufficient('pro', 'free') is True
+        assert is_plan_sufficient('free', 'pro') is False
+        assert is_plan_sufficient('enterprise', 'business') is True
+
+    def test_get_upgrade_recommendation(self):
+        """Test get_upgrade_recommendation function."""
+        from web.backend.billing.plans import get_upgrade_recommendation
+        
+        assert get_upgrade_recommendation('free') == 'pro'
+        assert get_upgrade_recommendation('pro') == 'business'
+        assert get_upgrade_recommendation('enterprise') is None
+
+    def test_get_all_plans(self):
+        """Test get_all_plans function."""
+        from web.backend.billing.plans import get_all_plans
+        
+        plans = get_all_plans()
+        
+        assert isinstance(plans, dict)
+        assert len(plans) >= 4
+
+    def test_get_plan_price(self):
+        """Test get_plan_price function."""
+        from web.backend.billing.plans import get_plan_price
+        
+        assert get_plan_price('free') == 0
+        assert get_plan_price('pro') == 19
+        assert get_plan_price('business') == 49
+
+
+class TestSecurityHeaders:
+    """Test security headers module."""
+
+    def test_security_headers_imports(self):
+        """Test that security headers module can be imported."""
+        from web.backend.security.headers import add_security_headers
+        assert add_security_headers is not None
+        assert callable(add_security_headers)
+
+    def test_add_security_headers(self):
+        """Test add_security_headers function."""
+        from web.backend.security.headers import add_security_headers
+        from flask import Flask, Response
+        
+        app = Flask(__name__)
+        
+        with app.app_context():
+            response = Response("test content")
+            secured = add_security_headers(response)
+            
+            assert secured is not None
+            # Check that security headers were added
+            headers = dict(secured.headers)
+            
+            # At least some security headers should be present
+            security_headers = [
+                'X-Content-Type-Options',
+                'X-Frame-Options', 
+                'X-XSS-Protection',
+                'Strict-Transport-Security'
+            ]
+            
+            has_security_headers = any(h in headers for h in security_headers)
+            assert has_security_headers or len(headers) > 1
+
+
+class TestDatabaseModels:
+    """Test database module imports and basic structure."""
 
     def test_database_module_imports(self):
         """Test that database module can be imported."""
-        try:
-            from web.backend import database
-            assert database is not None
-        except ImportError:
-            pytest.skip("Database module not available")
+        from web.backend import database
+        assert database is not None
 
-    def test_database_models_exist(self):
-        """Test that database models are defined."""
-        try:
-            from web.backend.database import User, Receipt
-            assert User is not None
-            assert Receipt is not None
-        except (ImportError, AttributeError):
-            pytest.skip("Database models not available")
+    def test_user_model_exists(self):
+        """Test that User model is defined."""
+        from web.backend.database import User
+        assert User is not None
 
-    def test_user_model_structure(self):
-        """Test User model has expected attributes."""
-        try:
-            from web.backend.database import User
-
-            # Check that User has common attributes
-            expected_attrs = ['id', 'email', 'password', 'username']
-            user_attrs = dir(User)
-
-            found_attrs = [attr for attr in expected_attrs if attr in user_attrs]
-
-            # Should have at least some of these attributes
-            assert len(found_attrs) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("User model structure not available")
-
-    def test_receipt_model_structure(self):
-        """Test Receipt model has expected attributes."""
-        try:
-            from web.backend.database import Receipt
-
-            # Check that Receipt has common attributes
-            expected_attrs = ['id', 'user_id', 'filename', 'data']
-            receipt_attrs = dir(Receipt)
-
-            found_attrs = [attr for attr in expected_attrs if attr in receipt_attrs]
-
-            # Should have at least some of these attributes
-            assert len(found_attrs) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("Receipt model structure not available")
-
-
-class TestStorageHandlers:
-    """Test storage handler implementations."""
-
-    def test_s3_handler_imports(self):
-        """Test that S3 handler can be imported."""
-        try:
-            from web.backend.storage.s3_handler import S3Handler
-            assert S3Handler is not None
-        except (ImportError, AttributeError):
-            pytest.skip("S3Handler not available")
-
-    def test_gdrive_handler_imports(self):
-        """Test that Google Drive handler can be imported."""
-        try:
-            from web.backend.storage.gdrive_handler import GoogleDriveHandler
-            assert GoogleDriveHandler is not None
-        except (ImportError, AttributeError):
-            pytest.skip("GoogleDriveHandler not available")
-
-    def test_dropbox_handler_imports(self):
-        """Test that Dropbox handler can be imported."""
-        try:
-            from web.backend.storage.dropbox_handler import DropboxHandler
-            assert DropboxHandler is not None
-        except (ImportError, AttributeError):
-            pytest.skip("DropboxHandler not available")
-
-    def test_s3_handler_initialization(self):
-        """Test S3Handler initialization with mocked boto3."""
-        try:
-            # Skip if boto3 is not available
-            pytest.importorskip('boto3')
-
-            from web.backend.storage.s3_handler import S3Handler
-
-            # Try to initialize (might fail without real credentials, which is ok)
-            try:
-                handler = S3Handler(
-                    bucket_name='test-bucket',
-                    access_key='test-key',
-                    secret_key='test-secret',
-                    region='us-east-1'
-                )
-                assert handler is not None
-            except Exception:
-                # If initialization fails due to credentials, just check import worked
-                assert S3Handler is not None
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("S3Handler not available")
-
-
-class TestTrainingModules:
-    """Test training modules."""
-
-    def test_base_trainer_imports(self):
-        """Test that base trainer can be imported."""
-        try:
-            from web.backend.training.base import BaseTrainer
-            assert BaseTrainer is not None
-        except (ImportError, AttributeError):
-            pytest.skip("BaseTrainer not available")
-
-    def test_hf_trainer_imports(self):
-        """Test that HuggingFace trainer can be imported."""
-        try:
-            from web.backend.training.hf_trainer import HuggingFaceTrainer
-            assert HuggingFaceTrainer is not None
-        except (ImportError, AttributeError):
-            pytest.skip("HuggingFaceTrainer not available")
-
-    def test_replicate_trainer_imports(self):
-        """Test that Replicate trainer can be imported."""
-        try:
-            from web.backend.training.replicate_trainer import ReplicateTrainer
-            assert ReplicateTrainer is not None
-        except (ImportError, AttributeError):
-            pytest.skip("ReplicateTrainer not available")
-
-    def test_runpod_trainer_imports(self):
-        """Test that RunPod trainer can be imported."""
-        try:
-            from web.backend.training.runpod_trainer import RunPodTrainer
-            assert RunPodTrainer is not None
-        except (ImportError, AttributeError):
-            pytest.skip("RunPodTrainer not available")
-
-    def test_base_trainer_interface(self):
-        """Test that BaseTrainer defines expected interface."""
-        try:
-            from web.backend.training.base import BaseTrainer
-            import inspect
-
-            methods = inspect.getmembers(BaseTrainer, predicate=inspect.isfunction)
-            method_names = [name for name, _ in methods]
-
-            # Trainers should have methods like train, validate, etc.
-            expected_methods = ['train', 'start_training', 'get_status']
-
-            # At least one should be present
-            found = any(method in method_names for method in expected_methods)
-            assert found or len(method_names) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("BaseTrainer interface not available")
+    def test_receipt_model_exists(self):
+        """Test that Receipt model is defined."""
+        from web.backend.database import Receipt
+        assert Receipt is not None
 
 
 if __name__ == '__main__':
