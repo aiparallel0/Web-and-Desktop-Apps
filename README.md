@@ -393,18 +393,26 @@ pytest tools/tests/test_integration.py # Integration tests
    cd Web-and-Desktop-Apps
    ```
 
-2. **Install Python Dependencies**
+2. **Updating the Repository**
+   
+   > **Important:** Always use `git-sync.py` instead of `git pull` to avoid conflicts with auto-generated files:
+   ```bash
+   python git-sync.py              # Sync with remote (recommended)
+   python git-sync.py --discard    # Discard auto-generated file changes and pull
+   ```
+
+3. **Install Python Dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Environment**
+4. **Configure Environment**
    ```bash
    cp .env.example .env
    # Edit .env with your actual credentials
    ```
 
-4. **Initialize Database**
+5. **Initialize Database**
    ```bash
    # Create PostgreSQL database
    createdb receipt_extractor
@@ -416,7 +424,7 @@ pytest tools/tests/test_integration.py # Integration tests
    export USE_SQLITE=true
    ```
 
-5. **Install Tesseract (Optional)**
+6. **Install Tesseract (Optional)**
    ```bash
    # Linux
    sudo apt-get install tesseract-ocr
@@ -428,7 +436,7 @@ pytest tools/tests/test_integration.py # Integration tests
    # Download from: https://github.com/UB-Mannheim/tesseract/wiki
    ```
 
-6. **Launch Application**
+7. **Launch Application**
    ```bash
    ./launch.sh
    # Or manually:
