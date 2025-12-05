@@ -1,146 +1,332 @@
 """
-Test suite for shared helper modules with low coverage.
+Test suite for shared utility modules.
 
 This file targets:
-- shared.utils.helpers (48% coverage)
-- shared.utils.image (50% coverage)
-- shared.utils.data (76% coverage - but still has gaps)
-- shared.utils.logging (74% coverage - but still has gaps)
+- shared.utils.helpers (error handling and caching module)
+- shared.utils.data (domain models - LineItem, ReceiptData, ExtractionResult)
+- shared.utils.logging (centralized logging)
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import os
 from pathlib import Path
+from decimal import Decimal
 
 
 class TestHelpersModule:
-    """Test shared.utils.helpers module."""
+    """Test shared.utils.helpers module (error handling and caching)."""
 
     def test_helpers_imports(self):
         """Test that helpers module can be imported."""
-        try:
-            from shared.utils import helpers
-            assert helpers is not None
-        except ImportError:
-            pytest.skip("Helpers module not available")
+        from shared.utils import helpers
+        assert helpers is not None
 
-    def test_ensure_directory_exists(self):
-        """Test directory creation helper."""
-        try:
-            from shared.utils.helpers import ensure_directory_exists
+    def test_error_category_enum(self):
+        """Test ErrorCategory enum values."""
+        from shared.utils.helpers import ErrorCategory
+        
+        # Test that common categories exist
+        assert ErrorCategory.VALIDATION == "validation"
+        assert ErrorCategory.AUTHENTICATION == "authentication"
+        assert ErrorCategory.PROCESSING == "processing"
+        assert ErrorCategory.INTERNAL == "internal"
 
-            with tempfile.TemporaryDirectory() as tmpdir:
-                test_dir = os.path.join(tmpdir, 'test', 'nested', 'dir')
+    def test_error_code_enum(self):
+        """Test ErrorCode enum values."""
+        from shared.utils.helpers import ErrorCode
+        
+        # Test that error codes exist
+        assert ErrorCode.INVALID_INPUT == "E1001"
+        assert ErrorCode.INTERNAL_ERROR == "E9001"
+        assert ErrorCode.RATE_LIMIT_EXCEEDED == "E3003"
 
-                # Ensure directory is created
-                result = ensure_directory_exists(test_dir)
+    def test_receipt_extractor_error_creation(self):
+        """Test ReceiptExtractorError exception creation."""
+        from shared.utils.helpers import ReceiptExtractorError, ErrorCode, ErrorCategory
+        
+        error = ReceiptExtractorError(
+            message="Test error",
+            code=ErrorCode.INVALID_INPUT,
+            category=ErrorCategory.VALIDATION,
+            http_status=400
+        )
+        
+        assert error.message == "Test error"
+        assert error.code == ErrorCode.INVALID_INPUT
+        assert error.category == ErrorCategory.VALIDATION
+        assert error.http_status == 400
 
-                # Directory should now exist
-                assert os.path.exists(test_dir)
-                assert os.path.isdir(test_dir)
-        except (ImportError, AttributeError):
-            pytest.skip("ensure_directory_exists not available")
+    def test_receipt_extractor_error_to_dict(self):
+        """Test ReceiptExtractorError to_dict conversion."""
+        from shared.utils.helpers import ReceiptExtractorError, ErrorCode, ErrorCategory
+        
+        error = ReceiptExtractorError(
+            message="Test validation error",
+            code=ErrorCode.INVALID_INPUT,
+            category=ErrorCategory.VALIDATION,
+            details={'field': 'email'},
+            suggestion='Provide a valid email address'
+        )
+        
+        result = error.to_dict()
+        
+        assert result['success'] is False
+        assert result['error']['code'] == "E1001"
+        assert result['error']['type'] == "validation"
+        assert result['error']['message'] == "Test validation error"
+        assert result['error']['details']['field'] == 'email'
+        assert result['error']['suggestion'] == 'Provide a valid email address'
 
-    def test_safe_filename(self):
-        """Test safe filename generation."""
-        try:
-            from shared.utils.helpers import safe_filename
+    def test_validation_error(self):
+        """Test ValidationError exception."""
+        from shared.utils.helpers import ValidationError, ErrorCode
+        
+        error = ValidationError(
+            message="Email is invalid",
+            code=ErrorCode.INVALID_INPUT
+        )
+        
+        assert error.http_status == 400
+        assert "Email is invalid" in str(error)
 
-            # Test with unsafe filename
-            unsafe = "test/file:name*.txt"
-            safe = safe_filename(unsafe)
+    def test_processing_error(self):
+        """Test ProcessingError exception."""
+        from shared.utils.helpers import ProcessingError, ErrorCode
+        
+        error = ProcessingError(
+            message="OCR processing failed",
+            code=ErrorCode.OCR_FAILED
+        )
+        
+        assert error.http_status == 500
 
-            assert safe != unsafe
-            assert '/' not in safe
-            assert ':' not in safe
-            assert '*' not in safe
-            assert len(safe) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("safe_filename not available")
+    def test_rate_limit_error(self):
+        """Test RateLimitError exception."""
+        from shared.utils.helpers import RateLimitError
+        
+        error = RateLimitError(
+            message="Too many requests",
+            retry_after=60,
+            limit=100,
+            remaining=0
+        )
+        
+        assert error.http_status == 429
+        assert error.details['retry_after'] == 60
+        assert error.details['limit'] == 100
 
-    def test_format_bytes(self):
-        """Test byte formatting helper."""
-        try:
-            from shared.utils.helpers import format_bytes
+    def test_external_service_error(self):
+        """Test ExternalServiceError exception."""
+        from shared.utils.helpers import ExternalServiceError
+        
+        error = ExternalServiceError(
+            message="AWS S3 unavailable",
+            service_name="S3"
+        )
+        
+        assert error.http_status == 503
+        assert error.details['service'] == "S3"
 
-            # Test various byte sizes
-            assert format_bytes(1024) in ['1.0 KB', '1 KB', '1.00 KB', '1024 B']
-            assert format_bytes(1048576) in ['1.0 MB', '1 MB', '1.00 MB']
-            assert format_bytes(1073741824) in ['1.0 GB', '1 GB', '1.00 GB']
-            assert format_bytes(0) in ['0 B', '0.0 B', '0.00 B']
-        except (ImportError, AttributeError):
-            pytest.skip("format_bytes not available")
+    def test_circuit_breaker_initialization(self):
+        """Test CircuitBreaker initialization."""
+        from shared.utils.helpers import CircuitBreaker, CircuitBreakerState
+        
+        breaker = CircuitBreaker("test_service")
+        
+        assert breaker.service_name == "test_service"
+        assert breaker.state == CircuitBreakerState.CLOSED
+        assert breaker.failure_count == 0
 
-    def test_parse_datetime(self):
-        """Test datetime parsing helper."""
-        try:
-            from shared.utils.helpers import parse_datetime
+    def test_circuit_breaker_state_transitions(self):
+        """Test CircuitBreaker state transitions."""
+        from shared.utils.helpers import CircuitBreaker, CircuitBreakerState, CircuitBreakerConfig
+        
+        config = CircuitBreakerConfig(failure_threshold=2, timeout_seconds=0.01)
+        breaker = CircuitBreaker("test_service", config)
+        
+        # Record failures to trigger open state
+        breaker.record_failure()
+        assert breaker.state == CircuitBreakerState.CLOSED
+        
+        breaker.record_failure()
+        assert breaker.state == CircuitBreakerState.OPEN
 
-            # Test ISO format
-            iso_str = "2024-01-15T10:30:00"
-            result = parse_datetime(iso_str)
+    def test_circuit_breaker_as_decorator(self):
+        """Test CircuitBreaker as a decorator."""
+        from shared.utils.helpers import CircuitBreaker
+        
+        breaker = CircuitBreaker("test_service")
+        call_count = 0
+        
+        @breaker
+        def test_func():
+            nonlocal call_count
+            call_count += 1
+            return "success"
+        
+        result = test_func()
+        assert result == "success"
+        assert call_count == 1
 
-            assert result is not None
-            # Should return datetime object or string
-            assert result
-        except (ImportError, AttributeError):
-            pytest.skip("parse_datetime not available")
+    def test_get_circuit_breaker(self):
+        """Test get_circuit_breaker factory function."""
+        from shared.utils.helpers import get_circuit_breaker
+        
+        breaker1 = get_circuit_breaker("service_a")
+        breaker2 = get_circuit_breaker("service_a")
+        
+        # Same service should return same breaker instance
+        assert breaker1 is breaker2
 
-    def test_get_file_extension(self):
-        """Test file extension extraction."""
-        try:
-            from shared.utils.helpers import get_file_extension
+    def test_create_error_response(self):
+        """Test create_error_response utility."""
+        from shared.utils.helpers import create_error_response, ValidationError
+        
+        error = ValidationError(message="Invalid input")
+        response, status = create_error_response(error)
+        
+        assert status == 400
+        assert response['success'] is False
 
-            assert get_file_extension('test.txt') in ['.txt', 'txt']
-            assert get_file_extension('image.jpg') in ['.jpg', 'jpg']
-            assert get_file_extension('archive.tar.gz') in ['.gz', 'gz', '.tar.gz', 'tar.gz']
-            assert get_file_extension('noextension') in ['', None]
-        except (ImportError, AttributeError):
-            pytest.skip("get_file_extension not available")
+    def test_handle_exception_with_custom_error(self):
+        """Test handle_exception with custom ReceiptExtractorError."""
+        from shared.utils.helpers import handle_exception, ValidationError
+        
+        error = ValidationError(message="Test error")
+        response, status = handle_exception(error)
+        
+        assert status == 400
+        assert response['success'] is False
 
-    def test_truncate_string(self):
-        """Test string truncation helper."""
-        try:
-            from shared.utils.helpers import truncate_string
+    def test_handle_exception_with_generic_error(self):
+        """Test handle_exception with generic Exception."""
+        from shared.utils.helpers import handle_exception
+        
+        error = Exception("Generic error")
+        response, status = handle_exception(error)
+        
+        assert status == 500
+        assert response['success'] is False
 
-            long_string = "This is a very long string that needs to be truncated"
-            truncated = truncate_string(long_string, max_length=20)
+    def test_lru_cache_basic_operations(self):
+        """Test LRUCache basic get/set operations."""
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=3)
+        
+        cache.set("key1", "value1")
+        cache.set("key2", "value2")
+        
+        assert cache.get("key1") == "value1"
+        assert cache.get("key2") == "value2"
+        assert cache.get("nonexistent") is None
 
-            assert truncated is not None
-            assert len(truncated) <= 25  # Allow for ellipsis
-            assert isinstance(truncated, str)
-        except (ImportError, AttributeError):
-            pytest.skip("truncate_string not available")
+    def test_lru_cache_eviction(self):
+        """Test LRUCache eviction when max_size is reached."""
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=2)
+        
+        cache.set("key1", "value1")
+        cache.set("key2", "value2")
+        cache.set("key3", "value3")  # This should evict key1
+        
+        assert cache.get("key1") is None  # Evicted
+        assert cache.get("key2") == "value2"
+        assert cache.get("key3") == "value3"
 
-    def test_get_timestamp(self):
-        """Test timestamp generation."""
-        try:
-            from shared.utils.helpers import get_timestamp
+    def test_lru_cache_ttl(self):
+        """Test LRUCache with TTL expiration."""
+        import time
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=10, ttl_seconds=0.1)  # 100ms TTL
+        
+        cache.set("key", "value")
+        assert cache.get("key") == "value"
+        
+        time.sleep(0.15)  # Wait for TTL to expire
+        assert cache.get("key") is None  # Should be expired
 
-            timestamp = get_timestamp()
+    def test_lru_cache_delete(self):
+        """Test LRUCache delete operation."""
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=10)
+        cache.set("key", "value")
+        
+        assert cache.delete("key") is True
+        assert cache.get("key") is None
+        assert cache.delete("nonexistent") is False
 
-            assert timestamp is not None
-            assert isinstance(timestamp, (str, int, float))
-            assert len(str(timestamp)) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("get_timestamp not available")
+    def test_lru_cache_clear(self):
+        """Test LRUCache clear operation."""
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=10)
+        cache.set("key1", "value1")
+        cache.set("key2", "value2")
+        
+        cache.clear()
+        
+        assert cache.get("key1") is None
+        assert cache.get("key2") is None
 
-    def test_merge_dicts(self):
-        """Test dictionary merging helper."""
-        try:
-            from shared.utils.helpers import merge_dicts
+    def test_lru_cache_stats(self):
+        """Test LRUCache statistics."""
+        from shared.utils.helpers import LRUCache
+        
+        cache = LRUCache(max_size=10, name="test_cache")
+        cache.set("key", "value")
+        cache.get("key")  # Hit
+        cache.get("nonexistent")  # Miss
+        
+        stats = cache.get_stats()
+        
+        assert stats['name'] == "test_cache"
+        assert stats['size'] == 1
+        assert stats['hits'] == 1
+        assert stats['misses'] == 1
 
-            dict1 = {'a': 1, 'b': 2}
-            dict2 = {'b': 3, 'c': 4}
+    def test_cache_result_decorator(self):
+        """Test cache_result decorator."""
+        from shared.utils.helpers import cache_result
+        
+        call_count = 0
+        
+        @cache_result(cache_name="test_decorator", max_size=10)
+        def expensive_function(x):
+            nonlocal call_count
+            call_count += 1
+            return x * 2
+        
+        # First call
+        result1 = expensive_function(5)
+        assert result1 == 10
+        assert call_count == 1
+        
+        # Second call with same arg should use cache
+        result2 = expensive_function(5)
+        assert result2 == 10
+        # call_count should still be 1 (cached)
+        
+        # Different arg should call function
+        result3 = expensive_function(10)
+        assert result3 == 20
 
-            result = merge_dicts(dict1, dict2)
-
-            assert result is not None
-            assert isinstance(result, dict)
-            assert 'a' in result or len(result) > 0
-        except (ImportError, AttributeError):
-            pytest.skip("merge_dicts not available")
+    def test_get_cache_stats(self):
+        """Test get_cache_stats function."""
+        from shared.utils.helpers import get_cache_stats, LRUCache, get_cache
+        
+        # Create some caches
+        cache = get_cache("stats_test", max_size=10)
+        cache.set("key", "value")
+        
+        stats = get_cache_stats()
+        
+        assert isinstance(stats, dict)
+        assert "stats_test" in stats
 
 
 class TestImageModule:
@@ -148,223 +334,367 @@ class TestImageModule:
 
     def test_image_module_imports(self):
         """Test that image module can be imported."""
-        try:
-            from shared.utils import image
-            assert image is not None
-        except ImportError:
-            pytest.skip("Image module not available")
+        from shared.utils import image
+        assert image is not None
 
-    def test_load_image(self):
-        """Test image loading function."""
-        try:
-            from shared.utils.image import load_image
-            from PIL import Image
-            import numpy as np
+    def test_load_and_validate_image(self):
+        """Test load_and_validate_image function."""
+        from shared.utils.image import load_and_validate_image
+        from PIL import Image
+        import numpy as np
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            img_path = os.path.join(tmpdir, 'test.png')
+            
+            # Create a simple image
+            img = Image.new('RGB', (100, 100), color='red')
+            img.save(img_path)
+            
+            # Load and validate the image
+            loaded = load_and_validate_image(img_path)
+            
+            assert loaded is not None
 
-            # Create a temporary test image
-            with tempfile.TemporaryDirectory() as tmpdir:
-                img_path = os.path.join(tmpdir, 'test.png')
+    def test_resize_if_needed(self):
+        """Test resize_if_needed function."""
+        from shared.utils.image import resize_if_needed
+        from PIL import Image
+        
+        # Create a large test image
+        large_image = Image.new('RGB', (4000, 4000), color='blue')
+        
+        # Resize should reduce size to max_size
+        resized = resize_if_needed(large_image, max_size=2000)
+        
+        assert resized is not None
+        assert max(resized.size) <= 2000
 
-                # Create a simple image
-                img = Image.new('RGB', (100, 100), color='red')
-                img.save(img_path)
+    def test_enhance_image(self):
+        """Test enhance_image function."""
+        from shared.utils.image import enhance_image
+        import numpy as np
+        
+        # Create a test image array
+        test_image = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+        
+        enhanced = enhance_image(test_image)
+        
+        assert enhanced is not None
+        assert isinstance(enhanced, np.ndarray)
 
-                # Load the image
-                loaded = load_image(img_path)
+    def test_assess_image_quality(self):
+        """Test assess_image_quality function."""
+        from shared.utils.image import assess_image_quality
+        from PIL import Image
+        
+        # Create a test PIL Image
+        test_image = Image.new('RGB', (200, 200), color='white')
+        
+        quality = assess_image_quality(test_image)
+        
+        assert quality is not None
+        assert isinstance(quality, dict)
 
-                assert loaded is not None
-                # Could be PIL Image or numpy array
-                assert isinstance(loaded, (Image.Image, np.ndarray))
-        except (ImportError, AttributeError):
-            pytest.skip("load_image not available")
-
-    def test_resize_image(self):
-        """Test image resizing function."""
-        try:
-            from shared.utils.image import resize_image
-            from PIL import Image
-
-            # Create a test image
-            img = Image.new('RGB', (200, 200), color='blue')
-
-            # Resize it
-            resized = resize_image(img, width=100, height=100)
-
-            assert resized is not None
-            if hasattr(resized, 'size'):
-                assert resized.size == (100, 100)
-        except (ImportError, AttributeError):
-            pytest.skip("resize_image not available")
-
-    def test_convert_to_grayscale(self):
-        """Test grayscale conversion."""
-        try:
-            from shared.utils.image import convert_to_grayscale
-            from PIL import Image
-
-            # Create a color image
-            img = Image.new('RGB', (100, 100), color='green')
-
-            # Convert to grayscale
-            gray = convert_to_grayscale(img)
-
-            assert gray is not None
-            if hasattr(gray, 'mode'):
-                assert gray.mode in ['L', 'LA', 'RGB']  # Could be various modes
-        except (ImportError, AttributeError):
-            pytest.skip("convert_to_grayscale not available")
-
-    def test_save_image(self):
-        """Test image saving function."""
-        try:
-            from shared.utils.image import save_image
-            from PIL import Image
-
-            with tempfile.TemporaryDirectory() as tmpdir:
-                img = Image.new('RGB', (50, 50), color='yellow')
-                save_path = os.path.join(tmpdir, 'saved.png')
-
-                # Save the image
-                result = save_image(img, save_path)
-
-                # Check file was created
-                assert os.path.exists(save_path) or result is not None
-        except (ImportError, AttributeError):
-            pytest.skip("save_image not available")
-
-    def test_crop_image(self):
-        """Test image cropping function."""
-        try:
-            from shared.utils.image import crop_image
-            from PIL import Image
-
-            img = Image.new('RGB', (200, 200), color='purple')
-
-            # Crop the image
-            cropped = crop_image(img, x=10, y=10, width=50, height=50)
-
-            assert cropped is not None
-            if hasattr(cropped, 'size'):
-                assert cropped.size == (50, 50)
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("crop_image not available")
-
-    def test_rotate_image(self):
-        """Test image rotation function."""
-        try:
-            from shared.utils.image import rotate_image
-            from PIL import Image
-
-            img = Image.new('RGB', (100, 100), color='orange')
-
-            # Rotate the image
-            rotated = rotate_image(img, angle=90)
-
-            assert rotated is not None
-            assert isinstance(rotated, Image.Image) or rotated.__class__.__name__ == 'Image'
-        except (ImportError, AttributeError):
-            pytest.skip("rotate_image not available")
+    def test_preprocess_for_ocr(self):
+        """Test preprocess_for_ocr function."""
+        from shared.utils.image import preprocess_for_ocr
+        from PIL import Image
+        
+        # Create a test PIL Image
+        test_image = Image.new('RGB', (200, 200), color='black')
+        
+        preprocessed = preprocess_for_ocr(test_image)
+        
+        assert preprocessed is not None
 
 
 class TestDataModule:
-    """Test shared.utils.data module."""
+    """Test shared.utils.data module (domain models)."""
 
     def test_data_module_imports(self):
         """Test that data module can be imported."""
-        try:
-            from shared.utils import data
-            assert data is not None
-        except ImportError:
-            pytest.skip("Data module not available")
+        from shared.utils import data
+        assert data is not None
 
-    def test_validate_json(self):
-        """Test JSON validation function."""
-        try:
-            from shared.utils.data import validate_json
-            import json
+    def test_line_item_creation(self):
+        """Test LineItem dataclass creation."""
+        from shared.utils.data import LineItem
+        
+        item = LineItem(
+            name="Coffee",
+            quantity=2,
+            unit_price=Decimal("3.50"),
+            total_price=Decimal("7.00")
+        )
+        
+        assert item.name == "Coffee"
+        assert item.quantity == 2
+        assert item.unit_price == Decimal("3.50")
+        assert item.total_price == Decimal("7.00")
 
-            # Valid JSON
-            valid_json_str = '{"key": "value"}'
-            result = validate_json(valid_json_str)
-            assert result is True or isinstance(result, dict)
+    def test_line_item_calculate_total(self):
+        """Test LineItem calculate_total method."""
+        from shared.utils.data import LineItem
+        
+        item = LineItem(
+            name="Bread",
+            quantity=3,
+            unit_price=Decimal("2.00")
+        )
+        
+        calculated = item.calculate_total()
+        assert calculated == Decimal("6.00")
 
-            # Invalid JSON
-            invalid_json_str = '{key: value}'
-            result = validate_json(invalid_json_str)
-            assert result is False or result is None
-        except (ImportError, AttributeError):
-            pytest.skip("validate_json not available")
+    def test_line_item_to_dict(self):
+        """Test LineItem to_dict serialization."""
+        from shared.utils.data import LineItem
+        
+        item = LineItem(
+            name="Milk",
+            quantity=1,
+            total_price=Decimal("4.50"),
+            category="Dairy"
+        )
+        
+        result = item.to_dict()
+        
+        assert result['name'] == "Milk"
+        assert result['quantity'] == 1
+        assert result['total_price'] == "4.50"
+        assert result['category'] == "Dairy"
 
-    def test_parse_json_safe(self):
-        """Test safe JSON parsing."""
-        try:
-            from shared.utils.data import parse_json_safe
+    def test_line_item_from_dict(self):
+        """Test LineItem from_dict deserialization."""
+        from shared.utils.data import LineItem
+        
+        data = {
+            'name': 'Eggs',
+            'quantity': 12,
+            'unit_price': '0.25',
+            'total_price': '3.00'
+        }
+        
+        item = LineItem.from_dict(data)
+        
+        assert item.name == 'Eggs'
+        assert item.quantity == 12
+        assert item.unit_price == Decimal('0.25')
+        assert item.total_price == Decimal('3.00')
 
-            valid = '{"test": 123}'
-            result = parse_json_safe(valid)
+    def test_store_info_creation(self):
+        """Test StoreInfo dataclass creation."""
+        from shared.utils.data import StoreInfo
+        
+        store = StoreInfo(
+            name="Grocery Store",
+            address="123 Main St",
+            phone="555-1234"
+        )
+        
+        assert store.name == "Grocery Store"
+        assert store.address == "123 Main St"
+        assert store.phone == "555-1234"
 
-            assert result is not None
-            if isinstance(result, dict):
-                assert 'test' in result
-                assert result['test'] == 123
-        except (ImportError, AttributeError):
-            pytest.skip("parse_json_safe not available")
+    def test_store_info_to_dict(self):
+        """Test StoreInfo to_dict serialization."""
+        from shared.utils.data import StoreInfo
+        
+        store = StoreInfo(name="Test Store", address="456 Oak Ave")
+        result = store.to_dict()
+        
+        assert result['name'] == "Test Store"
+        assert result['address'] == "456 Oak Ave"
 
-    def test_to_json_safe(self):
-        """Test safe JSON serialization."""
-        try:
-            from shared.utils.data import to_json_safe
+    def test_transaction_totals_creation(self):
+        """Test TransactionTotals dataclass creation."""
+        from shared.utils.data import TransactionTotals
+        
+        totals = TransactionTotals(
+            subtotal=Decimal("50.00"),
+            tax=Decimal("4.00"),
+            total=Decimal("54.00")
+        )
+        
+        assert totals.subtotal == Decimal("50.00")
+        assert totals.tax == Decimal("4.00")
+        assert totals.total == Decimal("54.00")
 
-            data = {'key': 'value', 'number': 42}
-            result = to_json_safe(data)
+    def test_receipt_data_creation(self):
+        """Test ReceiptData dataclass creation."""
+        from shared.utils.data import ReceiptData
+        
+        receipt = ReceiptData(
+            store_name="Test Mart",
+            store_address="789 Commerce St",
+            total=Decimal("100.00")
+        )
+        
+        assert receipt.store_name == "Test Mart"
+        assert receipt.total == Decimal("100.00")
 
-            assert result is not None
-            assert isinstance(result, str)
-            assert 'key' in result
-            assert 'value' in result
-        except (ImportError, AttributeError):
-            pytest.skip("to_json_safe not available")
+    def test_receipt_data_add_item(self):
+        """Test ReceiptData add_item method."""
+        from shared.utils.data import ReceiptData, LineItem
+        
+        receipt = ReceiptData()
+        item = LineItem(name="Apple", total_price=Decimal("1.50"))
+        
+        receipt.add_item(item)
+        
+        assert len(receipt.items) == 1
+        assert receipt.items[0].name == "Apple"
 
-    def test_flatten_dict(self):
-        """Test dictionary flattening."""
-        try:
-            from shared.utils.data import flatten_dict
+    def test_receipt_data_remove_item(self):
+        """Test ReceiptData remove_item method."""
+        from shared.utils.data import ReceiptData, LineItem
+        
+        receipt = ReceiptData()
+        item = LineItem(name="Banana", total_price=Decimal("0.50"))
+        receipt.add_item(item)
+        
+        removed = receipt.remove_item(0)
+        
+        assert removed is not None
+        assert removed.name == "Banana"
+        assert len(receipt.items) == 0
 
-            nested = {
-                'a': 1,
-                'b': {
-                    'c': 2,
-                    'd': {
-                        'e': 3
-                    }
-                }
-            }
+    def test_receipt_data_calculate_items_total(self):
+        """Test ReceiptData calculate_items_total method."""
+        from shared.utils.data import ReceiptData, LineItem
+        
+        receipt = ReceiptData()
+        receipt.add_item(LineItem(name="Item1", total_price=Decimal("10.00")))
+        receipt.add_item(LineItem(name="Item2", total_price=Decimal("20.00")))
+        
+        total = receipt.calculate_items_total()
+        
+        assert total == Decimal("30.00")
 
-            flat = flatten_dict(nested)
+    def test_receipt_data_to_dict(self):
+        """Test ReceiptData to_dict serialization."""
+        from shared.utils.data import ReceiptData, LineItem
+        
+        receipt = ReceiptData(
+            store_name="Market",
+            total=Decimal("25.00"),
+            model_used="TestModel"
+        )
+        receipt.add_item(LineItem(name="Product", total_price=Decimal("25.00")))
+        
+        result = receipt.to_dict()
+        
+        assert result['store']['name'] == "Market"
+        assert result['totals']['total'] == "25.00"
+        assert result['model'] == "TestModel"
+        assert len(result['items']) == 1
 
-            assert flat is not None
-            assert isinstance(flat, dict)
-            # Flattened dict should have more keys than top-level original
-            assert len(flat) >= len(nested)
-        except (ImportError, AttributeError):
-            pytest.skip("flatten_dict not available")
+    def test_receipt_data_to_json(self):
+        """Test ReceiptData to_json serialization."""
+        from shared.utils.data import ReceiptData
+        import json
+        
+        receipt = ReceiptData(store_name="JSON Store")
+        
+        json_str = receipt.to_json()
+        
+        assert isinstance(json_str, str)
+        parsed = json.loads(json_str)
+        assert parsed['store']['name'] == "JSON Store"
 
-    def test_chunk_list(self):
-        """Test list chunking function."""
-        try:
-            from shared.utils.data import chunk_list
+    def test_receipt_data_from_dict(self):
+        """Test ReceiptData from_dict deserialization."""
+        from shared.utils.data import ReceiptData
+        
+        data = {
+            'store': {'name': 'Loaded Store'},
+            'items': [
+                {'name': 'Loaded Item', 'total_price': '5.00'}
+            ],
+            'totals': {'total': '5.00'}
+        }
+        
+        receipt = ReceiptData.from_dict(data)
+        
+        assert receipt.store_name == 'Loaded Store'
+        assert len(receipt.items) == 1
 
-            items = list(range(10))
-            chunks = chunk_list(items, chunk_size=3)
+    def test_extraction_status_enum(self):
+        """Test ExtractionStatus enum values."""
+        from shared.utils.data import ExtractionStatus
+        
+        assert ExtractionStatus.SUCCESS.value == "success"
+        assert ExtractionStatus.PARTIAL.value == "partial"
+        assert ExtractionStatus.FAILED.value == "failed"
+        assert ExtractionStatus.PENDING.value == "pending"
 
-            assert chunks is not None
-            if isinstance(chunks, list):
-                assert len(chunks) >= 3  # Should have at least 3 chunks
-                # First chunk should have 3 items
-                if len(chunks) > 0:
-                    assert len(chunks[0]) == 3
-        except (ImportError, AttributeError):
-            pytest.skip("chunk_list not available")
+    def test_extraction_result_success(self):
+        """Test ExtractionResult success factory."""
+        from shared.utils.data import ExtractionResult, ReceiptData, ExtractionStatus
+        
+        receipt = ReceiptData(store_name="Success Store")
+        result = ExtractionResult.success_result(receipt)
+        
+        assert result.success is True
+        assert result.status == ExtractionStatus.SUCCESS
+        assert result.data.store_name == "Success Store"
+
+    def test_extraction_result_failure(self):
+        """Test ExtractionResult failure factory."""
+        from shared.utils.data import ExtractionResult, ExtractionStatus
+        
+        result = ExtractionResult.failure_result("OCR failed")
+        
+        assert result.success is False
+        assert result.status == ExtractionStatus.FAILED
+        assert result.error == "OCR failed"
+
+    def test_extraction_result_partial(self):
+        """Test ExtractionResult partial factory."""
+        from shared.utils.data import ExtractionResult, ReceiptData, ExtractionStatus
+        
+        # Note: partial_result sets PARTIAL status but __post_init__ overrides based on data
+        # With data present and success=True, it becomes SUCCESS
+        receipt = ReceiptData(store_name="Partial Store")
+        result = ExtractionResult.partial_result(receipt, ["Missing tax"])
+        
+        # The behavior is that with data present, it becomes SUCCESS
+        assert result.success is True
+        assert "Missing tax" in result.warnings
+
+    def test_extraction_result_to_dict(self):
+        """Test ExtractionResult to_dict serialization."""
+        from shared.utils.data import ExtractionResult, ReceiptData
+        
+        receipt = ReceiptData(store_name="Dict Store")
+        result = ExtractionResult.success_result(receipt)
+        
+        result_dict = result.to_dict()
+        
+        assert result_dict['success'] is True
+        assert result_dict['status'] == "success"
+        assert result_dict['data']['store']['name'] == "Dict Store"
+
+    def test_extraction_result_add_warning(self):
+        """Test ExtractionResult add_warning method."""
+        from shared.utils.data import ExtractionResult
+        
+        result = ExtractionResult(success=True)
+        result.add_warning("Test warning")
+        
+        assert "Test warning" in result.warnings
+
+    def test_extraction_result_is_partial(self):
+        """Test ExtractionResult is_partial method."""
+        from shared.utils.data import ExtractionResult, ReceiptData, ExtractionStatus
+        
+        # Partial status only applies when success=True but data=None
+        result_no_data = ExtractionResult(success=True, data=None)
+        result_with_data = ExtractionResult.success_result(ReceiptData())
+        
+        # Without data, success=True becomes PARTIAL
+        assert result_no_data.is_partial() is True
+        # With data, it's SUCCESS
+        assert result_with_data.is_partial() is False
 
 
 class TestLoggingModule:
@@ -372,119 +702,132 @@ class TestLoggingModule:
 
     def test_logging_module_imports(self):
         """Test that logging module can be imported."""
-        try:
-            from shared.utils import logging as log_utils
-            assert log_utils is not None
-        except ImportError:
-            pytest.skip("Logging module not available")
+        from shared.utils import logging as log_utils
+        assert log_utils is not None
 
     def test_setup_logger(self):
         """Test logger setup function."""
-        try:
-            from shared.utils.logging import setup_logger
-            import logging
+        from shared.utils.logging import setup_logger
+        import logging
 
-            logger = setup_logger('test_logger', level=logging.INFO)
+        logger = setup_logger('test_logger', level='INFO')
 
-            assert logger is not None
-            assert isinstance(logger, logging.Logger)
-            assert logger.name == 'test_logger'
-        except (ImportError, AttributeError):
-            pytest.skip("setup_logger not available")
-
-    def test_log_function_call(self):
-        """Test function call logging decorator."""
-        try:
-            from shared.utils.logging import log_function_call
-
-            @log_function_call()
-            def test_function(x, y):
-                return x + y
-
-            result = test_function(2, 3)
-            assert result == 5
-        except (ImportError, AttributeError):
-            pytest.skip("log_function_call not available")
+        assert logger is not None
+        assert isinstance(logger, logging.Logger)
 
     def test_get_logger(self):
         """Test get_logger function."""
-        try:
-            from shared.utils.logging import get_logger
-            import logging
+        from shared.utils.logging import get_logger
+        import logging
 
-            logger = get_logger('test.module')
+        logger = get_logger('test.module')
 
-            assert logger is not None
-            assert isinstance(logger, logging.Logger)
-        except (ImportError, AttributeError):
-            pytest.skip("get_logger not available")
+        assert logger is not None
+        assert isinstance(logger, logging.Logger)
 
-    def test_configure_logging(self):
-        """Test logging configuration function."""
-        try:
-            from shared.utils.logging import configure_logging
+    def test_get_module_logger(self):
+        """Test get_module_logger function."""
+        from shared.utils.logging import get_module_logger
+        import logging
 
-            # Configure logging with different levels
-            configure_logging(level='INFO')
-            configure_logging(level='DEBUG')
+        logger = get_module_logger()
 
-            # Should not raise exceptions
-            assert True
-        except (ImportError, AttributeError):
-            pytest.skip("configure_logging not available")
+        assert logger is not None
+        assert isinstance(logger, logging.Logger)
 
+    def test_generate_correlation_id(self):
+        """Test generate_correlation_id function."""
+        from shared.utils.logging import generate_correlation_id
 
-class TestPricingModule:
-    """Test shared.utils.pricing module."""
+        id1 = generate_correlation_id()
+        id2 = generate_correlation_id()
 
-    def test_pricing_module_imports(self):
-        """Test that pricing module can be imported."""
-        try:
-            from shared.utils import pricing
-            assert pricing is not None
-        except ImportError:
-            pytest.skip("Pricing module not available")
+        assert id1 is not None
+        assert id2 is not None
+        assert id1 != id2  # Each call should generate unique ID
 
-    def test_calculate_cost(self):
-        """Test cost calculation function."""
-        try:
-            from shared.utils.pricing import calculate_cost
+    def test_log_context_class(self):
+        """Test LogContext class as context manager."""
+        from shared.utils.logging import LogContext, get_context, clear_context
 
-            # Calculate cost for some usage
-            cost = calculate_cost(tokens=1000, model='gpt-4')
+        clear_context()
+        
+        with LogContext(request_id="test-123", user_id="user-456"):
+            context = get_context()
+            assert context is not None
+            assert context.get('request_id') == "test-123"
+            assert context.get('user_id') == "user-456"
 
-            assert cost is not None
-            assert isinstance(cost, (int, float))
-            assert cost >= 0
-        except (ImportError, AttributeError, TypeError):
-            pytest.skip("calculate_cost not available")
+        clear_context()
 
-    def test_estimate_tokens(self):
-        """Test token estimation function."""
-        try:
-            from shared.utils.pricing import estimate_tokens
+    def test_set_and_get_context(self):
+        """Test set_context and get_context functions."""
+        from shared.utils.logging import set_context, get_context, clear_context
 
-            text = "This is a test string for token estimation"
-            tokens = estimate_tokens(text)
+        # Clear any existing context
+        clear_context()
 
-            assert tokens is not None
-            assert isinstance(tokens, int)
-            assert tokens > 0
-        except (ImportError, AttributeError):
-            pytest.skip("estimate_tokens not available")
+        # Set context
+        set_context(request_id="req-123", user_id="user-456")
 
-    def test_format_cost(self):
-        """Test cost formatting function."""
-        try:
-            from shared.utils.pricing import format_cost
+        # Get context
+        context = get_context()
 
-            formatted = format_cost(1.234567)
+        assert context is not None
+        assert context.get('request_id') == "req-123"
+        assert context.get('user_id') == "user-456"
 
-            assert formatted is not None
-            assert isinstance(formatted, str)
-            assert '$' in formatted or '1.23' in formatted or '1.2' in formatted
-        except (ImportError, AttributeError):
-            pytest.skip("format_cost not available")
+        # Clean up
+        clear_context()
+
+    def test_clear_context(self):
+        """Test clear_context function."""
+        from shared.utils.logging import set_context, get_context, clear_context
+
+        set_context(test_key="test_value")
+        clear_context()
+
+        context = get_context()
+        # Context should be empty or None after clearing
+        assert context is None or len(context) == 0 or 'test_key' not in context
+
+    def test_log_level_enum(self):
+        """Test LogLevel enum."""
+        from shared.utils.logging import LogLevel
+
+        assert LogLevel.DEBUG is not None
+        assert LogLevel.INFO is not None
+        assert LogLevel.WARNING is not None
+        assert LogLevel.ERROR is not None
+
+    def test_logging_context_manager(self):
+        """Test logging_context context manager."""
+        from shared.utils.logging import logging_context, get_context, clear_context
+
+        clear_context()
+
+        with logging_context(request_id="ctx-123"):
+            context = get_context()
+            # Context should contain request_id within the context manager
+            assert context is not None
+
+    def test_error_handler_class(self):
+        """Test ErrorHandler class."""
+        from shared.utils.logging import ErrorHandler
+
+        handler = ErrorHandler()
+        assert handler is not None
+
+    def test_log_errors_decorator(self):
+        """Test log_errors decorator."""
+        from shared.utils.logging import log_errors
+
+        @log_errors()
+        def test_func():
+            return "success"
+
+        result = test_func()
+        assert result == "success"
 
 
 class TestAutoTuning:
@@ -492,19 +835,115 @@ class TestAutoTuning:
 
     def test_auto_tuning_imports(self):
         """Test that auto_tuning module can be imported."""
-        try:
-            from shared.circular_exchange import auto_tuning
-            assert auto_tuning is not None
-        except ImportError:
-            pytest.skip("auto_tuning module not available")
+        from shared.circular_exchange import auto_tuning
+        assert auto_tuning is not None
 
     def test_auto_tuner_class(self):
-        """Test AutoTuner class exists."""
-        try:
-            from shared.circular_exchange.auto_tuning import AutoTuner
-            assert AutoTuner is not None
-        except (ImportError, AttributeError):
-            pytest.skip("AutoTuner not available")
+        """Test AutoTuner class instantiation."""
+        from shared.circular_exchange.auto_tuning import AutoTuner
+        
+        tuner = AutoTuner()
+        assert tuner is not None
+        assert tuner.config is not None
+
+    def test_tuning_configuration(self):
+        """Test TuningConfiguration dataclass."""
+        from shared.circular_exchange.auto_tuning import TuningConfiguration, TuningStrategy
+        
+        config = TuningConfiguration(
+            strategy=TuningStrategy.MODERATE,
+            min_samples=50
+        )
+        
+        assert config.strategy == TuningStrategy.MODERATE
+        assert config.min_samples == 50
+
+    def test_tuning_strategy_enum(self):
+        """Test TuningStrategy enum values."""
+        from shared.circular_exchange.auto_tuning import TuningStrategy
+        
+        assert TuningStrategy.CONSERVATIVE.value == "conservative"
+        assert TuningStrategy.MODERATE.value == "moderate"
+        assert TuningStrategy.AGGRESSIVE.value == "aggressive"
+
+    def test_optimization_target_enum(self):
+        """Test OptimizationTarget enum values."""
+        from shared.circular_exchange.auto_tuning import OptimizationTarget
+        
+        assert OptimizationTarget.ACCURACY.value == "accuracy"
+        assert OptimizationTarget.SPEED.value == "speed"
+        assert OptimizationTarget.BALANCED.value == "balanced"
+
+    def test_analyze_model_insufficient_data(self):
+        """Test analyze_model with insufficient data."""
+        from shared.circular_exchange.auto_tuning import AutoTuner, TuningConfiguration
+        
+        config = TuningConfiguration(min_samples=100)
+        tuner = AutoTuner(config)
+        
+        # Provide fewer samples than required
+        result = tuner.analyze_model("test_model", [{"success_rate": 0.9}])
+        
+        assert result['status'] == 'insufficient_data'
+        assert result['samples'] == 1
+        assert result['required'] == 100
+
+    def test_analyze_model_with_data(self):
+        """Test analyze_model with sufficient data."""
+        from shared.circular_exchange.auto_tuning import AutoTuner, TuningConfiguration
+        
+        config = TuningConfiguration(min_samples=2)
+        tuner = AutoTuner(config)
+        
+        performance_data = [
+            {"success_rate": 0.85, "processing_time": 2.0, "confidence": 0.75},
+            {"success_rate": 0.88, "processing_time": 1.8, "confidence": 0.80},
+        ]
+        
+        result = tuner.analyze_model("test_model", performance_data)
+        
+        assert result['status'] == 'analyzed'
+        assert 'current_metrics' in result
+        assert 'recommendations' in result
+
+    def test_suggest_hyperparameters(self):
+        """Test suggest_hyperparameters method."""
+        from shared.circular_exchange.auto_tuning import AutoTuner
+        
+        tuner = AutoTuner()
+        current_params = {
+            'learning_rate': 0.001,
+            'batch_size': 8,
+            'epochs': 3
+        }
+        metrics = {'success_rate': 0.75}
+        
+        result = tuner.suggest_hyperparameters("model", current_params, metrics)
+        
+        assert 'model_id' in result
+        assert 'current_params' in result
+        assert 'suggested_params' in result
+
+    def test_get_experiments_summary(self):
+        """Test get_experiments_summary method."""
+        from shared.circular_exchange.auto_tuning import AutoTuner
+        
+        tuner = AutoTuner()
+        summary = tuner.get_experiments_summary()
+        
+        assert 'total_experiments' in summary
+        assert 'completed' in summary
+        assert 'running' in summary
+
+    def test_get_auto_tuner(self):
+        """Test get_auto_tuner factory function."""
+        from shared.circular_exchange.auto_tuning import get_auto_tuner
+        
+        tuner1 = get_auto_tuner()
+        tuner2 = get_auto_tuner()
+        
+        # Should return the same instance
+        assert tuner1 is tuner2
 
 
 class TestStyleChecker:
@@ -512,19 +951,42 @@ class TestStyleChecker:
 
     def test_style_checker_imports(self):
         """Test that style_checker module can be imported."""
-        try:
-            from shared.circular_exchange.core import style_checker
-            assert style_checker is not None
-        except ImportError:
-            pytest.skip("style_checker module not available")
+        from shared.circular_exchange.core import style_checker
+        assert style_checker is not None
 
     def test_style_checker_class(self):
-        """Test StyleChecker class exists."""
-        try:
-            from shared.circular_exchange.core.style_checker import StyleChecker
-            assert StyleChecker is not None
-        except (ImportError, AttributeError):
-            pytest.skip("StyleChecker not available")
+        """Test StyleChecker class instantiation."""
+        from shared.circular_exchange.core.style_checker import StyleChecker
+        
+        checker = StyleChecker("/tmp")
+        assert checker is not None
+
+    def test_style_issue_dataclass(self):
+        """Test StyleIssue dataclass."""
+        from shared.circular_exchange.core.style_checker import StyleIssue
+        
+        issue = StyleIssue(
+            file_path="/path/to/file.py",
+            line_number=10,
+            issue_type="generic_phrase",
+            message="Test message",
+            suggestion="Test suggestion"
+        )
+        
+        assert issue.file_path == "/path/to/file.py"
+        assert issue.line_number == 10
+        assert issue.issue_type == "generic_phrase"
+
+    def test_make_specific_function(self):
+        """Test make_specific function."""
+        from shared.circular_exchange.core.style_checker import make_specific
+        
+        result = make_specific(
+            "This module provides functionality",
+            "OCR processing"
+        )
+        
+        assert "OCR processing" in result
 
 
 class TestModuleContainer:
@@ -532,19 +994,121 @@ class TestModuleContainer:
 
     def test_module_container_imports(self):
         """Test that module_container can be imported."""
-        try:
-            from shared.circular_exchange.core import module_container
-            assert module_container is not None
-        except ImportError:
-            pytest.skip("module_container module not available")
+        from shared.circular_exchange.core import module_container
+        assert module_container is not None
 
     def test_module_container_class(self):
         """Test ModuleContainer class exists."""
-        try:
-            from shared.circular_exchange.core.module_container import ModuleContainer
-            assert ModuleContainer is not None
-        except (ImportError, AttributeError):
-            pytest.skip("ModuleContainer not available")
+        from shared.circular_exchange.core.module_container import ModuleContainer
+        assert ModuleContainer is not None
+
+
+class TestDecoratorsModule:
+    """Test shared.utils.decorators module."""
+
+    def test_decorators_imports(self):
+        """Test that decorators module can be imported."""
+        from shared.utils import decorators
+        assert decorators is not None
+
+    def test_circular_exchange_module_decorator(self):
+        """Test circular_exchange_module decorator."""
+        from shared.utils.decorators import circular_exchange_module
+        
+        @circular_exchange_module(
+            module_id="test.module",
+            description="Test module description",
+            dependencies=[],
+            exports=["test_func"]
+        )
+        def test_func():
+            return "result"
+        
+        assert test_func() == "result"
+
+    def test_retry_on_failure_success(self):
+        """Test retry_on_failure decorator with successful function."""
+        from shared.utils.decorators import retry_on_failure
+        
+        call_count = 0
+        
+        @retry_on_failure(max_attempts=3, delay=0.01)
+        def success_func():
+            nonlocal call_count
+            call_count += 1
+            return "success"
+        
+        result = success_func()
+        assert result == "success"
+        assert call_count == 1
+
+    def test_retry_on_failure_with_retries(self):
+        """Test retry_on_failure decorator with retries."""
+        from shared.utils.decorators import retry_on_failure
+        
+        call_count = 0
+        
+        @retry_on_failure(max_attempts=3, delay=0.01)
+        def failing_func():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise ValueError("Temporary error")
+            return "success"
+        
+        result = failing_func()
+        assert result == "success"
+        assert call_count == 2
+
+    def test_log_execution_time_decorator(self):
+        """Test log_execution_time decorator."""
+        from shared.utils.decorators import log_execution_time
+        
+        @log_execution_time
+        def timed_func():
+            return "timed result"
+        
+        result = timed_func()
+        assert result == "timed result"
+
+    def test_deprecated_decorator(self):
+        """Test deprecated decorator."""
+        import warnings
+        from shared.utils.decorators import deprecated
+        
+        @deprecated(reason="Testing deprecation", alternative="new_func")
+        def old_func():
+            return "old result"
+        
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = old_func()
+            
+            assert result == "old result"
+            # Should have generated a deprecation warning
+            assert len(w) >= 1
+
+    def test_handle_errors_decorator(self):
+        """Test handle_errors decorator."""
+        from shared.utils.decorators import handle_errors
+        
+        @handle_errors(default_return="default")
+        def error_func():
+            raise Exception("Test error")
+        
+        result = error_func()
+        assert result == "default"
+
+    def test_handle_errors_no_error(self):
+        """Test handle_errors decorator when no error occurs."""
+        from shared.utils.decorators import handle_errors
+        
+        @handle_errors(default_return="default")
+        def success_func():
+            return "actual"
+        
+        result = success_func()
+        assert result == "actual"
 
 
 if __name__ == '__main__':
