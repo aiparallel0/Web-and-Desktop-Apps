@@ -182,10 +182,10 @@ class OCRProcessor:
         # Version 5: Upscale 3x for very small text (better word spacing)
         upscaled3x = cv2.resize(img_np, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
         gray5 = cv2.cvtColor(upscaled3x, cv2.COLOR_RGB2GRAY)
-        # Morphological operations to separate touching characters
+        # Morphological opening to separate touching characters (erosion then dilation)
         kernel = np.ones((2, 2), np.uint8)
-        dilated = cv2.dilate(gray5, kernel, iterations=1)
-        _, thresh5 = cv2.threshold(dilated, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        opened = cv2.morphologyEx(gray5, cv2.MORPH_OPEN, kernel)
+        _, thresh5 = cv2.threshold(opened, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         preprocessed.append(Image.fromarray(thresh5))
         
         return preprocessed
@@ -215,7 +215,7 @@ class OCRProcessor:
         try:
             # Get detection configuration from circular exchange framework
             detection_config = get_detection_config()
-            min_confidence = detection_config.get('min_confidence', 0.25)
+            # Note: min_confidence can be used for future filtering of low-confidence results
             
             image = load_and_validate_image(image_path)
             processed = preprocess_for_ocr(image, aggressive=True)
@@ -292,6 +292,7 @@ class OCRProcessor:
             preprocessed_versions = self._aggressive_preprocess(image)
             psm_modes = [11, 3, 6, 4, 1]  # Priority order for aggressive pass
             best_result, best_score = receipt, initial_score
+            best_text_final = best_text  # Keep track of best text across all passes
             
             for v_idx, proc_img in enumerate(preprocessed_versions):
                 for psm in psm_modes:
@@ -305,7 +306,7 @@ class OCRProcessor:
                         if score > best_score:
                             best_score = score
                             best_result = rec
-                            best_text = text
+                            best_text_final = text
                             logger.info(f"Better result found: PSM {psm} on preproc v{v_idx+1}, score={score}")
                             # Early exit if we find an excellent result
                             if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
@@ -318,7 +319,7 @@ class OCRProcessor:
                     break
             
             # Record detection result for auto-tuning via circular exchange
-            text_regions = len(best_text.strip().split('\n')) if best_text else 0
+            text_regions = len(best_text_final.strip().split('\n')) if best_text_final else 0
             record_detection_result(
                 text_regions_count=text_regions,
                 avg_confidence=min(1.0, best_score / 100) if best_score else 0.0,
@@ -337,7 +338,7 @@ class OCRProcessor:
                 from .receipt_prompts import get_validated_extraction_with_confidence
                 _, realistic_confidence, validation = get_validated_extraction_with_confidence(
                     receipt_data=best_result,
-                    raw_text=best_text,
+                    raw_text=best_text_final,
                     base_confidence=min(1.0, best_score / 100)  # Convert score to base confidence
                 )
                 best_result.confidence_score = round(realistic_confidence * 100, 1)
