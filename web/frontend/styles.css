@@ -228,6 +228,11 @@ textarea:focus-visible {
 .nav-logo {
     width: 28px;
     height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+    flex-shrink: 0;
     color: var(--color-primary);
 }
 
@@ -379,7 +384,7 @@ textarea:focus-visible {
    HERO SECTION - Clean, minimal design
    ============================================================================= */
 .hero {
-    padding: var(--space-10) 0 var(--space-8);
+    padding: var(--space-6) 0 var(--space-5);
     background: white;
 }
 
@@ -397,7 +402,7 @@ textarea:focus-visible {
 .hero-subtitle {
     font-size: clamp(1.0625rem, 2vw, 1.1875rem);
     color: var(--color-gray-500);
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-3);
     line-height: 1.7;
 }
 
@@ -406,8 +411,8 @@ textarea:focus-visible {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    margin-bottom: var(--space-6);
-    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+    padding: var(--space-2) var(--space-3);
     background: var(--color-gray-50);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-gray-100);
@@ -438,7 +443,10 @@ textarea:focus-visible {
 
 /* Upload Zone Wrapper */
 .upload-zone-wrapper {
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-5);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Steps - Clean process flow */
@@ -460,11 +468,11 @@ textarea:focus-visible {
 .step {
     flex: 1;
     text-align: center;
-    padding: var(--space-4);
+    padding: var(--space-3);
     background: var(--color-gray-50);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-gray-100);
-    max-width: 220px;
+    max-width: 180px;
     transition: all var(--transition-base);
 }
 
@@ -474,9 +482,9 @@ textarea:focus-visible {
 }
 
 .step-icon {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto var(--space-2);
+    width: 44px;
+    height: 44px;
+    margin: 0 auto var(--space-1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -486,8 +494,8 @@ textarea:focus-visible {
 }
 
 .step-icon svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 .step-title {
