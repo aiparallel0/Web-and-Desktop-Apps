@@ -517,9 +517,10 @@ generate_test_report() {
     local test_result=${PIPESTATUS[0]}
 
     # Count test results from output
-    local passed=$(grep -c "PASSED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null || echo "0")
-    local failed=$(grep -c "FAILED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null || echo "0")
-    local skipped=$(grep -c "SKIPPED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null || echo "0")
+    # Note: grep -c returns exit code 1 when no matches found, so we use a subshell to ensure clean output
+    local passed=$(grep -c "PASSED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null) || passed=0
+    local failed=$(grep -c "FAILED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null) || failed=0
+    local skipped=$(grep -c "SKIPPED" "$LOG_DIR/test-reports/report-run.log" 2>/dev/null) || skipped=0
     local total=$((passed + failed + skipped))
 
     # Generate markdown report
