@@ -102,14 +102,21 @@ class ResultsView extends HTMLElement {
 
                 .receipt-image {
                     width: 100%;
-                    max-width: 600px;
-                    max-height: 80vh;
+                    max-width: 300px;
+                    max-height: 400px;
                     height: auto;
                     display: block;
                     margin: 0 auto;
                     object-fit: contain;
                     border-radius: 8px;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    cursor: pointer;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .receipt-image:hover {
+                    transform: scale(1.02);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
                 }
 
                 .data-section {
@@ -283,8 +290,8 @@ class ResultsView extends HTMLElement {
                     }
 
                     .receipt-image {
-                        max-width: 100%;
-                        max-height: 60vh;
+                        max-width: 200px;
+                        max-height: 300px;
                         margin: 0 auto;
                     }
                 }

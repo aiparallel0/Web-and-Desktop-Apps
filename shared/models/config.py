@@ -144,17 +144,17 @@ class OCRConfig:
     
     def _init_parameters(self) -> None:
         """Initialize all OCR parameter packages with defaults."""
-        # Confidence thresholds
+        # Confidence thresholds - lowered for improved text detection
         self._registry.create_package(
             name='ocr.min_confidence',
-            initial_value=0.3,
+            initial_value=0.25,  # Lowered from 0.3 for better detection
             source_module='ocr_config',
             validator=lambda v: 0.0 <= v <= 1.0
         )
         
         self._registry.create_package(
             name='ocr.relaxed_confidence',
-            initial_value=0.2,
+            initial_value=0.15,  # Lowered from 0.2 for fallback detection
             source_module='ocr_config',
             validator=lambda v: 0.0 <= v <= 1.0
         )
@@ -233,7 +233,7 @@ class OCRConfig:
         # Detection confidence threshold (lowered default for better detection)
         self._registry.create_package(
             name='ocr.detection.min_confidence',
-            initial_value=0.25,  # Lowered default for improved text detection
+            initial_value=0.20,  # Lowered default for improved text detection
             source_module='ocr_config',
             validator=lambda v: 0.0 <= v <= 1.0
         )
@@ -241,7 +241,7 @@ class OCRConfig:
         # Detection box threshold for text region detection
         self._registry.create_package(
             name='ocr.detection.box_threshold',
-            initial_value=0.3,
+            initial_value=0.25,  # Lowered for better region detection
             source_module='ocr_config',
             validator=lambda v: 0.0 <= v <= 1.0
         )
@@ -249,7 +249,7 @@ class OCRConfig:
         # Minimum text height in pixels
         self._registry.create_package(
             name='ocr.detection.min_text_height',
-            initial_value=8,  # Lowered to catch smaller text
+            initial_value=6,  # Lowered to catch smaller text
             source_module='ocr_config',
             validator=lambda v: v >= 1
         )
