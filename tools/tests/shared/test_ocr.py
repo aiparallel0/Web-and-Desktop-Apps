@@ -1195,8 +1195,10 @@ class TestOCRConfig:
         """Test default parameter values."""
         config = OCRConfig()
         
-        assert config.min_confidence == 0.3
-        assert config.relaxed_confidence == 0.2
+        # Note: min_confidence lowered to 0.25 for improved text detection
+        assert config.min_confidence == 0.25
+        # Note: relaxed_confidence lowered to 0.15 for better fallback detection
+        assert config.relaxed_confidence == 0.15
         assert config.relaxed_mode == False
         assert config.auto_fallback == True
         assert config.min_name_length == 2
@@ -1362,7 +1364,8 @@ class TestOCRConfigExportImport:
         
         config.reset_to_defaults()
         
-        assert config.min_confidence == 0.3
+        # Note: lowered defaults for improved text detection
+        assert config.min_confidence == 0.25
         assert config.relaxed_mode == False
 
 
@@ -1410,9 +1413,9 @@ class TestOCRConfigDetection:
         config = OCRConfig()
         
         # Detection parameters with lowered defaults for better text detection
-        assert config.detection_min_confidence == 0.25  # Lowered from typical 0.3
-        assert config.detection_box_threshold == 0.3
-        assert config.detection_min_text_height == 8  # Lowered to catch smaller text
+        assert config.detection_min_confidence == 0.20  # Lowered from 0.25
+        assert config.detection_box_threshold == 0.25  # Lowered from 0.3
+        assert config.detection_min_text_height == 6  # Lowered to catch smaller text
         assert config.detection_use_angle_cls == True
         assert config.detection_multi_scale == True
         assert config.detection_auto_retry == True
@@ -1575,9 +1578,264 @@ class TestOCRConfigDetectionPipeline:
         
         # Reset and import
         config.reset_to_defaults()
-        assert config.detection_min_confidence == 0.25  # Default
+        assert config.detection_min_confidence == 0.20  # Default (lowered)
         
         # Import the exported config
         config.import_config(exported)
         assert config.detection_min_confidence == 0.2
         assert config.detection_box_threshold == 0.35
+
+
+# ============================================================================
+# Tests for Receipt Prompts Module (New Module)
+# ============================================================================
+
+class TestReceiptPrompts:
+    """Tests for the receipt_prompts module - validation and confidence."""
+
+    def test_validate_monetary_value_valid(self):
+        """Test validation of valid monetary values."""
+        from shared.models.receipt_prompts import validate_monetary_value
+        from decimal import Decimal
+        
+        value, penalties = validate_monetary_value("$25.99", "total")
+        assert value == Decimal("25.99")
+        # No critical penalties for valid value
+        assert all(p.severity != "critical" for p in penalties)
+
+    def test_validate_monetary_value_negative(self):
+        """Test validation rejects negative values."""
+        from shared.models.receipt_prompts import validate_monetary_value
+        
+        value, penalties = validate_monetary_value("-5.00", "total")
+        assert value is None
+        assert any(p.severity == "critical" for p in penalties)
+
+    def test_validate_monetary_value_none(self):
+        """Test validation handles None."""
+        from shared.models.receipt_prompts import validate_monetary_value
+        
+        value, penalties = validate_monetary_value(None, "total")
+        assert value is None
+        assert len(penalties) > 0
+
+    def test_validate_date_valid_iso(self):
+        """Test validation of valid ISO date format."""
+        from shared.models.receipt_prompts import validate_date
+        
+        date_str, penalties = validate_date("2024-01-15")
+        assert date_str == "2024-01-15"
+        assert any(p.adjustment > 0 for p in penalties)  # Should have bonus
+
+    def test_validate_date_valid_us(self):
+        """Test validation of valid US date format."""
+        from shared.models.receipt_prompts import validate_date
+        
+        date_str, penalties = validate_date("01/15/2024")
+        assert date_str == "01/15/2024"
+
+    def test_validate_date_none(self):
+        """Test validation handles missing date."""
+        from shared.models.receipt_prompts import validate_date
+        
+        date_str, penalties = validate_date(None)
+        assert date_str is None
+        assert any(p.adjustment < 0 for p in penalties)  # Should have penalty
+
+    def test_validate_store_name_valid(self):
+        """Test validation of valid store names."""
+        from shared.models.receipt_prompts import validate_store_name
+        
+        name, penalties = validate_store_name("WALMART")
+        assert name == "WALMART"
+        assert any(p.adjustment > 0 for p in penalties)  # Should have bonus
+
+    def test_validate_store_name_too_short(self):
+        """Test validation rejects very short names."""
+        from shared.models.receipt_prompts import validate_store_name
+        
+        name, penalties = validate_store_name("AB")
+        assert name is None
+        assert any(p.adjustment < 0 for p in penalties)
+
+    def test_validate_store_name_garbage(self):
+        """Test validation rejects garbage text."""
+        from shared.models.receipt_prompts import validate_store_name
+        
+        name, penalties = validate_store_name("@#$%^&*()")
+        assert name is None
+        assert any(p.severity == "critical" for p in penalties)
+
+    def test_validate_receipt_math_valid(self):
+        """Test math validation when subtotal + tax = total."""
+        from shared.models.receipt_prompts import validate_receipt_math
+        from decimal import Decimal
+        
+        is_valid, penalties = validate_receipt_math(
+            total=Decimal("38.68"),
+            subtotal=Decimal("35.00"),
+            tax=Decimal("3.68"),
+            items_sum=Decimal("35.00")
+        )
+        assert is_valid is True
+        assert any(p.adjustment > 0 for p in penalties)  # Should have bonus
+
+    def test_validate_receipt_math_invalid(self):
+        """Test math validation when numbers don't add up."""
+        from shared.models.receipt_prompts import validate_receipt_math
+        from decimal import Decimal
+        
+        is_valid, penalties = validate_receipt_math(
+            total=Decimal("50.00"),
+            subtotal=Decimal("35.00"),
+            tax=Decimal("3.68"),  # 35 + 3.68 = 38.68, not 50
+            items_sum=Decimal("35.00")
+        )
+        assert is_valid is False
+        assert any(p.severity == "critical" for p in penalties)
+
+    def test_validate_receipt_extraction_complete(self):
+        """Test full validation with complete receipt data."""
+        from shared.models.receipt_prompts import validate_receipt_extraction
+        from decimal import Decimal
+        
+        validation = validate_receipt_extraction(
+            store_name="WALMART",
+            total=Decimal("38.68"),
+            subtotal=Decimal("35.00"),
+            tax=Decimal("3.68"),
+            transaction_date="01/15/2024",
+            items=[{"name": "Item 1", "total_price": Decimal("35.00")}],
+            raw_text="WALMART\n01/15/2024\nItem 1  35.00\nTOTAL 38.68"
+        )
+        
+        assert validation.validated_store == "WALMART"
+        assert validation.validated_total == Decimal("38.68")
+        assert validation.math_validated is True
+
+    def test_validate_receipt_extraction_missing_total(self):
+        """Test validation with missing total (critical error)."""
+        from shared.models.receipt_prompts import validate_receipt_extraction
+        
+        validation = validate_receipt_extraction(
+            store_name="WALMART",
+            total=None,
+            subtotal=None,
+            tax=None,
+            transaction_date="01/15/2024",
+            items=[]
+        )
+        
+        assert validation.is_valid is False
+        assert any("total" in error.lower() for error in validation.errors)
+
+    def test_calculate_realistic_confidence(self):
+        """Test realistic confidence calculation."""
+        from shared.models.receipt_prompts import (
+            validate_receipt_extraction,
+            calculate_realistic_confidence
+        )
+        from decimal import Decimal
+        
+        # Good extraction should have high confidence
+        good_validation = validate_receipt_extraction(
+            store_name="WALMART",
+            total=Decimal("38.68"),
+            subtotal=Decimal("35.00"),
+            tax=Decimal("3.68"),
+            transaction_date="01/15/2024",
+            items=[{"name": "Item 1", "total_price": Decimal("35.00")}]
+        )
+        
+        good_confidence = calculate_realistic_confidence(0.5, good_validation)
+        
+        # Bad extraction should have low confidence
+        bad_validation = validate_receipt_extraction(
+            store_name=None,
+            total=None,
+            subtotal=None,
+            tax=None,
+            transaction_date=None,
+            items=[]
+        )
+        
+        bad_confidence = calculate_realistic_confidence(0.5, bad_validation)
+        
+        # Good extraction should have higher confidence
+        assert good_confidence > bad_confidence
+        # Bad extraction should have significantly reduced confidence
+        assert bad_confidence < 0.4
+
+    def test_get_validated_extraction_with_confidence(self):
+        """Test the convenience function for OCR processors."""
+        from shared.models.receipt_prompts import get_validated_extraction_with_confidence
+        from decimal import Decimal
+        
+        # Create a mock receipt-like object
+        class MockReceipt:
+            store_name = "TARGET"
+            total = Decimal("25.00")
+            subtotal = Decimal("23.50")
+            tax = Decimal("1.50")
+            transaction_date = "2024-01-20"
+            items = []
+        
+        receipt = MockReceipt()
+        result_receipt, confidence, validation = get_validated_extraction_with_confidence(
+            receipt_data=receipt,
+            raw_text="TARGET 01/20/2024 TOTAL 25.00",
+            base_confidence=0.7
+        )
+        
+        assert result_receipt is receipt
+        assert 0.0 <= confidence <= 1.0
+        assert validation is not None
+
+
+class TestExtractionValidation:
+    """Tests for ExtractionValidation dataclass."""
+
+    def test_extraction_validation_defaults(self):
+        """Test ExtractionValidation default values."""
+        from shared.models.receipt_prompts import ExtractionValidation
+        
+        validation = ExtractionValidation()
+        assert validation.is_valid is True
+        assert validation.confidence_adjustments == []
+        assert validation.warnings == []
+        assert validation.errors == []
+        assert validation.validated_total is None
+        assert validation.math_validated is False
+
+    def test_confidence_penalty_creation(self):
+        """Test ConfidencePenalty creation."""
+        from shared.models.receipt_prompts import ConfidencePenalty
+        
+        penalty = ConfidencePenalty(
+            reason="Missing total",
+            adjustment=-0.25,
+            severity="critical"
+        )
+        
+        assert penalty.reason == "Missing total"
+        assert penalty.adjustment == -0.25
+        assert penalty.severity == "critical"
+
+
+class TestReceiptPromptConstants:
+    """Tests for receipt prompt constants."""
+
+    def test_system_prompt_exists(self):
+        """Test that system prompt is defined."""
+        from shared.models.receipt_prompts import RECEIPT_EXTRACTION_SYSTEM_PROMPT
+        
+        assert RECEIPT_EXTRACTION_SYSTEM_PROMPT is not None
+        assert len(RECEIPT_EXTRACTION_SYSTEM_PROMPT) > 100
+        assert "TOTAL" in RECEIPT_EXTRACTION_SYSTEM_PROMPT
+
+    def test_parsing_instructions_exists(self):
+        """Test that parsing instructions are defined."""
+        from shared.models.receipt_prompts import RECEIPT_PARSING_INSTRUCTIONS
+        
+        assert RECEIPT_PARSING_INSTRUCTIONS is not None
+        assert "{receipt_text}" in RECEIPT_PARSING_INSTRUCTIONS

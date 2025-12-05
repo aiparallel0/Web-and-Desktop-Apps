@@ -856,16 +856,16 @@ class OCRConfig:
     
     def reset_to_defaults(self) -> None:
         """Reset all parameters to their defaults."""
-        # Reset general OCR parameters
-        self.set_min_confidence(0.3)
-        self.set_relaxed_confidence(0.2)
+        # Reset general OCR parameters (lowered for improved text detection)
+        self.set_min_confidence(0.25)  # Lowered from 0.3 for better detection
+        self.set_relaxed_confidence(0.15)  # Lowered from 0.2 for fallback detection
         self.set_relaxed_mode(False)
         self.set_auto_fallback(True)
         
         # Reset detection parameters (with lowered defaults for better detection)
-        self.set_detection_min_confidence(0.25)
-        self.set_detection_box_threshold(0.3)
-        self.set_detection_min_text_height(8)
+        self.set_detection_min_confidence(0.20)  # Lowered from 0.25
+        self.set_detection_box_threshold(0.25)  # Lowered from 0.3
+        self.set_detection_min_text_height(6)  # Lowered from 8
         self.set_detection_denoise_strength(10)
         
         # Reset pipeline stages

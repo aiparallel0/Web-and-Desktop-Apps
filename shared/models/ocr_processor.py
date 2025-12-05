@@ -280,7 +280,24 @@ class OCRProcessor:
             
             best_result.processing_time = time.time() - start_time
             best_result.model_used = self.model_name
-            best_result.confidence_score = min(1.0, best_score / 95)
+            
+            # Use realistic validation-based confidence instead of naive scoring
+            try:
+                from .receipt_prompts import get_validated_extraction_with_confidence
+                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                    receipt_data=best_result,
+                    raw_text=best_text,
+                    base_confidence=min(1.0, best_score / 100)  # Convert score to base confidence
+                )
+                best_result.confidence_score = round(realistic_confidence * 100, 1)
+                if validation.math_validated:
+                    best_result.extraction_notes.append("Math validation passed ✓")
+                elif validation.errors:
+                    for error in validation.errors:
+                        best_result.extraction_notes.append(f"ERROR: {error}")
+            except ImportError:
+                best_result.confidence_score = min(1.0, best_score / 95) * 100
+            
             return ExtractionResult(success=True, data=best_result)
             
         except Exception as e:
