@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contact Receipt Extractor - Get in touch with our team for support, sales, or partnership inquiries.">
+    <title>Contact Us | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2l7 7-7 7"></path>
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <button class="btn btn-outline" id="signInBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>Contact Us</h1>
+            <p class="page-subtitle">We'd love to hear from you. Get in touch with our team.</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-section">
+        <div class="container">
+            <div class="contact-grid">
+                <!-- Contact Form -->
+                <div class="contact-form-wrapper">
+                    <h2>Send us a message</h2>
+                    <form class="contact-form" id="contactForm">
+                        <div class="form-group">
+                            <label for="name">Your Name *</label>
+                            <input type="text" id="name" name="name" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required placeholder="john@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="subject">Subject *</label>
+                            <select id="subject" name="subject" required>
+                                <option value="">Select a subject</option>
+                                <option value="support">Technical Support</option>
+                                <option value="sales">Sales Inquiry</option>
+                                <option value="billing">Billing Question</option>
+                                <option value="partnership">Partnership</option>
+                                <option value="feedback">Feedback</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message *</label>
+                            <textarea id="message" name="message" rows="6" required placeholder="How can we help you?"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+                    </form>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="contact-info">
+                    <div class="info-card">
+                        <div class="info-icon">📧</div>
+                        <h3>Email</h3>
+                        <p>For general inquiries:</p>
+                        <a href="mailto:hello@receiptextractor.com">hello@receiptextractor.com</a>
+                        <p style="margin-top: 16px;">For technical support:</p>
+                        <a href="mailto:support@receiptextractor.com">support@receiptextractor.com</a>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-icon">💬</div>
+                        <h3>Live Chat</h3>
+                        <p>Available Monday - Friday</p>
+                        <p>9:00 AM - 6:00 PM PST</p>
+                        <button class="btn btn-outline btn-full" style="margin-top: 16px;">Start Chat</button>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-icon">📍</div>
+                        <h3>Office</h3>
+                        <p>Receipt Extractor Inc.</p>
+                        <p>123 Tech Street</p>
+                        <p>San Francisco, CA 94107</p>
+                        <p>United States</p>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-icon">🌐</div>
+                        <h3>Social Media</h3>
+                        <div class="social-links">
+                            <a href="#" class="social-link">Twitter</a>
+                            <a href="#" class="social-link">LinkedIn</a>
+                            <a href="#" class="social-link">GitHub</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Time -->
+            <div class="response-info">
+                <h3>Expected Response Times</h3>
+                <div class="response-grid">
+                    <div class="response-item">
+                        <strong>Free Users</strong>
+                        <p>Within 48 hours</p>
+                    </div>
+                    <div class="response-item">
+                        <strong>Pro Users</strong>
+                        <p>Within 24 hours</p>
+                    </div>
+                    <div class="response-item">
+                        <strong>Business Users</strong>
+                        <p>Within 4 hours</p>
+                    </div>
+                    <div class="response-item">
+                        <strong>Enterprise</strong>
+                        <p>Dedicated support</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Receipt Extractor</h4>
+                    <p>AI-powered OCR for modern businesses</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="index.html#features">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="api.html">API</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="about.html">About</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="help.html">Help Center</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="status.html">Status</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Thank you for your message! We will get back to you soon.');
+            this.reset();
+        });
+    </script>
+</body>
+</html>
