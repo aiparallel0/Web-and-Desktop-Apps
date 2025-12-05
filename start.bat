@@ -4,15 +4,17 @@ REM Receipt Extractor - ONE-CLICK START for Windows
 REM =============================================================================
 REM 
 REM Double-click this file to:
-REM   1. Set up virtual environment
-REM   2. Install dependencies
-REM   3. Clear cache
-REM   4. Start servers
+REM   1. Sync with git (discard auto-generated file conflicts)
+REM   2. Set up virtual environment
+REM   3. Install dependencies
+REM   4. Clear cache
+REM   5. Start servers
 REM
 REM Or run from command prompt:
-REM   start.bat         - Full setup + start
+REM   start.bat         - Full setup + start (with git sync)
 REM   start.bat quick   - Skip venv, just start
 REM   start.bat clean   - Only clean cache
+REM   start.bat nosync  - Full setup without git sync
 REM
 REM =============================================================================
 
@@ -35,6 +37,25 @@ if %ERRORLEVEL% neq 0 (
     pause
     exit /b 1
 )
+
+REM Run git sync first (unless quick, clean, or nosync mode)
+if "%1"=="quick" goto skip_sync
+if "%1"=="clean" goto skip_sync
+if "%1"=="nosync" goto skip_sync
+
+REM Check if git-sync.py exists and run it
+if exist git-sync.py (
+    echo [STEP] Syncing with git repository...
+    python git-sync.py --discard
+    if %ERRORLEVEL% neq 0 (
+        echo [WARN] Git sync had issues, continuing anyway...
+    ) else (
+        echo [OK] Git sync complete
+    )
+    echo.
+)
+
+:skip_sync
 
 REM Run the Python startup script
 if "%1"=="quick" (

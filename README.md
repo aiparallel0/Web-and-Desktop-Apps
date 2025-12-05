@@ -475,6 +475,44 @@ The desktop app provides:
 
 ## 🛠️ Troubleshooting
 
+### Git Pull Fails: "Your local changes would be overwritten by merge"
+
+This error occurs when you have local changes to auto-generated files (like `version.json` or HTML files modified by old cache-bust scripts).
+
+**Automatic Fix - Just run start.bat:**
+```bash
+# Windows: Double-click start.bat
+# This automatically runs git-sync before starting the servers
+```
+
+**Quick Fix - Use git-sync.py:**
+```bash
+# From repository root:
+python git-sync.py              # Stash changes and pull
+python git-sync.py --discard    # Discard auto-generated files and pull
+python git-sync.py --status     # Just show what would happen
+```
+
+**Manual Fix:**
+```bash
+# Option 1: Discard changes to specific files
+git checkout -- web/frontend/index.html
+git checkout -- web/frontend/version.json
+
+# Option 2: Stash all local changes
+git stash
+git pull
+git stash pop  # Restore your changes (may have conflicts)
+
+# Option 3: Delete untracked auto-generated files
+rm web/frontend/version.json
+git pull
+```
+
+**Prevention:** The `version.json` file is now auto-generated and gitignored. HTML files are no longer modified by `cache-bust.py`. The `start.bat` script now automatically runs `git-sync.py` to handle these conflicts before starting.
+
+### Common Issues
+
 | Issue | Solution |
 |-------|----------|
 | Port in use | `lsof -i :5000` then `kill -9 <PID>` |
