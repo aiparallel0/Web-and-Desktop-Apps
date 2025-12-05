@@ -74,11 +74,11 @@ def get_detection_config():
     if config:
         return config.get_detection_config()
     
-    # Return defaults if config not available
+    # Return defaults if config not available - lowered min_confidence for better detection
     return {
-        'min_confidence': 0.25,
-        'box_threshold': 0.3,
-        'min_text_height': 8,
+        'min_confidence': 0.20,
+        'box_threshold': 0.25,
+        'min_text_height': 6,
         'use_angle_cls': True,
         'multi_scale': True,
         'auto_retry': True,

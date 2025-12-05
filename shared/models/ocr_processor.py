@@ -70,9 +70,11 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
 
 # Score thresholds for early-exit optimization in OCR extraction
 # Good quality threshold: has total + some other data (avoid aggressive preprocessing)
-GOOD_QUALITY_SCORE_THRESHOLD = 40
+# Lowered from 40 to 25 to ensure more aggressive multi-pass extraction
+GOOD_QUALITY_SCORE_THRESHOLD = 25
 # Excellent quality threshold: high confidence result (stop searching immediately)
-EXCELLENT_QUALITY_SCORE_THRESHOLD = 80
+# Lowered from 80 to 60 to capture more text from challenging images
+EXCELLENT_QUALITY_SCORE_THRESHOLD = 60
 
 
 class OCRProcessor:
