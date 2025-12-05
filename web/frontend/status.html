@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Receipt Extractor System Status - Check the current status of our services and view incident history.">
+    <title>System Status | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2l7 7-7 7"></path>
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>System Status</h1>
+            <p class="page-subtitle">Current status and uptime information for Receipt Extractor services</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-section">
+        <div class="container">
+            <!-- Overall Status -->
+            <div class="status-overview operational">
+                <div class="status-icon">✓</div>
+                <div class="status-text">
+                    <h2>All Systems Operational</h2>
+                    <p>Last updated: <span id="lastUpdated">Just now</span></p>
+                </div>
+            </div>
+
+            <!-- Service Status -->
+            <div class="status-section">
+                <h3>Service Status</h3>
+                <div class="status-list">
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>Web Application</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">99.99% uptime</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>API Services</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">99.98% uptime</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>OCR Processing</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">99.95% uptime</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>User Authentication</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">100% uptime</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>Payment Processing</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">100% uptime</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator operational"></div>
+                        <div class="status-details">
+                            <strong>File Storage</strong>
+                            <span>Operational</span>
+                        </div>
+                        <div class="status-uptime">99.99% uptime</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uptime Chart -->
+            <div class="status-section">
+                <h3>90-Day Uptime</h3>
+                <div class="uptime-chart">
+                    <div class="uptime-bars">
+                        <!-- Simulated uptime bars for past 90 days -->
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="99.9%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="99.95%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                        <div class="uptime-bar operational" title="100%"></div>
+                    </div>
+                    <div class="uptime-labels">
+                        <span>90 days ago</span>
+                        <span>Today</span>
+                    </div>
+                </div>
+                <p class="uptime-summary"><strong>99.98%</strong> uptime over the past 90 days</p>
+            </div>
+
+            <!-- Incident History -->
+            <div class="status-section">
+                <h3>Recent Incidents</h3>
+                <div class="incident-list">
+                    <div class="incident-item resolved">
+                        <div class="incident-date">
+                            <strong>January 10, 2024</strong>
+                            <span>Resolved</span>
+                        </div>
+                        <div class="incident-details">
+                            <h4>Scheduled Maintenance</h4>
+                            <p>Scheduled maintenance completed successfully. All services upgraded to latest versions with improved performance.</p>
+                            <div class="incident-timeline">
+                                <div class="timeline-item">
+                                    <span class="time">2:00 AM PST</span>
+                                    <span>Maintenance started</span>
+                                </div>
+                                <div class="timeline-item">
+                                    <span class="time">2:45 AM PST</span>
+                                    <span>Maintenance completed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="incident-item resolved">
+                        <div class="incident-date">
+                            <strong>December 28, 2023</strong>
+                            <span>Resolved</span>
+                        </div>
+                        <div class="incident-details">
+                            <h4>Increased API Latency</h4>
+                            <p>Some users experienced increased latency during peak hours. Issue was identified and resolved by scaling infrastructure.</p>
+                            <div class="incident-timeline">
+                                <div class="timeline-item">
+                                    <span class="time">11:30 AM PST</span>
+                                    <span>Issue detected</span>
+                                </div>
+                                <div class="timeline-item">
+                                    <span class="time">12:15 PM PST</span>
+                                    <span>Issue resolved</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscribe to Updates -->
+            <div class="subscribe-section">
+                <h3>Subscribe to Status Updates</h3>
+                <p>Get notified about scheduled maintenance and service incidents.</p>
+                <form class="subscribe-form">
+                    <input type="email" placeholder="Enter your email" required>
+                    <button type="submit" class="btn btn-primary">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Receipt Extractor</h4>
+                    <p>AI-powered OCR for modern businesses</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="index.html#features">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="api.html">API</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="about.html">About</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="help.html">Help Center</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="status.html">Status</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Update timestamp
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Help Center - Receipt Extractor. Find answers to common questions and learn how to use our service.">
+    <title>Help Center | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2l7 7-7 7"></path>
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>Help Center</h1>
+            <p class="page-subtitle">Find answers to your questions and learn how to get the most out of Receipt Extractor</p>
+            <div class="search-box">
+                <input type="text" placeholder="Search for help..." class="search-input">
+                <button class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-section">
+        <div class="container">
+            <!-- Help Categories -->
+            <div class="help-categories">
+                <div class="help-category">
+                    <div class="category-icon">🚀</div>
+                    <h3>Getting Started</h3>
+                    <p>New to Receipt Extractor? Start here.</p>
+                    <ul class="help-links">
+                        <li><a href="#how-to-upload">How to upload a receipt</a></li>
+                        <li><a href="#supported-formats">Supported file formats</a></li>
+                        <li><a href="#create-account">Creating an account</a></li>
+                    </ul>
+                </div>
+                <div class="help-category">
+                    <div class="category-icon">📊</div>
+                    <h3>Features & Usage</h3>
+                    <p>Learn about our features and how to use them.</p>
+                    <ul class="help-links">
+                        <li><a href="#export-data">Exporting extracted data</a></li>
+                        <li><a href="#batch-processing">Batch processing</a></li>
+                        <li><a href="#ocr-models">Choosing OCR models</a></li>
+                    </ul>
+                </div>
+                <div class="help-category">
+                    <div class="category-icon">💳</div>
+                    <h3>Billing & Plans</h3>
+                    <p>Manage your subscription and billing.</p>
+                    <ul class="help-links">
+                        <li><a href="#upgrade">Upgrading your plan</a></li>
+                        <li><a href="#cancel">Canceling subscription</a></li>
+                        <li><a href="#refunds">Refund policy</a></li>
+                    </ul>
+                </div>
+                <div class="help-category">
+                    <div class="category-icon">🔧</div>
+                    <h3>Troubleshooting</h3>
+                    <p>Having issues? Find solutions here.</p>
+                    <ul class="help-links">
+                        <li><a href="#poor-quality">Poor extraction quality</a></li>
+                        <li><a href="#upload-errors">Upload errors</a></li>
+                        <li><a href="#account-issues">Account issues</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="faq-section">
+                <h2>Frequently Asked Questions</h2>
+                
+                <div class="faq-item" id="how-to-upload">
+                    <button class="faq-question">
+                        <span>How do I upload a receipt?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>You can upload a receipt in three ways:</p>
+                        <ol>
+                            <li><strong>Drag & Drop:</strong> Simply drag your receipt image onto the upload area on the homepage.</li>
+                            <li><strong>Browse Files:</strong> Click the "Browse Files" button to select a file from your computer.</li>
+                            <li><strong>Take Photo:</strong> On mobile devices, use the "Take Photo" option to capture a receipt with your camera.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="faq-item" id="supported-formats">
+                    <button class="faq-question">
+                        <span>What file formats are supported?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We support the following image formats:</p>
+                        <ul>
+                            <li>JPEG/JPG</li>
+                            <li>PNG</li>
+                            <li>WebP</li>
+                            <li>PDF (single page)</li>
+                            <li>HEIC/HEIF (iOS photos)</li>
+                        </ul>
+                        <p>Maximum file size: 100MB</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" id="export-data">
+                    <button class="faq-question">
+                        <span>How can I export my extracted data?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>After extraction, you can export your data in multiple formats:</p>
+                        <ul>
+                            <li><strong>JSON:</strong> For developers and system integration</li>
+                            <li><strong>CSV:</strong> For spreadsheet applications (Excel, Google Sheets)</li>
+                            <li><strong>TXT:</strong> Plain text format</li>
+                            <li><strong>PDF:</strong> Formatted report (Pro plans)</li>
+                        </ul>
+                        <p>Click the export button next to your extraction results and select your preferred format.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" id="batch-processing">
+                    <button class="faq-question">
+                        <span>How does batch processing work?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Batch processing (available on Pro and Business plans) allows you to:</p>
+                        <ul>
+                            <li>Upload multiple receipts at once (up to 50 per batch)</li>
+                            <li>Process them automatically in the background</li>
+                            <li>Download all results in a single ZIP file</li>
+                        </ul>
+                        <p>To use batch processing, click "Batch Upload" in your dashboard and select multiple files.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" id="poor-quality">
+                    <button class="faq-question">
+                        <span>What if the extraction quality is poor?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>For best results, ensure your receipt images:</p>
+                        <ul>
+                            <li>Are well-lit and in focus</li>
+                            <li>Show the entire receipt without cropping</li>
+                            <li>Are not too small (minimum 640x480 pixels recommended)</li>
+                            <li>Have good contrast between text and background</li>
+                        </ul>
+                        <p>Pro tip: Try different OCR models if one doesn't work well for your receipt type. Florence-2 often works best for complex layouts.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" id="data-security">
+                    <button class="faq-question">
+                        <span>Is my data secure?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, we take security seriously:</p>
+                        <ul>
+                            <li>All uploads are encrypted using TLS/SSL</li>
+                            <li>Receipt images are automatically deleted within 24 hours</li>
+                            <li>We never sell or share your data</li>
+                            <li>Our infrastructure is hosted on secure cloud providers</li>
+                        </ul>
+                        <p>Read our <a href="privacy.html">Privacy Policy</a> for more details.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Support -->
+            <div class="support-cta">
+                <h2>Still need help?</h2>
+                <p>Our support team is here to assist you.</p>
+                <div class="cta-buttons">
+                    <a href="contact.html" class="btn btn-primary">Contact Support</a>
+                    <a href="mailto:support@receiptextractor.com" class="btn btn-outline">Email Us</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Receipt Extractor</h4>
+                    <p>AI-powered OCR for modern businesses</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="index.html#features">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="api.html">API</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="about.html">About</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="help.html">Help Center</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="status.html">Status</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // FAQ Toggle functionality - allows multiple FAQs open simultaneously
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const item = button.parentElement;
+                item.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>
