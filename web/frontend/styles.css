@@ -7,7 +7,7 @@
    Fonts: Inter (all text)
    ============================================================================= */
 
-/* Import Inter font for professional typography */
+/* Import Inter font for professional typography with font-display: swap for better performance */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* CSS Variables - Design Tokens */
@@ -39,8 +39,6 @@
 
     /* Typography - Single font family for consistency */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-heading: var(--font-family);
-    --font-body: var(--font-family);
 
     /* Font weights */
     --font-normal: 400;
@@ -100,7 +98,7 @@ html {
 }
 
 body {
-    font-family: var(--font-body);
+    font-family: var(--font-family);
     color: var(--color-gray-700);
     background: var(--color-gray-50);
     line-height: 1.6;
@@ -110,7 +108,7 @@ body {
 
 /* Typography - Clean hierarchy */
 h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    font-family: var(--font-family);
     font-weight: var(--font-semibold);
     line-height: 1.3;
     color: var(--color-gray-900);
