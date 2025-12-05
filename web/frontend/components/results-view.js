@@ -102,8 +102,14 @@ class ResultsView extends HTMLElement {
 
                 .receipt-image {
                     width: 100%;
+                    max-width: 600px;
+                    max-height: 80vh;
                     height: auto;
                     display: block;
+                    margin: 0 auto;
+                    object-fit: contain;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                 }
 
                 .data-section {
@@ -274,6 +280,11 @@ class ResultsView extends HTMLElement {
                     .items-table th,
                     .items-table td {
                         padding: 8px;
+                    }
+
+                    .receipt-image {
+                        max-width: 100%;
+                        max-height: 60vh;
                     }
                 }
             </style>
