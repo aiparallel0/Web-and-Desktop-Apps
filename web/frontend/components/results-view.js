@@ -285,6 +285,7 @@ class ResultsView extends HTMLElement {
                     .receipt-image {
                         max-width: 100%;
                         max-height: 60vh;
+                        margin: 0 auto;
                     }
                 }
             </style>
