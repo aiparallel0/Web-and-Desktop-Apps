@@ -119,7 +119,7 @@ def get_current_version() -> dict:
             return json.load(f)
     
     # Create version.json from template if it doesn't exist
-    example_file = VERSION_FILE.with_suffix('.json.example')
+    example_file = Path(str(VERSION_FILE) + '.example')
     if example_file.exists():
         with open(example_file, 'r') as f:
             template = json.load(f)
