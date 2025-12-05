@@ -9,11 +9,17 @@ class UploadZone extends HTMLElement {
         this.attachShadow({ mode: 'open' });
         this.selectedFile = null;
         this.onFileSelected = null;
+        this.stream = null;
+        this.cameraActive = false;
     }
 
     connectedCallback() {
         this.render();
         this.setupEventListeners();
+    }
+
+    disconnectedCallback() {
+        this.stopCamera();
     }
 
     render() {
@@ -194,6 +200,96 @@ class UploadZone extends HTMLElement {
                         width: 100%;
                     }
                 }
+
+                /* Camera overlay styles */
+                .camera-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.95);
+                    z-index: 10000;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .camera-overlay.hidden {
+                    display: none;
+                }
+
+                .camera-container {
+                    position: relative;
+                    max-width: 100%;
+                    max-height: 70vh;
+                }
+
+                .camera-video {
+                    max-width: 100%;
+                    max-height: 70vh;
+                    border-radius: 12px;
+                    background: #000;
+                }
+
+                .camera-canvas {
+                    display: none;
+                }
+
+                .camera-controls {
+                    display: flex;
+                    gap: 16px;
+                    margin-top: 24px;
+                }
+
+                .camera-btn {
+                    padding: 16px 32px;
+                    border-radius: 50px;
+                    border: none;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 150ms;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .camera-btn-capture {
+                    background: #10B981;
+                    color: white;
+                }
+
+                .camera-btn-capture:hover {
+                    background: #059669;
+                    transform: scale(1.05);
+                }
+
+                .camera-btn-cancel {
+                    background: #EF4444;
+                    color: white;
+                }
+
+                .camera-btn-cancel:hover {
+                    background: #DC2626;
+                }
+
+                .camera-error {
+                    color: white;
+                    text-align: center;
+                    padding: 24px;
+                }
+
+                .camera-error h3 {
+                    color: #EF4444;
+                    margin-bottom: 12px;
+                }
+
+                .camera-error p {
+                    color: #9CA3AF;
+                    margin-bottom: 16px;
+                }
             </style>
 
             <div class="upload-zone" id="dropZone">
@@ -239,6 +335,30 @@ class UploadZone extends HTMLElement {
                         <button class="btn btn-primary" id="extractBtn">Extract Receipt Data</button>
                         <button class="btn btn-secondary" id="clearBtn">Clear</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Camera Overlay -->
+            <div class="camera-overlay hidden" id="cameraOverlay">
+                <div class="camera-container" id="cameraContainer">
+                    <video class="camera-video" id="cameraVideo" autoplay playsinline></video>
+                    <canvas class="camera-canvas" id="cameraCanvas"></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button class="camera-btn camera-btn-capture" id="captureBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="6" fill="currentColor"/>
+                        </svg>
+                        Capture
+                    </button>
+                    <button class="camera-btn camera-btn-cancel" id="cancelCameraBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Cancel
+                    </button>
                 </div>
             </div>
         `;
@@ -292,16 +412,29 @@ class UploadZone extends HTMLElement {
             }
         });
 
-        // Camera capture
+        // Camera capture - use real camera API
         cameraBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            cameraInput.click();
+            this.openCamera();
         });
 
+        // Keep file input fallback for mobile devices
         cameraInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 this.handleFile(e.target.files[0]);
             }
+        });
+
+        // Camera overlay controls
+        const captureBtn = this.shadowRoot.getElementById('captureBtn');
+        const cancelCameraBtn = this.shadowRoot.getElementById('cancelCameraBtn');
+
+        captureBtn.addEventListener('click', () => {
+            this.capturePhoto();
+        });
+
+        cancelCameraBtn.addEventListener('click', () => {
+            this.closeCamera();
         });
 
         // Paste from clipboard
@@ -409,6 +542,132 @@ class UploadZone extends HTMLElement {
 
     getFile() {
         return this.selectedFile;
+    }
+
+    // Camera methods
+    async openCamera() {
+        const cameraOverlay = this.shadowRoot.getElementById('cameraOverlay');
+        const cameraVideo = this.shadowRoot.getElementById('cameraVideo');
+        const cameraContainer = this.shadowRoot.getElementById('cameraContainer');
+
+        // Check if MediaDevices API is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            // Fallback to file input with capture attribute for mobile
+            const cameraInput = this.shadowRoot.getElementById('cameraInput');
+            if (cameraInput) {
+                cameraInput.click();
+            } else {
+                this.showCameraError('Camera not supported', 
+                    'Your browser does not support camera access. Please use the file browser to upload a photo.');
+            }
+            return;
+        }
+
+        try {
+            // Request camera access
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment', // Prefer back camera
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                },
+                audio: false
+            });
+
+            cameraVideo.srcObject = this.stream;
+            cameraOverlay.classList.remove('hidden');
+            this.cameraActive = true;
+
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                cameraVideo.onloadedmetadata = resolve;
+            });
+            await cameraVideo.play();
+
+        } catch (error) {
+            console.error('Camera error:', error);
+            
+            if (error.name === 'NotAllowedError') {
+                this.showCameraError('Camera Access Denied', 
+                    'Please allow camera access in your browser settings to take photos.');
+            } else if (error.name === 'NotFoundError') {
+                this.showCameraError('No Camera Found', 
+                    'No camera was detected on your device. Please use the file browser to upload a photo.');
+            } else {
+                this.showCameraError('Camera Error', 
+                    'Could not access the camera. Please try using the file browser instead.');
+            }
+        }
+    }
+
+    showCameraError(title, message) {
+        const cameraOverlay = this.shadowRoot.getElementById('cameraOverlay');
+        const cameraContainer = this.shadowRoot.getElementById('cameraContainer');
+        
+        cameraContainer.innerHTML = `
+            <div class="camera-error">
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <button class="camera-btn camera-btn-cancel" id="errorCloseBtn">Close</button>
+            </div>
+        `;
+        cameraOverlay.classList.remove('hidden');
+        
+        this.shadowRoot.getElementById('errorCloseBtn').addEventListener('click', () => {
+            this.closeCamera();
+            // Restore the camera container
+            this.render();
+            this.setupEventListeners();
+        });
+    }
+
+    capturePhoto() {
+        const cameraVideo = this.shadowRoot.getElementById('cameraVideo');
+        const cameraCanvas = this.shadowRoot.getElementById('cameraCanvas');
+        
+        if (!this.stream || !cameraVideo.videoWidth) {
+            return;
+        }
+
+        // Set canvas dimensions to match video
+        cameraCanvas.width = cameraVideo.videoWidth;
+        cameraCanvas.height = cameraVideo.videoHeight;
+
+        // Draw video frame to canvas
+        const ctx = cameraCanvas.getContext('2d');
+        ctx.drawImage(cameraVideo, 0, 0);
+
+        // Convert to blob
+        cameraCanvas.toBlob((blob) => {
+            if (blob) {
+                // Create a file from the blob
+                const file = new File([blob], `receipt_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                
+                // Close camera and handle the file
+                this.closeCamera();
+                this.handleFile(file);
+            }
+        }, 'image/jpeg', 0.95);
+    }
+
+    closeCamera() {
+        const cameraOverlay = this.shadowRoot.getElementById('cameraOverlay');
+        
+        // Stop all video tracks
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        // Hide overlay
+        if (cameraOverlay) {
+            cameraOverlay.classList.add('hidden');
+        }
+        this.cameraActive = false;
+    }
+
+    stopCamera() {
+        this.closeCamera();
     }
 }
 

@@ -637,6 +637,245 @@ textarea:focus-visible {
 }
 
 /* =============================================================================
+   OCR MODELS SECTION - Model cards for landing page
+   ============================================================================= */
+.ocr-models-section {
+    padding: var(--space-10) 0;
+    background: white;
+}
+
+.models-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+    .models-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .models-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.model-card-landing {
+    padding: var(--space-4);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--color-gray-200);
+    transition: all var(--transition-base);
+}
+
+.model-card-landing:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+}
+
+.model-card-landing.featured {
+    border-color: var(--color-primary);
+    background: var(--color-primary-50);
+}
+
+.model-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.model-badge {
+    padding: 4px 10px;
+    font-size: 0.6875rem;
+    font-weight: var(--font-bold);
+    text-transform: uppercase;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.05em;
+}
+
+.model-badge.free {
+    background: var(--color-success-light);
+    color: var(--color-success-dark);
+}
+
+.model-badge.pro {
+    background: var(--color-primary);
+    color: white;
+}
+
+.model-header h3 {
+    font-size: 1.0625rem;
+    margin: 0;
+}
+
+.model-stats-landing {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.model-stats-landing .stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.model-stats-landing .stat-value {
+    font-size: 1.125rem;
+    font-weight: var(--font-bold);
+    color: var(--color-gray-900);
+}
+
+.model-stats-landing .stat-label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+}
+
+.model-card-landing p {
+    font-size: 0.9375rem;
+    color: var(--color-gray-600);
+    margin-bottom: var(--space-2);
+    line-height: 1.6;
+}
+
+.model-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.model-features li {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.model-features li::before {
+    content: "✓";
+    color: var(--color-success);
+    font-weight: var(--font-bold);
+}
+
+.section-cta {
+    text-align: center;
+    margin-top: var(--space-6);
+}
+
+/* =============================================================================
+   MODEL FINETUNING SECTION
+   ============================================================================= */
+.finetuning-section {
+    padding: var(--space-10) 0;
+    background: var(--color-gray-50);
+}
+
+.finetuning-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+}
+
+@media (min-width: 768px) {
+    .finetuning-content {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.finetuning-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.benefit-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gray-200);
+}
+
+.benefit-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-50);
+    border-radius: var(--radius-md);
+    color: var(--color-primary);
+}
+
+.benefit-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.benefit-text h4 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+    color: var(--color-gray-900);
+}
+
+.benefit-text p {
+    font-size: 0.9375rem;
+    color: var(--color-gray-600);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.finetuning-providers {
+    padding: var(--space-4);
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gray-200);
+}
+
+.finetuning-providers h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-3);
+    color: var(--color-gray-900);
+}
+
+.providers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.provider-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.provider-card:hover {
+    background: var(--color-primary-50);
+}
+
+.provider-icon {
+    font-size: 1.5rem;
+}
+
+.provider-name {
+    font-weight: var(--font-medium);
+    color: var(--color-gray-700);
+}
+
+/* =============================================================================
    PRICING SECTION - Clean pricing cards
    ============================================================================= */
 .pricing {
