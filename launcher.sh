@@ -7,7 +7,7 @@
 #
 # Features:
 # - Automatic dependency installation and validation
-# - Comprehensive test suite execution (~1000+ tests)
+# - Comprehensive test suite execution (dynamically counted)
 # - CEFR refactoring and AI agent test reporting
 # - Backend and Frontend server management
 # - Database migrations
@@ -138,7 +138,7 @@ get_test_count() {
         if [ -d "$TEST_DIR" ]; then
             TEST_COUNT_ESTIMATE=$(find "$TEST_DIR" -name "test_*.py" -type f -exec grep -c "def test_" {} \; 2>/dev/null | awk '{sum+=$1} END {print sum}')
             if [ -z "$TEST_COUNT_ESTIMATE" ] || [ "$TEST_COUNT_ESTIMATE" -eq 0 ]; then
-                TEST_COUNT_ESTIMATE="1000+"
+                TEST_COUNT_ESTIMATE="N/A"
             fi
         else
             TEST_COUNT_ESTIMATE="N/A"
@@ -442,7 +442,8 @@ run_quick_tests() {
 }
 
 run_full_tests() {
-    print_section "Running Full Test Suite (~1000+ Tests)"
+    local test_count=$(get_test_count)
+    print_section "Running Full Test Suite (~${test_count} Tests)"
 
     clean_cache
     detect_python || return 1
@@ -987,6 +988,7 @@ system_health_report() {
 
 show_help() {
     print_section "Help & Documentation"
+    local test_count=$(get_test_count)
 
     echo ""
     echo -e "${BOLD}Quick Start:${NC}"
@@ -1026,7 +1028,7 @@ show_help() {
     echo "  web/backend/         - Flask API backend"
     echo "  web/frontend/        - Web frontend"
     echo "  shared/              - Shared utilities & Circular Exchange Framework"
-    echo "  tools/tests/         - Test suite (~1000+ tests)"
+    echo "  tools/tests/         - Test suite (~${test_count} tests)"
     echo "  desktop/             - Desktop application"
     echo ""
     echo -e "${BOLD}Logs Location:${NC}"

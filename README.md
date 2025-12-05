@@ -25,7 +25,7 @@ AI-powered receipt text extraction with **Web Application** and **Electron Deskt
 **Using the Unified Launcher (Recommended):**
 ```bash
 ./launcher.sh          # Interactive menu
-./launcher.sh test     # Run full test suite (~1000+ tests)
+./launcher.sh test     # Run full test suite (~1055 tests)
 ./launcher.sh dev      # Start development servers
 ./launcher.sh help     # Show all options
 ```
@@ -266,6 +266,22 @@ registry.create_package(name='module.param', initial_value=0.5, source_module='m
 
 ## 🧪 Testing
 
+### Test Coverage Summary
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| Shared Utils Tests | ~170 | Core utilities (data, helpers, image, logging) |
+| OCR Tests | ~191 | OCR processing and configuration |
+| CEFR Framework Tests | ~322 | Circular Exchange Framework (core, refactor, analysis, persist) |
+| Backend Tests | ~50 | Backend API routes |
+| Integration Tests | ~28 | Cross-module integration |
+| Billing/Security Tests | ~59 | Billing, routes, security |
+| Model Tests | ~104 | Model management |
+| Infrastructure Tests | ~51 | Infrastructure and setup |
+| **Total** | **~1055** | **All test functions** |
+
+> **Note:** Test counts are dynamically calculated. Run `pytest --collect-only -q` for exact count.
+
 ### ⚠️ CRITICAL: Keeping Tests Up-to-Date
 
 **Tests MUST be synchronized with code changes.** Outdated tests that skip or fail due to missing functions are useless.
@@ -331,14 +347,7 @@ pytest tools/tests/ --cov=shared --cov=web/backend --cov-report=html
 
 **Using the Unified Launcher (Recommended):**
 ```bash
-./launcher.sh test           # Run full test suite (~1000+ tests)
-./launcher.sh test-quick     # Quick tests (faster)
-./launcher.sh report         # Generate comprehensive test report with CEFR analysis
-```
-
-**Direct pytest commands:**
-```bash
-./launcher.sh test           # Run full test suite (~1000+ tests)
+./launcher.sh test           # Run full test suite
 ./launcher.sh test-quick     # Quick tests (faster)
 ./launcher.sh report         # Generate comprehensive test report with CEFR analysis
 ```
@@ -352,17 +361,16 @@ pytest tools/tests/ -v
 pytest tools/tests/ --cov=shared --cov=web.backend --cov-report=html
 
 # By category
-pytest -m unit         # Unit tests
-pytest -m integration  # Integration tests
-pytest -m e2e         # End-to-end tests
+pytest tools/tests/shared/          # Shared module tests
+pytest tools/tests/circular_exchange/  # CEFR framework tests
+pytest tools/tests/backend/         # Backend tests
 
 # Specific test suites
-pytest tools/tests/test_billing.py  # Stripe integration tests
-pytest tools/tests/test_storage.py  # Cloud storage tests
-pytest tools/tests/test_training.py # Cloud training tests
+pytest tools/tests/test_billing.py  # Stripe integration tests (requires stripe package)
+pytest tools/tests/test_integration.py # Integration tests
 ```
 
-**Test Coverage:** ~1000+ tests covering shared modules, backend routes, CEFR framework, and AI agents
+**Test Coverage:** ~1055 tests covering shared modules, backend routes, CEFR framework, and AI agents
 
 **CI/CD:** GitHub Actions runs tests automatically on push and creates CEF analysis artifacts.
 
