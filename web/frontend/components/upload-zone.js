@@ -616,7 +616,7 @@ class UploadZone extends HTMLElement {
         
         // Hide the camera controls when showing error
         if (cameraControls) {
-            cameraControls.style.cssText = 'display: none !important';
+            cameraControls.classList.add('hidden');
         }
         
         cameraContainer.innerHTML = `
@@ -630,9 +630,6 @@ class UploadZone extends HTMLElement {
         
         this.shadowRoot.getElementById('errorCloseBtn').addEventListener('click', () => {
             this.closeCamera();
-            // Restore the camera container
-            this.render();
-            this.setupEventListeners();
         });
     }
 
@@ -667,6 +664,8 @@ class UploadZone extends HTMLElement {
 
     closeCamera() {
         const cameraOverlay = this.shadowRoot.getElementById('cameraOverlay');
+        const cameraContainer = this.shadowRoot.getElementById('cameraContainer');
+        const cameraControls = this.shadowRoot.getElementById('cameraControls');
         
         // Stop all video tracks
         if (this.stream) {
@@ -678,6 +677,20 @@ class UploadZone extends HTMLElement {
         if (cameraOverlay) {
             cameraOverlay.classList.add('hidden');
         }
+        
+        // Restore camera container HTML if it was replaced by error message
+        if (cameraContainer) {
+            cameraContainer.innerHTML = `
+                <video class="camera-video" id="cameraVideo" autoplay playsinline></video>
+                <canvas class="camera-canvas" id="cameraCanvas"></canvas>
+            `;
+        }
+        
+        // Show camera controls again
+        if (cameraControls) {
+            cameraControls.classList.remove('hidden');
+        }
+        
         this.cameraActive = false;
     }
 
