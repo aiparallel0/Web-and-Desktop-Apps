@@ -25,14 +25,15 @@ class UploadZone extends HTMLElement {
 
                 .upload-zone {
                     position: relative;
-                    padding: 48px 24px;
+                    padding: 32px 24px;
                     background: white;
                     border: 3px dashed #D1D5DB;
                     border-radius: 16px;
                     text-align: center;
                     transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
                     cursor: pointer;
-                    min-height: 300px;
+                    min-height: 200px;
+                    max-height: 400px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -56,9 +57,9 @@ class UploadZone extends HTMLElement {
                 }
 
                 .upload-icon {
-                    width: 64px;
-                    height: 64px;
-                    margin-bottom: 16px;
+                    width: 48px;
+                    height: 48px;
+                    margin-bottom: 12px;
                     color: #9CA3AF;
                     transition: color 250ms;
                 }
@@ -125,10 +126,11 @@ class UploadZone extends HTMLElement {
 
                 .preview-image {
                     max-width: 100%;
-                    max-height: 200px;
+                    max-height: 150px;
                     border-radius: 8px;
                     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                    margin-bottom: 16px;
+                    margin-bottom: 12px;
+                    object-fit: contain;
                 }
 
                 .file-info {
@@ -180,8 +182,8 @@ class UploadZone extends HTMLElement {
 
                 @media (max-width: 640px) {
                     .upload-zone {
-                        padding: 32px 16px;
-                        min-height: 250px;
+                        padding: 24px 16px;
+                        min-height: 180px;
                     }
 
                     .upload-methods {
