@@ -13,6 +13,7 @@ normalize_price() functions found in:
 from decimal import Decimal
 from typing import Optional
 import logging
+import re
 
 # Circular Exchange Framework Integration
 try:
@@ -41,6 +42,9 @@ PRICE_MIN = Decimal('0')
 PRICE_MAX = Decimal('9999')
 # Maximum realistic price for a single grocery/retail item
 # Items priced above this threshold are likely OCR errors
+
+# Pre-compiled regex pattern for ZIP code detection (performance optimization)
+_ZIP_CODE_PATTERN = re.compile(r'^\d{5}(-?\d{4})?$')
 
 
 def normalize_price(value) -> Optional[Decimal]:
@@ -88,8 +92,7 @@ def normalize_price(value) -> Optional[Decimal]:
 
         # Reject ZIP code format (5 digits or 5+4 digits)
         # e.g., "12345" or "12345-6789"
-        import re
-        if re.match(r'^\d{5}(-?\d{4})?$', price_str):
+        if _ZIP_CODE_PATTERN.match(price_str):
             return None
 
         # Handle thousands separator vs decimal separator

@@ -27,12 +27,21 @@ import time
 import gc
 import json
 import threading
+import platform
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import tempfile
 from pathlib import Path
 import zipfile
+
+# Optional import for system monitoring (used in health check)
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    psutil = None
+    PSUTIL_AVAILABLE = False
 
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -273,7 +282,8 @@ def index():
 @app.route('/api/health',methods=['GET'])
 def health_check():
  try:
-  import psutil,platform
+  if not PSUTIL_AVAILABLE:
+   return jsonify({'status':'healthy','service':'receipt-extraction-api','version':'2.0','note':'Install psutil for detailed system metrics'})
   memory=psutil.virtual_memory()
   disk=psutil.disk_usage('/')
   resource_stats=model_manager.get_resource_stats()
@@ -281,7 +291,6 @@ def health_check():
   if memory.percent>90:health_data['status']='degraded';health_data['warnings']=['Memory usage critical (>90%)']
   elif memory.percent>80:health_data['status']='warning';health_data['warnings']=['Memory usage high (>80%)']
   return jsonify(health_data)
- except ImportError:return jsonify({'status':'healthy','service':'receipt-extraction-api','version':'2.0','note':'Install psutil for detailed system metrics'})
  except Exception as e:logger.error(f"Health check error: {e}");return jsonify({'status':'unhealthy','service':'receipt-extraction-api','error':str(e)}),500
 
 @app.route('/api/cefr/dashboard', methods=['GET'])

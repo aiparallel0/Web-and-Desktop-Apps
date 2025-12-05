@@ -10,6 +10,7 @@ This module provides:
 Integrated with Circular Exchange Framework for dynamic error configuration.
 """
 import logging
+import re
 import time
 import traceback
 from typing import Dict, Optional, Any
@@ -964,7 +965,6 @@ class ResponseCache:
     
     def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate all entries matching pattern."""
-        import re
         with self._lock:
             regex = re.compile(pattern)
             keys_to_delete = [k for k in self._cache.keys() if regex.match(k)]
