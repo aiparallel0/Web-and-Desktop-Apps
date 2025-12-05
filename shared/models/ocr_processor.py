@@ -152,25 +152,41 @@ class OCRProcessor:
         preprocessed = []
         img_np = np.array(image)
         
-        # Upscale and denoise
+        # Version 1: Upscale 2x with denoising and Otsu threshold
         upscaled = cv2.resize(img_np, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
         gray1 = cv2.cvtColor(upscaled, cv2.COLOR_RGB2GRAY)
         denoised1 = cv2.fastNlMeansDenoising(gray1, h=10)
         _, thresh1 = cv2.threshold(denoised1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         preprocessed.append(Image.fromarray(thresh1))
         
-        # Adaptive threshold
+        # Version 2: Adaptive threshold (good for uneven lighting)
         gray2 = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
         adaptive = cv2.adaptiveThreshold(
             gray2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
         preprocessed.append(Image.fromarray(adaptive))
         
-        # Contrast enhancement
+        # Version 3: High contrast enhancement
         gray3 = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
         enhanced = Image.fromarray(gray3)
         enhancer = ImageEnhance.Contrast(enhanced)
         preprocessed.append(enhancer.enhance(2.0))
+        
+        # Version 4: CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        # Good for receipts with low contrast or faded text
+        gray4 = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        clahe_img = clahe.apply(gray4)
+        preprocessed.append(Image.fromarray(clahe_img))
+        
+        # Version 5: Upscale 3x for very small text (better word spacing)
+        upscaled3x = cv2.resize(img_np, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        gray5 = cv2.cvtColor(upscaled3x, cv2.COLOR_RGB2GRAY)
+        # Morphological operations to separate touching characters
+        kernel = np.ones((2, 2), np.uint8)
+        dilated = cv2.dilate(gray5, kernel, iterations=1)
+        _, thresh5 = cv2.threshold(dilated, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        preprocessed.append(Image.fromarray(thresh5))
         
         return preprocessed
 
@@ -203,22 +219,28 @@ class OCRProcessor:
             image = load_and_validate_image(image_path)
             processed = preprocess_for_ocr(image, aggressive=True)
             
-            # First pass: Try 2 PSM modes on preprocessed image
+            # First pass: Try multiple PSM modes on preprocessed image
+            # PSM 6: Assume uniform block of text
+            # PSM 4: Assume single column of variable-sized text
+            # PSM 11: Sparse text - find as much text as possible
+            # PSM 3: Fully automatic page segmentation
             ocr_results = []
-            config1 = (
-                r'--oem 3 --psm 6 -c tessedit_char_whitelist='
-                r'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,:/\-#@()&% '
-            )
-            text1 = pytesseract.image_to_string(processed, lang='eng', config=config1)
-            receipt1 = self._parse_receipt_text(text1)
-            score1 = self._score_result(receipt1, text1)
-            ocr_results.append(('PSM 6', text1, receipt1, score1))
             
-            config2 = r'--oem 3 --psm 4'
-            text2 = pytesseract.image_to_string(processed, lang='eng', config=config2)
-            receipt2 = self._parse_receipt_text(text2)
-            score2 = self._score_result(receipt2, text2)
-            ocr_results.append(('PSM 4', text2, receipt2, score2))
+            # Config without character whitelist (whitelist can cause word concatenation)
+            # Using preserve_interword_spaces to maintain word boundaries
+            for psm, desc in [(6, 'block'), (4, 'column'), (11, 'sparse'), (3, 'auto')]:
+                try:
+                    config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
+                    text = pytesseract.image_to_string(processed, lang='eng', config=config)
+                    receipt = self._parse_receipt_text(text)
+                    score = self._score_result(receipt, text)
+                    ocr_results.append((f'PSM {psm} ({desc})', text, receipt, score))
+                except Exception as e:
+                    logger.debug(f"PSM {psm} failed: {e}")
+                    continue
+            
+            if not ocr_results:
+                return ExtractionResult(success=False, error="All OCR modes failed")
             
             # Select best result by score (quality) rather than just length
             best_mode, best_text, receipt, initial_score = max(ocr_results, key=lambda x: x[3])
@@ -241,13 +263,14 @@ class OCRProcessor:
                 logger.info("Low OCR output - trying aggressive preprocessing")
             
             preprocessed_versions = self._aggressive_preprocess(image)
-            psm_modes = [6, 4, 11, 3]
+            psm_modes = [6, 4, 11, 3, 12]  # Added PSM 12 for sparse text with OSD
             best_result, best_score = receipt, initial_score
             
             for v_idx, proc_img in enumerate(preprocessed_versions):
                 for psm in psm_modes:
                     try:
-                        config = f'--oem 3 --psm {psm}'
+                        # Use preserve_interword_spaces to prevent word concatenation
+                        config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
                         text = pytesseract.image_to_string(proc_img, lang='eng', config=config)
                         if not text or len(text.strip()) < 10:
                             continue
@@ -256,6 +279,7 @@ class OCRProcessor:
                         if score > best_score:
                             best_score = score
                             best_result = rec
+                            best_text = text  # Keep track of best text for logging
                             # Early exit if we find an excellent result
                             if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
                                 logger.info(f"Found excellent result with score {score}, stopping search")
