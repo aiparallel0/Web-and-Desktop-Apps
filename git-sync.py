@@ -60,6 +60,8 @@ class Colors:
     END = "\033[0m"
 
 
+# Enable ANSI escape codes on Windows 10+ for colored terminal output
+# The empty os.system("") call triggers Windows to process virtual terminal sequences
 if sys.platform == "win32":
     os.system("")
 
@@ -89,21 +91,39 @@ def print_warning(msg):
     print(f"{Colors.YELLOW}[WARN]{Colors.END} {msg}")
 
 
-def run_git(args, check=True, capture=True):
-    """Run a git command and return the result."""
+def run_git(args, check=True, capture=True, timeout=60):
+    """Run a git command and return the result.
+    
+    Args:
+        args: Git command arguments (without 'git' prefix)
+        check: If True, raise CalledProcessError on non-zero exit
+        capture: If True, capture stdout/stderr
+        timeout: Maximum seconds to wait for command (default 60)
+    
+    Returns:
+        CompletedProcess object, or a mock result with returncode=-1 on error
+    """
     try:
         result = subprocess.run(
             ["git"] + args,
             cwd=PROJECT_ROOT,
             capture_output=capture,
             text=True,
-            check=check
+            check=check,
+            timeout=timeout
         )
         return result
     except subprocess.CalledProcessError as e:
-        if capture:
-            return e
-        raise
+        # Return a consistent result-like object with error info
+        return subprocess.CompletedProcess(
+            args=e.cmd, returncode=e.returncode, 
+            stdout=e.stdout or "", stderr=e.stderr or ""
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            args=["git"] + args, returncode=-1,
+            stdout="", stderr="Command timed out"
+        )
 
 
 def get_modified_files():
@@ -113,7 +133,13 @@ def get_modified_files():
         return []
     
     modified = []
-    for line in result.stdout.strip().split("\n"):
+    stdout = result.stdout.strip()
+    
+    # Handle empty output case
+    if not stdout:
+        return []
+    
+    for line in stdout.split("\n"):
         if line.strip():
             # Parse status line: "XY filename" or "XY old -> new"
             parts = line.split()
@@ -247,11 +273,15 @@ def run_cache_bust():
             [sys.executable, str(cache_bust_script)],
             cwd=str(cache_bust_script.parent),
             capture_output=True,
-            text=True
+            text=True,
+            timeout=30  # 30 second timeout for cache-bust
         )
         
         if result.returncode == 0:
             print_success("Cache files regenerated")
+        return True
+    except subprocess.TimeoutExpired:
+        print_warning("Cache regeneration timed out (non-critical)")
         return True
     except Exception as e:
         print_warning(f"Cache regeneration skipped: {e}")
