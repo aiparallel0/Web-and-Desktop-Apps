@@ -109,10 +109,25 @@ def calculate_version_hash() -> str:
 
 
 def get_current_version() -> dict:
-    """Read current version from version.json."""
+    """Read current version from version.json.
+    
+    If version.json doesn't exist, it will be created from version.json.example.
+    This file is auto-generated and not tracked in git to prevent merge conflicts.
+    """
     if VERSION_FILE.exists():
         with open(VERSION_FILE, 'r') as f:
             return json.load(f)
+    
+    # Create version.json from template if it doesn't exist
+    example_file = Path(str(VERSION_FILE) + '.example')
+    if example_file.exists():
+        with open(example_file, 'r') as f:
+            template = json.load(f)
+        with open(VERSION_FILE, 'w') as f:
+            json.dump(template, f, indent=4)
+        print(f"  Created version.json from template")
+        return template
+    
     return None
 
 
