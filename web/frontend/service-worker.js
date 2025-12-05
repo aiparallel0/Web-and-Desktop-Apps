@@ -377,16 +377,23 @@ self.addEventListener('message', (event) => {
     
     if (event.data.type === 'FORCE_UPDATE') {
         console.log('[ServiceWorker] Force update triggered');
-        // Clear caches and reload
-        caches.keys().then((names) => {
-            return Promise.all(names.map(name => caches.delete(name)));
-        }).then(() => {
-            self.clients.matchAll().then((clients) => {
+        // Clear caches and reload with error handling
+        caches.keys()
+            .then((names) => {
+                return Promise.all(names.map(name => caches.delete(name)));
+            })
+            .then(() => {
+                console.log('[ServiceWorker] All caches cleared for force update');
+                return self.clients.matchAll();
+            })
+            .then((clients) => {
                 clients.forEach((client) => {
                     client.postMessage({ type: 'RELOAD_PAGE' });
                 });
+            })
+            .catch((error) => {
+                console.error('[ServiceWorker] Force update failed:', error);
             });
-        });
     }
 });
 

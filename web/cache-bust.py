@@ -115,8 +115,10 @@ def update_version_file(version_hash: str) -> dict:
             parts = version.split('.')
             parts[-1] = str(int(parts[-1]) + 1)
             version = '.'.join(parts)
-        except (ValueError, IndexError):
-            pass
+        except (ValueError, IndexError) as e:
+            # Log version parsing failure and use default
+            print(f"  Warning: Could not parse version '{version}', using default: {e}")
+            version = '2.0.1'
     
     version_data = {
         'version': version,

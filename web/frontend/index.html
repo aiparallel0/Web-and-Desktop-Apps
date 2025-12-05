@@ -18,14 +18,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Preload critical assets -->
-    <link rel="preload" href="styles.css?v=eb18f99b" as="style">
-    <link rel="preload" href="app.js?v=eb18f99b" as="script">
+    <link rel="preload" href="styles.css?v=103bbeb4" as="style">
+    <link rel="preload" href="app.js?v=103bbeb4" as="script">
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="styles.css?v=eb18f99b">
+    <link rel="stylesheet" href="styles.css?v=103bbeb4">
 
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json?v=eb18f99b">
+    <link rel="manifest" href="manifest.json?v=103bbeb4">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
@@ -362,10 +362,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="components/upload-zone.js?v=eb18f99b" defer></script>
-    <script src="components/progress-bar.js?v=eb18f99b" defer></script>
-    <script src="components/results-view.js?v=eb18f99b" defer></script>
-    <script src="app.js?v=eb18f99b" defer></script>
+    <script src="components/upload-zone.js?v=103bbeb4" defer></script>
+    <script src="components/progress-bar.js?v=103bbeb4" defer></script>
+    <script src="components/results-view.js?v=103bbeb4" defer></script>
+    <script src="app.js?v=103bbeb4" defer></script>
 
     <!-- Service Worker Registration with Update Checking -->
     <script>
@@ -423,8 +423,9 @@
                             navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
                         }
                         localStorage.setItem('app_version_hash', serverVersion.hash);
-                        // Let the cache clear before reloading
-                        setTimeout(() => window.location.reload(), 100);
+                        // Brief delay to allow cache clear message to be processed before reload
+                        const CACHE_CLEAR_DELAY_MS = 100;
+                        setTimeout(() => window.location.reload(), CACHE_CLEAR_DELAY_MS);
                     } else {
                         localStorage.setItem('app_version_hash', serverVersion.hash);
                     }
