@@ -30,9 +30,13 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
     try:
         sys.stdout.reconfigure(errors='replace')
     except AttributeError:
-        # Python < 3.7 fallback
-        import codecs
-        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, errors='replace')
+        # Python < 3.7 fallback: wrap stdout with the same encoding but error handling
+        import io
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer,
+            encoding=sys.stdout.encoding,
+            errors='replace'
+        )
 
 # Configuration
 FRONTEND_DIR = Path(__file__).parent / 'frontend'
