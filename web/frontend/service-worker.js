@@ -6,16 +6,22 @@
  * Provides offline capabilities and caching for the PWA.
  * 
  * Caching Strategy:
- * - Static assets: Cache First
+ * - Static assets: Cache First with version validation
  * - API requests: Network First with offline fallback
  * - Images: Cache First with refresh
+ * 
+ * Cache Busting:
+ * - Version-based cache invalidation
+ * - Automatic update on new version detection
+ * - Clear old caches on activation
  * 
  * =============================================================================
  */
 
-const CACHE_NAME = 'receipt-extractor-v2.0.0';
-const STATIC_CACHE = 'static-v2.0.0';
-const DYNAMIC_CACHE = 'dynamic-v2.0.0';
+const APP_VERSION = '2.0.1';
+const CACHE_NAME = 'receipt-extractor-v2.0.1';
+const STATIC_CACHE = 'static-v2.0.1';
+const DYNAMIC_CACHE = 'dynamic-v2.0.1';
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
@@ -39,7 +45,7 @@ const API_CACHE_PATTERNS = [
 // ============================================================================
 
 self.addEventListener('install', (event) => {
-    console.log('[ServiceWorker] Installing...');
+    console.log('[ServiceWorker] Installing version:', APP_VERSION);
     
     event.waitUntil(
         caches.open(STATIC_CACHE)
@@ -48,7 +54,8 @@ self.addEventListener('install', (event) => {
                 return cache.addAll(STATIC_ASSETS);
             })
             .then(() => {
-                console.log('[ServiceWorker] Install complete');
+                console.log('[ServiceWorker] Install complete, skipping waiting');
+                // Force immediate activation
                 return self.skipWaiting();
             })
             .catch((error) => {
@@ -62,7 +69,7 @@ self.addEventListener('install', (event) => {
 // ============================================================================
 
 self.addEventListener('activate', (event) => {
-    console.log('[ServiceWorker] Activating...');
+    console.log('[ServiceWorker] Activating version:', APP_VERSION);
     
     event.waitUntil(
         caches.keys()
@@ -70,11 +77,16 @@ self.addEventListener('activate', (event) => {
                 return Promise.all(
                     cacheNames
                         .filter((name) => {
-                            // Delete old caches
-                            return name.startsWith('receipt-extractor-') && 
-                                   name !== CACHE_NAME &&
-                                   name !== STATIC_CACHE &&
-                                   name !== DYNAMIC_CACHE;
+                            // Delete ALL old caches that don't match current version
+                            const isOldCache = (
+                                (name.startsWith('receipt-extractor-') || 
+                                 name.startsWith('static-') || 
+                                 name.startsWith('dynamic-')) &&
+                                name !== CACHE_NAME &&
+                                name !== STATIC_CACHE &&
+                                name !== DYNAMIC_CACHE
+                            );
+                            return isOldCache;
                         })
                         .map((name) => {
                             console.log('[ServiceWorker] Deleting old cache:', name);
@@ -338,18 +350,44 @@ self.addEventListener('message', (event) => {
     console.log('[ServiceWorker] Message received:', event.data);
     
     if (event.data.type === 'SKIP_WAITING') {
+        console.log('[ServiceWorker] Skip waiting triggered');
         self.skipWaiting();
     }
     
     if (event.data.type === 'CLEAR_CACHE') {
+        console.log('[ServiceWorker] Clearing all caches...');
         caches.keys().then((names) => {
-            names.forEach((name) => caches.delete(name));
+            return Promise.all(
+                names.map((name) => {
+                    console.log('[ServiceWorker] Deleting cache:', name);
+                    return caches.delete(name);
+                })
+            );
+        }).then(() => {
+            console.log('[ServiceWorker] All caches cleared');
         });
     }
     
     if (event.data.type === 'GET_VERSION') {
-        event.ports[0].postMessage({ version: CACHE_NAME });
+        event.ports[0].postMessage({ 
+            version: APP_VERSION,
+            cacheName: CACHE_NAME 
+        });
+    }
+    
+    if (event.data.type === 'FORCE_UPDATE') {
+        console.log('[ServiceWorker] Force update triggered');
+        // Clear caches and reload
+        caches.keys().then((names) => {
+            return Promise.all(names.map(name => caches.delete(name)));
+        }).then(() => {
+            self.clients.matchAll().then((clients) => {
+                clients.forEach((client) => {
+                    client.postMessage({ type: 'RELOAD_PAGE' });
+                });
+            });
+        });
     }
 });
 
-console.log('[ServiceWorker] Script loaded');
+console.log('[ServiceWorker] Script loaded, version:', APP_VERSION);

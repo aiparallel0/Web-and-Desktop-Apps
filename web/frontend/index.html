@@ -6,6 +6,11 @@
     <meta name="description" content="Extract text from receipts instantly with AI-powered OCR. 98% accuracy, no signup required.">
     <meta name="theme-color" content="#3B82F6">
 
+    <!-- Cache Control Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>Extract Text from Any Receipt in Seconds | Receipt Extractor</title>
 
     <!-- Preconnect to Google Fonts for faster font loading -->
@@ -13,14 +18,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Preload critical assets -->
-    <link rel="preload" href="styles.css" as="style">
-    <link rel="preload" href="app.js" as="script">
+    <link rel="preload" href="styles.css?v=20251205" as="style">
+    <link rel="preload" href="app.js?v=20251205" as="script">
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20251205">
 
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=20251205">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
@@ -357,19 +362,76 @@
     </div>
 
     <!-- Scripts -->
-    <script src="components/upload-zone.js" defer></script>
-    <script src="components/progress-bar.js" defer></script>
-    <script src="components/results-view.js" defer></script>
-    <script src="app.js" defer></script>
+    <script src="components/upload-zone.js?v=20251205" defer></script>
+    <script src="components/progress-bar.js?v=20251205" defer></script>
+    <script src="components/results-view.js?v=20251205" defer></script>
+    <script src="app.js?v=20251205" defer></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration with Update Checking -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('ServiceWorker registered'))
-                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            window.addEventListener('load', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.register('/service-worker.js');
+                    console.log('ServiceWorker registered');
+                    
+                    // Check for updates immediately
+                    reg.update();
+                    
+                    // Check for updates periodically (every 5 minutes)
+                    setInterval(() => reg.update(), 5 * 60 * 1000);
+                    
+                    // Handle update found
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available, notify user
+                                if (confirm('A new version is available! Reload to update?')) {
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                    
+                    // Check version.json for updates
+                    checkVersionUpdate();
+                } catch (err) {
+                    console.log('ServiceWorker registration failed:', err);
+                }
             });
+            
+            // Listen for controller change
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+        
+        // Check version.json for updates
+        async function checkVersionUpdate() {
+            try {
+                const response = await fetch('/version.json?t=' + Date.now());
+                if (response.ok) {
+                    const serverVersion = await response.json();
+                    const cachedVersion = localStorage.getItem('app_version_hash');
+                    
+                    if (cachedVersion && cachedVersion !== serverVersion.hash) {
+                        console.log('New version detected:', serverVersion.version);
+                        // Clear service worker cache and reload
+                        if (navigator.serviceWorker.controller) {
+                            navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+                        }
+                        localStorage.setItem('app_version_hash', serverVersion.hash);
+                        // Let the cache clear before reloading
+                        setTimeout(() => window.location.reload(), 100);
+                    } else {
+                        localStorage.setItem('app_version_hash', serverVersion.hash);
+                    }
+                }
+            } catch (error) {
+                console.log('Version check failed:', error);
+            }
         }
     </script>
 </body>

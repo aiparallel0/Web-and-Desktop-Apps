@@ -143,6 +143,53 @@ except ImportError as e:
 
 
 # =============================================================================
+# CACHE CONTROL HEADERS
+# =============================================================================
+
+@app.after_request
+def add_cache_headers(response):
+    """
+    Add appropriate cache-control headers to responses.
+    
+    Strategy:
+    - HTML files: no-cache, must-revalidate (always check for updates)
+    - Static assets with version query: long cache (1 year) + immutable
+    - API responses: no-store (don't cache)
+    - version.json: no-store (always fetch fresh)
+    """
+    # Get the request path
+    path = request.path if request else ''
+    
+    # Check if this is a versioned static asset (has ?v= query parameter)
+    is_versioned = request.args.get('v') is not None if request else False
+    
+    # Determine content type
+    content_type = response.content_type or ''
+    
+    if path == '/version.json':
+        # Version file should never be cached
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    elif path.startswith('/api/'):
+        # API responses should not be cached
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+    elif 'text/html' in content_type:
+        # HTML files: no-cache but allow revalidation
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+    elif is_versioned:
+        # Versioned static assets: cache for 1 year, immutable
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    elif any(path.endswith(ext) for ext in ['.css', '.js', '.woff', '.woff2', '.ttf']):
+        # Unversioned static assets: short cache with revalidation
+        response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
+    elif any(path.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico']):
+        # Images: cache for 1 day
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+    
+    return response
 # UTILITY FUNCTIONS
 # =============================================================================
 
@@ -261,6 +308,7 @@ def index():
         'status': 'running',
         'endpoints': {
             'health': '/api/health',
+            'version': '/api/version',
             'models': '/api/models',
             'select_model': '/api/models/select (POST)',
             'extract': '/api/extract (POST)',
@@ -270,6 +318,36 @@ def index():
         },
         'documentation': 'Access /api/health for health check or /api/models to see available models'
     })
+
+@app.route('/api/version', methods=['GET'])
+def get_version():
+    """Get current application version for cache validation."""
+    try:
+        version_file = Path(__file__).parent.parent / 'frontend' / 'version.json'
+        if version_file.exists():
+            with open(version_file, 'r') as f:
+                version_data = json.load(f)
+            return jsonify({
+                'success': True,
+                'version': version_data.get('version', '2.0.0'),
+                'build': version_data.get('build'),
+                'hash': version_data.get('hash'),
+                'timestamp': version_data.get('timestamp')
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'version': '2.0.0',
+                'build': time.strftime('%Y%m%d'),
+                'hash': 'default'
+            })
+    except Exception as e:
+        logger.error(f"Version check error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/health',methods=['GET'])
 def health_check():
  try:
