@@ -7,15 +7,28 @@
 // CONFIGURATION
 // =============================================================================
 
-// Detect if backend is available at different ports (development mode)
+/**
+ * Detect the backend API URL based on current environment.
+ * In production, frontend and backend are served from the same origin.
+ * In development (start.py), frontend is on port 3000, backend on port 5000.
+ * 
+ * Note: For custom port configuration, set window.RECEIPT_EXTRACTOR_API_URL
+ * before loading this script, or modify the ports below.
+ */
 const detectBackendUrl = () => {
-    // In production, frontend and backend are on same origin
-    // In development, frontend is on port 3000, backend on port 5000
-    const currentPort = window.location.port;
-    if (currentPort === '3000') {
-        // Development mode - backend is on port 5000
-        return `${window.location.protocol}//${window.location.hostname}:5000`;
+    // Allow override via global variable for custom deployments
+    if (window.RECEIPT_EXTRACTOR_API_URL) {
+        return window.RECEIPT_EXTRACTOR_API_URL;
     }
+    
+    // Development mode detection
+    const FRONTEND_DEV_PORT = '3000';
+    const BACKEND_DEV_PORT = '5000';
+    
+    if (window.location.port === FRONTEND_DEV_PORT) {
+        return `${window.location.protocol}//${window.location.hostname}:${BACKEND_DEV_PORT}`;
+    }
+    
     // Production or same-origin deployment
     return window.location.origin;
 };
