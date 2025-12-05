@@ -412,34 +412,37 @@ def validate_receipt_extraction(
     validation.confidence_adjustments.extend(math_penalties)
     
     # Additional validation: check if we have reasonable content
-    if items and len(items) == 0:
+    if not items or len(items) == 0:
         validation.confidence_adjustments.append(ConfidencePenalty(
             reason="No line items extracted",
             adjustment=-0.10,
             severity="warning"
         ))
-    elif items and len(items) > 50:
+    elif len(items) > 50:
         validation.confidence_adjustments.append(ConfidencePenalty(
             reason=f"Unusually high item count: {len(items)}",
             adjustment=-0.05,
             severity="warning"
         ))
-    elif items and len(items) >= 1:
+    else:
         validation.confidence_adjustments.append(ConfidencePenalty(
             reason=f"Extracted {len(items)} items",
             adjustment=min(0.10, len(items) * 0.02),
             severity="info"
         ))
     
-    # Check raw text quality if provided
+    # Check raw text quality if provided (single pass for efficiency)
     if raw_text:
-        special_char_ratio = sum(1 for c in raw_text if not c.isalnum() and not c.isspace()) / max(len(raw_text), 1)
-        if special_char_ratio > 0.4:
-            validation.confidence_adjustments.append(ConfidencePenalty(
-                reason=f"High OCR noise detected ({special_char_ratio:.1%} special chars)",
-                adjustment=-0.20,
-                severity="warning"
-            ))
+        text_len = len(raw_text)
+        if text_len > 0:
+            special_count = sum(1 for c in raw_text if not c.isalnum() and not c.isspace())
+            special_char_ratio = special_count / text_len
+            if special_char_ratio > 0.4:
+                validation.confidence_adjustments.append(ConfidencePenalty(
+                    reason=f"High OCR noise detected ({special_char_ratio:.1%} special chars)",
+                    adjustment=-0.20,
+                    severity="warning"
+                ))
     
     return validation
 
