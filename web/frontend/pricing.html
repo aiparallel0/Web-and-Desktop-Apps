@@ -1,135 +1,390 @@
 <!DOCTYPE html>
+<!--
+================================================================================
+PRICING PAGE - Subscription Plans & Pricing
+================================================================================
+Platform: AI-Powered OCR & Data Extraction System
+Version:  2.0.0
+Author:   Receipt Extractor Team
+License:  MIT
+
+This page displays subscription plans and integrates with Stripe for payments.
+================================================================================
+-->
 <html lang="en">
 <head>
+    <!-- Document Metadata -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Choose the perfect plan for your receipt extraction needs - Receipt Extractor Pricing">
-    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="Choose the perfect plan for your receipt extraction needs">
+    <meta name="theme-color" content="#0066cc">
 
     <!-- Cache Control Meta Tags -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <!-- Stripe Configuration -->
+    <!-- Stripe Configuration - Set by backend or environment -->
     <meta name="stripe-publishable-key" content="">
     
-    <title>Pricing | Receipt Extractor</title>
+    <!-- Application Title -->
+    <title>Pricing - Receipt Extractor Pro</title>
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="styles.css?v=103bbeb4">
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json?v=103bbeb4">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
     
     <!-- Stripe.js -->
     <script src="https://js.stripe.com/v3/"></script>
+    
+    <!-- Additional Pricing Styles -->
+    <style>
+        .pricing-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .pricing-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #00ff00;
+        }
+        
+        .pricing-header p {
+            font-size: 1.2rem;
+            color: #888;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .pricing-toggle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .pricing-toggle span {
+            color: #888;
+        }
+        
+        .pricing-toggle span.active {
+            color: #00ff00;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: #00ff00;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.annual::after {
+            transform: translateX(30px);
+        }
+        
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .pricing-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff00;
+        }
+        
+        .pricing-card.popular {
+            border-color: #00ff00;
+        }
+        
+        .pricing-card.popular::before {
+            content: 'Most Popular';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #00ff00;
+            color: #000;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-description {
+            color: #888;
+            margin-bottom: 1.5rem;
+        }
+        
+        .plan-price {
+            margin-bottom: 1.5rem;
+        }
+        
+        .price-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .price-period {
+            color: #888;
+        }
+        
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+        }
+        
+        .plan-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .plan-features li::before {
+            content: '✓';
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .plan-features li.disabled {
+            color: #666;
+        }
+        
+        .plan-features li.disabled::before {
+            content: '✗';
+            color: #666;
+        }
+        
+        .plan-cta {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .plan-cta.primary {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .plan-cta.primary:hover {
+            background: #00cc00;
+        }
+        
+        .plan-cta.secondary {
+            background: #333;
+            color: #fff;
+            border: 1px solid #00ff00;
+        }
+        
+        .plan-cta.secondary:hover {
+            background: #444;
+        }
+        
+        .faq-section {
+            margin-top: 4rem;
+        }
+        
+        .faq-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #00ff00;
+        }
+        
+        .faq-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .faq-question:hover {
+            background: #222;
+        }
+        
+        .faq-answer {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s, padding 0.3s;
+        }
+        
+        .faq-item.open .faq-answer {
+            max-height: 500px;
+            padding: 1rem 1.5rem;
+        }
+        
+        .faq-item.open .faq-toggle {
+            transform: rotate(45deg);
+        }
+        
+        .faq-toggle {
+            font-size: 1.5rem;
+            color: #00ff00;
+            transition: transform 0.3s;
+        }
+        
+        .guarantee-section {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem;
+            background: #1a1a1a;
+            border-radius: 12px;
+        }
+        
+        .guarantee-section h3 {
+            color: #00ff00;
+            margin-bottom: 1rem;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #00ff00;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav" id="nav">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <a href="index.html">
-                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 2l7 7-7 7"></path>
-                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                    </svg>
-                    <span class="nav-title">Receipt Extractor</span>
-                </a>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Receipt Extractor Pro</h1>
+            <p>Professional OCR & AI-Powered Data Extraction Platform</p>
+        </header>
+        
+        <!-- Pricing Section -->
+        <div class="pricing-container">
+            <div class="pricing-header">
+                <h1>Simple, Transparent Pricing</h1>
+                <p>Choose the plan that fits your needs. All plans include our core AI-powered extraction technology.</p>
             </div>
-            <div class="nav-actions">
-                <a href="index.html#features" class="nav-link">Features</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="api.html" class="nav-link">API</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <h1>Simple, Transparent Pricing</h1>
-            <p class="page-subtitle">Choose the plan that fits your needs. All plans include our core AI-powered extraction technology.</p>
             
             <!-- Billing Toggle -->
-            <div class="billing-toggle">
-                <span id="monthlyLabel" class="toggle-label active">Monthly</span>
-                <button class="toggle-switch" id="billingToggle" onclick="toggleBilling()" aria-label="Toggle billing period">
-                    <span class="toggle-slider" id="toggleSlider"></span>
-                </button>
-                <span id="annualLabel" class="toggle-label">Annual <span class="save-badge">Save 20%</span></span>
+            <div class="pricing-toggle">
+                <span id="monthlyLabel" class="active">Monthly</span>
+                <div class="toggle-switch" id="billingToggle" onclick="toggleBilling()"></div>
+                <span id="annualLabel">Annual <span style="color: #00ff00;">(Save 20%)</span></span>
             </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section class="content-section">
-        <div class="container">
+            
+            <!-- Pricing Cards -->
             <div class="pricing-grid">
                 <!-- Free Plan -->
                 <div class="pricing-card" data-plan="free">
-                    <div class="pricing-header">
-                        <h3>Free</h3>
-                        <p class="pricing-desc">Get started with basic receipt extraction</p>
-                        <div class="price">
-                            <span class="price-amount">$0</span>
-                            <span class="price-period">/month</span>
-                        </div>
+                    <div class="plan-name">Free</div>
+                    <div class="plan-description">Get started with basic receipt extraction</div>
+                    <div class="plan-price">
+                        <span class="price-amount">$0</span>
+                        <span class="price-period">/month</span>
                     </div>
-                    <ul class="pricing-features">
+                    <ul class="plan-features">
                         <li>10 receipts per month</li>
                         <li>100 MB storage</li>
-                        <li>Basic OCR models (Tesseract, EasyOCR)</li>
+                        <li>Basic OCR models</li>
                         <li>JSON export</li>
                         <li>Community support</li>
+                        <li class="disabled">Cloud training</li>
+                        <li class="disabled">API access</li>
+                        <li class="disabled">Priority support</li>
                     </ul>
-                    <ul class="pricing-features disabled">
-                        <li>Cloud training</li>
-                        <li>API access</li>
-                        <li>Priority support</li>
-                    </ul>
-                    <button class="btn btn-outline btn-full" onclick="selectPlan('free')">
+                    <button class="plan-cta secondary" onclick="selectPlan('free')">
                         Get Started Free
                     </button>
                 </div>
                 
                 <!-- Pro Plan -->
-                <div class="pricing-card pricing-card-featured" data-plan="pro">
-                    <div class="pricing-badge">Most Popular</div>
-                    <div class="pricing-header">
-                        <h3>Pro</h3>
-                        <p class="pricing-desc">For power users who need more extractions</p>
-                        <div class="price">
-                            <span class="price-amount" id="proPrice">$19</span>
-                            <span class="price-period">/month</span>
-                        </div>
+                <div class="pricing-card popular" data-plan="pro">
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-description">For power users who need more extractions</div>
+                    <div class="plan-price">
+                        <span class="price-amount" id="proPrice">$19</span>
+                        <span class="price-period">/month</span>
                     </div>
-                    <ul class="pricing-features">
+                    <ul class="plan-features">
                         <li>500 receipts per month</li>
                         <li>5 GB storage</li>
-                        <li>All AI models (Florence-2, PaddleOCR)</li>
+                        <li>All AI models</li>
                         <li>JSON, CSV, Excel export</li>
                         <li>Email support</li>
                         <li>Cloud training</li>
                         <li>API access</li>
                         <li>Batch processing</li>
                     </ul>
-                    <button class="btn btn-primary btn-full" onclick="selectPlan('pro')">
-                        Start 14-Day Free Trial
+                    <button class="plan-cta primary" onclick="selectPlan('pro')">
+                        Subscribe to Pro
                     </button>
                 </div>
                 
                 <!-- Business Plan -->
                 <div class="pricing-card" data-plan="business">
-                    <div class="pricing-header">
-                        <h3>Business</h3>
-                        <p class="pricing-desc">For teams with high volume needs</p>
-                        <div class="price">
-                            <span class="price-amount" id="businessPrice">$49</span>
-                            <span class="price-period">/month</span>
-                        </div>
+                    <div class="plan-name">Business</div>
+                    <div class="plan-description">For teams and businesses with high volume needs</div>
+                    <div class="plan-price">
+                        <span class="price-amount" id="businessPrice">$49</span>
+                        <span class="price-period">/month</span>
                     </div>
-                    <ul class="pricing-features">
+                    <ul class="plan-features">
                         <li>2,000 receipts per month</li>
                         <li>20 GB storage</li>
                         <li>All AI models</li>
@@ -139,21 +394,20 @@
                         <li>API access</li>
                         <li>Custom models</li>
                     </ul>
-                    <button class="btn btn-outline btn-full" onclick="selectPlan('business')">
+                    <button class="plan-cta secondary" onclick="selectPlan('business')">
                         Subscribe to Business
                     </button>
                 </div>
                 
                 <!-- Enterprise Plan -->
                 <div class="pricing-card" data-plan="enterprise">
-                    <div class="pricing-header">
-                        <h3>Enterprise</h3>
-                        <p class="pricing-desc">Custom solutions for large organizations</p>
-                        <div class="price">
-                            <span class="price-amount">Custom</span>
-                        </div>
+                    <div class="plan-name">Enterprise</div>
+                    <div class="plan-description">Custom solutions for large organizations</div>
+                    <div class="plan-price">
+                        <span class="price-amount">Custom</span>
+                        <span class="price-period"></span>
                     </div>
-                    <ul class="pricing-features">
+                    <ul class="plan-features">
                         <li>Unlimited receipts</li>
                         <li>100+ GB storage</li>
                         <li>All AI models</li>
@@ -165,409 +419,250 @@
                         <li>On-premise deployment</li>
                         <li>SLA guarantee</li>
                     </ul>
-                    <button class="btn btn-outline btn-full" onclick="contactSales()">
+                    <button class="plan-cta secondary" onclick="contactSales()">
                         Contact Sales
                     </button>
                 </div>
             </div>
-
-            <!-- Feature Comparison -->
-            <div class="comparison-section">
-                <h2 class="section-title">Feature Comparison</h2>
-                <div class="comparison-table-wrapper">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>Feature</th>
-                                <th>Free</th>
-                                <th>Pro</th>
-                                <th>Business</th>
-                                <th>Enterprise</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Receipts per month</td>
-                                <td>10</td>
-                                <td>500</td>
-                                <td>2,000</td>
-                                <td>Unlimited</td>
-                            </tr>
-                            <tr>
-                                <td>Storage</td>
-                                <td>100 MB</td>
-                                <td>5 GB</td>
-                                <td>20 GB</td>
-                                <td>100+ GB</td>
-                            </tr>
-                            <tr>
-                                <td>Tesseract OCR</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>EasyOCR</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>PaddleOCR</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Florence-2 AI</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Batch Processing</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>API Access</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Model Finetuning</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Custom Integrations</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>SLA Guarantee</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
+            
             <!-- FAQ Section -->
             <div class="faq-section">
-                <h2 class="section-title">Frequently Asked Questions</h2>
+                <h2>Frequently Asked Questions</h2>
                 
                 <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Can I change my plan at any time?</span>
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Can I change my plan at any time?
                         <span class="faq-toggle">+</span>
-                    </button>
+                    </div>
                     <div class="faq-answer">
-                        <p>Yes! You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged the prorated difference. When downgrading, the change takes effect at the end of your current billing period.</p>
+                        Yes! You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged the prorated difference. When downgrading, the change takes effect at the end of your current billing period.
                     </div>
                 </div>
                 
                 <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>What payment methods do you accept?</span>
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        What payment methods do you accept?
                         <span class="faq-toggle">+</span>
-                    </button>
+                    </div>
                     <div class="faq-answer">
-                        <p>We accept all major credit cards (Visa, Mastercard, American Express) through Stripe. Enterprise customers can also pay via invoice.</p>
+                        We accept all major credit cards (Visa, Mastercard, American Express) through Stripe. Enterprise customers can also pay via invoice.
                     </div>
                 </div>
                 
                 <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>What happens if I exceed my monthly limit?</span>
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        What happens if I exceed my monthly limit?
                         <span class="faq-toggle">+</span>
-                    </button>
+                    </div>
                     <div class="faq-answer">
-                        <p>When you reach your monthly limit, you'll be notified and can either wait until the next billing cycle or upgrade your plan for immediate access to more extractions.</p>
+                        When you reach your monthly limit, you'll be notified and can either wait until the next billing cycle or upgrade your plan for immediate access to more extractions.
                     </div>
                 </div>
                 
                 <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Do you offer refunds?</span>
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Do you offer refunds?
                         <span class="faq-toggle">+</span>
-                    </button>
+                    </div>
                     <div class="faq-answer">
-                        <p>We offer a 14-day money-back guarantee for all paid plans. If you're not satisfied, contact our support team for a full refund.</p>
+                        We offer a 14-day money-back guarantee for all paid plans. If you're not satisfied, contact our support team for a full refund.
                     </div>
                 </div>
                 
                 <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Is my data secure?</span>
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        Is my data secure?
                         <span class="faq-toggle">+</span>
-                    </button>
+                    </div>
                     <div class="faq-answer">
-                        <p>Absolutely. We use industry-standard encryption for all data in transit and at rest. Your receipt images and extracted data are stored securely and never shared with third parties.</p>
+                        Absolutely. We use industry-standard encryption for all data in transit and at rest. Your receipt images and extracted data are stored securely and never shared with third parties.
                     </div>
                 </div>
             </div>
-
+            
             <!-- Money-Back Guarantee -->
             <div class="guarantee-section">
-                <div class="guarantee-icon">🛡️</div>
-                <h3>14-Day Money-Back Guarantee</h3>
+                <h3>🛡️ 14-Day Money-Back Guarantee</h3>
                 <p>Try any paid plan risk-free. If you're not completely satisfied, we'll refund your payment—no questions asked.</p>
             </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Receipt Extractor</h4>
-                    <p>AI-powered OCR for modern businesses</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Product</h4>
-                    <a href="index.html#features">Features</a>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="api.html">API</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Company</h4>
-                    <a href="about.html">About</a>
-                    <a href="privacy.html">Privacy</a>
-                    <a href="terms.html">Terms</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <a href="help.html">Help Center</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="status.html">Status</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <style>
-        /* Pricing Page Specific Styles */
-        .billing-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-2);
-            margin-top: var(--space-4);
-        }
-        
-        .toggle-label {
-            font-size: 0.9375rem;
-            color: var(--color-gray-500);
-            transition: color var(--transition-fast);
-        }
-        
-        .toggle-label.active {
-            color: var(--color-gray-900);
-            font-weight: var(--font-semibold);
-        }
-        
-        .save-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: var(--color-success-light);
-            color: var(--color-success-dark);
-            font-size: 0.75rem;
-            font-weight: var(--font-semibold);
-            border-radius: var(--radius-full);
-            margin-left: 4px;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            width: 56px;
-            height: 28px;
-            background: var(--color-gray-300);
-            border: none;
-            border-radius: var(--radius-full);
-            cursor: pointer;
-            transition: background var(--transition-fast);
-            padding: 0;
-        }
-        
-        .toggle-switch.annual {
-            background: var(--color-primary);
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border-radius: var(--radius-full);
-            transition: transform var(--transition-fast);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .toggle-switch.annual .toggle-slider {
-            transform: translateX(28px);
-        }
-        
-        .pricing-desc {
-            color: var(--color-gray-500);
-            font-size: 0.9375rem;
-            margin-bottom: var(--space-3);
-        }
-        
-        .pricing-features.disabled li {
-            color: var(--color-gray-400);
-            text-decoration: line-through;
-        }
-        
-        .pricing-features.disabled li::before {
-            content: "✗";
-            color: var(--color-gray-400);
-        }
-        
-        /* Comparison Section */
-        .comparison-section {
-            margin-top: var(--space-10);
-        }
-        
-        .comparison-table-wrapper {
-            overflow-x: auto;
-            margin-top: var(--space-4);
-        }
-        
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            min-width: 600px;
-        }
-        
-        .comparison-table th,
-        .comparison-table td {
-            padding: var(--space-2) var(--space-3);
-            text-align: center;
-            border-bottom: 1px solid var(--color-gray-100);
-        }
-        
-        .comparison-table th:first-child,
-        .comparison-table td:first-child {
-            text-align: left;
-            font-weight: var(--font-medium);
-        }
-        
-        .comparison-table th {
-            background: var(--color-gray-50);
-            font-weight: var(--font-semibold);
-            color: var(--color-gray-700);
-            font-size: 0.875rem;
-        }
-        
-        .comparison-table td {
-            font-size: 0.9375rem;
-            color: var(--color-gray-700);
-        }
-        
-        .comparison-table .check {
-            color: var(--color-success);
-            font-weight: var(--font-bold);
-        }
-        
-        .comparison-table .cross {
-            color: var(--color-gray-400);
-        }
-        
-        .comparison-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .comparison-table tr:hover td {
-            background: var(--color-gray-50);
-        }
-        
-        /* Guarantee Section */
-        .guarantee-section {
-            text-align: center;
-            padding: var(--space-6);
-            background: var(--color-primary-50);
-            border-radius: var(--radius-lg);
-            margin-top: var(--space-8);
-        }
-        
-        .guarantee-icon {
-            font-size: 3rem;
-            margin-bottom: var(--space-2);
-        }
-        
-        .guarantee-section h3 {
-            color: var(--color-primary-dark);
-            margin-bottom: var(--space-2);
-        }
-        
-        .guarantee-section p {
-            color: var(--color-gray-600);
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .billing-toggle {
-                flex-wrap: wrap;
-            }
             
-            .comparison-table {
-                font-size: 0.875rem;
-            }
-            
-            .comparison-table th,
-            .comparison-table td {
-                padding: var(--space-1) var(--space-2);
-            }
-        }
-    </style>
-
+            <!-- Back Link -->
+            <a href="index.html" class="back-link">← Back to Application</a>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>Receipt Extractor Pro © 2024 | Secure Payments by Stripe</p>
+        </footer>
+    </div>
+    
+    <!-- Pricing JavaScript -->
     <script>
-        // Stripe configuration
+        // Stripe configuration - Load from meta tag
         const STRIPE_PUBLISHABLE_KEY = document.querySelector('meta[name="stripe-publishable-key"]')?.content || '';
         let stripe = null;
+        let currentUser = null;
         
         // Pricing data
         const pricing = {
-            monthly: { pro: 19, business: 49 },
-            annual: { pro: 15, business: 39 }
+            monthly: {
+                pro: 19,
+                business: 49
+            },
+            annual: {
+                pro: 15, // 20% discount
+                business: 39 // 20% discount
+            }
         };
         
         let billingCycle = 'monthly';
         
+        /**
+         * Validate Stripe publishable key format
+         * @param {string} key - The Stripe publishable key
+         * @returns {boolean} True if key format is valid
+         */
+        function isValidStripeKey(key) {
+            if (!key || typeof key !== 'string') return false;
+            
+            // Stripe publishable keys should:
+            // - Start with 'pk_' followed by 'test_' or 'live_'
+            // - Be at least 32 characters long
+            const stripeKeyPattern = /^pk_(test|live)_[a-zA-Z0-9]{24,}$/;
+            return stripeKeyPattern.test(key);
+        }
+        
         // Initialize Stripe
         function initStripe() {
-            if (STRIPE_PUBLISHABLE_KEY && STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+            if (isValidStripeKey(STRIPE_PUBLISHABLE_KEY)) {
                 stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-                console.log('Stripe initialized');
+                const environment = STRIPE_PUBLISHABLE_KEY.includes('_test_') ? 'test' : 'live';
+                console.log(`Stripe initialized in ${environment} mode`);
+            } else if (STRIPE_PUBLISHABLE_KEY && STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
+                // Fallback: accept key if it starts with pk_ even if format doesn't match exactly
+                console.warn('Stripe key format not fully validated, proceeding anyway');
+                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+            } else {
+                console.warn('Stripe publishable key not configured or invalid');
             }
+        }
+        
+        // Check if user is authenticated
+        async function checkAuthentication() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                return null;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        return data.user;
+                    }
+                }
+                
+                // Token invalid, clear it
+                localStorage.removeItem('access_token');
+                return null;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                return null;
+            }
+        }
+        
+        // Check subscription status
+        async function checkSubscriptionStatus() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                return null;
+            }
+            
+            try {
+                const response = await fetch('/api/billing/subscription', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        return data.subscription;
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error('Subscription check error:', error);
+                return null;
+            }
+        }
+        
+        // Display current plan for authenticated users
+        async function displayCurrentPlan() {
+            currentUser = await checkAuthentication();
+            
+            if (currentUser) {
+                const subscription = await checkSubscriptionStatus();
+                const currentPlan = subscription?.plan || currentUser.plan || 'free';
+                
+                // Highlight current plan
+                const planCards = document.querySelectorAll('.pricing-card');
+                planCards.forEach(card => {
+                    const plan = card.dataset.plan;
+                    if (plan === currentPlan) {
+                        card.classList.add('current-plan');
+                        const btn = card.querySelector('.plan-cta');
+                        if (btn) {
+                            btn.textContent = 'Current Plan';
+                            btn.disabled = true;
+                            btn.classList.add('disabled');
+                        }
+                    }
+                });
+                
+                // Show usage info
+                displayUsageInfo(currentUser, subscription);
+            }
+        }
+        
+        // Display usage information
+        function displayUsageInfo(user, subscription) {
+            const usageSection = document.createElement('div');
+            usageSection.className = 'usage-info';
+            usageSection.innerHTML = `
+                <div class="usage-card">
+                    <h4>Your Usage This Month</h4>
+                    <p><strong>Receipts Processed:</strong> ${user.receipts_processed_month || 0}</p>
+                    <p><strong>Storage Used:</strong> ${formatBytes(user.storage_used_bytes || 0)}</p>
+                    ${subscription ? `<p><strong>Plan:</strong> ${subscription.plan}</p>` : ''}
+                </div>
+            `;
+            
+            const pricingHeader = document.querySelector('.pricing-header');
+            if (pricingHeader) {
+                pricingHeader.after(usageSection);
+            }
+        }
+        
+        /**
+         * Format bytes to human readable
+         * Note: This function is duplicated in app.js. If modifying, update both files.
+         * @param {number} bytes - Bytes to format
+         * @returns {string} Formatted string
+         */
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
         // Toggle billing cycle
@@ -593,30 +688,46 @@
         
         // Update displayed prices
         function updatePrices() {
-            document.getElementById('proPrice').textContent = '$' + pricing[billingCycle].pro;
-            document.getElementById('businessPrice').textContent = '$' + pricing[billingCycle].business;
+            const proPrice = document.getElementById('proPrice');
+            const businessPrice = document.getElementById('businessPrice');
+            
+            proPrice.textContent = '$' + pricing[billingCycle].pro;
+            businessPrice.textContent = '$' + pricing[billingCycle].business;
         }
         
         // Select a plan
         async function selectPlan(plan) {
             if (plan === 'free') {
-                window.location.href = 'index.html';
+                // Redirect to signup
+                window.location.href = '/signup?plan=free';
                 return;
             }
             
+            // Check authentication for paid plans
             const token = localStorage.getItem('access_token');
             if (!token) {
+                // Redirect to login with return URL
                 const returnUrl = encodeURIComponent(window.location.href);
-                alert('Please sign in to subscribe to a paid plan.');
+                window.location.href = `/login?redirect=${returnUrl}&plan=${plan}`;
                 return;
             }
             
+            // Verify token is still valid
+            const user = await checkAuthentication();
+            if (!user) {
+                // Token expired, redirect to login
+                const returnUrl = encodeURIComponent(window.location.href);
+                window.location.href = `/login?redirect=${returnUrl}&plan=${plan}`;
+                return;
+            }
+            
+            // For paid plans, create checkout session
             try {
                 const response = await fetch('/api/billing/create-checkout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
                         plan: plan,
@@ -627,7 +738,16 @@
                 const data = await response.json();
                 
                 if (data.success && data.checkout_url) {
+                    // Redirect to Stripe Checkout
                     window.location.href = data.checkout_url;
+                } else if (data.redirect) {
+                    // Redirect to login if not authenticated
+                    window.location.href = data.redirect;
+                } else if (response.status === 401) {
+                    // Token expired, redirect to login
+                    localStorage.removeItem('access_token');
+                    const returnUrl = encodeURIComponent(window.location.href);
+                    window.location.href = `/login?redirect=${returnUrl}&plan=${plan}`;
                 } else {
                     alert(data.error || 'Error creating checkout session. Please try again.');
                 }
@@ -649,9 +769,46 @@
         }
         
         // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initStripe();
+            await displayCurrentPlan();
         });
     </script>
+    
+    <!-- Additional Styles for Usage Info -->
+    <style>
+        .usage-info {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .usage-card {
+            display: inline-block;
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 1rem 2rem;
+        }
+        
+        .usage-card h4 {
+            color: #00ff00;
+            margin-bottom: 0.5rem;
+        }
+        
+        .usage-card p {
+            margin: 0.25rem 0;
+            color: #ccc;
+        }
+        
+        .current-plan {
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        
+        .plan-cta.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
 </body>
 </html>
