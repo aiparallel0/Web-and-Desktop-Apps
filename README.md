@@ -479,6 +479,12 @@ The desktop app provides:
 
 This error occurs when you have local changes to auto-generated files (like `version.json` or HTML files modified by old cache-bust scripts).
 
+**Automatic Fix - Just run start.bat:**
+```bash
+# Windows: Double-click start.bat
+# This automatically runs git-sync before starting the servers
+```
+
 **Quick Fix - Use git-sync.py:**
 ```bash
 # From repository root:
@@ -503,7 +509,7 @@ rm web/frontend/version.json
 git pull
 ```
 
-**Prevention:** The `version.json` file is now auto-generated and gitignored. HTML files are no longer modified by `cache-bust.py`. If you still see conflicts after pulling the latest code, run `python git-sync.py --discard` to clean up.
+**Prevention:** The `version.json` file is now auto-generated and gitignored. HTML files are no longer modified by `cache-bust.py`. The `start.bat` script now automatically runs `git-sync.py` to handle these conflicts before starting.
 
 ### Common Issues
 
