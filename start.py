@@ -24,6 +24,8 @@ import sys
 import subprocess
 import shutil
 import argparse
+import time
+import webbrowser
 from pathlib import Path
 
 # Get project root (where this script is located)
@@ -48,9 +50,10 @@ class Colors:
     BOLD = "\033[1m"
     END = "\033[0m"
 
-# Enable colors on Windows
+# Enable ANSI escape codes on Windows 10+ for colored output
+# The empty os.system("") call triggers Windows to process virtual terminal sequences
 if sys.platform == "win32":
-    os.system("")  # Enable ANSI escape codes on Windows 10+
+    os.system("")
 
 
 def print_banner():
@@ -305,7 +308,6 @@ def start_frontend():
 
 def open_browser():
     """Open the frontend in the default browser."""
-    import webbrowser
     url = f"http://localhost:{FRONTEND_PORT}"
     
     print_step("Opening browser...")
@@ -361,7 +363,6 @@ def main():
         return 1
     
     # Give backend time to start
-    import time
     time.sleep(2)
     
     frontend_process = start_frontend()
