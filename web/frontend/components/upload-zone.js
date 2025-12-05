@@ -278,17 +278,26 @@ class UploadZone extends HTMLElement {
                 .camera-error {
                     color: white;
                     text-align: center;
-                    padding: 24px;
+                    padding: 48px;
+                    background: rgba(0, 0, 0, 0.8);
+                    border-radius: 16px;
+                    max-width: 400px;
                 }
 
                 .camera-error h3 {
                     color: #EF4444;
                     margin-bottom: 12px;
+                    font-size: 1.5rem;
                 }
 
                 .camera-error p {
-                    color: #9CA3AF;
-                    margin-bottom: 16px;
+                    color: #D1D5DB;
+                    margin-bottom: 24px;
+                    line-height: 1.6;
+                }
+
+                .camera-controls.hidden {
+                    display: none;
                 }
             </style>
 
@@ -344,7 +353,7 @@ class UploadZone extends HTMLElement {
                     <video class="camera-video" id="cameraVideo" autoplay playsinline></video>
                     <canvas class="camera-canvas" id="cameraCanvas"></canvas>
                 </div>
-                <div class="camera-controls">
+                <div class="camera-controls" id="cameraControls">
                     <button class="camera-btn camera-btn-capture" id="captureBtn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
@@ -603,6 +612,12 @@ class UploadZone extends HTMLElement {
     showCameraError(title, message) {
         const cameraOverlay = this.shadowRoot.getElementById('cameraOverlay');
         const cameraContainer = this.shadowRoot.getElementById('cameraContainer');
+        const cameraControls = this.shadowRoot.getElementById('cameraControls');
+        
+        // Hide the camera controls when showing error
+        if (cameraControls) {
+            cameraControls.style.cssText = 'display: none !important';
+        }
         
         cameraContainer.innerHTML = `
             <div class="camera-error">
