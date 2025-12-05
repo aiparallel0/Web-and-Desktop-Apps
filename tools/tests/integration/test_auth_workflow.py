@@ -249,7 +249,9 @@ class TestRateLimitingWorkflow:
         except ImportError:
             pytest.skip("Rate limiting module not available")
         
-        # Create rate limiter (API takes backend, not max_requests)
+        # Create rate limiter
+        # Note: RateLimiter constructor takes 'backend' parameter
+        # Rate limits (max_requests, window_seconds) are passed to is_allowed() method
         limiter = RateLimiter(backend='memory')
         
         assert limiter is not None
@@ -298,8 +300,8 @@ class TestRateLimitingWorkflow:
         allowed, _ = limiter.is_allowed(client_id, max_requests, window_seconds)
         assert allowed is False
         
-        # Wait for window to reset
-        time.sleep(1.1)
+        # Wait for window to reset (use 1.3s for reliable timing across system loads)
+        time.sleep(1.3)
         
         # Should be allowed again
         allowed, _ = limiter.is_allowed(client_id, max_requests, window_seconds)

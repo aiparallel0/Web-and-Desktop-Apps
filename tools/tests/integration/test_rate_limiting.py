@@ -75,8 +75,8 @@ class TestRateLimitEnforcement:
         allowed, _ = limiter.is_allowed(client_id, max_requests, window_seconds)
         assert allowed is False
         
-        # Wait for window to expire
-        time.sleep(1.1)
+        # Wait for window to expire (use 1.3s for reliable timing across system loads)
+        time.sleep(1.3)
         
         # Should be allowed again
         allowed, _ = limiter.is_allowed(client_id, max_requests, window_seconds)

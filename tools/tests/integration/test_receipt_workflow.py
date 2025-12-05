@@ -216,9 +216,20 @@ class TestDataValidationWorkflow:
             total=Decimal('0')
         )
         
-        # Add items with total_price set properly
-        item1 = LineItem(name="Item 1", quantity=1, unit_price=Decimal('10.00'), total_price=Decimal('10.00'))
-        item2 = LineItem(name="Item 2", quantity=2, unit_price=Decimal('5.00'), total_price=Decimal('10.00'))
+        # Add items - total_price is used for calculate_items_total()
+        # This reflects the actual API where total_price is the calculated line total
+        item1 = LineItem(
+            name="Item 1", 
+            quantity=1, 
+            unit_price=Decimal('10.00'), 
+            total_price=Decimal('10.00')  # 1 * 10.00
+        )
+        item2 = LineItem(
+            name="Item 2", 
+            quantity=2, 
+            unit_price=Decimal('5.00'), 
+            total_price=Decimal('10.00')  # 2 * 5.00
+        )
         
         receipt.add_item(item1)
         receipt.add_item(item2)
