@@ -22,10 +22,19 @@ AI-powered receipt text extraction with **Web Application** and **Electron Deskt
 
 ## 🚀 Quick Start
 
+**Using the Unified Launcher (Recommended):**
 ```bash
-./launch.sh          # Full launch
-./launch.sh --quick  # Quick launch without tests
-./launch.sh --test   # Run tests only
+./launcher.sh          # Interactive menu
+./launcher.sh test     # Run full test suite (~1000+ tests)
+./launcher.sh dev      # Start development servers
+./launcher.sh help     # Show all options
+```
+
+**Quick Commands:**
+```bash
+./launcher.sh test-quick    # Quick tests (faster)
+./launcher.sh report        # Generate comprehensive test report
+./launcher.sh alternatives  # View deployment options (Docker, Cloud, etc.)
 ```
 
 **Manual Start:**
@@ -257,6 +266,14 @@ registry.create_package(name='module.param', initial_value=0.5, source_module='m
 
 ## 🧪 Testing
 
+**Using the Unified Launcher (Recommended):**
+```bash
+./launcher.sh test           # Run full test suite (~1000+ tests)
+./launcher.sh test-quick     # Quick tests (faster)
+./launcher.sh report         # Generate comprehensive test report with CEFR analysis
+```
+
+**Direct pytest commands:**
 ```bash
 # All tests
 pytest tools/tests/ -v
@@ -275,7 +292,7 @@ pytest tools/tests/test_storage.py  # Cloud storage tests
 pytest tools/tests/test_training.py # Cloud training tests
 ```
 
-**Test Status:** 867 tests passing, 23 skipped
+**Test Coverage:** ~1000+ tests covering shared modules, backend routes, CEFR framework, and AI agents
 
 **CI/CD:** GitHub Actions runs tests automatically on push and creates CEF analysis artifacts.
 
