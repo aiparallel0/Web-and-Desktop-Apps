@@ -59,8 +59,23 @@ except ImportError:
         r'^[A-Z0-9][A-Z0-9\s\-_/\']{2,40}$',
         re.IGNORECASE
     )
+    
+    # Fallback implementation with basic filtering
+    # Based on common skip keywords from ocr.py
+    FALLBACK_SKIP_KEYWORDS = frozenset({
+        'subtotal', 'total', 'cash', 'change', 'tax', 'payment', 'balance',
+        'thank', 'visit', 'welcome', 'receipt', 'cashier'
+    })
+    
     def should_skip_line(line: str) -> bool:
-        """Fallback implementation."""
+        """Fallback implementation with basic filtering."""
+        if not line:
+            return True
+        line_lower = line.lower()
+        # Skip lines with common keywords
+        if any(kw in line_lower for kw in FALLBACK_SKIP_KEYWORDS):
+            logger.debug(f"Fallback should_skip_line: skipping '{line}' (keyword match)")
+            return True
         return False
 
 logger = logging.getLogger(__name__)
@@ -345,7 +360,7 @@ class SpatialAnalyzer:
         
         # Step 2: Merge spatially overlapping regions
         analyzer_temp = SpatialAnalyzer()
-        analyzer_temp.regions = high_conf_regions
+        analyzer_temp.add_regions(high_conf_regions)
         spatially_merged = analyzer_temp.merge_overlapping_regions(iou_threshold)
         
         # Step 3: Merge multi-line items using spatial information
@@ -375,7 +390,7 @@ class SpatialAnalyzer:
         
         # Group regions by rows for easier multi-line detection
         analyzer_temp = SpatialAnalyzer()
-        analyzer_temp.regions = regions
+        analyzer_temp.add_regions(regions)
         rows = analyzer_temp.group_by_rows(tolerance=10.0)
         
         # Flatten rows back to a list while maintaining order
