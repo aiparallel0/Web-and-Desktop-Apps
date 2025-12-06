@@ -118,15 +118,20 @@
     },
     "craft_detector": {
       "id": "craft_detector",
-      "name": "CRAFT Text Detector",
+      "name": "CRAFT + OCR Pipeline",
       "type": "craft",
-      "description": "Character Region Awareness For Text detection - Advanced text region detection using deep learning",
+      "description": "CRAFT text detection + OCR reading - Advanced text region detection combined with OCR for complete extraction",
       "requires_auth": false,
       "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
         "text_detection": true,
         "region_detection": true,
-        "polygon_output": true,
-        "scene_text": true
+        "advanced_parsing": true
       }
     }
   },
