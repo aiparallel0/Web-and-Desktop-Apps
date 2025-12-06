@@ -171,6 +171,7 @@ class ModelType(Enum):
     PADDLE = "paddle"
     PADDLE_SPATIAL = "paddle_spatial"
     SPATIAL = "spatial"
+    CRAFT = "craft"
 
 
 @dataclass
@@ -402,6 +403,11 @@ class ProcessorFactory:
             '.spatial_ocr', 'SpatialOCRProcessor',
             "Spatial OCR requires multiple OCR engines. "
             "Install with: pip install pytesseract easyocr paddleocr opencv-python."
+        ),
+        ModelType.CRAFT.value: (
+            '.craft_detector', 'CRAFTProcessor',
+            "CRAFT text detector requires craft-text-detector and PyTorch. "
+            "Install with: pip install craft-text-detector torch."
         ),
     }
 

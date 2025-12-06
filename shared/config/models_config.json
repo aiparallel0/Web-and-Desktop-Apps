@@ -115,6 +115,19 @@
         "phone": true,
         "advanced_parsing": true
       }
+    },
+    "craft_detector": {
+      "id": "craft_detector",
+      "name": "CRAFT Text Detector",
+      "type": "craft",
+      "description": "Character Region Awareness For Text detection - Advanced text region detection using deep learning",
+      "requires_auth": false,
+      "capabilities": {
+        "text_detection": true,
+        "region_detection": true,
+        "polygon_output": true,
+        "scene_text": true
+      }
     }
   },
   "default_model": "ocr_tesseract",
