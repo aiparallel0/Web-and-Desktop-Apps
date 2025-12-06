@@ -50,8 +50,10 @@ cd web/frontend && python -m http.server 3000  # Frontend: http://localhost:3000
 
 Receipt Extractor is an enterprise-grade SaaS platform that uses multiple OCR engines and AI models to extract structured data from receipt images. The application supports:
 
-- **Multi-Model OCR**: Tesseract, EasyOCR, PaddleOCR, Donut, Florence-2
+- **7 Text Detection Algorithms**: Tesseract, EasyOCR, PaddleOCR, Donut, Florence-2, CRAFT, Spatial Multi-Method
 - **Batch Processing**: Process multiple receipts simultaneously
+- **Model Benchmarking**: Compare accuracy and performance across all algorithms
+- **Real-Time Progress**: Server-Sent Events for long-running operations
 - **Model Finetuning**: Local and cloud-based training capabilities
 - **User Management**: Authentication, subscriptions, and usage tracking
 - **RESTful API**: Complete backend API with authentication
@@ -75,7 +77,11 @@ For the comprehensive roadmap detailing planned integrations with external servi
 ### Current Implementation Status
 
 ✅ **Implemented Features:**
-- Multi-model OCR (Tesseract, EasyOCR, PaddleOCL, Donut, Florence-2)
+- **7 Text Detection Algorithms**: Tesseract, EasyOCR, PaddleOCR, Donut, Florence-2, CRAFT, Spatial Multi-Method
+- **Unified Output Schema**: Consistent DetectionResult format across all algorithms
+- **Real-Time Progress Tracking**: SSE endpoint for live updates during processing
+- **Model Benchmarking Suite**: Compare accuracy, speed, and reliability
+- **Non-Maximum Suppression**: Remove duplicate detections in ensemble mode
 - Local receipt processing and extraction
 - Web application with Flask backend
 - Electron desktop application
@@ -92,6 +98,67 @@ For the comprehensive roadmap detailing planned integrations with external servi
 - Cloud-based model training (HuggingFace, Replicate, RunPod)
 - Advanced analytics and monitoring
 - Production deployment guides
+
+---
+## 🎯 Text Detection Algorithms
+
+The system includes **7 distinct text detection algorithms**, each optimized for different use cases:
+
+### 1. **Tesseract OCR** (`ocr_tesseract`)
+- Traditional OCR engine with rule-based parsing
+- Fast and reliable for clear, high-quality receipts
+- No GPU required
+- Best for: Standard printed receipts
+
+### 2. **EasyOCR** (`ocr_easyocr`)
+- Deep learning OCR with 80+ language support
+- Ready-to-use with no additional installation
+- Excellent accuracy on various fonts and styles
+- Best for: Multilingual receipts, diverse fonts
+
+### 3. **PaddleOCR** (`ocr_paddle`)
+- Production-ready multilingual OCR
+- High accuracy with regex parsing
+- Efficient and fast
+- Best for: Production deployments, Asian languages
+
+### 4. **Donut** (`donut_cord`)
+- End-to-end transformer model
+- No explicit OCR step - direct image-to-text
+- Fine-tuned on receipt datasets (CORD v2)
+- Best for: AI-powered structured extraction
+
+### 5. **Florence-2** (`florence2`)
+- Microsoft's advanced vision-language model
+- Region detection with OCR capabilities
+- State-of-the-art performance
+- Best for: Complex layouts, challenging receipts
+
+### 6. **CRAFT** (`craft_detector`)
+- Character Region Awareness For Text detection
+- Specialized in text region localization
+- Outputs polygon bounding boxes
+- Best for: Text region detection, preprocessing for other OCR
+
+### 7. **Spatial Multi-Method** (`spatial`)
+- Ensemble approach combining multiple OCR engines
+- Spatial bounding box analysis
+- Non-Maximum Suppression for duplicate removal
+- Best for: Maximum accuracy, challenging documents
+
+### Benchmark Comparison
+
+Run comprehensive benchmarks to compare all algorithms:
+
+```bash
+./launcher.sh benchmark
+```
+
+This generates detailed reports with:
+- Processing time (speed)
+- Accuracy metrics (precision, recall, F1-score)
+- Character Error Rate (CER)
+- Success rate across test dataset
 
 ---
 ## 📁 Project Structure
@@ -124,9 +191,13 @@ For the comprehensive roadmap detailing planned integrations with external servi
 │   ├── main.js
 │   ├── renderer.js
 │   └── index.html
-├── tools/               # Scripts, tests, and test data
+├── tools/               # Scripts, tests, and benchmarks
 │   ├── scripts/           # Processing scripts
-│   ├── tests/             # Test suites
+│   ├── tests/             # Test suites (~1231 tests)
+│   ├── benchmarks/        # Model comparison suite (NEW)
+│   │   ├── compare_models.py  # Benchmark runner
+│   │   ├── data/          # Test dataset with ground truth
+│   │   └── results/       # Generated reports (JSON/HTML)
 │   └── data/              # Test data
 ├── migrations/          # Database migrations (NEW)
 ├── docs/                # Documentation (NEW)
