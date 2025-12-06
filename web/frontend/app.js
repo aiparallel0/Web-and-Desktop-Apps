@@ -93,7 +93,9 @@ class APIService {
         }
     }
 
-    static async extractReceipt(file, modelId = null, detectionSettings = null) {
+    static async extractReceipt(file, options = {}) {
+        const { modelId, detectionSettings } = options;
+        
         const formData = new FormData();
         formData.append('image', file);
         if (modelId) {
@@ -131,7 +133,7 @@ class APIService {
 
     static async quickExtract(file, detectionSettings = null) {
         // Fallback to regular extract endpoint if quick-extract not available
-        return this.extractReceipt(file, null, detectionSettings);
+        return this.extractReceipt(file, { detectionSettings });
     }
 }
 

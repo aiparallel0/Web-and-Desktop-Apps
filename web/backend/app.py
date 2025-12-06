@@ -487,6 +487,9 @@ def extract_receipt():
   enable_enhancement=request.form.get('enable_enhancement','true').lower()=='true'
   column_mode=request.form.get('column_mode','false').lower()=='true'
   manual_regions=request.form.get('manual_regions')
+  # NOTE: These parameters are logged but not yet integrated with the OCR processor.
+  # Full integration requires updating shared/models/processor.py to accept preprocessing options.
+  # This provides backward compatibility while the backend processing is enhanced.
   filename=secure_filename(file.filename)
   with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
   try:

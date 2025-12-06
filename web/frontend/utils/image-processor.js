@@ -151,11 +151,14 @@ class ImageProcessor {
     }
 
     /**
-     * Detect rotation angle (simplified)
+     * Detect rotation angle (simplified placeholder)
+     * Note: This is a placeholder implementation that returns 0.
+     * Real implementation would analyze image content using edge detection,
+     * Hough transforms, or machine learning to detect text orientation.
      */
     static detectRotation(canvas) {
-        // This is a simplified placeholder
-        // Real implementation would analyze image content
+        // Placeholder: Always returns 0 (no rotation)
+        // TODO: Implement actual rotation detection algorithm
         return 0;
     }
 

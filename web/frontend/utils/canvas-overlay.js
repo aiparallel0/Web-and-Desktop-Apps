@@ -197,8 +197,7 @@ class CanvasOverlay {
         
         // Draw label
         this.ctx.fillStyle = '#2563eb';
-        this.ctx.font = '14px Inter, sans-serif';
-        this.ctx.fontWeight = 'bold';
+        this.ctx.font = 'bold 14px Inter, sans-serif';
         
         const labelText = `Region ${label}`;
         const labelWidth = this.ctx.measureText(labelText).width;
