@@ -353,14 +353,15 @@ class TestSpatialOCRProcessor:
         processor = SpatialOCRProcessor()
         
         # Create overlapping detections from different engines
+        # Use confidence >= 0.95 to pass the filter
         tesseract_regions = [
-            TextRegion("TOTAL", BoundingBox(100, 200, 100, 30), 0.85, "tesseract"),
-            TextRegion("3.99", BoundingBox(250, 200, 50, 30), 0.90, "tesseract"),
+            TextRegion("TOTAL", BoundingBox(100, 200, 100, 30), 0.96, "tesseract"),
+            TextRegion("3.99", BoundingBox(250, 200, 50, 30), 0.96, "tesseract"),
         ]
         
         easyocr_regions = [
-            TextRegion("TOTAL", BoundingBox(102, 202, 98, 28), 0.92, "easyocr"),
-            TextRegion("3.99", BoundingBox(252, 202, 48, 28), 0.95, "easyocr"),
+            TextRegion("TOTAL", BoundingBox(102, 202, 98, 28), 0.97, "easyocr"),
+            TextRegion("3.99", BoundingBox(252, 202, 48, 28), 0.98, "easyocr"),
         ]
         
         combined = processor.combine_results([tesseract_regions, easyocr_regions])
@@ -370,7 +371,7 @@ class TestSpatialOCRProcessor:
         
         # Should prefer higher confidence detections
         total_region = [r for r in combined if r.text == "TOTAL"][0]
-        assert total_region.confidence >= 0.90
+        assert total_region.confidence >= 0.96
     
     def test_calculate_confidence_empty(self):
         """Test confidence calculation with empty regions."""

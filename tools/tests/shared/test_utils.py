@@ -1040,7 +1040,8 @@ def test_model_manager_processor_types():
 
     # Get all models and check their types
     models = manager.get_available_models()
-    valid_types = ['donut', 'florence', 'ocr', 'easyocr', 'paddle']
+    # Updated to include spatial variants
+    valid_types = ['donut', 'florence', 'ocr', 'easyocr', 'paddle', 'easyocr_spatial', 'paddle_spatial', 'craft']
 
     for model in models:
         assert model['type'] in valid_types, f"Model {model['id']} has invalid type {model['type']}"
