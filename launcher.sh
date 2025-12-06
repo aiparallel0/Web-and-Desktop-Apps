@@ -1001,6 +1001,7 @@ show_help() {
     echo "  ./launcher.sh test            Run full test suite"
     echo "  ./launcher.sh test-quick      Run quick tests only"
     echo "  ./launcher.sh test-full       Run full tests with coverage"
+    echo "  ./launcher.sh benchmark       Run model benchmark suite (7 algorithms)"
     echo "  ./launcher.sh report          Generate comprehensive test report"
     echo "  ./launcher.sh dev             Start development servers"
     echo "  ./launcher.sh deps            Install dependencies"
@@ -1059,6 +1060,14 @@ main() {
         test-full|full)
             print_banner
             run_full_tests
+            exit $?
+            ;;
+        benchmark)
+            print_banner
+            echo -e "${CYAN}Running Model Benchmark Suite${NC}"
+            echo -e "${DIM}Comparing all 7 text detection algorithms${NC}"
+            echo ""
+            python3 tools/benchmarks/compare_models.py
             exit $?
             ;;
         report)

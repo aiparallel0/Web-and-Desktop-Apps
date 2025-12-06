@@ -582,6 +582,122 @@ def extract_batch_multi():
   finally:
    for temp_path in temp_paths:safe_delete_temp_file(temp_path)
  except Exception as e:logger.error(f"Batch multi extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
+
+@app.route('/api/extract-stream',methods=['POST'])
+def extract_receipt_stream():
+ """
+ Server-Sent Events (SSE) endpoint for real-time progress tracking.
+ 
+ This endpoint provides real-time progress updates during text detection,
+ which can take 10-60 seconds for AI models. Clients use the EventSource API
+ to receive progress events.
+ 
+ Returns:
+  SSE stream with progress events in format:
+  data: {"progress": 50.0, "stage": "detecting", "message": "Running detection...", "eta_seconds": 5.2}
+ """
+ import uuid
+ from flask import Response, stream_with_context
+ 
+ # Import progress tracking utilities
+ sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..','..'))
+ from shared.utils.progress import (
+  ProgressTracker,ProcessingStage,register_tracker,unregister_tracker
+ )
+ 
+ def generate():
+  """Generator function for SSE stream."""
+  temp_path=None
+  tracker=None
+  
+  try:
+   # Validate request
+   if 'image'not in request.files:
+    yield 'data: '+json.dumps({'error':'No image file provided'})+'\n\n'
+    return
+   file=request.files['image']
+   if file.filename=='':
+    yield 'data: '+json.dumps({'error':'No file selected'})+'\n\n'
+    return
+   if not allowed_file(file.filename):
+    yield 'data: '+json.dumps({
+     'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
+    })+'\n\n'
+    return
+   
+   model_id=request.form.get('model_id')
+   operation_id=str(uuid.uuid4())
+   
+   # Create progress tracker
+   tracker=ProgressTracker(operation_id=operation_id,enable_history=True)
+   register_tracker(tracker)
+   
+   # Start operation
+   tracker.start('Initializing text detection...')
+   yield tracker.get_events()[-1].to_sse()
+   
+   # Save uploaded file
+   tracker.update(10,ProcessingStage.LOADING_IMAGE,'Saving uploaded image...')
+   yield tracker.get_events()[-1].to_sse()
+   
+   filename=secure_filename(file.filename)
+   with tempfile.NamedTemporaryFile(
+    delete=False,suffix=os.path.splitext(filename)[1]
+   )as temp_file:
+    temp_path=temp_file.name
+    file.save(temp_path)
+   
+   # Load model
+   tracker.update(
+    25,ProcessingStage.LOADING_MODEL,
+    f'Loading model: {model_id or "default"}...'
+   )
+   yield tracker.get_events()[-1].to_sse()
+   
+   processor=model_manager.get_processor(model_id)
+   
+   # Run detection/extraction
+   tracker.update(40,ProcessingStage.DETECTING,'Running text detection...')
+   yield tracker.get_events()[-1].to_sse()
+   
+   # For longer operations, we can add intermediate updates
+   # This is a simplified version - full integration would require
+   # processors to accept progress callbacks
+   result=processor.extract(temp_path)
+   
+   tracker.update(90,ProcessingStage.POST_PROCESSING,'Finalizing results...')
+   yield tracker.get_events()[-1].to_sse()
+   
+   # Complete
+   tracker.complete('Text detection completed successfully')
+   final_event=tracker.get_events()[-1]
+   final_data=final_event.to_dict()
+   final_data['result']=result.to_dict()
+   yield 'data: '+json.dumps(final_data)+'\n\n'
+   
+  except Exception as e:
+   logger.error(f"Stream extraction error: {e}",exc_info=True)
+   if tracker:
+    tracker.fail(f'Extraction failed: {str(e)}',error=e)
+    yield tracker.get_events()[-1].to_sse()
+   else:
+    yield 'data: '+json.dumps({'error':str(e)})+'\n\n'
+  finally:
+   if temp_path:
+    safe_delete_temp_file(temp_path)
+   if tracker:
+    unregister_tracker(tracker.operation_id)
+ 
+ try:
+  return Response(
+   stream_with_context(generate()),
+   mimetype='text/event-stream',
+   headers={'Cache-Control':'no-cache','X-Accel-Buffering':'no'}
+  )
+ except Exception as e:
+  logger.error(f"SSE endpoint error: {e}",exc_info=True)
+  return jsonify({'success':False,'error':str(e)}),500
+
 @app.route('/api/finetune/prepare',methods=['POST'])
 def prepare_finetune():
  try:

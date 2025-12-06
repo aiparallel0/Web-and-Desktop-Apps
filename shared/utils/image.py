@@ -95,7 +95,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         description="Image loading, validation, and preprocessing for OCR processing",
         dependencies=["shared.circular_exchange"],
         exports=["load_and_validate_image", "enhance_image", "preprocess_for_ocr", 
-                 "assess_image_quality", "get_image_config"]
+                 "assess_image_quality", "get_image_config", "non_maximum_suppression"]
     ))
 
 # Create package registry for image processing configuration
@@ -481,3 +481,114 @@ def preprocess_multi_pass(image: Image.Image) -> list:
         results.append(('fallback', enhance_image(image)))
     
     return results
+
+
+def non_maximum_suppression(
+    boxes: list,
+    confidences: list = None,
+    overlap_threshold: float = 0.3
+) -> list:
+    """
+    Apply Non-Maximum Suppression (NMS) to remove duplicate bounding boxes.
+    
+    This function eliminates overlapping detections by keeping only the boxes
+    with highest confidence scores when multiple boxes overlap significantly.
+    
+    Args:
+        boxes: List of bounding boxes, each as [x, y, width, height] or BoundingBox object
+        confidences: List of confidence scores (0-1). If None, all boxes have equal priority.
+        overlap_threshold: IoU threshold above which boxes are considered duplicates (default: 0.3)
+    
+    Returns:
+        List of indices of boxes to keep after NMS
+        
+    Example:
+        >>> boxes = [[10, 10, 50, 50], [15, 15, 50, 50], [100, 100, 30, 30]]
+        >>> confidences = [0.9, 0.7, 0.8]
+        >>> keep_indices = non_maximum_suppression(boxes, confidences, 0.3)
+        >>> filtered_boxes = [boxes[i] for i in keep_indices]
+    """
+    if not boxes:
+        return []
+    
+    # Import BoundingBox schema if available
+    try:
+        from shared.models.schemas import BoundingBox
+        has_schema = True
+    except ImportError:
+        has_schema = False
+    
+    # Convert boxes to uniform format [x, y, width, height]
+    normalized_boxes = []
+    for box in boxes:
+        if has_schema and isinstance(box, BoundingBox):
+            normalized_boxes.append([box.x, box.y, box.width, box.height])
+        elif isinstance(box, (list, tuple)) and len(box) >= 4:
+            normalized_boxes.append(list(box[:4]))
+        else:
+            logger.warning(f"Invalid box format: {box}, skipping")
+            continue
+    
+    if not normalized_boxes:
+        return []
+    
+    # Use default confidences if not provided
+    if confidences is None:
+        confidences = [1.0] * len(normalized_boxes)
+    
+    # Validate inputs
+    if len(normalized_boxes) != len(confidences):
+        logger.error(
+            f"Boxes ({len(normalized_boxes)}) and confidences ({len(confidences)}) "
+            f"length mismatch"
+        )
+        return list(range(len(normalized_boxes)))
+    
+    # Convert to numpy arrays for efficient computation
+    boxes_array = np.array(normalized_boxes, dtype=np.float32)
+    confidences_array = np.array(confidences, dtype=np.float32)
+    
+    # Extract coordinates
+    x = boxes_array[:, 0]
+    y = boxes_array[:, 1]
+    w = boxes_array[:, 2]
+    h = boxes_array[:, 3]
+    
+    # Calculate areas
+    areas = w * h
+    
+    # Sort by confidence (descending)
+    order = confidences_array.argsort()[::-1]
+    
+    keep = []
+    while order.size > 0:
+        # Pick the box with highest confidence
+        i = order[0]
+        keep.append(int(i))
+        
+        if order.size == 1:
+            break
+        
+        # Calculate IoU with remaining boxes
+        xx1 = np.maximum(x[i], x[order[1:]])
+        yy1 = np.maximum(y[i], y[order[1:]])
+        xx2 = np.minimum(x[i] + w[i], x[order[1:]] + w[order[1:]])
+        yy2 = np.minimum(y[i] + h[i], y[order[1:]] + h[order[1:]])
+        
+        # Calculate intersection area
+        intersection_w = np.maximum(0.0, xx2 - xx1)
+        intersection_h = np.maximum(0.0, yy2 - yy1)
+        intersection = intersection_w * intersection_h
+        
+        # Calculate union area
+        union = areas[i] + areas[order[1:]] - intersection
+        
+        # Calculate IoU
+        iou = np.where(union > 0, intersection / union, 0.0)
+        
+        # Keep boxes with IoU below threshold
+        inds = np.where(iou <= overlap_threshold)[0]
+        order = order[inds + 1]
+    
+    logger.debug(f"NMS: kept {len(keep)} of {len(boxes)} boxes (threshold: {overlap_threshold})")
+    return keep
