@@ -2043,3 +2043,135 @@ class TestSemanticValidation:
         # Price exceeds PRICE_MAX (9999)
         result = normalize_price('99999.00')
         assert result is None
+
+
+class TestCleanItemNameLeadingQuotes:
+    """Tests for clean_item_name function removing leading quotes/apostrophes."""
+
+    def test_remove_leading_apostrophe(self):
+        """Test removal of leading apostrophe: 'BLACK. BEANS -> BLACK. BEANS"""
+        from shared.models.ocr import clean_item_name
+        result = clean_item_name("'BLACK. BEANS")
+        assert not result.startswith("'")
+        assert 'BLACK' in result
+
+    def test_remove_mid_apostrophe_before_word(self):
+        """Test removal of apostrophe before words: CAGE 'FREE ALL 'WHIT -> CAGE FREE ALL WHIT"""
+        from shared.models.ocr import clean_item_name
+        result = clean_item_name("CAGE 'FREE ALL 'WHIT")
+        assert "'" not in result
+        assert 'CAGE' in result and 'FREE' in result
+
+    def test_remove_multiple_leading_apostrophes(self):
+        """Test removal of multiple apostrophes: ''ITEM NAME -> ITEM NAME"""
+        from shared.models.ocr import clean_item_name
+        result = clean_item_name("''ITEM NAME")
+        assert not result.startswith("'")
+
+    def test_remove_leading_quote(self):
+        """Test removal of leading double quote."""
+        from shared.models.ocr import clean_item_name
+        result = clean_item_name('"MAHI FILLETS')
+        assert not result.startswith('"')
+        assert 'MAHI' in result
+
+    def test_preserve_valid_apostrophe_in_word(self):
+        """Test that valid apostrophes in words are preserved: TRADER JOE'S"""
+        from shared.models.ocr import clean_item_name
+        result = clean_item_name("TRADER JOE'S")
+        assert "JOE'S" in result
+
+
+class TestExtractStoreNameAddressValidation:
+    """Tests for extract_store_name rejecting address-like lines."""
+
+    def test_reject_address_line_ending_with_rd(self):
+        """Test that lines ending with RD. are rejected as store names."""
+        from shared.models.ocr import extract_store_name
+        # SHARON RD. should not be selected as store name
+        lines = ['SHARON RD.', 'WHOLE FOODS', '123 Main St']
+        result = extract_store_name(lines)
+        # Should find WHOLE FOODS, not SHARON RD.
+        assert result == 'WHOLE FOODS'
+
+    def test_reject_address_line_ending_with_st(self):
+        """Test that lines ending with ST are rejected as store names."""
+        from shared.models.ocr import extract_store_name
+        lines = ['123 Main St', 'MY STORE']
+        result = extract_store_name(lines)
+        assert result == 'MY STORE'
+
+    def test_reject_line_with_price_pattern(self):
+        """Test that lines with price patterns are rejected as store names."""
+        from shared.models.ocr import extract_store_name
+        lines = ['Whole Strawberries 2.99', 'GROCERY STORE']
+        result = extract_store_name(lines)
+        assert result == 'GROCERY STORE'
+
+
+class TestExtractAddressProductFilter:
+    """Tests for extract_address not extracting product lines."""
+
+    def test_reject_product_line_as_address(self):
+        """Test that lines containing products are not extracted as addresses."""
+        from shared.models.ocr import extract_address
+        lines = [
+            'STORE NAME',
+            'Whole Strawberries 2.99: 8',  # This looks like a product, not address
+            '123 Main Street',  # This is a valid address
+        ]
+        result = extract_address(lines)
+        # Should return the actual address, not the product line
+        assert result == '123 Main Street'
+
+    def test_reject_line_with_price_ending(self):
+        """Test that lines ending with prices are rejected."""
+        from shared.models.ocr import extract_address
+        lines = [
+            'STORE',
+            'BANANAS 1.29',  # Has price, not an address
+        ]
+        result = extract_address(lines)
+        assert result is None
+
+
+class TestTaxValidation:
+    """Tests for tax validation rejecting unreasonable values."""
+
+    def test_tax_greater_than_subtotal_rejected(self):
+        """Test that tax > subtotal is rejected in parse_receipt_text."""
+        from shared.models.ocr import parse_receipt_text
+        from decimal import Decimal
+        
+        # Simulate a receipt where tax (45.44) is greater than subtotal (32.85)
+        lines = [
+            'STORE NAME',
+            'ITEM ONE 10.00',
+            'ITEM TWO 15.00',
+            'ITEM THREE 7.85',
+            'SUBTOTAL 32.85',
+            'TAX 45.44',  # Invalid: greater than subtotal
+            'TOTAL 78.29',
+        ]
+        result = parse_receipt_text(lines)
+        
+        # Tax should be rejected (set to None) because it's greater than subtotal
+        assert result['tax'] is None
+        assert any('rejected' in note.lower() for note in result['extraction_notes'])
+
+    def test_reasonable_tax_accepted(self):
+        """Test that reasonable tax values are accepted."""
+        from shared.models.ocr import parse_receipt_text
+        from decimal import Decimal
+        
+        lines = [
+            'STORE NAME',
+            'ITEM ONE 30.00',
+            'SUBTOTAL 30.00',
+            'TAX 2.40',  # Valid: 8% tax
+            'TOTAL 32.40',
+        ]
+        result = parse_receipt_text(lines)
+        
+        assert result['tax'] == Decimal('2.40')
+        assert result['subtotal'] == Decimal('30.00')

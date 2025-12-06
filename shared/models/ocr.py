@@ -373,7 +373,17 @@ def extract_address(lines: list, start_index: int = 1, end_index: int = 8) -> Op
     """
     for line in lines[start_index:end_index]:
         line_lower = line.lower()
+        # Check for address keywords and digits
         if any(kw in line_lower for kw in ADDRESS_KEYWORDS) and any(c.isdigit() for c in line):
+            # Skip lines that look like product items (contain price patterns like X.XX)
+            # An address might have numbers but shouldn't have price-like decimals
+            if re.search(r'\d+[.,]\d{2}\s*$', line):
+                continue
+            # Skip lines that contain product-like words
+            product_words = ['strawberr', 'apple', 'banana', 'milk', 'bread', 'cheese', 
+                           'chicken', 'beef', 'fish', 'mahi', 'plum', 'egg', 'cottage']
+            if any(pw in line_lower for pw in product_words):
+                continue
             return line
     return None
 
@@ -580,6 +590,7 @@ def clean_item_name(name: str) -> str:
     Clean and correct common OCR errors in item names.
     
     Applies:
+    - Removes leading apostrophes/quotes (common OCR artifact)
     - Fix concatenated text (OCR joining words without spaces)
     - Word-level corrections (e.g., FASHIUNED -> FASHIONED)
     - Unit abbreviation fixes (e.g., "10 02" -> "10 OZ")
@@ -597,6 +608,12 @@ def clean_item_name(name: str) -> str:
         return name
     
     cleaned = name.strip()
+    
+    # Remove leading apostrophes/quotes (common OCR artifact)
+    # E.g., "'BLACK. BEANS" -> "BLACK. BEANS", "CAGE 'FREE" -> "CAGE FREE"
+    cleaned = re.sub(r"^['\"`]+\s*", '', cleaned)  # Leading quotes at start
+    cleaned = re.sub(r"\s*['\"`]+\s+", ' ', cleaned)  # Quotes before words (with space after)
+    cleaned = re.sub(r"(?<=\s)['\"`]+(?=[A-Z])", '', cleaned)  # Quote before uppercase letter
     
     # First, fix concatenated text issues from OCR
     cleaned = fix_concatenated_text(cleaned)
@@ -716,6 +733,16 @@ def extract_store_name(lines: list, max_lines: int = 10) -> Optional[str]:
     for line in lines[:max_lines]:
         line = line.strip()
         if len(line) >= 2 and not line.isdigit():
+            # Skip lines that look like addresses (end with RD., ST., AVE., etc.)
+            line_lower = line.lower().rstrip('.')
+            line_words = line_lower.split()
+            if line_words:
+                last_word = line_words[-1].rstrip('.,')
+                if last_word in ADDRESS_KEYWORDS:
+                    continue
+            # Skip lines that contain price patterns (likely line items)
+            if re.search(r'\d+[.,]\d{2}', line):
+                continue
             # Apply store name corrections
             return correct_store_name(line)
     return correct_store_name(lines[0]) if lines else None
@@ -1565,6 +1592,13 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
         if calculated_subtotal > 0:
             result['subtotal'] = calculated_subtotal
             result['extraction_notes'].append(f"Subtotal calculated from {len(result['items'])} items: ${calculated_subtotal}")
+    
+    # Validate tax: tax should never be greater than subtotal (unrealistic)
+    # Tax values greater than subtotal are likely OCR errors
+    if result['tax'] is not None and result['subtotal'] is not None:
+        if result['tax'] > result['subtotal']:
+            result['extraction_notes'].append(f"Tax {result['tax']} > subtotal {result['subtotal']} - rejected as OCR error")
+            result['tax'] = None
     
     # Semantic validation: if we have subtotal and total but no tax, calculate tax
     if result['subtotal'] is not None and result['total'] is not None and result['tax'] is None:
