@@ -32,18 +32,23 @@ from .base import (
     BaseStorageHandler, StorageFile, UploadResult,
     StorageError, StorageProvider
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import Dropbox SDK
-try:
-    import dropbox
-    from dropbox.exceptions import ApiError, AuthError
-    from dropbox.files import WriteMode
-    DROPBOX_AVAILABLE = True
-except ImportError:
-    DROPBOX_AVAILABLE = False
-    logger.warning("Dropbox SDK not installed. Run: pip install dropbox>=11.36.0")
+# Import Dropbox SDK
+_dropbox_imports = OptionalImport.try_imports({
+    'dropbox': 'dropbox',
+    'ApiError': 'dropbox.exceptions.ApiError',
+    'AuthError': 'dropbox.exceptions.AuthError',
+    'WriteMode': 'dropbox.files.WriteMode'
+}, install_msg='pip install dropbox>=11.36.0')
+
+dropbox = _dropbox_imports['dropbox']
+ApiError = _dropbox_imports['ApiError']
+AuthError = _dropbox_imports['AuthError']
+WriteMode = _dropbox_imports['WriteMode']
+DROPBOX_AVAILABLE = _dropbox_imports['DROPBOX_AVAILABLE']
 
 
 class DropboxStorageHandler(BaseStorageHandler):

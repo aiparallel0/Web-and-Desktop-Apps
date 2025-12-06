@@ -32,22 +32,25 @@ from .base import (
     BaseStorageHandler, StorageFile, UploadResult,
     StorageError, StorageProvider
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import Google Drive libraries
-try:
-    from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import Flow
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
-    GDRIVE_AVAILABLE = True
-except ImportError:
-    GDRIVE_AVAILABLE = False
-    logger.warning(
-        "Google Drive SDK not installed. Run: "
-        "pip install google-auth google-auth-oauthlib google-api-python-client"
-    )
+# Import Google Drive libraries
+_gdrive_imports = OptionalImport.try_imports({
+    'Credentials': 'google.oauth2.credentials.Credentials',
+    'Flow': 'google_auth_oauthlib.flow.Flow',
+    'build': 'googleapiclient.discovery.build',
+    'MediaIoBaseUpload': 'googleapiclient.http.MediaIoBaseUpload',
+    'MediaIoBaseDownload': 'googleapiclient.http.MediaIoBaseDownload'
+}, install_msg='pip install google-auth google-auth-oauthlib google-api-python-client')
+
+Credentials = _gdrive_imports['Credentials']
+Flow = _gdrive_imports['Flow']
+build = _gdrive_imports['build']
+MediaIoBaseUpload = _gdrive_imports['MediaIoBaseUpload']
+MediaIoBaseDownload = _gdrive_imports['MediaIoBaseDownload']
+GDRIVE_AVAILABLE = _gdrive_imports['CREDENTIALS_AVAILABLE']  # Use any of the import keys
 
 
 class GoogleDriveHandler(BaseStorageHandler):

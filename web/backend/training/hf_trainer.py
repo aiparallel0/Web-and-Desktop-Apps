@@ -30,17 +30,25 @@ from .base import (
     TrainingStatus, TrainingProvider, TrainingMetrics,
     TrainingError, TrainingStartError
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import HuggingFace libraries
-try:
-    from huggingface_hub import HfApi, HfFolder, create_repo
-    from huggingface_hub import upload_file, upload_folder
-    HF_AVAILABLE = True
-except ImportError:
-    HF_AVAILABLE = False
-    logger.warning("huggingface_hub not installed. Run: pip install huggingface-hub>=0.20.0")
+# Import HuggingFace libraries
+_hf_imports = OptionalImport.try_imports({
+    'HfApi': 'huggingface_hub.HfApi',
+    'HfFolder': 'huggingface_hub.HfFolder',
+    'create_repo': 'huggingface_hub.create_repo',
+    'upload_file': 'huggingface_hub.upload_file',
+    'upload_folder': 'huggingface_hub.upload_folder'
+}, install_msg='pip install huggingface-hub>=0.20.0')
+
+HfApi = _hf_imports['HfApi']
+HfFolder = _hf_imports['HfFolder']
+create_repo = _hf_imports['create_repo']
+upload_file = _hf_imports['upload_file']
+upload_folder = _hf_imports['upload_folder']
+HF_AVAILABLE = _hf_imports['HFAPI_AVAILABLE']  # Use one of the actual import names
 
 
 class HuggingFaceTrainer(BaseTrainer):

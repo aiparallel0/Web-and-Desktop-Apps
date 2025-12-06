@@ -19,16 +19,14 @@ import os
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import stripe
-try:
-    import stripe
-    STRIPE_AVAILABLE = True
-except ImportError:
-    STRIPE_AVAILABLE = False
-    logger.warning("Stripe SDK not installed. Run: pip install stripe")
+# Import stripe
+stripe_import = OptionalImport('stripe', 'pip install stripe')
+stripe = stripe_import.module
+STRIPE_AVAILABLE = stripe_import.is_available
 
 
 class StripeHandler:
