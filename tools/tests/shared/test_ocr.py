@@ -2027,7 +2027,8 @@ class TestSemanticValidation:
 
     def test_price_in_valid_range(self):
         """Test that prices in valid range are accepted."""
-        from shared.models.ocr import normalize_price, PRICE_MIN, PRICE_MAX
+        from shared.models.ocr import normalize_price
+        from shared.utils.pricing import PRICE_MIN, PRICE_MAX
         from decimal import Decimal
         
         # Valid prices

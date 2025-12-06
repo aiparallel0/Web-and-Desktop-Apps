@@ -211,15 +211,17 @@ SKU_PATTERN = re.compile(r'\b\d{12,14}\b')
 
 # Multi-line item pattern: SKU-only line with price
 # Matches: "020108870398 F 3.98 0" or "053099656595 4.88 0"
+# Uses 12-14 digits to be consistent with SKU_PATTERN
 MULTILINE_SKU_PRICE_PATTERN = re.compile(
-    r'^(\d{10,14})\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]?$',
+    r'^(\d{12,14})\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]?$',
     re.IGNORECASE
 )
 
 # Pattern for potential item name lines (used in multi-line detection)
 # These are lines that could be item names on their own
+# Requires at least 3 characters (1 initial + 2 from range) to be consistent with merge validation
 POTENTIAL_ITEM_NAME_PATTERN = re.compile(
-    r'^[A-Z0-9][A-Z0-9\s\-_/\']{1,40}$',
+    r'^[A-Z0-9][A-Z0-9\s\-_/\']{2,40}$',
     re.IGNORECASE
 )
 
