@@ -30,16 +30,14 @@ from .base import (
     TrainingStatus, TrainingProvider, TrainingMetrics,
     TrainingError, TrainingStartError
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import Replicate SDK
-try:
-    import replicate
-    REPLICATE_AVAILABLE = True
-except ImportError:
-    REPLICATE_AVAILABLE = False
-    logger.warning("replicate not installed. Run: pip install replicate>=0.25.0")
+# Import Replicate SDK
+replicate_import = OptionalImport('replicate', 'pip install replicate>=0.25.0')
+replicate = replicate_import.module
+REPLICATE_AVAILABLE = replicate_import.is_available
 
 
 class ReplicateTrainer(BaseTrainer):

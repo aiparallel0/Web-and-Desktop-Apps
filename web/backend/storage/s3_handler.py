@@ -32,18 +32,21 @@ from .base import (
     StorageError, UploadError, DownloadError, DeleteError,
     StorageProvider
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import boto3
-try:
-    import boto3
-    from botocore.exceptions import ClientError, NoCredentialsError
-    BOTO3_AVAILABLE = True
-except ImportError:
-    boto3 = None  # Make boto3 available at module level for mocking
-    BOTO3_AVAILABLE = False
-    logger.warning("boto3 not installed. Run: pip install boto3>=1.34.0")
+# Import boto3 and dependencies
+_boto3_imports = OptionalImport.try_imports({
+    'boto3': 'boto3',
+    'ClientError': 'botocore.exceptions.ClientError',
+    'NoCredentialsError': 'botocore.exceptions.NoCredentialsError'
+}, install_msg='pip install boto3>=1.34.0')
+
+boto3 = _boto3_imports['boto3']
+ClientError = _boto3_imports['ClientError']
+NoCredentialsError = _boto3_imports['NoCredentialsError']
+BOTO3_AVAILABLE = _boto3_imports['BOTO3_AVAILABLE']
 
 
 class S3StorageHandler(BaseStorageHandler):

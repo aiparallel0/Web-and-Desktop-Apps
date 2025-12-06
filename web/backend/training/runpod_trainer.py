@@ -30,16 +30,14 @@ from .base import (
     TrainingStatus, TrainingProvider, TrainingMetrics,
     TrainingError, TrainingStartError
 )
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import RunPod SDK
-try:
-    import runpod
-    RUNPOD_AVAILABLE = True
-except ImportError:
-    RUNPOD_AVAILABLE = False
-    logger.warning("runpod not installed. Run: pip install runpod>=1.5.0")
+# Import RunPod SDK
+runpod_import = OptionalImport('runpod', 'pip install runpod>=1.5.0')
+runpod = runpod_import.module
+RUNPOD_AVAILABLE = runpod_import.is_available
 
 
 class RunPodTrainer(BaseTrainer):
