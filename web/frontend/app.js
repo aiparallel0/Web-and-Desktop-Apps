@@ -93,11 +93,22 @@ class APIService {
         }
     }
 
-    static async extractReceipt(file, modelId = null) {
+    static async extractReceipt(file, modelId = null, detectionSettings = null) {
         const formData = new FormData();
         formData.append('image', file);
         if (modelId) {
             formData.append('model_id', modelId);
+        }
+        
+        // Add detection parameters if provided
+        if (detectionSettings) {
+            formData.append('detection_mode', detectionSettings.detection_mode || 'auto');
+            formData.append('enable_deskew', detectionSettings.enable_deskew !== false);
+            formData.append('enable_enhancement', detectionSettings.enable_enhancement !== false);
+            formData.append('column_mode', detectionSettings.column_mode || false);
+            if (detectionSettings.manual_regions) {
+                formData.append('manual_regions', JSON.stringify(detectionSettings.manual_regions));
+            }
         }
 
         try {
@@ -118,9 +129,9 @@ class APIService {
         }
     }
 
-    static async quickExtract(file) {
+    static async quickExtract(file, detectionSettings = null) {
         // Fallback to regular extract endpoint if quick-extract not available
-        return this.extractReceipt(file);
+        return this.extractReceipt(file, null, detectionSettings);
     }
 }
 
@@ -202,8 +213,12 @@ class ExtractionController {
             // Store file for later reference
             AppState.currentFile = file;
 
-            // Call API
-            const results = await APIService.quickExtract(file);
+            // Get detection settings from controls
+            const detectionControls = document.getElementById('detectionControls');
+            const detectionSettings = detectionControls ? detectionControls.getSettings() : null;
+
+            // Call API with detection settings
+            const results = await APIService.quickExtract(file, detectionSettings);
 
             if (progressBar) {
                 progressBar.setProgress(100, 'Complete!');
@@ -329,6 +344,22 @@ function setupEventHandlers() {
         signInBtn.addEventListener('click', () => {
             // Show coming soon message - authentication feature not yet fully implemented
             alert('Sign In feature coming soon! For now, try our free extraction above - no account required.');
+        });
+    }
+
+    // Detection controls
+    const detectionControls = document.getElementById('detectionControls');
+    if (detectionControls) {
+        detectionControls.addEventListener('settings-applied', (e) => {
+            console.log('Detection settings applied:', e.detail);
+        });
+        
+        detectionControls.addEventListener('preview-toggle', (e) => {
+            console.log('Preview toggle:', e.detail.enabled);
+        });
+        
+        detectionControls.addEventListener('regions-cleared', () => {
+            console.log('Manual regions cleared');
         });
     }
 
