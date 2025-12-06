@@ -1182,6 +1182,10 @@ def merge_multiline_items(lines: List[str]) -> List[str]:
     This function detects and merges such patterns into single lines
     that can be processed by standard item extraction patterns.
     
+    NOTE: This text-based merging is also integrated with spatial bounding box
+    analysis in the SpatialOCRProcessor.merge_regions_unified() method, which
+    provides a more comprehensive merging solution when spatial information is available.
+    
     Args:
         lines: List of OCR text lines
         
