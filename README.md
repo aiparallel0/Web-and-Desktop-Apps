@@ -152,6 +152,14 @@ For the comprehensive roadmap detailing planned integrations with external servi
 | `ocr_tesseract` | OCR | Very Fast | Traditional OCR |
 | `ocr_easyocr` | OCR | Fast | Deep learning OCR |
 | `ocr_paddleocr` | OCR | Medium | Enterprise OCR |
+| `spatial_multi` | Multi-Method | Medium | **NEW**: Combines multiple OCR engines with spatial bounding box analysis |
+
+**Spatial Multi-Method OCR** (NEW):
+- Combines Tesseract, EasyOCR, and PaddleOCR results
+- Analyzes spatial relationships using bounding boxes
+- Resolves conflicts between engines using confidence scores
+- Improves accuracy through consensus-based extraction
+- Best for challenging receipts with poor quality or complex layouts
 
 **Cloud Models** (via HuggingFace API):
 - Microsoft TrOCR

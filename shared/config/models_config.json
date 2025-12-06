@@ -82,6 +82,24 @@
         "phone": true,
         "advanced_parsing": true
       }
+    },
+    "spatial_multi": {
+      "id": "spatial_multi",
+      "name": "Multi-Method Spatial OCR",
+      "type": "spatial",
+      "description": "Combines multiple OCR engines with spatial bounding box analysis for maximum accuracy",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "advanced_parsing": true,
+        "spatial_analysis": true,
+        "multi_engine": true
+      }
     }
   },
   "default_model": "ocr_tesseract",
