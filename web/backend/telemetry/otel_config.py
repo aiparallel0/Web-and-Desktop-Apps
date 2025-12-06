@@ -23,39 +23,57 @@ import os
 import logging
 from typing import Optional
 from functools import lru_cache
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenTelemetry packages
-try:
-    from opentelemetry import trace, metrics
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader, ConsoleMetricExporter
-    OTEL_AVAILABLE = True
-except ImportError:
-    OTEL_AVAILABLE = False
-    logger.info("OpenTelemetry not installed. Run: pip install opentelemetry-api opentelemetry-sdk")
+# Import OpenTelemetry packages
+_otel_imports = OptionalImport.try_imports({
+    'trace': 'opentelemetry.trace',
+    'metrics': 'opentelemetry.metrics',
+    'TracerProvider': 'opentelemetry.sdk.trace.TracerProvider',
+    'MeterProvider': 'opentelemetry.sdk.metrics.MeterProvider',
+    'Resource': 'opentelemetry.sdk.resources.Resource',
+    'SERVICE_NAME': 'opentelemetry.sdk.resources.SERVICE_NAME',
+    'SERVICE_VERSION': 'opentelemetry.sdk.resources.SERVICE_VERSION',
+    'BatchSpanProcessor': 'opentelemetry.sdk.trace.export.BatchSpanProcessor',
+    'ConsoleSpanExporter': 'opentelemetry.sdk.trace.export.ConsoleSpanExporter',
+    'PeriodicExportingMetricReader': 'opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader',
+    'ConsoleMetricExporter': 'opentelemetry.sdk.metrics.export.ConsoleMetricExporter'
+}, install_msg='pip install opentelemetry-api opentelemetry-sdk')
 
-# Try to import OTLP exporters
-try:
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-    OTLP_AVAILABLE = True
-except ImportError:
-    OTLP_AVAILABLE = False
-    logger.info("OTLP exporters not installed. Run: pip install opentelemetry-exporter-otlp")
+trace = _otel_imports['trace']
+metrics = _otel_imports['metrics']
+TracerProvider = _otel_imports['TracerProvider']
+MeterProvider = _otel_imports['MeterProvider']
+Resource = _otel_imports['Resource']
+SERVICE_NAME = _otel_imports['SERVICE_NAME']
+SERVICE_VERSION = _otel_imports['SERVICE_VERSION']
+BatchSpanProcessor = _otel_imports['BatchSpanProcessor']
+ConsoleSpanExporter = _otel_imports['ConsoleSpanExporter']
+PeriodicExportingMetricReader = _otel_imports['PeriodicExportingMetricReader']
+ConsoleMetricExporter = _otel_imports['ConsoleMetricExporter']
+OTEL_AVAILABLE = _otel_imports['TRACE_AVAILABLE']
 
-# Try to import Flask instrumentation
-try:
-    from opentelemetry.instrumentation.flask import FlaskInstrumentor
-    from opentelemetry.instrumentation.requests import RequestsInstrumentor
-    FLASK_INSTRUMENTATION_AVAILABLE = True
-except ImportError:
-    FLASK_INSTRUMENTATION_AVAILABLE = False
-    logger.info("Flask instrumentation not available. Run: pip install opentelemetry-instrumentation-flask")
+# Import OTLP exporters
+_otlp_imports = OptionalImport.try_imports({
+    'OTLPSpanExporter': 'opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter',
+    'OTLPMetricExporter': 'opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter'
+}, install_msg='pip install opentelemetry-exporter-otlp')
+
+OTLPSpanExporter = _otlp_imports['OTLPSpanExporter']
+OTLPMetricExporter = _otlp_imports['OTLPMetricExporter']
+OTLP_AVAILABLE = _otlp_imports['OTLPSPANEXPORTER_AVAILABLE']
+
+# Import Flask instrumentation
+_flask_inst_imports = OptionalImport.try_imports({
+    'FlaskInstrumentor': 'opentelemetry.instrumentation.flask.FlaskInstrumentor',
+    'RequestsInstrumentor': 'opentelemetry.instrumentation.requests.RequestsInstrumentor'
+}, install_msg='pip install opentelemetry-instrumentation-flask')
+
+FlaskInstrumentor = _flask_inst_imports['FlaskInstrumentor']
+RequestsInstrumentor = _flask_inst_imports['RequestsInstrumentor']
+FLASK_INSTRUMENTATION_AVAILABLE = _flask_inst_imports['FLASKINSTRUMENTOR_AVAILABLE']
 
 
 # =============================================================================

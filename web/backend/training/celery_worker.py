@@ -26,6 +26,7 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
 import json
+from shared.utils.optional_imports import OptionalImport
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +35,10 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
 
-# Try to import Celery
-try:
-    from celery import Celery
-    CELERY_AVAILABLE = True
-except ImportError:
-    CELERY_AVAILABLE = False
-    logger.warning("Celery not installed. Run: pip install celery redis")
+# Import Celery
+celery_import = OptionalImport('celery.Celery', 'pip install celery redis')
+Celery = celery_import.module
+CELERY_AVAILABLE = celery_import.is_available
 
 # Initialize Celery app (if available)
 if CELERY_AVAILABLE:

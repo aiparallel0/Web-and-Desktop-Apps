@@ -48,7 +48,7 @@ HfFolder = _hf_imports['HfFolder']
 create_repo = _hf_imports['create_repo']
 upload_file = _hf_imports['upload_file']
 upload_folder = _hf_imports['upload_folder']
-HF_AVAILABLE = _hf_imports['HF_AVAILABLE']
+HF_AVAILABLE = _hf_imports['HFAPI_AVAILABLE']  # Use one of the actual import names
 
 
 class HuggingFaceTrainer(BaseTrainer):
