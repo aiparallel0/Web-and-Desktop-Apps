@@ -28,6 +28,24 @@ pytest tools/tests -v
 python web/backend/app.py
 ```
 
+### Using the Launcher Scripts
+
+For more convenient development, use the launcher scripts:
+
+```bash
+# Interactive menu
+./launcher.sh              # Unix/macOS
+# or
+./run.sh                   # Alternative
+
+# Common commands
+./launcher.sh dev          # Start development servers
+./launcher.sh test         # Run full test suite
+./launcher.sh test-quick   # Quick tests (faster)
+./launcher.sh clean        # Clean cache and temp files
+./launcher.sh help         # Show all options
+```
+
 ---
 
 ## Detailed Setup
