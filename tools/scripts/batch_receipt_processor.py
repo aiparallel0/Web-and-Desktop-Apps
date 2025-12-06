@@ -60,6 +60,7 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from contextlib import contextmanager
 import traceback
 
 # Add project root to path for imports
@@ -92,6 +93,37 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def suppress_logging(logger_names: List[str], level: int = logging.ERROR):
+    """
+    Context manager to temporarily suppress logging for specific loggers.
+    
+    Args:
+        logger_names: List of logger names to suppress
+        level: Logging level to set during suppression
+        
+    Yields:
+        None
+        
+    Example:
+        with suppress_logging(['shared.models.ocr_processor']):
+            # Code with suppressed logging
+            process_image()
+    """
+    loggers = [(name, logging.getLogger(name)) for name in logger_names]
+    original_levels = [(name, logger.level) for name, logger in loggers]
+    
+    try:
+        # Set suppression levels
+        for name, logger in loggers:
+            logger.setLevel(level)
+        yield
+    finally:
+        # Restore original levels
+        for (name, original_level), (_, logger) in zip(original_levels, loggers):
+            logger.setLevel(original_level)
 
 
 def find_receipt_images(project_root: Path) -> List[Path]:
@@ -280,7 +312,9 @@ def process_all_receipts(project_root: Path, model_name: str = 'tesseract', verb
     if hasattr(ocr_config, 'max_psm_modes'):
         ocr_config.max_psm_modes = 5  # Reduce from 10 to 5 OCR mode combinations
     if hasattr(ocr_config, 'auto_retry'):
-        ocr_config.auto_retry = False  # Disable auto-retry for batch processing
+        # Disable auto-retry for batch processing - speeds up sequential image processing
+        # by preventing redundant retry attempts when handling multiple images
+        ocr_config.auto_retry = False
     
     logger.info(f"\nOCR Configuration:")
     logger.info(f"  Model: {model_name}")
@@ -321,36 +355,28 @@ def process_all_receipts(project_root: Path, model_name: str = 'tesseract', verb
     logger.info("PROCESSING RECEIPTS")
     logger.info("=" * 80 + "\n")
     
-    # Temporarily suppress OCR debug logging for cleaner output
-    ocr_logger = logging.getLogger('shared.models.ocr_processor')
-    ocr_logger.setLevel(logging.ERROR)
-    utils_logger = logging.getLogger('shared.utils')
-    utils_logger.setLevel(logging.ERROR)
-    
     receipts = []
     progress_path = project_root / "receipt_processing_progress.json"
     
-    for idx, image_path in enumerate(image_files):
-        result = process_single_receipt(image_path, processor, idx, len(image_files))
-        receipts.append(result)
-        
-        # Save progress after every 5 images
-        if (idx + 1) % 5 == 0:
-            progress_data = {
-                'metadata': {
-                    'last_updated': datetime.now().isoformat(),
-                    'images_processed': idx + 1,
-                    'total_images': len(image_files),
-                },
-                'receipts': receipts
-            }
-            with open(progress_path, 'w', encoding='utf-8') as f:
-                json.dump(progress_data, f, indent=2, ensure_ascii=False)
-            logger.info(f"  Progress saved: {idx + 1}/{len(image_files)} images processed")
-    
-    # Restore logging levels
-    ocr_logger.setLevel(logging.INFO)
-    utils_logger.setLevel(logging.INFO)
+    # Suppress verbose OCR logging for cleaner output
+    with suppress_logging(['shared.models.ocr_processor', 'shared.utils']):
+        for idx, image_path in enumerate(image_files):
+            result = process_single_receipt(image_path, processor, idx, len(image_files))
+            receipts.append(result)
+            
+            # Save progress after every 5 images
+            if (idx + 1) % 5 == 0:
+                progress_data = {
+                    'metadata': {
+                        'last_updated': datetime.now().isoformat(),
+                        'images_processed': idx + 1,
+                        'total_images': len(image_files),
+                    },
+                    'receipts': receipts
+                }
+                with open(progress_path, 'w', encoding='utf-8') as f:
+                    json.dump(progress_data, f, indent=2, ensure_ascii=False)
+                logger.info(f"  Progress saved: {idx + 1}/{len(image_files)} images processed")
     
     # Remove progress file if it exists
     if progress_path.exists():
