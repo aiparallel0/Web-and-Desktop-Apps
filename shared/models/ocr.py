@@ -36,7 +36,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             description="Common OCR processing utilities with regex patterns and text extraction",
             dependencies=["shared.circular_exchange", "shared.utils.pricing"],
             exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
-                    "extract_line_items", "parse_receipt_text", "get_detection_config",
+                    "extract_line_items", "extract_line_items_with_codes", "merge_multiline_items",
+                    "parse_receipt_text", "get_detection_config",
                     "record_detection_result", "fix_concatenated_text", "clean_item_name",
                     "is_garbage_text", "MAX_REALISTIC_ITEM_PRICE", "PRICE_MIN", "PRICE_MAX"]
         ))
@@ -207,6 +208,20 @@ LINE_ITEM_PATTERNS = [
 
 # SKU pattern for receipt items (12-14 digits)
 SKU_PATTERN = re.compile(r'\b\d{12,14}\b')
+
+# Multi-line item pattern: SKU-only line with price
+# Matches: "020108870398 F 3.98 0" or "053099656595 4.88 0"
+MULTILINE_SKU_PRICE_PATTERN = re.compile(
+    r'^(\d{10,14})\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]?$',
+    re.IGNORECASE
+)
+
+# Pattern for potential item name lines (used in multi-line detection)
+# These are lines that could be item names on their own
+POTENTIAL_ITEM_NAME_PATTERN = re.compile(
+    r'^[A-Z0-9][A-Z0-9\s\-_/\']{1,40}$',
+    re.IGNORECASE
+)
 
 # Address keywords for detection
 ADDRESS_KEYWORDS = frozenset({
@@ -1119,6 +1134,192 @@ def calculate_overall_confidence(base_confidence: float,
     return min(1.0, max(0.0, confidence))
 
 
+def merge_multiline_items(lines: List[str]) -> List[str]:
+    """
+    Merge multi-line item entries common in Walmart and similar receipts.
+    
+    Some receipts split items across multiple lines:
+    - Line 1: Item name (e.g., "6 WING PLATE")
+    - Line 2: SKU + price (e.g., "020108870398 F 3.98 0")
+    
+    This function detects and merges such patterns into single lines
+    that can be processed by standard item extraction patterns.
+    
+    Args:
+        lines: List of OCR text lines
+        
+    Returns:
+        List of lines with multi-line items merged
+    """
+    if not lines or len(lines) < 2:
+        return lines
+    
+    merged = []
+    i = 0
+    
+    while i < len(lines):
+        current_line = lines[i].strip()
+        
+        # Skip empty lines
+        if not current_line:
+            merged.append(current_line)
+            i += 1
+            continue
+        
+        # Check if current line could be an item name (no price, no SKU, not a total line)
+        is_potential_name = (
+            POTENTIAL_ITEM_NAME_PATTERN.match(current_line) and
+            not SKU_PATTERN.search(current_line) and
+            not re.search(r'\d+[.,]\d{2}\s*$', current_line) and  # No price at end
+            not should_skip_line(current_line) and
+            len(current_line) >= 3
+        )
+        
+        # If this looks like an item name and we have a next line
+        if is_potential_name and i + 1 < len(lines):
+            next_line = lines[i + 1].strip()
+            
+            # Check if next line matches the SKU+price pattern
+            sku_price_match = MULTILINE_SKU_PRICE_PATTERN.match(next_line)
+            if sku_price_match:
+                # Merge the two lines
+                sku = sku_price_match.group(1)
+                dollars = sku_price_match.group(2)
+                cents = sku_price_match.group(3)
+                merged_line = f"{current_line} {sku} {dollars}.{cents}"
+                merged.append(merged_line)
+                i += 2  # Skip both lines
+                continue
+        
+        # Default: add line as-is
+        merged.append(current_line)
+        i += 1
+    
+    return merged
+
+
+def extract_line_items_with_codes(lines: List[str], text_metadata: Optional[List[dict]] = None,
+                                   min_confidence: float = None, relaxed_mode: bool = None
+                                   ) -> List[Tuple[str, Optional[str], Decimal, int]]:
+    """
+    Extract line items with item codes/SKUs from text lines.
+    
+    Enhanced version of extract_line_items that also extracts item codes.
+    This is useful for receipts that include SKU/barcode numbers.
+    
+    Args:
+        lines: List of text lines from OCR
+        text_metadata: Optional list of metadata dicts with 'confidence' keys
+        min_confidence: Minimum confidence threshold
+        relaxed_mode: If True, use less strict validation rules
+        
+    Returns:
+        List of tuples (name, code, price, quantity) representing line items.
+        code is None if no SKU was found.
+    """
+    # First, try to merge multi-line items
+    merged_lines = merge_multiline_items(lines)
+    
+    # Get configuration from circular exchange if not provided
+    config = get_config()
+    if min_confidence is None:
+        min_confidence = config.min_confidence if config else 0.3
+    if relaxed_mode is None:
+        relaxed_mode = config.relaxed_mode if config else False
+    
+    max_price = config.max_price if config else 1000.0
+    realistic_max_price = min(max_price, float(MAX_REALISTIC_ITEM_PRICE))
+    
+    items = []
+    seen = set()
+    min_name_length = 1 if relaxed_mode else 2
+    
+    for i, line in enumerate(merged_lines):
+        if should_skip_line(line):
+            continue
+        
+        matched = False
+        
+        # Try standard patterns
+        for pattern in LINE_ITEM_PATTERNS:
+            m = pattern.search(line.strip())
+            if m:
+                name = m.group(1).strip()
+                name = clean_item_name(name)
+                
+                # Handle 3-group patterns (name, dollars, cents)
+                if len(m.groups()) >= 3:
+                    price_str = f"{m.group(2)}.{m.group(3)}"
+                else:
+                    price_str = m.group(2)
+                
+                price_str = price_str.replace(',', '.')
+                
+                # Validate item name
+                if len(name) < min_name_length or name in seen:
+                    continue
+                
+                if name.replace(' ', '').isdigit():
+                    continue
+                
+                alphas = sum(1 for c in name if c.isalpha())
+                digits = sum(1 for c in name if c.isdigit())
+                if alphas == 0 and digits > 0:
+                    continue
+                
+                if is_garbage_text(name):
+                    continue
+                
+                price = normalize_price(price_str)
+                if not price or price <= 0 or price > Decimal(str(realistic_max_price)):
+                    continue
+                
+                if should_skip_item_name(name):
+                    continue
+                
+                # Extract SKU/code from the original line
+                sku_match = SKU_PATTERN.search(line)
+                code = sku_match.group(0) if sku_match else None
+                
+                items.append((name, code, price, 1))
+                seen.add(name)
+                matched = True
+                break
+        
+        # Fallback pattern matching
+        if not matched:
+            fallback_patterns = [
+                r'\$?\s*(\d+[.,]\d{2})(?!\d)',
+                r'(\d+[.,]\d{2})\s*$',
+                r'(\d{1,3}[.,]\d{2})\s*[A-Z]?$',
+            ]
+            
+            for fallback_pattern in fallback_patterns:
+                pm = re.search(fallback_pattern, line)
+                if pm:
+                    price_str = pm.group(1).replace(',', '.')
+                    price = normalize_price(price_str)
+                    
+                    if price and price > 0 and price <= Decimal(str(realistic_max_price)):
+                        name_part = line[:pm.start()].strip()
+                        name_part = re.sub(r'^\d+\s*[xX*]\s*', '', name_part).strip()
+                        name_part = re.sub(r'\s+\d{10,14}\s*$', '', name_part).strip()
+                        name_part = clean_item_name(name_part)
+                        
+                        if is_garbage_text(name_part):
+                            continue
+                        
+                        if len(name_part) >= min_name_length and name_part not in seen:
+                            if not should_skip_line(name_part) and not should_skip_item_name(name_part):
+                                sku_match = SKU_PATTERN.search(line)
+                                code = sku_match.group(0) if sku_match else None
+                                items.append((name_part, code, price, 1))
+                                seen.add(name_part)
+                                break
+    
+    return items
+
+
 def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None, 
                        min_confidence: float = None, relaxed_mode: bool = None) -> List[Tuple[str, Decimal, int]]:
     """
@@ -1156,13 +1357,16 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
     # Prices like 200.49 are unrealistic for individual grocery items
     realistic_max_price = min(max_price, float(MAX_REALISTIC_ITEM_PRICE))
     
+    # First, try to merge multi-line items (common in Walmart receipts)
+    merged_lines = merge_multiline_items(lines)
+    
     items = []
     seen = set()
     
     # In relaxed mode, use lower thresholds
     min_name_length = 1 if relaxed_mode else 2
     
-    for i, line in enumerate(lines):
+    for i, line in enumerate(merged_lines):
         if should_skip_line(line):
             continue
         
@@ -1352,6 +1556,21 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
         if result['items']:
             result['extraction_notes'].append("Used relaxed extraction mode")
             used_relaxed = True
+    
+    # Calculate subtotal from items if not found (Section III.C.3 of plan.txt)
+    if result['subtotal'] is None and result['items']:
+        calculated_subtotal = sum(item[1] for item in result['items'])  # item[1] is price
+        if calculated_subtotal > 0:
+            result['subtotal'] = calculated_subtotal
+            result['extraction_notes'].append(f"Subtotal calculated from {len(result['items'])} items: ${calculated_subtotal}")
+    
+    # Semantic validation: if we have subtotal and total but no tax, calculate tax
+    if result['subtotal'] is not None and result['total'] is not None and result['tax'] is None:
+        calculated_tax = result['total'] - result['subtotal']
+        # Only accept calculated tax if it's reasonable (0-30% of subtotal)
+        if calculated_tax >= 0 and (result['subtotal'] == 0 or calculated_tax <= result['subtotal'] * Decimal('0.30')):
+            result['tax'] = calculated_tax
+            result['extraction_notes'].append(f"Tax calculated: ${calculated_tax}")
     
     # Validate totals for accuracy
     validation = validate_receipt_totals(result['subtotal'], result['tax'], result['total'])

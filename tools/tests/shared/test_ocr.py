@@ -1839,3 +1839,206 @@ class TestReceiptPromptConstants:
         
         assert RECEIPT_PARSING_INSTRUCTIONS is not None
         assert "{receipt_text}" in RECEIPT_PARSING_INSTRUCTIONS
+
+
+class TestMultilineItemExtraction:
+    """Tests for multi-line item extraction (Walmart-style receipts)."""
+
+    def test_merge_multiline_items_basic(self):
+        """Test basic multi-line item merging."""
+        from shared.models.ocr import merge_multiline_items
+        
+        lines = [
+            '6 WING PLATE',
+            '020108870398 F 3.98 0',
+            'ASST 27',
+            '053099656595 4.88 0',
+        ]
+        merged = merge_multiline_items(lines)
+        
+        # Should merge to 2 lines
+        non_empty = [l for l in merged if l.strip()]
+        assert len(non_empty) == 2
+        assert '6 WING PLATE' in non_empty[0]
+        assert '3.98' in non_empty[0]
+        assert 'ASST 27' in non_empty[1]
+        assert '4.88' in non_empty[1]
+
+    def test_merge_multiline_items_preserves_regular_lines(self):
+        """Test that non-multi-line items are preserved."""
+        from shared.models.ocr import merge_multiline_items
+        
+        lines = [
+            'WALMART',
+            'Store #1234',
+            '6 WING PLATE',
+            '020108870398 F 3.98 0',
+            'TOTAL 23.19',
+        ]
+        merged = merge_multiline_items(lines)
+        
+        # Should preserve WALMART, Store, and TOTAL
+        assert 'WALMART' in merged
+        assert 'Store #1234' in merged
+        assert 'TOTAL 23.19' in merged
+
+    def test_multiline_extraction_walmart_format(self):
+        """Test complete extraction of Walmart-style multi-line receipt."""
+        from shared.models.ocr import parse_receipt_text
+        from decimal import Decimal
+        
+        lines = [
+            'WALMART',
+            '6 WING PLATE',
+            '020108870398 F 3.98 0',
+            'ASST 27',
+            '053099656595 4.88 0',
+            'CUTIE CAR',
+            '053099656644 12.88 0',
+            'SUBTOTAL 21.74',
+            'TAX 1 1.45',
+            'TOTAL 23.19',
+        ]
+        
+        result = parse_receipt_text(lines)
+        
+        assert result['store_name'] == 'WALMART'
+        assert len(result['items']) == 3
+        assert result['subtotal'] == Decimal('21.74')
+        assert result['tax'] == Decimal('1.45')
+        assert result['total'] == Decimal('23.19')
+
+    def test_multiline_items_with_codes(self):
+        """Test extraction with SKU codes."""
+        from shared.models.ocr import extract_line_items_with_codes
+        from decimal import Decimal
+        
+        lines = [
+            '6 WING PLATE',
+            '020108870398 F 3.98 0',
+            'ASST 27',
+            '053099656595 4.88 0',
+        ]
+        
+        items = extract_line_items_with_codes(lines)
+        
+        assert len(items) == 2
+        # Check first item
+        name, code, price, qty = items[0]
+        assert name == '6 WING PLATE'
+        assert code == '020108870398'
+        assert price == Decimal('3.98')
+        # Check second item
+        name, code, price, qty = items[1]
+        assert name == 'ASST 27'
+        assert code == '053099656595'
+        assert price == Decimal('4.88')
+
+    def test_subtotal_calculation_from_items(self):
+        """Test subtotal calculation when not explicitly found."""
+        from shared.models.ocr import parse_receipt_text
+        from decimal import Decimal
+        
+        # Receipt without SUBTOTAL line
+        lines = [
+            'WALMART',
+            'ITEM ONE 10.00',
+            'ITEM TWO 5.00',
+            'ITEM THREE 2.50',
+            'TAX 1 0.88',
+            'TOTAL 18.38',
+        ]
+        
+        result = parse_receipt_text(lines)
+        
+        assert len(result['items']) == 3
+        # Subtotal should be calculated from items
+        assert result['subtotal'] == Decimal('17.50')  # 10 + 5 + 2.50
+
+    def test_tax_calculation_from_subtotal_and_total(self):
+        """Test tax calculation when total and subtotal are known."""
+        from shared.models.ocr import parse_receipt_text
+        from decimal import Decimal
+        
+        lines = [
+            'WALMART',
+            'ITEM ONE 10.00',
+            'ITEM TWO 5.00',
+            'SUBTOTAL 15.00',
+            'TOTAL 16.50',
+        ]
+        
+        result = parse_receipt_text(lines)
+        
+        assert result['subtotal'] == Decimal('15.00')
+        assert result['total'] == Decimal('16.50')
+        # Tax should be calculated
+        assert result['tax'] == Decimal('1.50')
+
+    def test_multiline_pattern_no_merge_for_single_line_items(self):
+        """Test that single-line items are not affected by multi-line merging."""
+        from shared.models.ocr import extract_line_items
+        from decimal import Decimal
+        
+        lines = [
+            'MILK 2% GALLON 3.99',
+            'BREAD WHOLE WHEAT 2.49',
+            'EGGS DOZEN 4.99',
+        ]
+        
+        items = extract_line_items(lines)
+        
+        assert len(items) == 3
+        assert items[0][1] == Decimal('3.99')
+        assert items[1][1] == Decimal('2.49')
+        assert items[2][1] == Decimal('4.99')
+
+
+class TestSemanticValidation:
+    """Tests for semantic validation of receipt data."""
+
+    def test_math_validation_passes(self):
+        """Test that valid math (subtotal + tax = total) is validated."""
+        from shared.models.ocr import validate_receipt_totals
+        from decimal import Decimal
+        
+        result = validate_receipt_totals(
+            subtotal=Decimal('21.74'),
+            tax=Decimal('1.45'),
+            total=Decimal('23.19')
+        )
+        
+        assert result['valid'] is True
+        assert 'Math validation passed' in result['notes']
+
+    def test_math_validation_fails(self):
+        """Test that invalid math is flagged."""
+        from shared.models.ocr import validate_receipt_totals
+        from decimal import Decimal
+        
+        result = validate_receipt_totals(
+            subtotal=Decimal('21.74'),
+            tax=Decimal('1.45'),
+            total=Decimal('25.00')  # Wrong total
+        )
+        
+        assert result['valid'] is False
+        assert any('Math validation failed' in note for note in result['notes'])
+
+    def test_price_in_valid_range(self):
+        """Test that prices in valid range are accepted."""
+        from shared.models.ocr import normalize_price, PRICE_MIN, PRICE_MAX
+        from decimal import Decimal
+        
+        # Valid prices
+        assert normalize_price('0.01') == Decimal('0.01')
+        assert normalize_price('99.99') == Decimal('99.99')
+        assert normalize_price('999.99') == Decimal('999.99')
+
+    def test_price_exceeds_max_rejected(self):
+        """Test that prices exceeding max are rejected."""
+        from shared.models.ocr import normalize_price
+        
+        # Price exceeds PRICE_MAX (9999)
+        result = normalize_price('99999.00')
+        assert result is None
