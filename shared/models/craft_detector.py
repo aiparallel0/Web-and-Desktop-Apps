@@ -49,6 +49,12 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
     except Exception as e:
         logger.debug(f"Module registration skipped: {e}")
 
+# Confidence calculation constants
+NEUTRAL_CONFIDENCE_BASELINE = 0.5  # Base confidence when no detection quality info available
+CONFIDENCE_PER_FIELD = 20.0  # Percentage per successfully extracted field
+CONFIDENCE_BONUS_ITEMS = 20.0  # Bonus percentage for extracting items
+MAX_CONFIDENCE = 100.0  # Maximum confidence score
+
 
 class CRAFTProcessor:
     """
@@ -309,13 +315,15 @@ class CRAFTProcessor:
                 )
             
             # Step 2: Read text from detected regions using OCR
+            # Load image once for reuse by both OCR engines
+            image_pil = load_and_validate_image(image_path)
+            text_lines = []
+            
             # Try to use an available OCR engine
             try:
                 # Try EasyOCR first (no external dependencies)
                 import easyocr
                 reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-                # Load image and convert properly for EasyOCR
-                image_pil = load_and_validate_image(image_path)
                 # Convert PIL to RGB numpy array (EasyOCR expects numpy array)
                 image_array = np.array(image_pil.convert('RGB'))
                 ocr_results = reader.readtext(image_array)
@@ -323,8 +331,8 @@ class CRAFTProcessor:
             except ImportError:
                 try:
                     # Fall back to Tesseract if EasyOCR not available
+                    # Reuse already-loaded image
                     import pytesseract
-                    image_pil = load_and_validate_image(image_path)
                     text = pytesseract.image_to_string(image_pil, lang='eng')
                     text_lines = [line.strip() for line in text.split('\n') if line.strip()]
                 except ImportError:
@@ -371,7 +379,7 @@ class CRAFTProcessor:
                 if detection_result.texts:
                     base_conf = sum(t.confidence for t in detection_result.texts) / len(detection_result.texts)
                 else:
-                    base_conf = 0.5  # Neutral confidence if no regions detected
+                    base_conf = NEUTRAL_CONFIDENCE_BASELINE
                     
                 _, realistic_confidence, validation = get_validated_extraction_with_confidence(
                     receipt_data=receipt,
@@ -392,8 +400,11 @@ class CRAFTProcessor:
                     1 if receipt.transaction_date else 0,
                     1 if len(receipt.items) > 0 else 0
                 ])
-                # Each field gives 20%, max 80% + 20% bonus for having some items
-                receipt.confidence_score = min(100.0, field_count * 20 + (20 if receipt.items else 0))
+                # Each field gives CONFIDENCE_PER_FIELD%, plus bonus for items
+                receipt.confidence_score = min(
+                    MAX_CONFIDENCE,
+                    field_count * CONFIDENCE_PER_FIELD + (CONFIDENCE_BONUS_ITEMS if receipt.items else 0)
+                )
             
             receipt.extraction_notes.append(f"CRAFT detected {len(detection_result.texts)} text regions")
             
