@@ -475,20 +475,55 @@ Use this for load balancer health checks and monitoring.
 
 ---
 
-## Security Checklist
+## Pre-Deployment Checklist
 
-Before going to production:
+Use this checklist before EVERY production deployment.
 
-- [ ] Set strong `JWT_SECRET` (32+ characters)
-- [ ] Enable HTTPS only
-- [ ] Set `FLASK_ENV=production`
-- [ ] Configure CORS properly
-- [ ] Set up rate limiting
-- [ ] Enable Sentry for error tracking
-- [ ] Configure proper database permissions
-- [ ] Set up database backups
-- [ ] Configure security headers
-- [ ] Review and restrict API access
+### Security Configuration
+
+- [ ] JWT_SECRET is NOT default value (64+ characters, cryptographically random)
+- [ ] SECRET_KEY is NOT default value (32+ characters)
+- [ ] FLASK_DEBUG=False and FLASK_ENV=production
+- [ ] HTTPS enforced (no HTTP)
+- [ ] CORS_ORIGINS set to production domain only
+
+### Database
+
+- [ ] Using PostgreSQL (NOT SQLite)
+- [ ] DATABASE_URL configured and tested
+- [ ] Migrations run: `alembic upgrade head`
+- [ ] Automated backups enabled
+- [ ] Connection pooling configured
+
+### Domain & SSL
+
+- [ ] Domain name registered and DNS configured
+- [ ] SSL certificate active (HTTPS working)
+- [ ] HTTP redirects to HTTPS
+
+### Payments (if enabled)
+
+- [ ] Using LIVE Stripe keys (sk_live_*, not sk_test_*)
+- [ ] STRIPE_WEBHOOK_SECRET configured
+- [ ] Webhook endpoint tested
+
+### Monitoring
+
+- [ ] Sentry configured (SENTRY_DSN)
+- [ ] Uptime monitoring active
+- [ ] Error alerts configured
+
+### Testing
+
+- [ ] All tests passing: `pytest tools/tests/ -v`
+- [ ] Complete user journey tested
+- [ ] Tested on mobile devices and different browsers
+
+### Post-Deployment
+
+- [ ] Monitor error rate (< 1%)
+- [ ] Check performance (response time < 500ms)
+- [ ] Verify all endpoints working
 
 ---
 
