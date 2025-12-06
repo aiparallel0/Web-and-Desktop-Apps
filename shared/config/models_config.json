@@ -86,7 +86,7 @@
       "type": "florence",
       "huggingface_id": "microsoft/Florence-2-large",
       "task_prompt": "<OCR_WITH_REGION>",
-      "description": "Microsoft Florence-2 - Advanced AI with region detection & OCR (fixed for production)",
+      "description": "Microsoft Florence-2 - Advanced AI with region detection & OCR",
       "requires_auth": false,
       "capabilities": {
         "store_name": true,

@@ -129,3 +129,4 @@ tools/data/receipts/*.png
 tools/data/receipts/*.tiff
 tools/data/receipts/*.tif
 *.backup
+test-model-selector.html

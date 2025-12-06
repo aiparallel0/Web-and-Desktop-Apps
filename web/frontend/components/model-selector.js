@@ -287,8 +287,26 @@ class ModelSelector extends HTMLElement {
     selectModel(modelId) {
         this.selectedModelId = modelId;
         this.saveSelectedModel();
-        this.render();
-        this.setupEventListeners();
+        
+        // Update only the visual state instead of full re-render
+        const cards = this.shadowRoot.querySelectorAll('.model-card');
+        cards.forEach(card => {
+            if (card.dataset.modelId === modelId) {
+                card.classList.add('selected');
+                // Update the check icon
+                const checkDiv = card.querySelector('.model-check');
+                if (checkDiv) {
+                    checkDiv.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+                }
+            } else {
+                card.classList.remove('selected');
+                // Clear the check icon
+                const checkDiv = card.querySelector('.model-check');
+                if (checkDiv) {
+                    checkDiv.innerHTML = '';
+                }
+            }
+        });
         
         // Dispatch custom event
         this.dispatchEvent(new CustomEvent('model-selected', {
