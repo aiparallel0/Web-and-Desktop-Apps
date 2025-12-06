@@ -168,6 +168,7 @@ class ModelType(Enum):
     OCR = "ocr"
     EASYOCR = "easyocr"
     PADDLE = "paddle"
+    SPATIAL = "spatial"
 
 
 @dataclass
@@ -385,6 +386,11 @@ class ProcessorFactory:
         ModelType.OCR.value: ('.ocr_processor', 'OCRProcessor', None),
         ModelType.EASYOCR.value: ('.processors', 'EasyOCRProcessor', None),
         ModelType.PADDLE.value: ('.processors', 'PaddleProcessor', None),
+        ModelType.SPATIAL.value: (
+            '.spatial_ocr', 'SpatialOCRProcessor',
+            "Spatial OCR requires multiple OCR engines. "
+            "Install with: pip install pytesseract easyocr paddleocr opencv-python."
+        ),
     }
 
     @classmethod
