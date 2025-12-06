@@ -501,9 +501,15 @@ class SpatialOCRProcessor:
     Performance optimizations:
     - Lazy initialization of OCR engines (only when needed)
     - Cached reader instances (reused across calls)
+    
+    Note: Class-level caches are designed for single-threaded use.
+    For multi-threaded applications, consider using thread-local storage
+    or adding synchronization mechanisms to the cache access.
     """
     
     # Class-level cache for OCR engine instances (shared across all instances)
+    # NOTE: Not thread-safe - designed for single-threaded use
+    # For multi-threaded use, consider threading.local() or proper locks
     _easyocr_reader_cache = None
     _paddleocr_cache = None
     

@@ -272,8 +272,12 @@ class OCRProcessor:
                         continue
                 
                 # Break outer loop if excellent result found
-                if ocr_results and ocr_results[-1][3] >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                    break
+                # Check if we just added a result with excellent score
+                if ocr_results:
+                    # Extract score from last result: (mode_name, text, receipt, score)
+                    last_score = ocr_results[-1][3]
+                    if last_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                        break
             
             if not ocr_results:
                 return ExtractionResult(success=False, error="All OCR modes failed")
