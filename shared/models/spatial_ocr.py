@@ -31,12 +31,37 @@ except ImportError:
 
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 
-# Import ocr_common parsing functions
+# Import ocr_common parsing functions and patterns
 try:
     from .ocr_common import parse_receipt_text as _parse_receipt_text_shared
     OCR_COMMON_AVAILABLE = True
 except ImportError:
     OCR_COMMON_AVAILABLE = False
+
+# Import patterns for multi-line item detection from ocr module
+try:
+    from .ocr import (
+        SKU_PATTERN,
+        MULTILINE_SKU_PRICE_PATTERN,
+        POTENTIAL_ITEM_NAME_PATTERN,
+        should_skip_line
+    )
+    OCR_PATTERNS_AVAILABLE = True
+except ImportError:
+    OCR_PATTERNS_AVAILABLE = False
+    # Define fallback patterns if imports fail
+    SKU_PATTERN = re.compile(r'\b\d{12,14}\b')
+    MULTILINE_SKU_PRICE_PATTERN = re.compile(
+        r'^(\d{12,14})\s*[FfTt]?\s*(\d+)\s*[.,]\s*(\d{2})\s*[FTNXOD0]?$',
+        re.IGNORECASE
+    )
+    POTENTIAL_ITEM_NAME_PATTERN = re.compile(
+        r'^[A-Z0-9][A-Z0-9\s\-_/\']{2,40}$',
+        re.IGNORECASE
+    )
+    def should_skip_line(line: str) -> bool:
+        """Fallback implementation."""
+        return False
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +76,9 @@ SOURCE_PRIORITY = {
 # Weights for scoring overlapping regions (confidence vs source priority)
 CONFIDENCE_WEIGHT = 0.7  # Weight for confidence score (0-1)
 PRIORITY_WEIGHT = 0.3    # Weight for source priority (0-1)
+
+# Minimum confidence threshold for text extraction (95%)
+MIN_CONFIDENCE_THRESHOLD = 0.95
 
 # Register module with Circular Exchange
 if CIRCULAR_EXCHANGE_AVAILABLE:
@@ -283,6 +311,143 @@ class SpatialAnalyzer:
                 merged.append(region)
                 used.add(i)
         
+        return merged
+    
+    def merge_regions_unified(self, iou_threshold: float = 0.5, 
+                             min_confidence: float = MIN_CONFIDENCE_THRESHOLD,
+                             merge_multiline_items: bool = True) -> List[TextRegion]:
+        """
+        Unified method to merge text regions using both spatial and text-based analysis.
+        
+        This method combines:
+        1. Spatial overlapping region detection (IoU-based)
+        2. Multi-line item merging (text pattern-based)
+        3. Confidence filtering (95% threshold)
+        
+        Args:
+            iou_threshold: IoU threshold for considering regions as duplicates (default: 0.5)
+            min_confidence: Minimum confidence threshold for accepting regions (default: 0.95)
+            merge_multiline_items: Whether to merge multi-line item patterns (default: True)
+            
+        Returns:
+            List of merged and filtered regions
+        """
+        if not self.regions:
+            return []
+        
+        # Step 1: Filter regions by confidence threshold (95%)
+        high_conf_regions = [r for r in self.regions if r.confidence >= min_confidence]
+        
+        # If no high-confidence regions, use all regions but log a warning
+        if not high_conf_regions:
+            logger.warning(f"No regions with confidence >= {min_confidence:.0%}, using all regions")
+            high_conf_regions = self.regions
+        
+        # Step 2: Merge spatially overlapping regions
+        analyzer_temp = SpatialAnalyzer()
+        analyzer_temp.regions = high_conf_regions
+        spatially_merged = analyzer_temp.merge_overlapping_regions(iou_threshold)
+        
+        # Step 3: Merge multi-line items using spatial information
+        if merge_multiline_items and OCR_PATTERNS_AVAILABLE:
+            spatially_merged = self._merge_multiline_regions(spatially_merged)
+        
+        return spatially_merged
+    
+    def _merge_multiline_regions(self, regions: List[TextRegion]) -> List[TextRegion]:
+        """
+        Merge multi-line item entries using spatial and text pattern analysis.
+        
+        This detects patterns where:
+        - Line 1: Item name (e.g., "6 WING PLATE")
+        - Line 2: SKU + price (e.g., "020108870398 F 3.98 0")
+        
+        And merges them into a single region.
+        
+        Args:
+            regions: List of text regions sorted by reading order
+            
+        Returns:
+            List of regions with multi-line items merged
+        """
+        if not regions or len(regions) < 2:
+            return regions
+        
+        # Group regions by rows for easier multi-line detection
+        analyzer_temp = SpatialAnalyzer()
+        analyzer_temp.regions = regions
+        rows = analyzer_temp.group_by_rows(tolerance=10.0)
+        
+        # Flatten rows back to a list while maintaining order
+        sorted_regions = []
+        for row in rows:
+            sorted_regions.extend(row)
+        
+        merged = []
+        i = 0
+        
+        while i < len(sorted_regions):
+            current_region = sorted_regions[i]
+            current_text = current_region.text.strip()
+            
+            # Skip empty regions
+            if not current_text:
+                merged.append(current_region)
+                i += 1
+                continue
+            
+            # Check if current region could be an item name
+            is_potential_name = (
+                POTENTIAL_ITEM_NAME_PATTERN.match(current_text) and
+                not SKU_PATTERN.search(current_text) and
+                not re.search(r'\d+[.,]\d{2}\s*$', current_text) and
+                not should_skip_line(current_text) and
+                len(current_text) >= 3
+            )
+            
+            # If this looks like an item name and we have a next region
+            if is_potential_name and i + 1 < len(sorted_regions):
+                next_region = sorted_regions[i + 1]
+                next_text = next_region.text.strip()
+                
+                # Check if next region matches the SKU+price pattern
+                sku_price_match = MULTILINE_SKU_PRICE_PATTERN.match(next_text)
+                if sku_price_match:
+                    # Merge the two regions
+                    sku = sku_price_match.group(1)
+                    dollars = sku_price_match.group(2)
+                    cents = sku_price_match.group(3)
+                    merged_text = f"{current_text} {sku} {dollars}.{cents}"
+                    
+                    # Create a merged region with combined bounding box
+                    merged_bbox = BoundingBox(
+                        x=min(current_region.bbox.x, next_region.bbox.x),
+                        y=min(current_region.bbox.y, next_region.bbox.y),
+                        width=max(current_region.bbox.x2, next_region.bbox.x2) - 
+                              min(current_region.bbox.x, next_region.bbox.x),
+                        height=max(current_region.bbox.y2, next_region.bbox.y2) - 
+                               min(current_region.bbox.y, next_region.bbox.y)
+                    )
+                    
+                    # Use the higher confidence of the two regions
+                    merged_confidence = max(current_region.confidence, next_region.confidence)
+                    
+                    merged_region = TextRegion(
+                        text=merged_text,
+                        bbox=merged_bbox,
+                        confidence=merged_confidence,
+                        source=current_region.source  # Use source from item name
+                    )
+                    
+                    merged.append(merged_region)
+                    i += 2  # Skip both regions
+                    continue
+            
+            # Default: add region as-is
+            merged.append(current_region)
+            i += 1
+        
+        logger.info(f"Multi-line merging: {len(regions)} regions -> {len(merged)} regions")
         return merged
     
     def extract_structured_text(self) -> List[str]:
@@ -524,12 +689,19 @@ class SpatialOCRProcessor:
             logger.error(f"PaddleOCR extraction failed: {e}")
             return []
     
-    def combine_results(self, regions_list: List[List[TextRegion]]) -> List[TextRegion]:
+    def combine_results(self, regions_list: List[List[TextRegion]], 
+                       min_confidence: float = MIN_CONFIDENCE_THRESHOLD) -> List[TextRegion]:
         """
-        Combine results from multiple OCR engines using spatial analysis.
+        Combine results from multiple OCR engines using unified spatial and text-based analysis.
+        
+        This method now uses the unified merging approach that combines:
+        1. Spatial overlapping region detection
+        2. Multi-line item merging
+        3. 95% confidence filtering
         
         Args:
             regions_list: List of region lists from different engines
+            min_confidence: Minimum confidence threshold (default: 0.95 = 95%)
             
         Returns:
             Combined and deduplicated list of text regions
@@ -542,11 +714,16 @@ class SpatialOCRProcessor:
         if not all_regions:
             return []
         
-        # Create analyzer and merge overlapping regions
+        # Create analyzer and use unified merging
         analyzer = SpatialAnalyzer()
         analyzer.add_regions(all_regions)
         
-        merged_regions = analyzer.merge_overlapping_regions(iou_threshold=0.5)
+        # Use the new unified merging method
+        merged_regions = analyzer.merge_regions_unified(
+            iou_threshold=0.5,
+            min_confidence=min_confidence,
+            merge_multiline_items=True
+        )
         
         logger.info(f"Combined {len(all_regions)} regions into {len(merged_regions)} unique regions")
         
@@ -604,7 +781,8 @@ class SpatialOCRProcessor:
             receipt_data.model_used = f"Multi-method ({len(regions_list)} engines)"
             receipt_data.confidence_score = self._calculate_confidence(combined_regions)
             receipt_data.extraction_notes.append(
-                f"Combined results from {len(regions_list)} OCR engines using spatial analysis"
+                f"Combined results from {len(regions_list)} OCR engines using unified spatial "
+                f"and text-based merging with {MIN_CONFIDENCE_THRESHOLD:.0%} confidence threshold"
             )
             
             return ExtractionResult(success=True, data=receipt_data)
@@ -726,24 +904,32 @@ class EasyOCRSpatialProcessor(SpatialOCRProcessor):
                     error="EasyOCR not available"
                 )
             
-            # Use spatial analysis on EasyOCR results
+            # Use unified merging on EasyOCR results
             combined_regions = regions_list[0]  # Only EasyOCR results
             
-            # Analyze spatial structure
+            # Apply unified spatial and text-based merging
             analyzer = SpatialAnalyzer()
             analyzer.add_regions(combined_regions)
+            merged_regions = analyzer.merge_regions_unified(
+                iou_threshold=0.5,
+                min_confidence=MIN_CONFIDENCE_THRESHOLD,
+                merge_multiline_items=True
+            )
             
-            # Extract structured text
-            structured_lines = analyzer.extract_structured_text()
+            # Extract structured text from merged regions
+            analyzer_final = SpatialAnalyzer()
+            analyzer_final.add_regions(merged_regions)
+            structured_lines = analyzer_final.extract_structured_text()
             
             # Parse receipt data from structured text
             receipt_data = self._parse_receipt_from_lines(structured_lines)
             
             # Add metadata
-            receipt_data.model_used = "EasyOCR with Spatial Bounding Boxes"
-            receipt_data.confidence_score = self._calculate_confidence(combined_regions)
+            receipt_data.model_used = "EasyOCR with Unified Spatial and Text-based Merging"
+            receipt_data.confidence_score = self._calculate_confidence(merged_regions)
             receipt_data.extraction_notes.append(
-                "EasyOCR with spatial bounding box analysis for improved structure detection"
+                f"EasyOCR with unified spatial and text-based merging, "
+                f"{MIN_CONFIDENCE_THRESHOLD:.0%} confidence threshold applied"
             )
             
             return ExtractionResult(success=True, data=receipt_data)
@@ -805,24 +991,32 @@ class PaddleOCRSpatialProcessor(SpatialOCRProcessor):
                     error="PaddleOCR not available"
                 )
             
-            # Use spatial analysis on PaddleOCR results
+            # Use unified merging on PaddleOCR results
             combined_regions = regions_list[0]  # Only PaddleOCR results
             
-            # Analyze spatial structure
+            # Apply unified spatial and text-based merging
             analyzer = SpatialAnalyzer()
             analyzer.add_regions(combined_regions)
+            merged_regions = analyzer.merge_regions_unified(
+                iou_threshold=0.5,
+                min_confidence=MIN_CONFIDENCE_THRESHOLD,
+                merge_multiline_items=True
+            )
             
-            # Extract structured text
-            structured_lines = analyzer.extract_structured_text()
+            # Extract structured text from merged regions
+            analyzer_final = SpatialAnalyzer()
+            analyzer_final.add_regions(merged_regions)
+            structured_lines = analyzer_final.extract_structured_text()
             
             # Parse receipt data from structured text
             receipt_data = self._parse_receipt_from_lines(structured_lines)
             
             # Add metadata
-            receipt_data.model_used = "PaddleOCR with Spatial Bounding Boxes"
-            receipt_data.confidence_score = self._calculate_confidence(combined_regions)
+            receipt_data.model_used = "PaddleOCR with Unified Spatial and Text-based Merging"
+            receipt_data.confidence_score = self._calculate_confidence(merged_regions)
             receipt_data.extraction_notes.append(
-                "PaddleOCR with spatial bounding box analysis for improved structure detection"
+                f"PaddleOCR with unified spatial and text-based merging, "
+                f"{MIN_CONFIDENCE_THRESHOLD:.0%} confidence threshold applied"
             )
             
             return ExtractionResult(success=True, data=receipt_data)
