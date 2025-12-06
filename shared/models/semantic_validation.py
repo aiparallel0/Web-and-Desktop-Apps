@@ -603,17 +603,17 @@ class SemanticValidator:
         # Remove currency symbols
         cleaned = value.replace('$', '').replace('€', '').replace('£', '')
         
-        # Handle common OCR errors
+        # Handle common OCR errors in digit recognition
+        # Note: Only apply digit corrections, not letter 'S' which could be valid in item names
         cleaned = cleaned.replace(' ', '')
-        cleaned = cleaned.replace('O', '0').replace('o', '0')
-        cleaned = cleaned.replace('l', '1').replace('I', '1')
-        cleaned = cleaned.replace('S', '5').replace('$', '5')
+        cleaned = cleaned.replace('O', '0').replace('o', '0')  # Letter O -> digit 0
+        cleaned = cleaned.replace('l', '1').replace('I', '1')  # Letter l/I -> digit 1
         
         # Handle dash as decimal (e.g., "1-99" -> "1.99")
         cleaned = re.sub(r'(\d)-(\d{2})$', r'\1.\2', cleaned)
         
-        # Ensure proper decimal format
-        if cleaned and not '.' in cleaned and len(cleaned) >= 3:
+        # Ensure proper decimal format for prices without decimals
+        if cleaned and '.' not in cleaned and len(cleaned) >= 3:
             # Insert decimal before last two digits
             cleaned = cleaned[:-2] + '.' + cleaned[-2:]
         

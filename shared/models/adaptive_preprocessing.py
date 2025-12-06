@@ -207,11 +207,20 @@ def assess_image_quality(image: Image.Image) -> QualityMetrics:
         'density': 0.05     # Text density indicates document type
     }
     
-    # Normalize and score each component
-    blur_norm = min(100, metrics.blur_score / 10)  # Higher is better
-    contrast_norm = min(100, metrics.contrast / 0.8)  # ~80 std is good
-    noise_norm = max(0, 100 - metrics.noise_level * 5)  # Lower is better
-    skew_norm = max(0, 100 - abs(metrics.skew_angle) * 5)  # Near 0 is best
+    # Normalization thresholds for quality metrics
+    # BLUR_NORMALIZATION_FACTOR: Laplacian variance of ~1000 indicates sharp image
+    # Values below 100 suggest significant blur
+    BLUR_NORMALIZATION_FACTOR = 10  # Divide blur score by this to get 0-100 scale
+    
+    # CONTRAST_NORMALIZATION_FACTOR: Standard deviation of ~80 represents good contrast
+    # for grayscale images with typical text documents
+    CONTRAST_NORMALIZATION_FACTOR = 0.8  # Divide contrast by this (results in std ~80 = score 100)
+    
+    # Normalize and score each component (0-100 scale)
+    blur_norm = min(100, metrics.blur_score / BLUR_NORMALIZATION_FACTOR)  # Higher variance = sharper
+    contrast_norm = min(100, metrics.contrast / CONTRAST_NORMALIZATION_FACTOR)  # Higher std = better contrast
+    noise_norm = max(0, 100 - metrics.noise_level * 5)  # Lower noise = better
+    skew_norm = max(0, 100 - abs(metrics.skew_angle) * 5)  # Near 0° is best
     density_norm = 100 if 0.05 < metrics.text_density < 0.30 else 50  # Typical document range
     
     metrics.overall_score = (
