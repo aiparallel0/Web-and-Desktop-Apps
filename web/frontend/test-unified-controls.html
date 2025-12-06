@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Unified Extractor Controls</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            background: #f3f4f6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #111827;
+            margin-bottom: 30px;
+        }
+        .test-output {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .test-output h2 {
+            margin-top: 0;
+            color: #374151;
+        }
+        .test-output pre {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test: Unified Extractor Controls Component</h1>
+        
+        <unified-extractor-controls id="testControls"></unified-extractor-controls>
+
+        <div class="test-output">
+            <h2>Event Log</h2>
+            <pre id="eventLog">Waiting for events...</pre>
+        </div>
+
+        <div class="test-output">
+            <h2>Current Settings</h2>
+            <pre id="settingsDisplay">{}</pre>
+        </div>
+    </div>
+
+    <script src="components/unified-extractor-controls.js"></script>
+    <script>
+        const controls = document.getElementById('testControls');
+        const eventLog = document.getElementById('eventLog');
+        const settingsDisplay = document.getElementById('settingsDisplay');
+        let events = [];
+
+        function logEvent(eventName, detail) {
+            const timestamp = new Date().toLocaleTimeString();
+            events.push(`[${timestamp}] ${eventName}: ${JSON.stringify(detail, null, 2)}`);
+            eventLog.textContent = events.slice(-10).join('\n\n');
+        }
+
+        function updateSettings() {
+            if (controls && controls.getSettings) {
+                const settings = controls.getSettings();
+                settingsDisplay.textContent = JSON.stringify(settings, null, 2);
+            }
+        }
+
+        // Listen to all events
+        controls.addEventListener('model-selected', (e) => {
+            logEvent('model-selected', e.detail);
+            updateSettings();
+        });
+
+        controls.addEventListener('settings-applied', (e) => {
+            logEvent('settings-applied', e.detail);
+            updateSettings();
+        });
+
+        controls.addEventListener('preview-toggle', (e) => {
+            logEvent('preview-toggle', e.detail);
+            updateSettings();
+        });
+
+        controls.addEventListener('regions-cleared', (e) => {
+            logEvent('regions-cleared', 'Manual regions cleared');
+            updateSettings();
+        });
+
+        // Initial settings display
+        setTimeout(updateSettings, 500);
+    </script>
+</body>
+</html>
