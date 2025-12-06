@@ -48,6 +48,10 @@ SOURCE_PRIORITY = {
     'paddleocr': 1,    # Lower priority - but still useful
 }
 
+# Weights for scoring overlapping regions (confidence vs source priority)
+CONFIDENCE_WEIGHT = 0.7  # Weight for confidence score (0-1)
+PRIORITY_WEIGHT = 0.3    # Weight for source priority (0-1)
+
 # Register module with Circular Exchange
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
@@ -264,11 +268,11 @@ class SpatialAnalyzer:
             
             # If we have overlaps, take the best one based on confidence and source
             if overlaps:
-                # Use global source priority mapping
+                # Use global source priority mapping and weights
                 candidates = [(i, region)] + overlaps
                 best = max(candidates, key=lambda x: (
-                    x[1].confidence * 0.7 + 
-                    SOURCE_PRIORITY.get(x[1].source, 0) * 0.3
+                    x[1].confidence * CONFIDENCE_WEIGHT + 
+                    SOURCE_PRIORITY.get(x[1].source, 0) * PRIORITY_WEIGHT
                 ))
                 
                 merged.append(best[1])
