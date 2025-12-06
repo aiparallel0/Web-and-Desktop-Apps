@@ -218,12 +218,13 @@ class CRAFTProcessor:
                             confidence = float(prediction_result['scores'][i])
                         
                         detected_text = DetectedText(
-                            text="",  # CRAFT only detects regions, not text content
+                            text="[REGION]",  # CRAFT detects regions, not text content
                             confidence=confidence,
                             bbox=bbox,
                             attributes={
                                 'detector': 'CRAFT',
-                                'polygon': box.tolist() if isinstance(box, np.ndarray) else box
+                                'polygon': box.tolist() if isinstance(box, np.ndarray) else box,
+                                'note': 'CRAFT detects text regions only; use OCR for text extraction'
                             }
                         )
                         detected_texts.append(detected_text)
