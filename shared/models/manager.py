@@ -167,7 +167,9 @@ class ModelType(Enum):
     FLORENCE = "florence"
     OCR = "ocr"
     EASYOCR = "easyocr"
+    EASYOCR_SPATIAL = "easyocr_spatial"
     PADDLE = "paddle"
+    PADDLE_SPATIAL = "paddle_spatial"
     SPATIAL = "spatial"
 
 
@@ -385,7 +387,17 @@ class ProcessorFactory:
         ),
         ModelType.OCR.value: ('.ocr_processor', 'OCRProcessor', None),
         ModelType.EASYOCR.value: ('.processors', 'EasyOCRProcessor', None),
+        ModelType.EASYOCR_SPATIAL.value: (
+            '.spatial_ocr', 'EasyOCRSpatialProcessor',
+            "Spatial EasyOCR requires EasyOCR and spatial analysis. "
+            "Install with: pip install easyocr opencv-python."
+        ),
         ModelType.PADDLE.value: ('.processors', 'PaddleProcessor', None),
+        ModelType.PADDLE_SPATIAL.value: (
+            '.spatial_ocr', 'PaddleOCRSpatialProcessor',
+            "Spatial PaddleOCR requires PaddleOCR and spatial analysis. "
+            "Install with: pip install paddleocr opencv-python."
+        ),
         ModelType.SPATIAL.value: (
             '.spatial_ocr', 'SpatialOCRProcessor',
             "Spatial OCR requires multiple OCR engines. "

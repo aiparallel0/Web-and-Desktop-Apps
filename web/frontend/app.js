@@ -131,9 +131,9 @@ class APIService {
         }
     }
 
-    static async quickExtract(file, detectionSettings = null) {
+    static async quickExtract(file, detectionSettings = null, modelId = null) {
         // Fallback to regular extract endpoint if quick-extract not available
-        return this.extractReceipt(file, { detectionSettings });
+        return this.extractReceipt(file, { detectionSettings, modelId });
     }
 }
 
@@ -219,8 +219,16 @@ class ExtractionController {
             const detectionControls = document.getElementById('detectionControls');
             const detectionSettings = detectionControls ? detectionControls.getSettings() : null;
 
-            // Call API with detection settings
-            const results = await APIService.quickExtract(file, detectionSettings);
+            // Get selected model from model selector
+            const modelSelector = document.getElementById('modelSelector');
+            const selectedModel = modelSelector ? modelSelector.getSelectedModel() : null;
+
+            // Call API with detection settings and model ID
+            const results = await APIService.quickExtract(
+                file, 
+                detectionSettings,
+                selectedModel?.modelId
+            );
 
             if (progressBar) {
                 progressBar.setProgress(100, 'Complete!');

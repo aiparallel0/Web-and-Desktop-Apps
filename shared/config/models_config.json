@@ -18,9 +18,9 @@
     },
     "ocr_easyocr": {
       "id": "ocr_easyocr",
-      "name": "EasyOCR",
+      "name": "EasyOCR with Regex",
       "type": "easyocr",
-      "description": "Ready-to-use OCR with 80+ languages - Excellent accuracy, no installation needed",
+      "description": "Ready-to-use OCR with 80+ languages and regex parsing - Excellent accuracy, no installation needed",
       "requires_auth": false,
       "capabilities": {
         "store_name": true,
@@ -31,11 +31,27 @@
         "phone": true
       }
     },
+    "ocr_easyocr_spatial": {
+      "id": "ocr_easyocr_spatial",
+      "name": "EasyOCR with Spatial Bounding Boxes",
+      "type": "easyocr_spatial",
+      "description": "EasyOCR with spatial bounding box analysis for improved structure detection",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "spatial_analysis": true
+      }
+    },
     "ocr_paddle": {
       "id": "ocr_paddle",
-      "name": "PaddleOCR",
+      "name": "PaddleOCR with Regex",
       "type": "paddle",
-      "description": "PaddlePaddle OCR - Multilingual, high accuracy, production-ready",
+      "description": "PaddlePaddle OCR with regex parsing - Multilingual, high accuracy, production-ready",
       "requires_auth": false,
       "requires_paddleocr": true,
       "capabilities": {
@@ -47,9 +63,44 @@
         "phone": true
       }
     },
+    "ocr_paddle_spatial": {
+      "id": "ocr_paddle_spatial",
+      "name": "PaddleOCR with Spatial Bounding Boxes",
+      "type": "paddle_spatial",
+      "description": "PaddleOCR with spatial bounding box analysis for improved structure detection",
+      "requires_auth": false,
+      "requires_paddleocr": true,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "spatial_analysis": true
+      }
+    },
+    "florence2": {
+      "id": "florence2",
+      "name": "Florence-2 AI",
+      "type": "florence",
+      "huggingface_id": "microsoft/Florence-2-large",
+      "task_prompt": "<OCR_WITH_REGION>",
+      "description": "Microsoft Florence-2 - Advanced AI with region detection & OCR (fixed for production)",
+      "requires_auth": false,
+      "capabilities": {
+        "store_name": true,
+        "date": true,
+        "total": true,
+        "address": true,
+        "items": true,
+        "phone": true,
+        "advanced_parsing": true
+      }
+    },
     "donut_cord": {
       "id": "donut_cord",
-      "name": "Donut CORD",
+      "name": "DONUT End-to-End",
       "type": "donut",
       "huggingface_id": "naver-clova-ix/donut-base-finetuned-cord-v2",
       "task_prompt": "<s_cord-v2>",
@@ -63,42 +114,6 @@
         "items": true,
         "phone": true,
         "advanced_parsing": true
-      }
-    },
-    "florence2": {
-      "id": "florence2",
-      "name": "Florence-2 AI",
-      "type": "florence",
-      "huggingface_id": "microsoft/Florence-2-large",
-      "task_prompt": "<OCR_WITH_REGION>",
-      "description": "Microsoft Florence-2 - Advanced AI with region detection & OCR",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": true,
-        "phone": true,
-        "advanced_parsing": true
-      }
-    },
-    "spatial_multi": {
-      "id": "spatial_multi",
-      "name": "Multi-Method Spatial OCR",
-      "type": "spatial",
-      "description": "Combines multiple OCR engines with spatial bounding box analysis for maximum accuracy",
-      "requires_auth": false,
-      "capabilities": {
-        "store_name": true,
-        "date": true,
-        "total": true,
-        "address": true,
-        "items": true,
-        "phone": true,
-        "advanced_parsing": true,
-        "spatial_analysis": true,
-        "multi_engine": true
       }
     }
   },
