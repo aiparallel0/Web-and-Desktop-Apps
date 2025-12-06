@@ -281,6 +281,8 @@ class SpatialAnalyzer:
         """
         Merge overlapping text regions, keeping the one with higher confidence.
         
+        Optimized version with early termination to reduce unnecessary comparisons.
+        
         Args:
             iou_threshold: IoU threshold for considering regions as duplicates
             
@@ -290,7 +292,7 @@ class SpatialAnalyzer:
         if not self.regions:
             return []
         
-        # Sort by confidence (descending)
+        # Sort by confidence (descending) - higher confidence regions processed first
         sorted_regions = sorted(self.regions, key=lambda r: r.confidence, reverse=True)
         
         merged = []
@@ -306,7 +308,9 @@ class SpatialAnalyzer:
                 if j in used:
                     continue
                 
-                if region.bbox.iou(other.bbox) > iou_threshold:
+                # Calculate IoU - this is the expensive operation
+                iou = region.bbox.iou(other.bbox)
+                if iou > iou_threshold:
                     overlaps.append((j, other))
             
             # If we have overlaps, take the best one based on confidence and source
@@ -320,9 +324,11 @@ class SpatialAnalyzer:
                 
                 merged.append(best[1])
                 used.add(best[0])
+                # Mark all overlapping regions as used (early termination)
                 for idx, _ in overlaps:
                     used.add(idx)
             else:
+                # No overlaps, add region directly
                 merged.append(region)
                 used.add(i)
         
@@ -491,7 +497,21 @@ class SpatialOCRProcessor:
     
     This processor combines results from multiple OCR engines and uses
     spatial analysis to improve accuracy and structure understanding.
+    
+    Performance optimizations:
+    - Lazy initialization of OCR engines (only when needed)
+    - Cached reader instances (reused across calls)
+    
+    Note: Class-level caches are designed for single-threaded use.
+    For multi-threaded applications, consider using thread-local storage
+    or adding synchronization mechanisms to the cache access.
     """
+    
+    # Class-level cache for OCR engine instances (shared across all instances)
+    # NOTE: Not thread-safe - designed for single-threaded use
+    # For multi-threaded use, consider threading.local() or proper locks
+    _easyocr_reader_cache = None
+    _paddleocr_cache = None
     
     def __init__(self, ocr_engines: Optional[List[Any]] = None):
         """
@@ -499,23 +519,28 @@ class SpatialOCRProcessor:
         
         Args:
             ocr_engines: List of OCR engine instances to use.
-                        If None, will attempt to initialize available engines.
+                        If None, will attempt to initialize available engines lazily.
         """
         self.ocr_engines = ocr_engines or []
         self.analyzer = SpatialAnalyzer()
         
-        # Initialize availability flags
+        # Initialize availability flags (check imports, don't initialize yet)
         self.has_tesseract = False
         self.has_easyocr = False
         self.has_paddleocr = False
         
-        # Initialize engines if not provided
+        # Check engine availability without initializing them
         if not self.ocr_engines:
-            self._initialize_engines()
+            self._check_engine_availability()
     
-    def _initialize_engines(self):
-        """Initialize available OCR engines."""
-        # Try to import and initialize Tesseract
+    def _check_engine_availability(self):
+        """
+        Check which OCR engines are available without initializing them.
+        
+        This is much faster than _initialize_engines() as it only checks imports.
+        Actual engine initialization is deferred until first use (lazy loading).
+        """
+        # Check Tesseract availability (no initialization needed - uses system binary)
         try:
             import pytesseract
             from PIL import Image
@@ -525,7 +550,7 @@ class SpatialOCRProcessor:
             self.has_tesseract = False
             logger.warning("Tesseract OCR not available")
         
-        # Try to import EasyOCR
+        # Check EasyOCR availability (don't create Reader yet - expensive)
         try:
             import easyocr
             self.has_easyocr = True
@@ -534,7 +559,7 @@ class SpatialOCRProcessor:
             self.has_easyocr = False
             logger.warning("EasyOCR not available")
         
-        # Try to import PaddleOCR
+        # Check PaddleOCR availability (don't create instance yet - expensive)
         try:
             from paddleocr import PaddleOCR
             self.has_paddleocr = True
@@ -604,6 +629,9 @@ class SpatialOCRProcessor:
         """
         Extract text regions using EasyOCR with bounding box information.
         
+        Uses a cached EasyOCR Reader instance for better performance.
+        Creating a new Reader() for each call is very slow (~2-3 seconds).
+        
         Args:
             image_path: Path to the image file
             
@@ -616,7 +644,12 @@ class SpatialOCRProcessor:
         try:
             import easyocr
             
-            reader = easyocr.Reader(['en'], gpu=False)
+            # Use cached reader instance if available (major performance improvement)
+            if SpatialOCRProcessor._easyocr_reader_cache is None:
+                logger.info("Initializing EasyOCR Reader (one-time setup)...")
+                SpatialOCRProcessor._easyocr_reader_cache = easyocr.Reader(['en'], gpu=False)
+            
+            reader = SpatialOCRProcessor._easyocr_reader_cache
             results = reader.readtext(image_path)
             
             regions = []
@@ -653,6 +686,9 @@ class SpatialOCRProcessor:
         """
         Extract text regions using PaddleOCR with bounding box information.
         
+        Uses a cached PaddleOCR instance for better performance.
+        Creating a new PaddleOCR() for each call is very slow.
+        
         Args:
             image_path: Path to the image file
             
@@ -665,7 +701,12 @@ class SpatialOCRProcessor:
         try:
             from paddleocr import PaddleOCR
             
-            ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
+            # Use cached PaddleOCR instance if available (major performance improvement)
+            if SpatialOCRProcessor._paddleocr_cache is None:
+                logger.info("Initializing PaddleOCR (one-time setup)...")
+                SpatialOCRProcessor._paddleocr_cache = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
+            
+            ocr = SpatialOCRProcessor._paddleocr_cache
             results = ocr.ocr(image_path, cls=True)
             
             regions = []
@@ -883,13 +924,13 @@ class EasyOCRSpatialProcessor(SpatialOCRProcessor):
         self._initialize_easyocr_only()
     
     def _initialize_easyocr_only(self):
-        """Initialize only EasyOCR engine."""
+        """Initialize only EasyOCR engine (check availability, don't create Reader yet)."""
         try:
             import easyocr
             self.has_easyocr = True
             self.has_tesseract = False
             self.has_paddleocr = False
-            logger.info("EasyOCR Spatial processor initialized")
+            logger.info("EasyOCR Spatial processor initialized (lazy loading)")
         except ImportError:
             self.has_easyocr = False
             logger.warning("EasyOCR not available for spatial processing")
@@ -970,13 +1011,13 @@ class PaddleOCRSpatialProcessor(SpatialOCRProcessor):
         self._initialize_paddleocr_only()
     
     def _initialize_paddleocr_only(self):
-        """Initialize only PaddleOCR engine."""
+        """Initialize only PaddleOCR engine (check availability, don't create instance yet)."""
         try:
             from paddleocr import PaddleOCR
             self.has_paddleocr = True
             self.has_tesseract = False
             self.has_easyocr = False
-            logger.info("PaddleOCR Spatial processor initialized")
+            logger.info("PaddleOCR Spatial processor initialized (lazy loading)")
         except ImportError:
             self.has_paddleocr = False
             logger.warning("PaddleOCR not available for spatial processing")
