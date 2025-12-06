@@ -50,7 +50,7 @@ Flow = _gdrive_imports['Flow']
 build = _gdrive_imports['build']
 MediaIoBaseUpload = _gdrive_imports['MediaIoBaseUpload']
 MediaIoBaseDownload = _gdrive_imports['MediaIoBaseDownload']
-GDRIVE_AVAILABLE = _gdrive_imports['GDRIVE_AVAILABLE']
+GDRIVE_AVAILABLE = _gdrive_imports['CREDENTIALS_AVAILABLE']  # Use any of the import keys
 
 
 class GoogleDriveHandler(BaseStorageHandler):

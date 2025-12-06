@@ -76,7 +76,7 @@ class OptionalImport:
             
             self._is_available = True
             
-        except ImportError as e:
+        except (ImportError, AttributeError) as e:
             self._error = e
             self._is_available = False
             
