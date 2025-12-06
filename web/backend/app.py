@@ -481,11 +481,22 @@ def extract_receipt():
   if file.filename=='':return jsonify({'success':False,'error':'No file selected'}),400
   if not allowed_file(file.filename):return jsonify({'success':False,'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}),400
   model_id=request.form.get('model_id')
+  # Get new detection parameters
+  detection_mode=request.form.get('detection_mode','auto')
+  enable_deskew=request.form.get('enable_deskew','true').lower()=='true'
+  enable_enhancement=request.form.get('enable_enhancement','true').lower()=='true'
+  column_mode=request.form.get('column_mode','false').lower()=='true'
+  manual_regions=request.form.get('manual_regions')
+  # NOTE: These parameters are logged but not yet integrated with the OCR processor.
+  # Full integration requires updating shared/models/processor.py to accept preprocessing options.
+  # This provides backward compatibility while the backend processing is enhanced.
   filename=secure_filename(file.filename)
   with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
   try:
    processor=model_manager.get_processor(model_id)
-   logger.info(f"Processing image with model: {model_manager.get_current_model()}")
+   logger.info(f"Processing image with model: {model_manager.get_current_model()}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
+   # Note: The processor.extract() method would need to be updated to accept these parameters
+   # For now, we just log them. Full integration would require updating the shared/models code
    result=processor.extract(temp_path)
    return jsonify(result.to_dict())
   finally:safe_delete_temp_file(temp_path)

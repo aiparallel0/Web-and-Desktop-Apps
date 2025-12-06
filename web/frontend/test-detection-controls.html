@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Controls Test</title>
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <style>
+        body {
+            font-family: var(--font-body);
+            padding: 40px;
+            background: var(--neutral-50);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--neutral-900);
+            margin-bottom: 24px;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 24px;
+            border: 1px solid var(--neutral-200);
+        }
+        
+        .output {
+            background: var(--neutral-900);
+            color: var(--neutral-100);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        
+        .output-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--neutral-700);
+        }
+    </style>
+</head>
+<body>
+    <h1>🎛️ Detection Controls Test</h1>
+    
+    <div class="test-info">
+        <h2>Test Information</h2>
+        <p>This page tests the Detection Controls Web Component functionality.</p>
+        <ul>
+            <li>Select different detection modes</li>
+            <li>Toggle enhancement options</li>
+            <li>Click "Apply Settings" to see output</li>
+            <li>Settings are saved to localStorage</li>
+        </ul>
+    </div>
+    
+    <!-- Detection Controls Component -->
+    <detection-controls id="detectionControls"></detection-controls>
+    
+    <div style="margin-top: 24px;">
+        <div class="output-label">Settings Output:</div>
+        <div class="output" id="output">Waiting for settings...</div>
+    </div>
+    
+    <script src="utils/storage.js"></script>
+    <script src="components/detection-controls.js"></script>
+    <script>
+        // Listen for settings applied event
+        const detectionControls = document.getElementById('detectionControls');
+        const output = document.getElementById('output');
+        
+        detectionControls.addEventListener('settings-applied', (e) => {
+            const settings = e.detail;
+            output.textContent = JSON.stringify(settings, null, 2);
+            console.log('Settings applied:', settings);
+        });
+        
+        detectionControls.addEventListener('preview-toggle', (e) => {
+            console.log('Preview toggled:', e.detail);
+        });
+        
+        detectionControls.addEventListener('regions-cleared', () => {
+            console.log('Regions cleared');
+        });
+        
+        // Show current settings on load
+        setTimeout(() => {
+            const currentSettings = detectionControls.getSettings();
+            output.textContent = 'Current settings:\n' + JSON.stringify(currentSettings, null, 2);
+        }, 100);
+    </script>
+</body>
+</html>
