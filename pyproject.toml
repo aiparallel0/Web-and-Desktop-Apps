@@ -8,14 +8,16 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 testpaths = ["tools/tests"]
-addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing --no-header -ra -p no:cacheprovider"
+# Optimized test execution with cleaner output
+addopts = "-v --tb=short --strict-markers --cov=shared --cov=web/backend --cov-report=html --cov-report=term-missing:skip-covered --no-header -ra -p no:cacheprovider -p no:warnings --maxfail=3"
 markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
-    "model: Model tests",
-    "slow: Slow tests",
-    "web: Web app tests",
-    "cosmetic: Cosmetic enhancement tests"
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (slower, multiple components)",
+    "model: Model/ML tests",
+    "slow: Slow-running tests (>5s)",
+    "web: Web application tests",
+    "cosmetic: Cosmetic enhancement tests",
+    "skip_ci: Skip in CI environment"
 ]
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv", "node_modules"]
 # Aggressive warning suppression - eliminate ALL noise from test output
@@ -31,6 +33,9 @@ filterwarnings = [
 # Disable pytest's temp directory retention to prevent Windows cleanup issues
 tmp_path_retention_count = 0
 tmp_path_retention_policy = "none"
+# Performance optimizations
+console_output_style = "progress"
+log_cli = false
 
 [tool.coverage.run]
 source = ["shared", "web/backend"]
