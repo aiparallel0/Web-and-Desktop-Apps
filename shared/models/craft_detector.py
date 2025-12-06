@@ -314,16 +314,18 @@ class CRAFTProcessor:
                 # Try EasyOCR first (no external dependencies)
                 import easyocr
                 reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-                image = load_and_validate_image(image_path)
-                ocr_results = reader.readtext(np.array(image))
+                # Load image and convert properly for EasyOCR
+                image_pil = load_and_validate_image(image_path)
+                # Convert PIL to RGB numpy array (EasyOCR expects numpy array)
+                image_array = np.array(image_pil.convert('RGB'))
+                ocr_results = reader.readtext(image_array)
                 text_lines = [text for (bbox, text, conf) in ocr_results if conf > 0.3]
             except ImportError:
                 try:
                     # Fall back to Tesseract if EasyOCR not available
                     import pytesseract
-                    from PIL import Image
-                    image = Image.open(image_path)
-                    text = pytesseract.image_to_string(image, lang='eng')
+                    image_pil = load_and_validate_image(image_path)
+                    text = pytesseract.image_to_string(image_pil, lang='eng')
                     text_lines = [line.strip() for line in text.split('\n') if line.strip()]
                 except ImportError:
                     return ExtractionResult(
@@ -365,8 +367,12 @@ class CRAFTProcessor:
             try:
                 from shared.models.receipt_prompts import get_validated_extraction_with_confidence
                 raw_text = ' '.join(text_lines)
-                # Base confidence from CRAFT detection quality
-                base_conf = sum(t.confidence for t in detection_result.texts) / max(len(detection_result.texts), 1)
+                # Base confidence from CRAFT detection quality (average of all region confidences)
+                if detection_result.texts:
+                    base_conf = sum(t.confidence for t in detection_result.texts) / len(detection_result.texts)
+                else:
+                    base_conf = 0.5  # Neutral confidence if no regions detected
+                    
                 _, realistic_confidence, validation = get_validated_extraction_with_confidence(
                     receipt_data=receipt,
                     raw_text=raw_text,
@@ -379,8 +385,15 @@ class CRAFTProcessor:
                     for error in validation.errors:
                         receipt.extraction_notes.append(f"ERROR: {error}")
             except ImportError:
-                # Fallback confidence calculation
-                receipt.confidence_score = min(100.0, len(text_lines) * 5)
+                # Fallback confidence: base on number of fields extracted
+                field_count = sum([
+                    1 if receipt.store_name else 0,
+                    1 if receipt.total else 0,
+                    1 if receipt.transaction_date else 0,
+                    1 if len(receipt.items) > 0 else 0
+                ])
+                # Each field gives 20%, max 80% + 20% bonus for having some items
+                receipt.confidence_score = min(100.0, field_count * 20 + (20 if receipt.items else 0))
             
             receipt.extraction_notes.append(f"CRAFT detected {len(detection_result.texts)} text regions")
             
