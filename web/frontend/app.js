@@ -215,19 +215,28 @@ class ExtractionController {
             // Store file for later reference
             AppState.currentFile = file;
 
-            // Get detection settings from controls
-            const detectionControls = document.getElementById('detectionControls');
-            const detectionSettings = detectionControls ? detectionControls.getSettings() : null;
-
-            // Get selected model from model selector
-            const modelSelector = document.getElementById('modelSelector');
-            const selectedModel = modelSelector ? modelSelector.getSelectedModel() : null;
+            // Get detection settings and model from unified controls
+            const unifiedControls = document.getElementById('unifiedControls');
+            let detectionSettings = null;
+            let selectedModelId = null;
+            
+            if (unifiedControls) {
+                const settings = unifiedControls.getSettings();
+                detectionSettings = {
+                    detection_mode: settings.detection_mode,
+                    enable_deskew: settings.enable_deskew,
+                    enable_enhancement: settings.enable_enhancement,
+                    column_mode: settings.column_mode,
+                    manual_regions: settings.manual_regions
+                };
+                selectedModelId = settings.model_id;
+            }
 
             // Call API with detection settings and model ID
             const results = await APIService.quickExtract(
                 file, 
                 detectionSettings,
-                selectedModel?.modelId
+                selectedModelId
             );
 
             if (progressBar) {
@@ -357,18 +366,22 @@ function setupEventHandlers() {
         });
     }
 
-    // Detection controls
-    const detectionControls = document.getElementById('detectionControls');
-    if (detectionControls) {
-        detectionControls.addEventListener('settings-applied', (e) => {
-            console.log('Detection settings applied:', e.detail);
+    // Unified extractor controls
+    const unifiedControls = document.getElementById('unifiedControls');
+    if (unifiedControls) {
+        unifiedControls.addEventListener('settings-applied', (e) => {
+            console.log('Unified settings applied:', e.detail);
         });
         
-        detectionControls.addEventListener('preview-toggle', (e) => {
+        unifiedControls.addEventListener('model-selected', (e) => {
+            console.log('Model selected:', e.detail);
+        });
+        
+        unifiedControls.addEventListener('preview-toggle', (e) => {
             console.log('Preview toggle:', e.detail.enabled);
         });
         
-        detectionControls.addEventListener('regions-cleared', () => {
+        unifiedControls.addEventListener('regions-cleared', () => {
             console.log('Manual regions cleared');
         });
     }

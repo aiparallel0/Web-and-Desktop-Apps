@@ -90,14 +90,9 @@
                     <upload-zone id="mainUploadZone"></upload-zone>
                 </div>
 
-                <!-- Model Selector - 7 Extraction Methods -->
-                <div class="model-selector-wrapper" style="margin-top: 32px; max-width: 900px; margin-left: auto; margin-right: auto;">
-                    <model-selector id="modelSelector"></model-selector>
-                </div>
-
-                <!-- Detection Controls -->
-                <div class="detection-controls-wrapper" style="margin-top: 32px; max-width: 800px; margin-left: auto; margin-right: auto;">
-                    <detection-controls id="detectionControls"></detection-controls>
+                <!-- Unified Extractor Controls - Combines Model Selection & Detection Controls -->
+                <div class="unified-controls-wrapper" style="margin-top: 32px; max-width: 1000px; margin-left: auto; margin-right: auto;">
+                    <unified-extractor-controls id="unifiedControls"></unified-extractor-controls>
                 </div>
 
                 <!-- 3-Step Visual Flow -->
@@ -233,7 +228,7 @@
                     </div>
                     <div class="model-stats-landing">
                         <div class="stat-item">
-                            <span class="stat-value">~85%</span>
+                            <span class="stat-value">~95%</span>
                             <span class="stat-label">Accuracy</span>
                         </div>
                         <div class="stat-item">
@@ -548,8 +543,7 @@
     <script src="utils/storage.js" defer></script>
     <script src="utils/canvas-overlay.js" defer></script>
     <script src="utils/image-processor.js" defer></script>
-    <script src="components/model-selector.js" defer></script>
-    <script src="components/detection-controls.js" defer></script>
+    <script src="components/unified-extractor-controls.js" defer></script>
     <script src="components/upload-zone.js" defer></script>
     <script src="components/progress-bar.js" defer></script>
     <script src="components/results-view.js" defer></script>
