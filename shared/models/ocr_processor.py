@@ -239,6 +239,7 @@ class OCRProcessor:
             
             # Try each PSM mode on BOTH preprocessed AND original image
             # Sometimes preprocessing hurts more than helps
+            # Each result stored as: (mode_name: str, text: str, receipt: ReceiptData, score: int)
             images_to_try = [
                 ('preprocessed', processed),
                 ('original', image.convert('L')),  # Grayscale original
@@ -263,8 +264,10 @@ class OCRProcessor:
                         
                         # Early exit optimization: Stop if we get an excellent result early
                         # Saves time by avoiding unnecessary OCR passes
+                        # Note: This only exits the PSM mode loop for the current image variant
+                        # The outer loop will continue with the next image variant if needed
                         if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                            logger.info(f"Excellent result found early with {mode_name}, stopping initial OCR passes")
+                            logger.info(f"Excellent result found early with {mode_name}, stopping PSM modes for this image variant")
                             break  # Exit inner loop (PSM modes)
                         
                     except Exception as e:
@@ -273,11 +276,12 @@ class OCRProcessor:
                 
                 # Break outer loop if excellent result found
                 # Check if we just added a result with excellent score
+                # Each ocr_results entry is: (mode_name, text, receipt, score)
                 if ocr_results:
-                    # Extract score from last result: (mode_name, text, receipt, score)
-                    last_score = ocr_results[-1][3]
+                    last_score = ocr_results[-1][3]  # Index 3 is the score
                     if last_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                        break
+                        logger.info(f"Excellent result found, stopping all OCR passes")
+                        break  # Exit outer loop (image variants)
             
             if not ocr_results:
                 return ExtractionResult(success=False, error="All OCR modes failed")
