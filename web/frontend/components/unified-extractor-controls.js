@@ -27,9 +27,12 @@ class UnifiedExtractorControls extends HTMLElement {
         this.previewEnabled = false;
         this.manualRegions = [];
         
-        // Storage keys
-        this.MODEL_STORAGE_KEY = 'receipt_selected_model';
-        this.DETECTION_STORAGE_KEY = 'receipt_detection_preferences';
+        // Storage keys - use consistent prefix
+        this.MODEL_STORAGE_KEY = 'unified_extractor_selected_model';
+        this.DETECTION_STORAGE_KEY = 'unified_extractor_detection_preferences';
+        
+        // Rendering state
+        this._isRendered = false;
     }
 
     connectedCallback() {
@@ -57,8 +60,12 @@ class UnifiedExtractorControls extends HTMLElement {
             this.availableModels = this.getDefaultModels();
         }
         
-        this.render();
-        this.setupEventListeners();
+        // Only render once when models are loaded
+        if (!this._isRendered) {
+            this.render();
+            this.setupEventListeners();
+            this._isRendered = true;
+        }
     }
 
     getDefaultModels() {
@@ -879,8 +886,12 @@ class UnifiedExtractorControls extends HTMLElement {
         
         this.savePreferences();
         this.saveSelectedModel();
+        
+        // Re-render and setup
+        this._isRendered = false;
         this.render();
         this.setupEventListeners();
+        this._isRendered = true;
     }
 
     loadPreferences() {
