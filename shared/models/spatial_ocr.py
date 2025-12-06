@@ -31,7 +31,22 @@ except ImportError:
 
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 
+# Import ocr_common parsing functions
+try:
+    from .ocr_common import parse_receipt_text as _parse_receipt_text_shared
+    OCR_COMMON_AVAILABLE = True
+except ImportError:
+    OCR_COMMON_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Source priority for conflict resolution when merging overlapping regions
+# Higher values indicate higher priority/reliability
+SOURCE_PRIORITY = {
+    'easyocr': 3,      # Highest priority - typically most accurate
+    'tesseract': 2,    # Medium priority - good for standard text
+    'paddleocr': 1,    # Lower priority - but still useful
+}
 
 # Register module with Circular Exchange
 if CIRCULAR_EXCHANGE_AVAILABLE:
@@ -249,13 +264,11 @@ class SpatialAnalyzer:
             
             # If we have overlaps, take the best one based on confidence and source
             if overlaps:
-                # Prefer regions from more reliable sources
-                source_priority = {'tesseract': 2, 'easyocr': 3, 'paddleocr': 1}
-                
+                # Use global source priority mapping
                 candidates = [(i, region)] + overlaps
                 best = max(candidates, key=lambda x: (
                     x[1].confidence * 0.7 + 
-                    source_priority.get(x[1].source, 0) * 0.3
+                    SOURCE_PRIORITY.get(x[1].source, 0) * 0.3
                 ))
                 
                 merged.append(best[1])
@@ -306,6 +319,11 @@ class SpatialOCRProcessor:
         """
         self.ocr_engines = ocr_engines or []
         self.analyzer = SpatialAnalyzer()
+        
+        # Initialize availability flags
+        self.has_tesseract = False
+        self.has_easyocr = False
+        self.has_paddleocr = False
         
         # Initialize engines if not provided
         if not self.ocr_engines:
@@ -601,8 +619,10 @@ class SpatialOCRProcessor:
         Returns:
             ReceiptData object
         """
-        # Use the shared parsing logic from ocr_common
-        from .ocr_common import parse_receipt_text as _parse_receipt_text_shared
+        # Use the shared parsing logic from ocr_common if available
+        if not OCR_COMMON_AVAILABLE:
+            logger.warning("ocr_common module not available, returning empty receipt")
+            return ReceiptData()
         
         parsed = _parse_receipt_text_shared(lines)
         
