@@ -674,8 +674,168 @@ class SpatialOCRProcessor:
         return round(avg_confidence * 100, 1)
 
 
+class EasyOCRSpatialProcessor(SpatialOCRProcessor):
+    """
+    EasyOCR processor with spatial bounding box analysis.
+    
+    This processor uses only EasyOCR for text extraction but applies
+    spatial analysis for improved structure understanding.
+    """
+    
+    def __init__(self, model_config: Optional[Dict] = None):
+        """Initialize with EasyOCR only."""
+        super().__init__()
+        self.model_config = model_config or {}
+        # Force initialization of EasyOCR only
+        self._initialize_easyocr_only()
+    
+    def _initialize_easyocr_only(self):
+        """Initialize only EasyOCR engine."""
+        try:
+            import easyocr
+            self.has_easyocr = True
+            self.has_tesseract = False
+            self.has_paddleocr = False
+            logger.info("EasyOCR Spatial processor initialized")
+        except ImportError:
+            self.has_easyocr = False
+            logger.warning("EasyOCR not available for spatial processing")
+    
+    def extract(self, image_path: str) -> ExtractionResult:
+        """
+        Extract receipt data using EasyOCR with spatial analysis.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            ExtractionResult containing extracted receipt data
+        """
+        try:
+            # Extract with EasyOCR only
+            regions_list = []
+            
+            if self.has_easyocr:
+                easyocr_regions = self.extract_with_easyocr(image_path)
+                if easyocr_regions:
+                    regions_list.append(easyocr_regions)
+            
+            if not regions_list:
+                return ExtractionResult(
+                    success=False,
+                    error="EasyOCR not available"
+                )
+            
+            # Use spatial analysis on EasyOCR results
+            combined_regions = regions_list[0]  # Only EasyOCR results
+            
+            # Analyze spatial structure
+            analyzer = SpatialAnalyzer()
+            analyzer.add_regions(combined_regions)
+            
+            # Extract structured text
+            structured_lines = analyzer.extract_structured_text()
+            
+            # Parse receipt data from structured text
+            receipt_data = self._parse_receipt_from_lines(structured_lines)
+            
+            # Add metadata
+            receipt_data.model_used = "EasyOCR with Spatial Bounding Boxes"
+            receipt_data.confidence_score = self._calculate_confidence(combined_regions)
+            receipt_data.extraction_notes.append(
+                "EasyOCR with spatial bounding box analysis for improved structure detection"
+            )
+            
+            return ExtractionResult(success=True, data=receipt_data)
+            
+        except Exception as e:
+            logger.error(f"EasyOCR Spatial extraction failed: {e}", exc_info=True)
+            return ExtractionResult(success=False, error=str(e))
+
+
+class PaddleOCRSpatialProcessor(SpatialOCRProcessor):
+    """
+    PaddleOCR processor with spatial bounding box analysis.
+    
+    This processor uses only PaddleOCR for text extraction but applies
+    spatial analysis for improved structure understanding.
+    """
+    
+    def __init__(self, model_config: Optional[Dict] = None):
+        """Initialize with PaddleOCR only."""
+        super().__init__()
+        self.model_config = model_config or {}
+        # Force initialization of PaddleOCR only
+        self._initialize_paddleocr_only()
+    
+    def _initialize_paddleocr_only(self):
+        """Initialize only PaddleOCR engine."""
+        try:
+            from paddleocr import PaddleOCR
+            self.has_paddleocr = True
+            self.has_tesseract = False
+            self.has_easyocr = False
+            logger.info("PaddleOCR Spatial processor initialized")
+        except ImportError:
+            self.has_paddleocr = False
+            logger.warning("PaddleOCR not available for spatial processing")
+    
+    def extract(self, image_path: str) -> ExtractionResult:
+        """
+        Extract receipt data using PaddleOCR with spatial analysis.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            ExtractionResult containing extracted receipt data
+        """
+        try:
+            # Extract with PaddleOCR only
+            regions_list = []
+            
+            if self.has_paddleocr:
+                paddleocr_regions = self.extract_with_paddleocr(image_path)
+                if paddleocr_regions:
+                    regions_list.append(paddleocr_regions)
+            
+            if not regions_list:
+                return ExtractionResult(
+                    success=False,
+                    error="PaddleOCR not available"
+                )
+            
+            # Use spatial analysis on PaddleOCR results
+            combined_regions = regions_list[0]  # Only PaddleOCR results
+            
+            # Analyze spatial structure
+            analyzer = SpatialAnalyzer()
+            analyzer.add_regions(combined_regions)
+            
+            # Extract structured text
+            structured_lines = analyzer.extract_structured_text()
+            
+            # Parse receipt data from structured text
+            receipt_data = self._parse_receipt_from_lines(structured_lines)
+            
+            # Add metadata
+            receipt_data.model_used = "PaddleOCR with Spatial Bounding Boxes"
+            receipt_data.confidence_score = self._calculate_confidence(combined_regions)
+            receipt_data.extraction_notes.append(
+                "PaddleOCR with spatial bounding box analysis for improved structure detection"
+            )
+            
+            return ExtractionResult(success=True, data=receipt_data)
+            
+        except Exception as e:
+            logger.error(f"PaddleOCR Spatial extraction failed: {e}", exc_info=True)
+            return ExtractionResult(success=False, error=str(e))
+
+
 __all__ = [
     'SpatialOCRProcessor',
+    'EasyOCRSpatialProcessor',
+    'PaddleOCRSpatialProcessor',
     'BoundingBox',
     'TextRegion',
     'SpatialAnalyzer'
