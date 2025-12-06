@@ -144,6 +144,16 @@ ITEM_SKIP_TIME_PATTERNS = [
     re.compile(r'\b(?:am|pm)\s+to\s+\d{1,2}(?::\d{2})?\b', re.IGNORECASE),  # AM TO 9:00, PM TO 5
 ]
 
+# Product-related words to detect line items (for address/store name filtering)
+PRODUCT_KEYWORDS = frozenset({
+    'strawberr', 'apple', 'banana', 'milk', 'bread', 'cheese',
+    'chicken', 'beef', 'fish', 'mahi', 'plum', 'egg', 'cottage',
+    'tomato', 'lettuce', 'carrot', 'onion', 'potato', 'orange'
+})
+
+# Quote/apostrophe characters pattern for OCR cleaning
+QUOTE_CHARS_PATTERN = r"['\"`]+"
+
 # Pre-compiled regex patterns for performance
 # Order matters - more specific patterns first
 DATE_PATTERNS = [
@@ -380,9 +390,7 @@ def extract_address(lines: list, start_index: int = 1, end_index: int = 8) -> Op
             if re.search(r'\d+[.,]\d{2}\s*$', line):
                 continue
             # Skip lines that contain product-like words
-            product_words = ['strawberr', 'apple', 'banana', 'milk', 'bread', 'cheese', 
-                           'chicken', 'beef', 'fish', 'mahi', 'plum', 'egg', 'cottage']
-            if any(pw in line_lower for pw in product_words):
+            if any(pw in line_lower for pw in PRODUCT_KEYWORDS):
                 continue
             return line
     return None
@@ -611,9 +619,9 @@ def clean_item_name(name: str) -> str:
     
     # Remove leading apostrophes/quotes (common OCR artifact)
     # E.g., "'BLACK. BEANS" -> "BLACK. BEANS", "CAGE 'FREE" -> "CAGE FREE"
-    cleaned = re.sub(r"^['\"`]+\s*", '', cleaned)  # Leading quotes at start
-    cleaned = re.sub(r"\s*['\"`]+\s+", ' ', cleaned)  # Quotes before words (with space after)
-    cleaned = re.sub(r"(?<=\s)['\"`]+(?=[A-Z])", '', cleaned)  # Quote before uppercase letter
+    cleaned = re.sub(rf"^{QUOTE_CHARS_PATTERN}\s*", '', cleaned)  # Leading quotes at start
+    cleaned = re.sub(rf"\s*{QUOTE_CHARS_PATTERN}\s+", ' ', cleaned)  # Quotes before words (with space after)
+    cleaned = re.sub(rf"(?<=\s){QUOTE_CHARS_PATTERN}(?=[A-Z])", '', cleaned)  # Quote before uppercase letter
     
     # First, fix concatenated text issues from OCR
     cleaned = fix_concatenated_text(cleaned)
@@ -1591,13 +1599,13 @@ def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = N
         calculated_subtotal = sum(item[1] for item in result['items'])  # item[1] is price
         if calculated_subtotal > 0:
             result['subtotal'] = calculated_subtotal
-            result['extraction_notes'].append(f"Subtotal calculated from {len(result['items'])} items: ${calculated_subtotal}")
+            result['extraction_notes'].append(f"Subtotal calculated from {len(result['items'])} items: ${calculated_subtotal:.2f}")
     
     # Validate tax: tax should never be greater than subtotal (unrealistic)
     # Tax values greater than subtotal are likely OCR errors
     if result['tax'] is not None and result['subtotal'] is not None:
         if result['tax'] > result['subtotal']:
-            result['extraction_notes'].append(f"Tax {result['tax']} > subtotal {result['subtotal']} - rejected as OCR error")
+            result['extraction_notes'].append(f"Tax ${result['tax']:.2f} > subtotal ${result['subtotal']:.2f} - rejected as OCR error")
             result['tax'] = None
     
     # Semantic validation: if we have subtotal and total but no tax, calculate tax
