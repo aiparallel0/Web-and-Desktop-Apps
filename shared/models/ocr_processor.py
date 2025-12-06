@@ -282,7 +282,8 @@ class OCRProcessor:
             if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
                 receipt.processing_time = time.time() - start_time
                 receipt.model_used = f"{self.model_name} ({best_mode})"
-                receipt.confidence_score = min(1.0, initial_score / 95)
+                # Convert score to percentage (0-100) - don't exceed 100%
+                receipt.confidence_score = min(100.0, (initial_score / 95) * 100)
                 logger.info(f"Good result achieved with score: {initial_score}")
                 return ExtractionResult(success=True, data=receipt)
             

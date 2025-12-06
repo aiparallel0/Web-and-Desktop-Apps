@@ -555,8 +555,13 @@ function displayResults(data, duration, engine) {
     const processingTime = document.getElementById('processingTime');
 
     if (confidenceBadge) {
-        const confidence = receipt.confidence || 'N/A';
-        confidenceBadge.textContent = `Confidence: ${confidence}`;
+        // confidence or confidence_score from backend is already a percentage (0-100)
+        const confidence = receipt.confidence || receipt.confidence_score;
+        if (confidence !== undefined && confidence !== null && confidence > 0) {
+            confidenceBadge.textContent = `Confidence: ${Math.round(confidence)}%`;
+        } else {
+            confidenceBadge.textContent = 'Confidence: N/A';
+        }
     }
     if (processingTime) {
         processingTime.textContent = `Time: ${duration}s`;

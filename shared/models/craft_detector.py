@@ -49,6 +49,12 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
     except Exception as e:
         logger.debug(f"Module registration skipped: {e}")
 
+# Confidence calculation constants
+NEUTRAL_CONFIDENCE_BASELINE = 0.5  # Base confidence when no detection quality info available
+CONFIDENCE_PER_FIELD = 20.0  # Percentage per successfully extracted field
+CONFIDENCE_BONUS_ITEMS = 20.0  # Bonus percentage for extracting items
+MAX_CONFIDENCE = 100.0  # Maximum confidence score
+
 
 class CRAFTProcessor:
     """
@@ -278,18 +284,135 @@ class CRAFTProcessor:
     
     def extract(self, image_path: str) -> Any:
         """
-        Compatibility method for BaseProcessor interface.
+        Extract receipt data using CRAFT detection + OCR reading.
         
-        This method provides compatibility with the existing processor interface
-        used by ModelManager. It wraps the detect() method.
+        This method provides a complete extraction pipeline by:
+        1. Using CRAFT to detect text regions (bounding boxes)
+        2. Using Tesseract/EasyOCR to read text from those regions
+        3. Parsing the text into structured receipt data
         
         Args:
             image_path: Path to input image
             
         Returns:
-            DetectionResult object
+            ExtractionResult with receipt data (not just DetectionResult)
         """
-        return self.detect(image_path)
+        from shared.utils.data import ReceiptData, ExtractionResult
+        from shared.models.ocr_common import parse_receipt_text
+        import time
+        
+        start_time = time.time()
+        
+        try:
+            # Step 1: Detect text regions with CRAFT
+            detection_result = self.detect(image_path)
+            
+            if not detection_result.success:
+                # Return extraction failure if detection failed
+                return ExtractionResult(
+                    success=False,
+                    error=detection_result.error_message or "CRAFT detection failed"
+                )
+            
+            # Step 2: Read text from detected regions using OCR
+            # Load image once for reuse by both OCR engines
+            image_pil = load_and_validate_image(image_path)
+            text_lines = []
+            
+            # Try to use an available OCR engine
+            try:
+                # Try EasyOCR first (no external dependencies)
+                import easyocr
+                reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+                # Convert PIL to RGB numpy array (EasyOCR expects numpy array)
+                image_array = np.array(image_pil.convert('RGB'))
+                ocr_results = reader.readtext(image_array)
+                text_lines = [text for (bbox, text, conf) in ocr_results if conf > 0.3]
+            except ImportError:
+                try:
+                    # Fall back to Tesseract if EasyOCR not available
+                    # Reuse already-loaded image
+                    import pytesseract
+                    text = pytesseract.image_to_string(image_pil, lang='eng')
+                    text_lines = [line.strip() for line in text.split('\n') if line.strip()]
+                except ImportError:
+                    return ExtractionResult(
+                        success=False,
+                        error="CRAFT requires either EasyOCR or Tesseract for text reading. Install with: pip install easyocr OR pip install pytesseract"
+                    )
+            
+            if not text_lines:
+                return ExtractionResult(
+                    success=False,
+                    error="CRAFT detected text regions but OCR could not read text"
+                )
+            
+            # Step 3: Parse text into receipt data
+            parsed = parse_receipt_text(text_lines)
+            
+            receipt = ReceiptData(
+                store_name=parsed['store_name'],
+                transaction_date=parsed['transaction_date'],
+                total=parsed['total'],
+                subtotal=parsed['subtotal'],
+                tax=parsed['tax'],
+                store_address=parsed['store_address'],
+                store_phone=parsed['store_phone'],
+                extraction_notes=parsed['extraction_notes']
+            )
+            
+            # Convert tuples to LineItem objects
+            from shared.utils.data import LineItem
+            receipt.items = [
+                LineItem(name=name, total_price=price, quantity=qty)
+                for name, price, qty in parsed['items']
+            ]
+            
+            receipt.processing_time = time.time() - start_time
+            receipt.model_used = f"{self.model_name} + OCR"
+            
+            # Calculate confidence based on detection and extraction quality
+            try:
+                from shared.models.receipt_prompts import get_validated_extraction_with_confidence
+                raw_text = ' '.join(text_lines)
+                # Base confidence from CRAFT detection quality (average of all region confidences)
+                if detection_result.texts:
+                    base_conf = sum(t.confidence for t in detection_result.texts) / len(detection_result.texts)
+                else:
+                    base_conf = NEUTRAL_CONFIDENCE_BASELINE
+                    
+                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                    receipt_data=receipt,
+                    raw_text=raw_text,
+                    base_confidence=base_conf
+                )
+                receipt.confidence_score = round(realistic_confidence * 100, 1)
+                if validation.math_validated:
+                    receipt.extraction_notes.append("Math validation passed ✓")
+                elif validation.errors:
+                    for error in validation.errors:
+                        receipt.extraction_notes.append(f"ERROR: {error}")
+            except ImportError:
+                # Fallback confidence: base on number of fields extracted
+                field_count = sum([
+                    1 if receipt.store_name else 0,
+                    1 if receipt.total else 0,
+                    1 if receipt.transaction_date else 0,
+                    1 if len(receipt.items) > 0 else 0
+                ])
+                # Each field gives CONFIDENCE_PER_FIELD%, plus bonus for items
+                receipt.confidence_score = min(
+                    MAX_CONFIDENCE,
+                    field_count * CONFIDENCE_PER_FIELD + (CONFIDENCE_BONUS_ITEMS if receipt.items else 0)
+                )
+            
+            receipt.extraction_notes.append(f"CRAFT detected {len(detection_result.texts)} text regions")
+            
+            return ExtractionResult(success=True, data=receipt)
+            
+        except Exception as e:
+            logger.error(f"CRAFT extraction failed: {e}", exc_info=True)
+            return ExtractionResult(success=False, error=str(e))
 
 
 __all__ = ['CRAFTProcessor']

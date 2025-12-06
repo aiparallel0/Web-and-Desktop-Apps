@@ -410,11 +410,16 @@ class ResultsView extends HTMLElement {
             receiptImage.src = imageDataUrl;
         }
 
-        // Set accuracy
-        const confidence = results.confidence || 95;
+        // Set accuracy - use actual confidence from extraction or indicate unknown
+        // confidence_score from backend is already a percentage (0-100)
+        const confidence = results.confidence || results.confidence_score;
         const accuracyText = this.shadowRoot.getElementById('accuracyText');
         if (accuracyText) {
-            accuracyText.textContent = `${confidence}% Confidence`;
+            if (confidence !== undefined && confidence !== null && confidence > 0) {
+                accuracyText.textContent = `${Math.round(confidence)}% Confidence`;
+            } else {
+                accuracyText.textContent = 'Confidence: Unknown';
+            }
         }
 
         // Render data
