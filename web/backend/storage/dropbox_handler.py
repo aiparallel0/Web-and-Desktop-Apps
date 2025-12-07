@@ -33,6 +33,7 @@ from .base import (
     StorageError, StorageProvider
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -92,10 +93,25 @@ class DropboxStorageHandler(BaseStorageHandler):
             logger.error("Dropbox SDK not available")
             return
         
-        self.app_key = self.app_key or os.getenv('DROPBOX_APP_KEY')
-        self.app_secret = self.app_secret or os.getenv('DROPBOX_APP_SECRET')
-        self.access_token = self.access_token or os.getenv('DROPBOX_ACCESS_TOKEN')
-        self.refresh_token = self.refresh_token or os.getenv('DROPBOX_REFRESH_TOKEN')
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={
+                    'app_key': 'DROPBOX_APP_KEY',
+                    'app_secret': 'DROPBOX_APP_SECRET',
+                    'access_token': 'DROPBOX_ACCESS_TOKEN',
+                    'refresh_token': 'DROPBOX_REFRESH_TOKEN'
+                }
+            )
+            
+            # Override with constructor values if provided
+            self.app_key = self.app_key or config.get('app_key')
+            self.app_secret = self.app_secret or config.get('app_secret')
+            self.access_token = self.access_token or config.get('access_token')
+            self.refresh_token = self.refresh_token or config.get('refresh_token')
+            
+        except Exception as e:
+            logger.warning(f"Failed to load Dropbox config from environment: {e}")
         
         if not all([self.app_key, self.app_secret]):
             logger.warning("Dropbox OAuth credentials not configured")
@@ -113,12 +129,12 @@ class DropboxStorageHandler(BaseStorageHandler):
                 # Verify the token works
                 self._client.users_get_current_account()
                 self._configured = True
-                logger.info("Dropbox initialized with access token")
+                log_handler_event("DropboxStorage", "initialized", {'has_token': True})
             except AuthError as e:
                 logger.error(f"Dropbox auth error: {e}")
         else:
             self._configured = True  # Configured but not authenticated
-            logger.info("Dropbox configured (OAuth required)")
+            log_handler_event("DropboxStorage", "configured", {'oauth_required': True})
     
     def get_authorization_url(self, redirect_uri: str = None) -> str:
         """

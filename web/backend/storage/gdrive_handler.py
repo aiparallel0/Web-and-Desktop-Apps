@@ -33,6 +33,7 @@ from .base import (
     StorageError, StorageProvider
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -99,12 +100,24 @@ class GoogleDriveHandler(BaseStorageHandler):
             logger.error("Google Drive SDK not available")
             return
         
-        self.client_id = self.client_id or os.getenv('GOOGLE_DRIVE_CLIENT_ID')
-        self.client_secret = self.client_secret or os.getenv('GOOGLE_DRIVE_CLIENT_SECRET')
-        self.redirect_uri = self.redirect_uri or os.getenv(
-            'GOOGLE_DRIVE_REDIRECT_URI',
-            'http://localhost:5000/api/auth/google/callback'
-        )
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={
+                    'client_id': 'GOOGLE_DRIVE_CLIENT_ID',
+                    'client_secret': 'GOOGLE_DRIVE_CLIENT_SECRET',
+                    'redirect_uri': 'GOOGLE_DRIVE_REDIRECT_URI'
+                },
+                defaults={'redirect_uri': 'http://localhost:5000/api/auth/google/callback'}
+            )
+            
+            # Override with constructor values if provided
+            self.client_id = self.client_id or config.get('client_id')
+            self.client_secret = self.client_secret or config.get('client_secret')
+            self.redirect_uri = self.redirect_uri or config.get('redirect_uri')
+            
+        except Exception as e:
+            logger.warning(f"Failed to load Google Drive config from environment: {e}")
         
         if not all([self.client_id, self.client_secret]):
             logger.warning("Google Drive OAuth credentials not configured")
@@ -116,13 +129,13 @@ class GoogleDriveHandler(BaseStorageHandler):
                 creds = Credentials(**self._credentials)
                 self._service = build('drive', 'v3', credentials=creds)
                 self._configured = True
-                logger.info("Google Drive initialized with existing credentials")
+                log_handler_event("GoogleDriveStorage", "initialized", {'has_credentials': True})
             except Exception as e:
                 logger.error(f"Failed to initialize with credentials: {e}")
         else:
             # OAuth flow will be needed
             self._configured = True  # Configured but not authenticated
-            logger.info("Google Drive configured (OAuth required)")
+            log_handler_event("GoogleDriveStorage", "configured", {'oauth_required': True})
     
     def get_authorization_url(self, state: str = None) -> str:
         """

@@ -31,6 +31,7 @@ from .base import (
     TrainingError, TrainingStartError
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,15 @@ class RunPodTrainer(BaseTrainer):
             logger.error("RunPod SDK not available")
             return
         
-        self.api_key = self.api_key or os.getenv('RUNPOD_API_KEY')
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={'api_key': 'RUNPOD_API_KEY'}
+            )
+            # Override with constructor value if provided
+            self.api_key = self.api_key or config.get('api_key')
+        except Exception as e:
+            logger.warning(f"Failed to load RunPod config from environment: {e}")
         
         if not self.api_key:
             logger.warning("RUNPOD_API_KEY not configured")
@@ -87,7 +96,7 @@ class RunPodTrainer(BaseTrainer):
             runpod.api_key = self.api_key
             
             self._configured = True
-            logger.info("RunPod trainer initialized")
+            log_handler_event("RunPodTrainer", "initialized")
         except Exception as e:
             logger.error(f"RunPod initialization error: {e}")
     
