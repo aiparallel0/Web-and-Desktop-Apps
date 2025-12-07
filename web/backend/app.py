@@ -691,49 +691,147 @@ def get_model_info(model_id):
 def unload_models():
  try:model_manager.unload_all_models();return jsonify({'success':True,'message':'All models unloaded successfully'})
  except Exception as e:logger.error(f"Error unloading models: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract/batch-multi',methods=['POST'])
+@app.route('/api/extract/batch-multi', methods=['POST'])
+@rate_limit(requests=5, window=3600, error_message="Batch multi-model extraction rate limit exceeded. Please try again later.")
 def extract_batch_multi():
- try:
-  if 'images'not in request.files:return jsonify({'success':False,'error':'No image files provided'}),400
-  files=request.files.getlist('images')
-  if not files or len(files)==0:return jsonify({'success':False,'error':'No files selected'}),400
-  model_id=request.form.get('model_id')
-  use_all_models=request.form.get('use_all_models','false').lower()=='true'
-  temp_paths=[]
-  try:
-   batch_results={'success':True,'images_count':len(files),'results':[]}
-   if use_all_models:
-    available_models=model_manager.get_available_models()
-    logger.info(f"Batch processing {len(files)} images with {len(available_models)} models")
-    for file in files:
-     if file.filename==''or not allowed_file(file.filename):continue
-     filename=secure_filename(file.filename)
-     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
-     file_results={'filename':filename,'models':{}}
-     for model_info in available_models:
-      mid=model_info['id']
-      try:
-       processor=model_manager.get_processor(mid)
-       result=processor.extract(temp_path)
-       file_results['models'][mid]={'model_name':model_info['name'],'extraction':result.to_dict()}
-      except Exception as e:logger.error(f"Model {mid} failed on {filename}: {e}");file_results['models'][mid]={'model_name':model_info['name'],'extraction':{'success':False,'error':str(e)}}
-     batch_results['results'].append(file_results)
-     logger.info(f"Processed {filename} with {len(available_models)} models")
-   else:
-    for file in files:
-     if file.filename==''or not allowed_file(file.filename):continue
-     filename=secure_filename(file.filename)
-     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
-     try:
-      processor=model_manager.get_processor(model_id)
-      result=processor.extract(temp_path)
-      batch_results['results'].append({'filename':filename,'extraction':result.to_dict()})
-      logger.info(f"Processed {filename}: {'Success'if result.success else'Failed'}")
-     except Exception as e:logger.error(f"Failed to process {filename}: {e}");batch_results['results'].append({'filename':filename,'extraction':{'success':False,'error':str(e)}})
-   return jsonify(batch_results)
-  finally:
-   for temp_path in temp_paths:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Batch multi extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
+    """
+    Extract text from multiple images using one or all models.
+    
+    Rate Limited: 5 requests per hour (very expensive operation)
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract.batch_multi") as span:
+        temp_paths = []
+        try:
+            # Validate images parameter
+            if 'images' not in request.files:
+                return jsonify({'success': False, 'error': 'No image files provided'}), 400
+            
+            files = request.files.getlist('images')
+            if not files or len(files) == 0:
+                return jsonify({'success': False, 'error': 'No files selected'}), 400
+            
+            model_id = request.form.get('model_id')
+            use_all_models = request.form.get('use_all_models', 'false').lower() == 'true'
+            
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "batch_multi_extract",
+                "batch.images_count": len(files),
+                "batch.use_all_models": use_all_models,
+                "batch.model_id": model_id or "all"
+            })
+            
+            batch_results = {'success': True, 'images_count': len(files), 'results': []}
+            successful_count = 0
+            failed_count = 0
+            
+            if use_all_models:
+                available_models = model_manager.get_available_models()
+                models_count = len(available_models)
+                
+                set_span_attributes(span, {
+                    "batch.models_count": models_count
+                })
+                
+                logger.info(f"Batch processing {len(files)} images with {models_count} models")
+                
+                for file in files:
+                    if file.filename == '' or not allowed_file(file.filename):
+                        continue
+                    
+                    filename = sanitize_filename(file.filename)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                        temp_path = temp_file.name
+                        file.save(temp_path)
+                        temp_paths.append(temp_path)
+                    
+                    file_results = {'filename': filename, 'models': {}}
+                    file_success = False
+                    
+                    for model_info in available_models:
+                        mid = model_info['id']
+                        try:
+                            processor = model_manager.get_processor(mid)
+                            result = processor.extract(temp_path)
+                            file_results['models'][mid] = {
+                                'model_name': model_info['name'],
+                                'extraction': result.to_dict()
+                            }
+                            if result.success:
+                                file_success = True
+                        except Exception as e:
+                            logger.error(f"Model {mid} failed on {filename}: {e}")
+                            file_results['models'][mid] = {
+                                'model_name': model_info['name'],
+                                'extraction': {'success': False, 'error': str(e)}
+                            }
+                    
+                    batch_results['results'].append(file_results)
+                    if file_success:
+                        successful_count += 1
+                    else:
+                        failed_count += 1
+                    
+                    logger.info(f"Processed {filename} with {models_count} models")
+            else:
+                for file in files:
+                    if file.filename == '' or not allowed_file(file.filename):
+                        continue
+                    
+                    filename = sanitize_filename(file.filename)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                        temp_path = temp_file.name
+                        file.save(temp_path)
+                        temp_paths.append(temp_path)
+                    
+                    try:
+                        processor = model_manager.get_processor(model_id)
+                        result = processor.extract(temp_path)
+                        batch_results['results'].append({
+                            'filename': filename,
+                            'extraction': result.to_dict()
+                        })
+                        
+                        if result.success:
+                            successful_count += 1
+                        else:
+                            failed_count += 1
+                        
+                        logger.info(f"Processed {filename}: {'Success' if result.success else 'Failed'}")
+                    except Exception as e:
+                        logger.error(f"Failed to process {filename}: {e}")
+                        batch_results['results'].append({
+                            'filename': filename,
+                            'extraction': {'success': False, 'error': str(e)}
+                        })
+                        failed_count += 1
+            
+            # Set result attributes
+            set_span_attributes(span, {
+                "batch.successful_count": successful_count,
+                "batch.failed_count": failed_count,
+                "batch.total_processed": successful_count + failed_count
+            })
+            
+            logger.info(f"Batch multi extraction complete: {successful_count}/{successful_count + failed_count} succeeded")
+            return jsonify(batch_results)
+            
+        except Exception as e:
+            logger.error(f"Batch multi extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            for temp_path in temp_paths:
+                safe_delete_temp_file(temp_path)
 
 @app.route('/api/extract-stream',methods=['POST'])
 def extract_receipt_stream():
@@ -850,40 +948,137 @@ def extract_receipt_stream():
   logger.error(f"SSE endpoint error: {e}",exc_info=True)
   return jsonify({'success':False,'error':str(e)}),500
 
-@app.route('/api/finetune/prepare',methods=['POST'])
+@app.route('/api/finetune/prepare', methods=['POST'])
+@rate_limit(requests=3, window=3600, error_message="Finetuning preparation rate limit exceeded.")
+@validate_json_body({
+    'model_id': {'type': str, 'required': True},
+    'mode': {'type': str, 'choices': ['local', 'cloud']},
+    'config': {'type': dict}
+})
 def prepare_finetune():
- try:
-  data=request.get_json()
-  model_id=data.get('model_id')
-  mode=data.get('mode','local')
-  config=data.get('config',{})
-  if not model_id:return jsonify({'success':False,'error':'model_id is required'}),400
-  job_id=f"ft_{model_id}_{int(time.time())}"
-  finetune_jobs[job_id]={'status':'preparing','model_id':model_id,'mode':mode,'config':config,'created':time.time(),'training_data':[],'progress':0}
-  logger.info(f"Created finetuning job {job_id} for model {model_id} in {mode} mode")
-  return jsonify({'success':True,'job_id':job_id,'message':'Finetuning job created'})
- except Exception as e:logger.error(f"Error preparing finetune: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/finetune/<job_id>/add-data',methods=['POST'])
+    """
+    Prepare a finetuning job for a model.
+    
+    Rate Limited: 3 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.prepare") as span:
+        try:
+            data = request.get_json()
+            model_id = data.get('model_id')
+            mode = data.get('mode', 'local')
+            config = data.get('config', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_prepare",
+                "finetune.model_id": model_id,
+                "finetune.mode": mode
+            })
+            
+            job_id = f"ft_{model_id}_{int(time.time())}"
+            finetune_jobs[job_id] = {
+                'status': 'preparing',
+                'model_id': model_id,
+                'mode': mode,
+                'config': config,
+                'created': time.time(),
+                'training_data': [],
+                'progress': 0
+            }
+            
+            set_span_attributes(span, {
+                "finetune.job_id": job_id
+            })
+            
+            logger.info(f"Created finetuning job {job_id} for model {model_id} in {mode} mode")
+            return jsonify({
+                'success': True,
+                'job_id': job_id,
+                'message': 'Finetuning job created'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error preparing finetune: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/finetune/<job_id>/add-data', methods=['POST'])
 def add_finetune_data(job_id):
- try:
-  if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
-  if 'images'not in request.files:return jsonify({'success':False,'error':'No image files provided'}),400
-  files=request.files.getlist('images')
-  labels=json.loads(request.form.get('labels','{}'))
-  job=finetune_jobs[job_id]
-  upload_dir=Path(tempfile.gettempdir())/job_id
-  upload_dir.mkdir(exist_ok=True)
-  for file in files:
-   if file.filename==''or not allowed_file(file.filename):continue
-   filename=secure_filename(file.filename)
-   file_path=upload_dir/filename
-   file.save(str(file_path))
-   ground_truth=labels.get(filename,{})
-   job['training_data'].append({'image':str(file_path),'truth':ground_truth,'filename':filename})
-   logger.info(f"Added training data: {filename}")
-  job['status']='data_ready'
-  return jsonify({'success':True,'samples_added':len(files),'total_samples':len(job['training_data'])})
- except Exception as e:logger.error(f"Error adding finetune data: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Add training data to a finetuning job.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.add_data") as span:
+        try:
+            # Validate job exists
+            if job_id not in finetune_jobs:
+                return jsonify({'success': False, 'error': 'Job not found'}), 404
+            
+            # Validate files
+            if 'images' not in request.files:
+                return jsonify({'success': False, 'error': 'No image files provided'}), 400
+            
+            files = request.files.getlist('images')
+            labels = json.loads(request.form.get('labels', '{}'))
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_add_data",
+                "finetune.job_id": job_id,
+                "finetune.files_count": len(files)
+            })
+            
+            job = finetune_jobs[job_id]
+            upload_dir = Path(tempfile.gettempdir()) / job_id
+            upload_dir.mkdir(exist_ok=True)
+            
+            added_count = 0
+            for file in files:
+                if file.filename == '' or not allowed_file(file.filename):
+                    continue
+                
+                filename = sanitize_filename(file.filename)
+                file_path = upload_dir / filename
+                file.save(str(file_path))
+                
+                ground_truth = labels.get(filename, {})
+                job['training_data'].append({
+                    'image': str(file_path),
+                    'truth': ground_truth,
+                    'filename': filename
+                })
+                added_count += 1
+                logger.info(f"Added training data: {filename}")
+            
+            job['status'] = 'data_ready'
+            
+            set_span_attributes(span, {
+                "finetune.samples_added": added_count,
+                "finetune.total_samples": len(job['training_data'])
+            })
+            
+            return jsonify({
+                'success': True,
+                'samples_added': added_count,
+                'total_samples': len(job['training_data'])
+            })
+            
+        except Exception as e:
+            logger.error(f"Error adding finetune data: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/start',methods=['POST'])
 def start_finetune(job_id):
  try:
