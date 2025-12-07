@@ -324,16 +324,16 @@ def get_all_circuit_breaker_states() -> Dict[str, Dict[str, Any]]:
 # CACHING MODULE - Response and Result Caching
 # =============================================================================
 
-# CEF Round 4: Added caching infrastructure for improved performance.
-#
-# This module provides:
-# - LRU caching for model predictions
-# - Response caching with ETag support
-# - Database query result caching
+"""
+CEF Round 4: Added caching infrastructure for improved performance.
+
+This module provides:
+- LRU caching for model predictions
+- Response caching with ETag support
+- Database query result caching
 - Cache statistics and monitoring
 
 Integrated with Circular Exchange Framework for dynamic configuration.
-=============================================================================
 """
 
 import os
