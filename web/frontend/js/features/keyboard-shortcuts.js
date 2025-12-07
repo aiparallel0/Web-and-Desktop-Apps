@@ -32,6 +32,7 @@ class KeyboardShortcuts {
     setupEventListeners() {
         document.addEventListener('keydown', (e) => {
             if (!this.enabled) return;
+            if (!e.target) return;
 
             // Check if in input field
             const tagName = e.target.tagName.toLowerCase();

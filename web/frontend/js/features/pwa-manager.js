@@ -9,6 +9,7 @@ import toastSystem from '../components/toast-system.js';
 class PWAManager {
     constructor() {
         this.serviceWorker = null;
+        this.serviceWorkerPath = '/service-worker.js';
         this.deferredPrompt = null;
         this.isInstalled = false;
         this.isOnline = navigator.onLine;
@@ -51,7 +52,7 @@ class PWAManager {
         }
 
         try {
-            const registration = await navigator.serviceWorker.register('/service-worker.js', {
+            const registration = await navigator.serviceWorker.register(this.serviceWorkerPath, {
                 scope: '/'
             });
 
@@ -232,8 +233,12 @@ class PWAManager {
 
         for (const item of this.offlineQueue) {
             try {
-                await fetch(item.request);
-                processed.push(item);
+                const response = await fetch(item.request);
+                if (response.ok) {
+                    processed.push(item);
+                } else {
+                    failed.push(item);
+                }
             } catch (error) {
                 failed.push(item);
             }

@@ -50,7 +50,7 @@ class SearchFilterSystem {
 
             data.forEach(item => {
                 const value = this.getNestedValue(item, field);
-                if (value !== null && value !== undefined) {
+                if (value !== null && value !== undefined && value !== '') {
                     const key = String(value);
                     values.set(key, (values.get(key) || 0) + 1);
                 }

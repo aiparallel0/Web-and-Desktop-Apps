@@ -229,7 +229,10 @@ class BulkOperationsManager {
      * Export items in bulk
      */
     async bulkExport(items, format = 'json') {
-        const ids = items.map(item => item.id);
+        const ids = items.filter(item => item && item.id).map(item => item.id);
+        if (ids.length === 0) {
+            throw new Error('No valid items to export');
+        }
         return apiClient.exportData(ids, format);
     }
 
