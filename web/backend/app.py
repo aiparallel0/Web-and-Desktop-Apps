@@ -49,6 +49,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from shared.models.manager import ModelManager
 from shared.models.engine import ModelTrainer, DataAugmenter
 
+# Import telemetry and security utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+from shared.utils.validation import validate_file_upload, validate_json_body, sanitize_filename
+from web.backend.security.rate_limiting import rate_limit
+
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
@@ -473,61 +478,208 @@ def select_model():
   if success:return jsonify({'success':True,'model_id':model_id,'message':f'Model {model_id} selected successfully'})
   else:return jsonify({'success':False,'error':f'Model {model_id} not found'}),404
  except Exception as e:logger.error(f"Error selecting model: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract',methods=['POST'])
+@app.route('/api/extract', methods=['POST'])
+@rate_limit(requests=100, window=3600, error_message="Extraction rate limit exceeded. Please try again later.")
+@validate_file_upload(param_name='image', max_size=100*1024*1024)
 def extract_receipt():
- try:
-  if 'image'not in request.files:return jsonify({'success':False,'error':'No image file provided'}),400
-  file=request.files['image']
-  if file.filename=='':return jsonify({'success':False,'error':'No file selected'}),400
-  if not allowed_file(file.filename):return jsonify({'success':False,'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}),400
-  model_id=request.form.get('model_id')
-  # Get new detection parameters
-  detection_mode=request.form.get('detection_mode','auto')
-  enable_deskew=request.form.get('enable_deskew','true').lower()=='true'
-  enable_enhancement=request.form.get('enable_enhancement','true').lower()=='true'
-  column_mode=request.form.get('column_mode','false').lower()=='true'
-  manual_regions=request.form.get('manual_regions')
-  # NOTE: These parameters are logged but not yet integrated with the OCR processor.
-  # Full integration requires updating shared/models/processor.py to accept preprocessing options.
-  # This provides backward compatibility while the backend processing is enhanced.
-  filename=secure_filename(file.filename)
-  with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
-  try:
-   processor=model_manager.get_processor(model_id)
-   logger.info(f"Processing image with model: {model_manager.get_current_model()}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
-   # Note: The processor.extract() method would need to be updated to accept these parameters
-   # For now, we just log them. Full integration would require updating the shared/models code
-   result=processor.extract(temp_path)
-   return jsonify(result.to_dict())
-  finally:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract/batch',methods=['POST'])
+    """
+    Extract text from a receipt image using OCR.
+    
+    Rate Limited: 100 requests per hour
+    Max File Size: 100MB
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract") as span:
+        temp_path = None
+        try:
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "single_extract",
+                "request.authenticated": True
+            })
+            
+            # Get file from request
+            file = request.files['image']
+            
+            # Get model_id and detection parameters
+            model_id = request.form.get('model_id')
+            detection_mode = request.form.get('detection_mode', 'auto')
+            enable_deskew = request.form.get('enable_deskew', 'true').lower() == 'true'
+            enable_enhancement = request.form.get('enable_enhancement', 'true').lower() == 'true'
+            column_mode = request.form.get('column_mode', 'false').lower() == 'true'
+            manual_regions = request.form.get('manual_regions')
+            
+            # Sanitize filename
+            filename = sanitize_filename(file.filename)
+            
+            # Set file attributes in span
+            file.seek(0, 2)  # Seek to end
+            file_size = file.tell()
+            file.seek(0)  # Reset to beginning
+            
+            set_span_attributes(span, {
+                "file.name": filename,
+                "file.size": file_size,
+                "model.id": model_id or "default",
+                "detection.mode": detection_mode,
+                "preprocessing.deskew": enable_deskew,
+                "preprocessing.enhancement": enable_enhancement
+            })
+            
+            # Save file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                temp_path = temp_file.name
+                file.save(temp_path)
+            
+            # Process image
+            logger.info(f"Processing image with model: {model_id or 'default'}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
+            
+            processor = model_manager.get_processor(model_id)
+            result = processor.extract(temp_path)
+            
+            # Set extraction result attributes
+            set_span_attributes(span, {
+                "extraction.success": result.success,
+                "extraction.processing_time": getattr(result, 'processing_time', 0),
+                "extraction.items_count": len(getattr(result.data, 'items', [])) if hasattr(result, 'data') and result.data else 0
+            })
+            
+            logger.info(f"Extraction completed successfully for {filename}")
+            return jsonify(result.to_dict())
+            
+        except Exception as e:
+            logger.error(f"Extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            # Clean up temp file
+            if temp_path:
+                safe_delete_temp_file(temp_path)
+@app.route('/api/extract/batch', methods=['POST'])
+@rate_limit(requests=10, window=3600, error_message="Batch extraction rate limit exceeded. Please try again later.")
+@validate_file_upload(param_name='image', max_size=100*1024*1024)
 def extract_batch():
- try:
-  if 'image'not in request.files:return jsonify({'success':False,'error':'No image file provided'}),400
-  file=request.files['image']
-  if file.filename=='':return jsonify({'success':False,'error':'No file selected'}),400
-  if not allowed_file(file.filename):return jsonify({'success':False,'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}),400
-  filename=secure_filename(file.filename)
-  with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
-  try:
-   available_models=model_manager.get_available_models()
-   logger.info(f"Running batch extraction with {len(available_models)} models")
-   batch_results={'success':True,'image_filename':filename,'models_count':len(available_models),'results':{}}
-   for model_info in available_models:
-    model_id=model_info['id']
-    model_name=model_info['name']
-    logger.info(f"Processing with model: {model_name} ({model_id})")
-    try:
-     processor=model_manager.get_processor(model_id)
-     result=processor.extract(temp_path)
-     batch_results['results'][model_id]={'model_name':model_name,'model_id':model_id,'extraction':result.to_dict()}
-     logger.info(f"✓ {model_name}: {'Success'if result.success else'Failed'}")
-    except Exception as e:logger.error(f"Model {model_name} failed: {e}");batch_results['results'][model_id]={'model_name':model_name,'model_id':model_id,'extraction':{'success':False,'error':str(e)}}
-   logger.info(f"Batch extraction complete: {len(batch_results['results'])} models processed")
-   return jsonify(batch_results)
-  finally:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Batch extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
+    """
+    Extract text from a receipt image using all available models.
+    
+    Rate Limited: 10 requests per hour
+    Max File Size: 100MB
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract.batch") as span:
+        temp_path = None
+        try:
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "batch_extract",
+                "request.authenticated": True
+            })
+            
+            # Get file from request
+            file = request.files['image']
+            filename = sanitize_filename(file.filename)
+            
+            # Get file size
+            file.seek(0, 2)
+            file_size = file.tell()
+            file.seek(0)
+            
+            set_span_attributes(span, {
+                "file.name": filename,
+                "file.size": file_size
+            })
+            
+            # Save file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                temp_path = temp_file.name
+                file.save(temp_path)
+            
+            # Get available models
+            available_models = model_manager.get_available_models()
+            models_count = len(available_models)
+            
+            set_span_attributes(span, {
+                "batch.models_count": models_count
+            })
+            
+            logger.info(f"Running batch extraction with {models_count} models")
+            
+            batch_results = {
+                'success': True,
+                'image_filename': filename,
+                'models_count': models_count,
+                'results': {}
+            }
+            
+            # Process with each model
+            successful_count = 0
+            failed_count = 0
+            
+            for model_info in available_models:
+                model_id = model_info['id']
+                model_name = model_info['name']
+                
+                logger.info(f"Processing with model: {model_name} ({model_id})")
+                
+                try:
+                    processor = model_manager.get_processor(model_id)
+                    result = processor.extract(temp_path)
+                    
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': result.to_dict()
+                    }
+                    
+                    if result.success:
+                        successful_count += 1
+                        logger.info(f"✓ {model_name}: Success")
+                    else:
+                        failed_count += 1
+                        logger.warning(f"✗ {model_name}: Failed")
+                        
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Model {model_name} failed: {e}")
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': {'success': False, 'error': str(e)}
+                    }
+            
+            # Set batch result attributes
+            set_span_attributes(span, {
+                "batch.successful_count": successful_count,
+                "batch.failed_count": failed_count,
+                "batch.total_processed": models_count
+            })
+            
+            logger.info(f"Batch extraction complete: {successful_count}/{models_count} models succeeded")
+            return jsonify(batch_results)
+            
+        except Exception as e:
+            logger.error(f"Batch extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            if temp_path:
+                safe_delete_temp_file(temp_path)
 @app.route('/api/models/<model_id>/info',methods=['GET'])
 def get_model_info(model_id):
  try:
