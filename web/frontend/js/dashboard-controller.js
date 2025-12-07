@@ -615,15 +615,7 @@
                 transition: all 0.2s;
             `;
 
-            card.addEventListener('mouseenter', () => {
-                card.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                card.style.transform = 'translateY(-2px)';
-            });
-
-            card.addEventListener('mouseleave', () => {
-                card.style.boxShadow = 'none';
-                card.style.transform = 'translateY(0)';
-            });
+            card.classList.add('template-card-hover');
 
             card.innerHTML = `
                 <h4 style="margin: 0 0 12px 0; font-size: 16px;">${template.name}</h4>

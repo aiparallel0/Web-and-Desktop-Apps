@@ -460,6 +460,13 @@
          * Generate unique ID
          */
         generateId() {
+            // Use crypto.getRandomValues for better security if available
+            if (window.crypto && window.crypto.getRandomValues) {
+                const array = new Uint32Array(2);
+                window.crypto.getRandomValues(array);
+                return 'receipt_' + Date.now() + '_' + Array.from(array).map(n => n.toString(36)).join('');
+            }
+            // Fallback to Math.random
             return 'receipt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 

@@ -34,10 +34,11 @@
             if (!str) return '';
             const smallWords = ['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'by', 'in'];
             const words = str.toLowerCase().split(' ');
+            const self = this;
             
-            return words.map((word, index) => {
+            return words.map(function(word, index) {
                 if (index === 0 || !smallWords.includes(word)) {
-                    return this.capitalize(word);
+                    return self.capitalize(word);
                 }
                 return word;
             }).join(' ');

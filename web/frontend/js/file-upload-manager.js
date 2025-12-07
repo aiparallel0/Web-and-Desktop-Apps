@@ -126,8 +126,14 @@
                 errors.push(`File type ${file.type} is not allowed`);
             }
 
-            // Check file name
-            if (!/^[\w\-. ]+\.[a-zA-Z0-9]+$/.test(file.name)) {
+            // Check file name - prevent directory traversal and invalid characters
+            if (/[\/\\]/.test(file.name)) {
+                errors.push('File name cannot contain path separators');
+            }
+            if (/^\./.test(file.name)) {
+                errors.push('File name cannot start with a dot');
+            }
+            if (!/^[a-zA-Z0-9_\-. ]+\.[a-zA-Z0-9]+$/.test(file.name)) {
                 errors.push('File name contains invalid characters');
             }
 
