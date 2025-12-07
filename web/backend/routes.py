@@ -9,6 +9,10 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, g
 from functools import wraps
 
+from shared.utils.telemetry import get_tracer, set_span_attributes
+from shared.utils.validation import validate_json_body
+from web.backend.security.rate_limiting import rate_limit
+
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
@@ -40,6 +44,13 @@ def _get_models():
 
 
 @auth_bp.route('/register', methods=['POST'])
+@rate_limit(requests=5, window=3600, error_message="Too many registration attempts. Please try again later.")
+@validate_json_body({
+    'email': {'type': str, 'required': True, 'format': 'email'},
+    'password': {'type': str, 'required': True, 'min_length': 8},
+    'full_name': {'type': str, 'required': False, 'max_length': 255},
+    'company': {'type': str, 'required': False, 'max_length': 255}
+})
 def register():
     """
     Register a new user account.
@@ -57,95 +68,106 @@ def register():
         400: Validation error
         409: Email already exists
     """
-    try:
-        from .password import hash_password, is_password_strong
-        from .jwt_handler import create_access_token, create_refresh_token
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'Request body is required'}), 400
-        
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        full_name = data.get('full_name', '').strip()
-        company = data.get('company', '').strip()
-        
-        # Validate email
-        if not email:
-            return jsonify({'success': False, 'error': 'Email is required'}), 400
-        
-        if '@' not in email or '.' not in email:
-            return jsonify({'success': False, 'error': 'Invalid email format'}), 400
-        
-        # Validate password strength
-        is_strong, issues = is_password_strong(password)
-        if not is_strong:
-            return jsonify({
-                'success': False,
-                'error': 'Password does not meet requirements',
-                'issues': issues
-            }), 400
-        
-        User, RefreshToken = _get_models()
-        
-        with _get_db_context()() as db:
-            # Check if email already exists
-            existing_user = db.query(User).filter(User.email == email).first()
-            if existing_user:
-                return jsonify({'success': False, 'error': 'Email already registered'}), 409
+    tracer = get_tracer()
+    with tracer.start_as_current_span("auth.register") as span:
+        try:
+            from .password import hash_password, is_password_strong
+            from .jwt_handler import create_access_token, create_refresh_token
             
-            # Create new user
-            import uuid
-            user = User(
-                id=uuid.uuid4(),
-                email=email,
-                password_hash=hash_password(password),
-                full_name=full_name or None,
-                company=company or None,
-                is_active=True,
-                email_verified=False,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
-            )
-            db.add(user)
-            db.flush()  # Get the user ID
+            data = request.get_json()
             
-            # Create tokens
-            access_token = create_access_token(str(user.id), user.email, user.is_admin)
-            refresh_token, token_hash = create_refresh_token()
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "user_registration",
+                "request.ip": request.remote_addr
+            })
             
-            # Store refresh token
-            refresh_token_record = RefreshToken(
-                id=uuid.uuid4(),
-                user_id=user.id,
-                token_hash=token_hash,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-                device_info=request.headers.get('User-Agent', '')[:255],
-                ip_address=request.remote_addr
-            )
-            db.add(refresh_token_record)
-            db.commit()
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            full_name = data.get('full_name', '').strip()
+            company = data.get('company', '').strip()
             
-            logger.info(f"New user registered: {email}")
+            # Validate password strength
+            is_strong, issues = is_password_strong(password)
+            if not is_strong:
+                return jsonify({
+                    'success': False,
+                    'error': 'Password does not meet requirements',
+                    'issues': issues
+                }), 400
             
-            return jsonify({
-                'success': True,
-                'message': 'Registration successful',
-                'user': {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'full_name': user.full_name,
-                    'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
-                },
-                'access_token': access_token,
-                'refresh_token': refresh_token,
-                'token_type': 'Bearer',
-                'expires_in': 900  # 15 minutes
-            }), 201
+            User, RefreshToken = _get_models()
             
-    except Exception as e:
-        logger.error(f"Registration error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Registration failed'}), 500
+            with _get_db_context()() as db:
+                # Check if email already exists
+                existing_user = db.query(User).filter(User.email == email).first()
+                if existing_user:
+                    return jsonify({'success': False, 'error': 'Email already registered'}), 409
+                
+                # Create new user
+                import uuid
+                user = User(
+                    id=uuid.uuid4(),
+                    email=email,
+                    password_hash=hash_password(password),
+                    full_name=full_name or None,
+                    company=company or None,
+                    is_active=True,
+                    email_verified=False,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
+                )
+                db.add(user)
+                db.flush()  # Get the user ID
+                
+                # Set user attributes in span (no PII)
+                set_span_attributes(span, {
+                    "user.id": str(user.id),
+                    "registration.success": True
+                })
+                
+                # Create tokens
+                access_token = create_access_token(str(user.id), user.email, user.is_admin)
+                refresh_token, token_hash = create_refresh_token()
+                
+                # Store refresh token
+                refresh_token_record = RefreshToken(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    token_hash=token_hash,
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+                    device_info=request.headers.get('User-Agent', '')[:255],
+                    ip_address=request.remote_addr
+                )
+                db.add(refresh_token_record)
+                db.commit()
+                
+                logger.info(f"New user registered: {email}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Registration successful',
+                    'user': {
+                        'id': str(user.id),
+                        'email': user.email,
+                        'full_name': user.full_name,
+                        'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                    },
+                    'access_token': access_token,
+                    'refresh_token': refresh_token,
+                    'token_type': 'Bearer',
+                    'expires_in': 900  # 15 minutes
+                }), 201
+                
+        except Exception as e:
+            logger.error(f"Registration error: {e}", exc_info=True)
+            span.record_exception(e)
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            return jsonify({'success': False, 'error': 'Registration failed'}), 500
 
 
 @auth_bp.route('/login', methods=['POST'])

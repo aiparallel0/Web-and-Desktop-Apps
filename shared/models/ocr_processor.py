@@ -37,6 +37,7 @@ except ImportError:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 from shared.utils.image import load_and_validate_image, preprocess_for_ocr
+from shared.utils.telemetry import get_tracer, set_span_attributes
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
     extract_date, extract_total, extract_phone, extract_address,
@@ -207,11 +208,22 @@ class OCRProcessor:
             ExtractionResult containing the extracted receipt data on success,
             or error information on failure.
         """
-        start_time = time.time()
-        if not self.tesseract_path:
-            return ExtractionResult(success=False, error="Tesseract not installed")
-        
-        try:
+        tracer = get_tracer()
+        with tracer.start_as_current_span("ocr_processor.extract") as span:
+            start_time = time.time()
+            
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "ocr_processing",
+                "model.id": "tesseract",
+                "model.name": self.model_name
+            })
+            
+            if not self.tesseract_path:
+                span.set_attribute("error", True)
+                return ExtractionResult(success=False, error="Tesseract not installed")
+            
+            try:
             # Get detection configuration from circular exchange framework
             detection_config = get_detection_config()
             # Note: min_confidence can be used for future filtering of low-confidence results
@@ -370,10 +382,25 @@ class OCRProcessor:
             except ImportError:
                 best_result.confidence_score = min(1.0, best_score / 95) * 100
             
+            # Set success span attributes
+            set_span_attributes(span, {
+                "extraction.success": True,
+                "extraction.confidence": best_result.confidence_score,
+                "extraction.items_count": len(best_result.items) if best_result.items else 0,
+                "extraction.total": float(best_result.total) if best_result.total else 0.0,
+                "extraction.processing_time": time.time() - start_time
+            })
+            
             return ExtractionResult(success=True, data=best_result)
             
         except Exception as e:
             logger.error(f"OCR failed: {e}", exc_info=True)
+            span.record_exception(e)
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
             return ExtractionResult(success=False, error=str(e))
 
     def _score_result(self, receipt: ReceiptData, text: str) -> int:
