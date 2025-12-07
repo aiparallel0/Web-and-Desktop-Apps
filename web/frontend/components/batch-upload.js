@@ -372,7 +372,12 @@ class BatchUploadComponent extends HTMLElement {
 
         const totalFiles = this.files.length + validFiles.length;
         if (totalFiles > this.maxFiles) {
-            alert(`You can only upload up to ${this.maxFiles} files`);
+            // Use NotificationSystem if available, fallback to alert
+            if (window.notify) {
+                window.notify.warning(`You can only upload up to ${this.maxFiles} files at once`, 'Upload Limit');
+            } else {
+                alert(`You can only upload up to ${this.maxFiles} files`);
+            }
             const allowed = this.maxFiles - this.files.length;
             validFiles.splice(allowed);
         }

@@ -570,12 +570,23 @@ const Dashboard = {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        showNotification('Copied to clipboard!', 'success');
+        // Use NotificationSystem if available, fallback to simple notification
+        if (window.notify) {
+            window.notify.success('Copied to clipboard!');
+        } else {
+            showSimpleNotification('Copied to clipboard!', 'success');
+        }
+    }).catch(() => {
+        if (window.notify) {
+            window.notify.error('Failed to copy to clipboard');
+        } else {
+            showSimpleNotification('Failed to copy', 'error');
+        }
     });
 }
 
-function showNotification(message, type = 'info') {
-    // Create toast notification
+function showSimpleNotification(message, type = 'info') {
+    // Fallback simple toast notification
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
@@ -583,7 +594,7 @@ function showNotification(message, type = 'info') {
         position: fixed;
         bottom: 24px;
         right: 24px;
-        background: ${type === 'success' ? '#10B981' : '#3B82F6'};
+        background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
         color: white;
         padding: 12px 24px;
         border-radius: 8px;

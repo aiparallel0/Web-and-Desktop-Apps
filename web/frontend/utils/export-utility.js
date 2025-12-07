@@ -137,10 +137,13 @@ class ExportUtility {
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
             
+            // Get currency symbol (default to USD if not specified)
+            const currencySymbol = this.getCurrencySymbol(receiptData.currency);
+            
             receiptData.items.forEach((item, index) => {
                 const itemText = `${item.name || 'Item ' + (index + 1)}`;
                 const qtyText = item.quantity ? `x${item.quantity}` : '';
-                const priceText = item.price ? `$${item.price.toFixed(2)}` : '';
+                const priceText = item.price ? `${currencySymbol}${item.price.toFixed(2)}` : '';
                 
                 doc.text(itemText, 20, yPos);
                 doc.text(qtyText, 120, yPos, { align: 'right' });
@@ -160,20 +163,20 @@ class ExportUtility {
             
             if (receiptData.subtotal) {
                 doc.text('Subtotal:', 120, yPos, { align: 'right' });
-                doc.text(`$${receiptData.subtotal.toFixed(2)}`, 180, yPos, { align: 'right' });
+                doc.text(`${currencySymbol}${receiptData.subtotal.toFixed(2)}`, 180, yPos, { align: 'right' });
                 yPos += 7;
             }
             
             if (receiptData.tax) {
                 doc.text('Tax:', 120, yPos, { align: 'right' });
-                doc.text(`$${receiptData.tax.toFixed(2)}`, 180, yPos, { align: 'right' });
+                doc.text(`${currencySymbol}${receiptData.tax.toFixed(2)}`, 180, yPos, { align: 'right' });
                 yPos += 7;
             }
             
             if (receiptData.total) {
                 doc.setFontSize(12);
                 doc.text('Total:', 120, yPos, { align: 'right' });
-                doc.text(`$${receiptData.total.toFixed(2)}`, 180, yPos, { align: 'right' });
+                doc.text(`${currencySymbol}${receiptData.total.toFixed(2)}`, 180, yPos, { align: 'right' });
             }
         }
         
@@ -550,6 +553,29 @@ class ExportUtility {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    /**
+     * Get currency symbol from currency code
+     * @param {string} currency - Currency code (ISO 4217)
+     * @returns {string} Currency symbol
+     */
+    static getCurrencySymbol(currency = 'USD') {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'CNY': '¥',
+            'INR': '₹',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'CHF': 'CHF',
+            'KRW': '₩',
+            'BRL': 'R$',
+            'MXN': 'Mex$'
+        };
+        return symbols[currency?.toUpperCase()] || currency + ' ';
     }
 }
 
