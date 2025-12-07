@@ -460,49 +460,80 @@ def cancel_subscription():
         200: Subscription cancelled
         404: No subscription found
     """
-    if not STRIPE_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Stripe is not configured'
-        }), 400
-    
-    try:
-        User, Subscription = _get_models()
-        handler = StripeHandler()
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.cancel_subscription") as span:
+        if not STRIPE_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'Stripe is not configured'
+            }), 400
         
-        with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == g.user_id).first()
-            if not user:
-                return jsonify({'success': False, 'error': 'User not found'}), 404
+        try:
+            set_span_attributes(span, {
+                "operation.type": "cancel_subscription",
+                "user.id": g.user_id
+            })
             
-            subscription = db.query(Subscription).filter(
-                Subscription.user_id == user.id,
-                Subscription.status == 'active'
-            ).first()
+            User, Subscription = _get_models()
+            handler = StripeHandler()
             
-            if not subscription:
-                return jsonify({'success': False, 'error': 'No active subscription'}), 404
-            
-            result = handler.cancel_subscription(
-                subscription.stripe_subscription_id,
-                at_period_end=True
-            )
-            
-            if result:
-                subscription.cancel_at_period_end = True
-                db.commit()
+            with _get_db_context()() as db:
+                user = db.query(User).filter(User.id == g.user_id).first()
+                if not user:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
                 
-                return jsonify({
-                    'success': True,
-                    'message': 'Subscription will be cancelled at end of billing period',
-                    'cancel_at': subscription.current_period_end.isoformat() if subscription.current_period_end else None
+                subscription = db.query(Subscription).filter(
+                    Subscription.user_id == user.id,
+                    Subscription.status == 'active'
+                ).first()
+                
+                if not subscription:
+                    set_span_attributes(span, {
+                        "cancel.has_subscription": False
+                    })
+                    return jsonify({'success': False, 'error': 'No active subscription'}), 404
+                
+                plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                set_span_attributes(span, {
+                    "cancel.plan": plan_name,
+                    "cancel.stripe_subscription_id": subscription.stripe_subscription_id[:8] + "..." if subscription.stripe_subscription_id else None
                 })
-            else:
-                return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
                 
-    except Exception as e:
-        logger.error(f"Cancel subscription error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
+                result = handler.cancel_subscription(
+                    subscription.stripe_subscription_id,
+                    at_period_end=True
+                )
+                
+                if result:
+                    subscription.cancel_at_period_end = True
+                    db.commit()
+                    
+                    set_span_attributes(span, {
+                        "cancel.success": True,
+                        "cancel.at_period_end": True
+                    })
+                    
+                    logger.info(f"Subscription cancelled for user {g.user_id}, plan {plan_name}")
+                    return jsonify({
+                        'success': True,
+                        'message': 'Subscription will be cancelled at end of billing period',
+                        'cancel_at': subscription.current_period_end.isoformat() if subscription.current_period_end else None
+                    })
+                else:
+                    span.record_exception(Exception("Failed to cancel subscription via Stripe"))
+                    return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
+                    
+        except Exception as e:
+            logger.error(f"Cancel subscription error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
 
 
 # =============================================================================
@@ -521,50 +552,78 @@ def webhook():
     - invoice.payment_succeeded
     - invoice.payment_failed
     """
-    if not STRIPE_AVAILABLE:
-        return jsonify({'error': 'Stripe not configured'}), 400
-    
-    payload = request.get_data()
-    sig_header = request.headers.get('Stripe-Signature')
-    
-    if not sig_header:
-        return jsonify({'error': 'Missing signature'}), 400
-    
-    try:
-        handler = StripeHandler()
-        event = handler.construct_webhook_event(payload, sig_header)
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.webhook") as span:
+        if not STRIPE_AVAILABLE:
+            return jsonify({'error': 'Stripe not configured'}), 400
         
-        if not event:
-            return jsonify({'error': 'Invalid signature'}), 400
+        payload = request.get_data()
+        sig_header = request.headers.get('Stripe-Signature')
         
-        event_type = event['type']
-        logger.info(f"Processing webhook event: {event_type}")
+        set_span_attributes(span, {
+            "operation.type": "webhook",
+            "webhook.has_signature": sig_header is not None,
+            "webhook.payload_size": len(payload)
+        })
         
-        User, Subscription = _get_models()
+        if not sig_header:
+            return jsonify({'error': 'Missing signature'}), 400
         
-        with _get_db_context()() as db:
-            if event_type == 'customer.subscription.created':
-                _handle_subscription_created(db, event['data']['object'], User, Subscription)
+        try:
+            handler = StripeHandler()
+            event = handler.construct_webhook_event(payload, sig_header)
             
-            elif event_type == 'customer.subscription.updated':
-                _handle_subscription_updated(db, event['data']['object'], User, Subscription)
+            if not event:
+                set_span_attributes(span, {
+                    "webhook.signature_valid": False
+                })
+                return jsonify({'error': 'Invalid signature'}), 400
             
-            elif event_type == 'customer.subscription.deleted':
-                _handle_subscription_deleted(db, event['data']['object'], User, Subscription)
+            event_type = event['type']
+            set_span_attributes(span, {
+                "webhook.event_type": event_type,
+                "webhook.signature_valid": True
+            })
             
-            elif event_type == 'invoice.payment_succeeded':
-                _handle_payment_succeeded(db, event['data']['object'], User)
+            logger.info(f"Processing webhook event: {event_type}")
             
-            elif event_type == 'invoice.payment_failed':
-                _handle_payment_failed(db, event['data']['object'], User, Subscription)
+            User, Subscription = _get_models()
             
-            db.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        logger.error(f"Webhook error: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+            with _get_db_context()() as db:
+                if event_type == 'customer.subscription.created':
+                    _handle_subscription_created(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'customer.subscription.updated':
+                    _handle_subscription_updated(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'customer.subscription.deleted':
+                    _handle_subscription_deleted(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'invoice.payment_succeeded':
+                    _handle_payment_succeeded(db, event['data']['object'], User)
+                
+                elif event_type == 'invoice.payment_failed':
+                    _handle_payment_failed(db, event['data']['object'], User, Subscription)
+                
+                db.commit()
+            
+            set_span_attributes(span, {
+                "webhook.processed": True
+            })
+            
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            logger.error(f"Webhook error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'error': str(e)}), 500
 
 
 def _handle_subscription_created(db, subscription_data, User, Subscription):
