@@ -31,6 +31,7 @@ from .base import (
     TrainingError, TrainingStartError
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,15 @@ class ReplicateTrainer(BaseTrainer):
             logger.error("Replicate SDK not available")
             return
         
-        self.api_token = self.api_token or os.getenv('REPLICATE_API_TOKEN')
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={'api_token': 'REPLICATE_API_TOKEN'}
+            )
+            # Override with constructor value if provided
+            self.api_token = self.api_token or config.get('api_token')
+        except Exception as e:
+            logger.warning(f"Failed to load Replicate config from environment: {e}")
         
         if not self.api_token:
             logger.warning("REPLICATE_API_TOKEN not configured")
@@ -85,7 +94,7 @@ class ReplicateTrainer(BaseTrainer):
             self._client = replicate.Client(api_token=self.api_token)
             
             self._configured = True
-            logger.info("Replicate trainer initialized")
+            log_handler_event("ReplicateTrainer", "initialized")
         except Exception as e:
             logger.error(f"Replicate initialization error: {e}")
     
