@@ -574,9 +574,9 @@ class NewModelProcessor:
             raw_results = self._run_model(image_path)
             
             # Convert to unified schema
-            detected_texts = []
+            texts = []
             for result in raw_results:
-                detected_texts.append(DetectedText(
+                texts.append(DetectedText(
                     text=result['text'],
                     confidence=result['confidence'],
                     bbox=BoundingBox(
@@ -588,19 +588,23 @@ class NewModelProcessor:
                 ))
             
             return DetectionResult(
-                success=True,
-                model_id="new_model",
-                detected_texts=detected_texts,
+                texts=texts,
+                metadata={'config': self.config},
                 processing_time=0.0,  # Actual time
-                metadata={'config': self.config}
+                model_id="new_model",
+                success=True
             )
             
         except Exception as e:
             logger.error(f"Model processing failed: {e}")
+            from shared.models.schemas import ErrorCode
             return DetectionResult(
-                success=False,
+                texts=[],
+                metadata={},
+                processing_time=0.0,
                 model_id="new_model",
-                error_code="processing_failed",
+                success=False,
+                error_code=ErrorCode.PROCESSING_FAILED,
                 error_message=str(e)
             )
     
@@ -621,17 +625,17 @@ from shared.models.schemas import DetectionResult, DetectedText, BoundingBox
 
 # Example usage
 result = DetectionResult(
-    success=True,
-    model_id="ocr_tesseract",
-    detected_texts=[
+    texts=[
         DetectedText(
             text="Total: $42.99",
             confidence=0.95,
             bbox=BoundingBox(x=100, y=200, width=150, height=30)
         )
     ],
+    metadata={'engine': 'tesseract', 'version': '5.0'},
     processing_time=0.45,
-    metadata={'engine': 'tesseract', 'version': '5.0'}
+    model_id="ocr_tesseract",
+    success=True
 )
 
 # Convert to dict for API response
@@ -639,12 +643,12 @@ response = result.to_dict()
 ```
 
 **Schema Fields:**
-- `success`: bool - Whether processing succeeded
-- `model_id`: str - Model identifier
-- `detected_texts`: List[DetectedText] - Detected text regions
-- `processing_time`: float - Processing duration in seconds
-- `metadata`: Dict[str, Any] - Additional information
-- `error_code`: Optional[str] - Error code if failed
+- `texts`: List[DetectedText] - Detected text regions (required)
+- `metadata`: Dict[str, Any] - Additional information (required)
+- `processing_time`: float - Processing duration in seconds (required)
+- `model_id`: str - Model identifier (required)
+- `success`: bool - Whether processing succeeded (default: True)
+- `error_code`: Optional[ErrorCode] - Error code enum if failed
 - `error_message`: Optional[str] - Error description
 
 ---
@@ -1093,9 +1097,15 @@ from shared.models.schemas import DetectionResult, DetectedText, BoundingBox
 
 def extract_text(image) -> DetectionResult:
     return DetectionResult(
-        success=True,
+        texts=[DetectedText(
+            text='Total: $42.99',
+            confidence=0.95,
+            bbox=BoundingBox(x=0, y=0, width=100, height=20)
+        )],
+        metadata={},
+        processing_time=0.1,
         model_id="ocr_tesseract",
-        detected_texts=[DetectedText(text='Total: $42.99', confidence=0.95)]
+        success=True
     )
 ```
 
@@ -1268,12 +1278,23 @@ cd tools/tests && pytest -v
    ```python
    try:
        result = process()
-       return DetectionResult(success=True, data=result)
+       return DetectionResult(
+           texts=result.texts,
+           metadata=result.metadata,
+           processing_time=result.processing_time,
+           model_id=result.model_id,
+           success=True
+       )
    except Exception as e:
        logger.error(f"Processing failed: {e}")
+       from shared.models.schemas import ErrorCode
        return DetectionResult(
+           texts=[],
+           metadata={},
+           processing_time=0.0,
+           model_id="unknown",
            success=False,
-           error_code="processing_failed",
+           error_code=ErrorCode.PROCESSING_FAILED,
            error_message=str(e)
        )
    ```
@@ -1410,10 +1431,11 @@ def protected_endpoint():
 
 # Return DetectionResult
 return DetectionResult(
-    success=True,
+    texts=[...],
+    metadata={},
+    processing_time=0.45,
     model_id="model_name",
-    detected_texts=[...],
-    processing_time=0.45
+    success=True
 )
 ```
 
