@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to Receipt Extractor - Access your account">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <title>Sign In | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+    
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideInUp 0.6s ease;
+        }
+        
+        .auth-header {
+            padding: var(--space-6) var(--space-6) var(--space-4);
+            text-align: center;
+        }
+        
+        .auth-logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--space-3);
+            background: var(--color-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .auth-title {
+            font-size: 1.875rem;
+            font-weight: var(--font-bold);
+            color: var(--color-gray-900);
+            margin-bottom: 8px;
+        }
+        
+        .auth-subtitle {
+            font-size: 0.9375rem;
+            color: var(--color-gray-500);
+        }
+        
+        .auth-body {
+            padding: var(--space-2) var(--space-6) var(--space-6);
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .form-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            font-weight: var(--font-medium);
+            color: var(--color-gray-700);
+            font-size: 0.9375rem;
+        }
+        
+        .form-input {
+            padding: var(--space-2) var(--space-3);
+            border: 2px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .form-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: var(--font-medium);
+            font-size: 0.9375rem;
+            transition: color var(--transition-fast);
+        }
+        
+        .form-link:hover {
+            color: var(--color-primary-dark);
+        }
+        
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin: var(--space-4) 0;
+            color: var(--color-gray-500);
+            font-size: 0.875rem;
+        }
+        
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--color-gray-200);
+        }
+        
+        .social-login {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-2);
+        }
+        
+        .social-btn {
+            padding: var(--space-2);
+            border: 1px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            background: white;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .social-btn:hover {
+            background: var(--color-gray-50);
+            border-color: var(--color-gray-300);
+        }
+        
+        .social-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .auth-footer {
+            text-align: center;
+            padding: var(--space-4) var(--space-6) var(--space-6);
+            color: var(--color-gray-600);
+            font-size: 0.9375rem;
+        }
+        
+        .features-sidebar {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: var(--space-8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .sidebar-content {
+            max-width: 480px;
+        }
+        
+        .sidebar-title {
+            font-size: 2.5rem;
+            font-weight: var(--font-bold);
+            margin-bottom: var(--space-4);
+            line-height: 1.2;
+        }
+        
+        .sidebar-features {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+        
+        .sidebar-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-3);
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .feature-content h3 {
+            font-size: 1.125rem;
+            margin-bottom: 4px;
+        }
+        
+        .feature-content p {
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 1024px) {
+            .features-sidebar {
+                display: none;
+            }
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            50% {
+                transform: translate(50px, 50px) rotate(180deg);
+            }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <!-- Features Sidebar -->
+        <div class="features-sidebar">
+            <div class="sidebar-content">
+                <h1 class="sidebar-title">Extract Receipt Data with AI in Seconds</h1>
+                <div class="sidebar-features">
+                    <div class="sidebar-feature">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>Lightning Fast</h3>
+                            <p>Extract receipt data in under 3 seconds with 98% accuracy</p>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-feature">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>Privacy First</h3>
+                            <p>Your data is encrypted and automatically deleted after processing</p>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-feature">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>50+ Languages</h3>
+                            <p>Extract text from receipts in multiple languages worldwide</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auth Form -->
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="auth-logo">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 2l7 7-7 7"></path>
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        </svg>
+                    </div>
+                    <h1 class="auth-title">Welcome Back</h1>
+                    <p class="auth-subtitle">Sign in to your account to continue</p>
+                </div>
+                
+                <div class="auth-body">
+                    <form class="auth-form" id="signInForm">
+                        <div class="form-input-group">
+                            <label class="form-label" for="email">Email Address</label>
+                            <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+                        </div>
+                        
+                        <div class="form-input-group">
+                            <label class="form-label" for="password">Password</label>
+                            <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="remember">
+                                <span>Remember me</span>
+                            </label>
+                            <a href="#forgot" class="form-link">Forgot password?</a>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">
+                            Sign In
+                        </button>
+                    </form>
+                    
+                    <div class="auth-divider">
+                        <span>Or continue with</span>
+                    </div>
+                    
+                    <div class="social-login">
+                        <button class="social-btn" title="Sign in with Google">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                        </button>
+                        <button class="social-btn" title="Sign in with GitHub">
+                            <svg viewBox="0 0 24 24" fill="#181717">
+                                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+                            </svg>
+                        </button>
+                        <button class="social-btn" title="Sign in with Microsoft">
+                            <svg viewBox="0 0 24 24">
+                                <path fill="#f25022" d="M1 1h10v10H1z"/>
+                                <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                                <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                                <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="auth-footer">
+                    Don't have an account? <a href="#register" class="form-link">Sign up for free</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('signInForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            // Simulate API call
+            console.log('Signing in...', { email, remember });
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Signing in...';
+            submitBtn.disabled = true;
+            
+            // Simulate success after 1 second
+            setTimeout(() => {
+                // Store token (mock)
+                localStorage.setItem('access_token', 'mock_token_' + Date.now());
+                localStorage.setItem('user_email', email);
+                
+                // Redirect to dashboard
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        });
+        
+        // Social login handlers
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                alert('Social login coming soon!');
+            });
+        });
+    </script>
+</body>
+</html>

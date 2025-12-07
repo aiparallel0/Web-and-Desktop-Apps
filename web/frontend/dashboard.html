@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dashboard - Manage your receipts and extractions">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <title>Dashboard | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+</head>
+<body class="dashboard-page">
+    <!-- Navigation -->
+    <nav class="nav dashboard-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2l7 7-7 7"></path>
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn btn-ghost btn-sm" id="notificationsBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span class="notification-badge">3</span>
+                </button>
+                <button class="btn btn-ghost btn-sm" id="userMenuBtn">
+                    <div class="user-avatar">JD</div>
+                    <span class="hide-mobile">John Doe</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <a href="#overview" class="sidebar-link active" data-section="overview">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#extractions" class="sidebar-link" data-section="extractions">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    <span>Extractions</span>
+                </a>
+                <a href="#batch" class="sidebar-link" data-section="batch">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    </svg>
+                    <span>Batch Processing</span>
+                </a>
+                <a href="#api" class="sidebar-link" data-section="api">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>API Keys</span>
+                </a>
+                <a href="#templates" class="sidebar-link" data-section="templates">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>Templates</span>
+                </a>
+                <a href="#analytics" class="sidebar-link" data-section="analytics">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="20" x2="12" y2="10"></line>
+                        <line x1="18" y1="20" x2="18" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="16"></line>
+                    </svg>
+                    <span>Analytics</span>
+                </a>
+                <a href="#settings" class="sidebar-link" data-section="settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m5.66-15l-3 5.2m-3 5.2l-3 5.2M23 12h-6m-6 0H1m18.66 5l-3-5.2m-5.2-3l-3-5.2"></path>
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="usage-card">
+                    <h4>Monthly Usage</h4>
+                    <div class="usage-progress">
+                        <div class="usage-bar" style="width: 45%"></div>
+                    </div>
+                    <p>225 / 500 extractions</p>
+                    <a href="pricing.html" class="btn btn-sm btn-outline btn-full">Upgrade Plan</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Overview Section -->
+            <section class="dashboard-section active" id="overview">
+                <header class="section-header">
+                    <h1>Dashboard Overview</h1>
+                    <button class="btn btn-primary" id="quickExtractBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Quick Extract
+                    </button>
+                </header>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Total Extractions</h3>
+                            <p class="stat-value">1,247</p>
+                            <span class="stat-change positive">+12% this month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon success">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Success Rate</h3>
+                            <p class="stat-value">97.3%</p>
+                            <span class="stat-change positive">+2.1% vs last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon warning">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Avg. Processing Time</h3>
+                            <p class="stat-value">2.3s</p>
+                            <span class="stat-change negative">+0.2s slower</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>API Calls</h3>
+                            <p class="stat-value">3,429</p>
+                            <span class="stat-change positive">+24% growth</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Extraction Activity</h3>
+                            <select class="chart-select">
+                                <option>Last 7 days</option>
+                                <option>Last 30 days</option>
+                                <option>Last 90 days</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Model Usage</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="modelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-card">
+                    <div class="activity-header">
+                        <h3>Recent Extractions</h3>
+                        <a href="#extractions" class="btn btn-ghost btn-sm">View All</a>
+                    </div>
+                    <div class="activity-list" id="recentActivity">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Extractions Section -->
+            <section class="dashboard-section" id="extractions">
+                <header class="section-header">
+                    <h1>Extraction History</h1>
+                    <div class="header-actions">
+                        <input type="search" placeholder="Search extractions..." class="search-input">
+                        <button class="btn btn-outline" id="filterBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                            Filters
+                        </button>
+                        <button class="btn btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export All
+                        </button>
+                    </div>
+                </header>
+
+                <div class="table-container">
+                    <table class="data-table" id="extractionsTable">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAll"></th>
+                                <th>Receipt</th>
+                                <th>Merchant</th>
+                                <th>Total</th>
+                                <th>Date</th>
+                                <th>Model</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button class="btn btn-ghost btn-sm" disabled>Previous</button>
+                    <div class="pagination-info">
+                        <span class="page-numbers">
+                            <button class="page-number active">1</button>
+                            <button class="page-number">2</button>
+                            <button class="page-number">3</button>
+                            <span>...</span>
+                            <button class="page-number">10</button>
+                        </span>
+                    </div>
+                    <button class="btn btn-ghost btn-sm">Next</button>
+                </div>
+            </section>
+
+            <!-- Batch Processing Section -->
+            <section class="dashboard-section" id="batch">
+                <header class="section-header">
+                    <h1>Batch Processing</h1>
+                    <button class="btn btn-primary" id="newBatchBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Batch
+                    </button>
+                </header>
+
+                <div class="batch-queue">
+                    <h3>Processing Queue</h3>
+                    <div class="queue-list" id="batchQueue">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="batch-history">
+                    <h3>Batch History</h3>
+                    <div class="history-list" id="batchHistory">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- API Keys Section -->
+            <section class="dashboard-section" id="api">
+                <header class="section-header">
+                    <h1>API Keys</h1>
+                    <button class="btn btn-primary" id="createApiKeyBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Create API Key
+                    </button>
+                </header>
+
+                <div class="api-keys-list" id="apiKeysList">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <div class="api-docs-card">
+                    <h3>API Documentation</h3>
+                    <p>Learn how to integrate Receipt Extractor into your applications.</p>
+                    <a href="api.html" class="btn btn-outline">View Documentation</a>
+                </div>
+            </section>
+
+            <!-- Templates Section -->
+            <section class="dashboard-section" id="templates">
+                <header class="section-header">
+                    <h1>Receipt Templates</h1>
+                    <button class="btn btn-primary" id="createTemplateBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Create Template
+                    </button>
+                </header>
+
+                <div class="templates-grid" id="templatesGrid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section class="dashboard-section" id="analytics">
+                <header class="section-header">
+                    <h1>Analytics & Insights</h1>
+                    <select class="date-range-select">
+                        <option>Last 7 days</option>
+                        <option>Last 30 days</option>
+                        <option>Last 90 days</option>
+                        <option>This year</option>
+                        <option>All time</option>
+                    </select>
+                </header>
+
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Extraction Trends</h3>
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3>Average Confidence Score</h3>
+                        <canvas id="confidenceChart"></canvas>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3>Popular Merchants</h3>
+                        <div id="merchantsList"></div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3>Error Rate Analysis</h3>
+                        <canvas id="errorChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="dashboard-section" id="settings">
+                <header class="section-header">
+                    <h1>Settings</h1>
+                </header>
+
+                <div class="settings-container">
+                    <div class="settings-nav">
+                        <button class="settings-tab active" data-tab="profile">Profile</button>
+                        <button class="settings-tab" data-tab="account">Account</button>
+                        <button class="settings-tab" data-tab="billing">Billing</button>
+                        <button class="settings-tab" data-tab="notifications">Notifications</button>
+                        <button class="settings-tab" data-tab="security">Security</button>
+                        <button class="settings-tab" data-tab="preferences">Preferences</button>
+                    </div>
+
+                    <div class="settings-content">
+                        <div class="settings-panel active" id="profile">
+                            <h2>Profile Settings</h2>
+                            <form class="settings-form">
+                                <div class="form-group">
+                                    <label>Profile Picture</label>
+                                    <div class="profile-upload">
+                                        <div class="profile-preview">JD</div>
+                                        <button type="button" class="btn btn-outline">Upload Photo</button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fullName">Full Name</label>
+                                    <input type="text" id="fullName" value="John Doe">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" id="email" value="john@example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="company">Company</label>
+                                    <input type="text" id="company" placeholder="Your company name">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+
+                        <div class="settings-panel" id="account">
+                            <h2>Account Settings</h2>
+                            <div class="account-info">
+                                <div class="info-row">
+                                    <span>Account Type:</span>
+                                    <strong>Pro Plan</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Member Since:</span>
+                                    <strong>January 2024</strong>
+                                </div>
+                                <div class="info-row">
+                                    <span>Account ID:</span>
+                                    <code>acc_1234567890</code>
+                                </div>
+                            </div>
+                            <div class="danger-zone">
+                                <h3>Danger Zone</h3>
+                                <button class="btn btn-outline">Delete Account</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-panel" id="billing">
+                            <h2>Billing & Subscription</h2>
+                            <div class="billing-info">
+                                <div class="current-plan">
+                                    <h3>Current Plan: Pro</h3>
+                                    <p>$19/month • Renews on Feb 15, 2024</p>
+                                    <button class="btn btn-outline">Change Plan</button>
+                                </div>
+                                <div class="payment-method">
+                                    <h3>Payment Method</h3>
+                                    <p>•••• •••• •••• 4242</p>
+                                    <button class="btn btn-outline">Update Card</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-panel" id="notifications">
+                            <h2>Notification Preferences</h2>
+                            <form class="settings-form">
+                                <div class="toggle-group">
+                                    <div class="toggle-item">
+                                        <div>
+                                            <strong>Email Notifications</strong>
+                                            <p>Receive email updates about your extractions</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="toggle-item">
+                                        <div>
+                                            <strong>Batch Completion</strong>
+                                            <p>Notify when batch processing completes</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="toggle-item">
+                                        <div>
+                                            <strong>API Alerts</strong>
+                                            <p>Alert when API rate limits are reached</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Preferences</button>
+                            </form>
+                        </div>
+
+                        <div class="settings-panel" id="security">
+                            <h2>Security Settings</h2>
+                            <form class="settings-form">
+                                <div class="form-group">
+                                    <label for="currentPassword">Current Password</label>
+                                    <input type="password" id="currentPassword">
+                                </div>
+                                <div class="form-group">
+                                    <label for="newPassword">New Password</label>
+                                    <input type="password" id="newPassword">
+                                </div>
+                                <div class="form-group">
+                                    <label for="confirmPassword">Confirm New Password</label>
+                                    <input type="password" id="confirmPassword">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Password</button>
+                            </form>
+                            
+                            <div class="two-factor">
+                                <h3>Two-Factor Authentication</h3>
+                                <p>Add an extra layer of security to your account</p>
+                                <button class="btn btn-outline">Enable 2FA</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-panel" id="preferences">
+                            <h2>App Preferences</h2>
+                            <form class="settings-form">
+                                <div class="form-group">
+                                    <label for="defaultModel">Default OCR Model</label>
+                                    <select id="defaultModel">
+                                        <option>Auto-select</option>
+                                        <option>Tesseract OCR</option>
+                                        <option>EasyOCR</option>
+                                        <option>Florence-2 AI</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="exportFormat">Default Export Format</label>
+                                    <select id="exportFormat">
+                                        <option>JSON</option>
+                                        <option>CSV</option>
+                                        <option>Excel</option>
+                                    </select>
+                                </div>
+                                <div class="toggle-group">
+                                    <div class="toggle-item">
+                                        <div>
+                                            <strong>Dark Mode</strong>
+                                            <p>Use dark theme across the dashboard</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="darkModeToggle">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Preferences</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="quickExtractModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Quick Extract</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-dropzone" id="quickUpload">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <h3>Drop your receipt here</h3>
+                    <p>or click to browse</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="dashboard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</body>
+</html>

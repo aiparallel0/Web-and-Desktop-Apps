@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create your Receipt Extractor account">
+    <meta name="theme-color" content="#3B82F6">
+    
+    <title>Sign Up | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+    
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            max-width: 520px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideInUp 0.6s ease;
+        }
+        
+        .auth-header {
+            padding: var(--space-6) var(--space-6) var(--space-4);
+            text-align: center;
+        }
+        
+        .auth-logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--space-3);
+            background: var(--color-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .auth-title {
+            font-size: 1.875rem;
+            font-weight: var(--font-bold);
+            color: var(--color-gray-900);
+            margin-bottom: 8px;
+        }
+        
+        .auth-subtitle {
+            font-size: 0.9375rem;
+            color: var(--color-gray-500);
+        }
+        
+        .auth-body {
+            padding: var(--space-2) var(--space-6) var(--space-6);
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-2);
+        }
+        
+        .form-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            font-weight: var(--font-medium);
+            color: var(--color-gray-700);
+            font-size: 0.9375rem;
+        }
+        
+        .form-input {
+            padding: var(--space-2) var(--space-3);
+            border: 2px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-input.error {
+            border-color: var(--color-danger);
+        }
+        
+        .form-error {
+            color: var(--color-danger);
+            font-size: 0.875rem;
+            display: none;
+        }
+        
+        .form-input.error + .form-error {
+            display: block;
+        }
+        
+        .form-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin-top: 2px;
+        }
+        
+        .form-checkbox label {
+            font-size: 0.875rem;
+            color: var(--color-gray-600);
+            line-height: 1.5;
+        }
+        
+        .form-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: var(--font-medium);
+            transition: color var(--transition-fast);
+        }
+        
+        .form-link:hover {
+            color: var(--color-primary-dark);
+            text-decoration: underline;
+        }
+        
+        .password-strength {
+            margin-top: 8px;
+        }
+        
+        .strength-bar {
+            height: 4px;
+            background: var(--color-gray-200);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        
+        .strength-fill {
+            height: 100%;
+            transition: width var(--transition-base), background var(--transition-base);
+            border-radius: var(--radius-full);
+        }
+        
+        .strength-label {
+            font-size: 0.75rem;
+            color: var(--color-gray-500);
+            margin-top: 4px;
+        }
+        
+        .plan-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-2);
+            margin-bottom: var(--space-2);
+        }
+        
+        .plan-option {
+            padding: var(--space-3);
+            border: 2px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+        }
+        
+        .plan-option:hover {
+            border-color: var(--color-gray-300);
+        }
+        
+        .plan-option.selected {
+            border-color: var(--color-primary);
+            background: var(--color-primary-50);
+        }
+        
+        .plan-name {
+            font-weight: var(--font-semibold);
+            color: var(--color-gray-900);
+            margin-bottom: 4px;
+        }
+        
+        .plan-price {
+            font-size: 1.5rem;
+            font-weight: var(--font-bold);
+            color: var(--color-primary);
+        }
+        
+        .plan-price small {
+            font-size: 0.875rem;
+            font-weight: var(--font-normal);
+            color: var(--color-gray-500);
+        }
+        
+        .auth-footer {
+            text-align: center;
+            padding: var(--space-4) var(--space-6) var(--space-6);
+            color: var(--color-gray-600);
+            font-size: 0.9375rem;
+        }
+        
+        .features-sidebar {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: var(--space-8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .sidebar-content {
+            max-width: 480px;
+        }
+        
+        .sidebar-title {
+            font-size: 2.5rem;
+            font-weight: var(--font-bold);
+            margin-bottom: var(--space-2);
+            line-height: 1.2;
+        }
+        
+        .sidebar-subtitle {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            margin-bottom: var(--space-6);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: var(--font-bold);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+        
+        .sidebar-features {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+        
+        .sidebar-feature {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.9375rem;
+        }
+        
+        .check-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 1024px) {
+            .features-sidebar {
+                display: none;
+            }
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            50% {
+                transform: translate(50px, 50px) rotate(180deg);
+            }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <!-- Features Sidebar -->
+        <div class="features-sidebar">
+            <div class="sidebar-content">
+                <h1 class="sidebar-title">Join 10,000+ Users</h1>
+                <p class="sidebar-subtitle">Start extracting receipt data with AI in seconds</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value">1M+</span>
+                        <span class="stat-label">Receipts Processed</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">98%</span>
+                        <span class="stat-label">Accuracy Rate</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">50+</span>
+                        <span class="stat-label">Languages</span>
+                    </div>
+                </div>
+                
+                <div class="sidebar-features">
+                    <div class="sidebar-feature">
+                        <div class="check-icon">✓</div>
+                        <span>Free plan includes 10 extractions per month</span>
+                    </div>
+                    <div class="sidebar-feature">
+                        <div class="check-icon">✓</div>
+                        <span>No credit card required to start</span>
+                    </div>
+                    <div class="sidebar-feature">
+                        <div class="check-icon">✓</div>
+                        <span>Upgrade or cancel anytime</span>
+                    </div>
+                    <div class="sidebar-feature">
+                        <div class="check-icon">✓</div>
+                        <span>14-day money-back guarantee on paid plans</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auth Form -->
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="auth-logo">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 2l7 7-7 7"></path>
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        </svg>
+                    </div>
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Start your 14-day free trial, no credit card required</p>
+                </div>
+                
+                <div class="auth-body">
+                    <!-- Plan Selector -->
+                    <div class="plan-selector">
+                        <div class="plan-option selected" data-plan="free">
+                            <div class="plan-name">Free</div>
+                            <div class="plan-price">
+                                $0
+                                <small>/mo</small>
+                            </div>
+                        </div>
+                        <div class="plan-option" data-plan="pro">
+                            <div class="plan-name">Pro</div>
+                            <div class="plan-price">
+                                $19
+                                <small>/mo</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form class="auth-form" id="signUpForm">
+                        <div class="form-row">
+                            <div class="form-input-group">
+                                <label class="form-label" for="firstName">First Name</label>
+                                <input type="text" id="firstName" class="form-input" placeholder="John" required>
+                                <span class="form-error">Please enter your first name</span>
+                            </div>
+                            
+                            <div class="form-input-group">
+                                <label class="form-label" for="lastName">Last Name</label>
+                                <input type="text" id="lastName" class="form-input" placeholder="Doe" required>
+                                <span class="form-error">Please enter your last name</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-input-group">
+                            <label class="form-label" for="email">Email Address</label>
+                            <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+                            <span class="form-error">Please enter a valid email address</span>
+                        </div>
+                        
+                        <div class="form-input-group">
+                            <label class="form-label" for="password">Password</label>
+                            <input type="password" id="password" class="form-input" placeholder="••••••••" required minlength="8">
+                            <span class="form-error">Password must be at least 8 characters</span>
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill" id="strengthFill"></div>
+                                </div>
+                                <div class="strength-label" id="strengthLabel">Enter a password</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-input-group">
+                            <label class="form-label" for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" class="form-input" placeholder="••••••••" required>
+                            <span class="form-error">Passwords do not match</span>
+                        </div>
+                        
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">
+                                I agree to the <a href="terms.html" class="form-link" target="_blank">Terms of Service</a> 
+                                and <a href="privacy.html" class="form-link" target="_blank">Privacy Policy</a>
+                            </label>
+                        </div>
+                        
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="newsletter">
+                            <label for="newsletter">
+                                Send me product updates and tips via email
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="auth-footer">
+                    Already have an account? <a href="login.html" class="form-link">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Plan selection
+        document.querySelectorAll('.plan-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.plan-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+        
+        // Password strength checker
+        const passwordInput = document.getElementById('password');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthLabel = document.getElementById('strengthLabel');
+        
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            
+            if (password.length >= 8) strength += 25;
+            if (password.match(/[a-z]/)) strength += 25;
+            if (password.match(/[A-Z]/)) strength += 25;
+            if (password.match(/[0-9]/)) strength += 12.5;
+            if (password.match(/[^a-zA-Z0-9]/)) strength += 12.5;
+            
+            strengthFill.style.width = strength + '%';
+            
+            if (strength < 50) {
+                strengthFill.style.background = '#EF4444';
+                strengthLabel.textContent = 'Weak password';
+            } else if (strength < 75) {
+                strengthFill.style.background = '#F59E0B';
+                strengthLabel.textContent = 'Medium password';
+            } else {
+                strengthFill.style.background = '#10B981';
+                strengthLabel.textContent = 'Strong password';
+            }
+        });
+        
+        // Form validation and submission
+        document.getElementById('signUpForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const firstName = document.getElementById('firstName');
+            const lastName = document.getElementById('lastName');
+            const email = document.getElementById('email');
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirmPassword');
+            const terms = document.getElementById('terms');
+            
+            let isValid = true;
+            
+            // Reset errors
+            document.querySelectorAll('.form-input').forEach(input => {
+                input.classList.remove('error');
+            });
+            
+            // Validate
+            if (!firstName.value.trim()) {
+                firstName.classList.add('error');
+                isValid = false;
+            }
+            
+            if (!lastName.value.trim()) {
+                lastName.classList.add('error');
+                isValid = false;
+            }
+            
+            if (!email.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                email.classList.add('error');
+                isValid = false;
+            }
+            
+            if (password.value.length < 8) {
+                password.classList.add('error');
+                isValid = false;
+            }
+            
+            if (password.value !== confirmPassword.value) {
+                confirmPassword.classList.add('error');
+                isValid = false;
+            }
+            
+            if (!terms.checked) {
+                alert('Please agree to the Terms of Service and Privacy Policy');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                return;
+            }
+            
+            // Get selected plan
+            const selectedPlan = document.querySelector('.plan-option.selected').dataset.plan;
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Creating account...';
+            submitBtn.disabled = true;
+            
+            // Simulate API call
+            console.log('Creating account...', {
+                firstName: firstName.value,
+                lastName: lastName.value,
+                email: email.value,
+                plan: selectedPlan,
+                newsletter: document.getElementById('newsletter').checked
+            });
+            
+            // Simulate success after 1.5 seconds
+            setTimeout(() => {
+                // Store token (mock)
+                localStorage.setItem('access_token', 'mock_token_' + Date.now());
+                localStorage.setItem('user_email', email.value);
+                localStorage.setItem('user_name', firstName.value + ' ' + lastName.value);
+                localStorage.setItem('user_plan', selectedPlan);
+                
+                // Redirect to dashboard
+                window.location.href = 'dashboard.html';
+            }, 1500);
+        });
+    </script>
+</body>
+</html>
