@@ -1184,13 +1184,51 @@ def start_finetune(job_id):
   thread.start()
   return jsonify({'success':True,'message':'Finetuning started','job_id':job_id})
  except Exception as e:logger.error(f"Error starting finetune: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/finetune/<job_id>/status',methods=['GET'])
+@app.route('/api/finetune/<job_id>/status', methods=['GET'])
 def get_finetune_status(job_id):
- try:
-  if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
-  job=finetune_jobs[job_id]
-  return jsonify({'success':True,'job':{'id':job_id,'status':job['status'],'progress':job.get('progress',0),'metrics':job.get('metrics'),'error':job.get('error'),'model_path':job.get('model_path'),'cloud_url':job.get('cloud_url'),'samples_count':len(job.get('training_data',[]))}})
- except Exception as e:logger.error(f"Error getting finetune status: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Get the status of a finetuning job.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.status") as span:
+        try:
+            if job_id not in finetune_jobs:
+                return jsonify({'success': False, 'error': 'Job not found'}), 404
+            
+            job = finetune_jobs[job_id]
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_status",
+                "finetune.job_id": job_id,
+                "finetune.status": job['status'],
+                "finetune.progress": job.get('progress', 0)
+            })
+            
+            return jsonify({
+                'success': True,
+                'job': {
+                    'id': job_id,
+                    'status': job['status'],
+                    'progress': job.get('progress', 0),
+                    'metrics': job.get('metrics'),
+                    'error': job.get('error'),
+                    'model_path': job.get('model_path'),
+                    'cloud_url': job.get('cloud_url'),
+                    'samples_count': len(job.get('training_data', []))
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting finetune status: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/export',methods=['GET'])
 def export_finetuned_model(job_id):
  try:
@@ -1211,84 +1249,265 @@ def list_finetune_jobs():
   jobs_list=[{'id':job_id,'model_id':job['model_id'],'status':job['status'],'progress':job.get('progress',0),'created':job['created'],'samples':len(job.get('training_data',[]))}for job_id,job in finetune_jobs.items()]
   return jsonify({'success':True,'jobs':jobs_list})
  except Exception as e:logger.error(f"Error listing jobs: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/list',methods=['POST'])
+@app.route('/api/cloud/list', methods=['POST'])
+@rate_limit(requests=30, window=3600, error_message="Cloud listing rate limit exceeded.")
+@validate_json_body({
+    'provider': {'type': str, 'required': True, 'choices': ['google_drive', 'dropbox', 's3']},
+    'credentials': {'type': dict, 'required': True},
+    'path': {'type': str}
+})
 def list_cloud_files():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  credentials=data.get('credentials',{})
-  path=data.get('path','/')
-  if not provider:
-   return jsonify({'success':False,'error':'Provider is required. Supported: google_drive, dropbox, s3'}),400
-  from shared.services.cloud_storage import CloudStorageService,GoogleDriveProvider,DropboxProvider,S3Provider
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   if not credentials.get('access_token')and not credentials.get('client_id'):
-    return jsonify({'success':False,'error':'Google Drive requires OAuth credentials. Provide access_token or client_id/client_secret.'}),400
-   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'),client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
-  elif provider=='dropbox':
-   if not credentials.get('access_token'):
-    return jsonify({'success':False,'error':'Dropbox access_token required.'}),400
-   storage_service.configure_dropbox(access_token=credentials.get('access_token'),app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
-  elif provider=='s3':
-   if not credentials.get('access_key_id')or not credentials.get('secret_access_key'):
-    return jsonify({'success':False,'error':'S3 requires access_key_id and secret_access_key.'}),400
-   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'),region=credentials.get('region'))
-  else:
-   return jsonify({'success':False,'error':f'Unsupported provider: {provider}. Supported: google_drive, dropbox, s3'}),400
-  files=storage_service.list_files(provider,path)
-  files_list=[{'id':f.id,'name':f.name,'path':f.path,'size':f.size,'mime_type':f.mime_type,'modified_at':f.modified_at.isoformat()if f.modified_at else None,'is_folder':f.is_folder,'download_url':f.download_url}for f in files]
-  return jsonify({'success':True,'files':files_list,'provider':provider,'path':path})
- except ImportError as e:
-  logger.error(f"Cloud storage import error: {e}")
-  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}. See documentation for required packages.'}),500
- except Exception as e:logger.error(f"Error listing cloud files: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/download',methods=['POST'])
+    """
+    List files from cloud storage provider.
+    
+    Rate Limited: 30 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.list") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            credentials = data.get('credentials', {})
+            path = data.get('path', '/')
+            
+            # Sanitize credentials for logging (don't log sensitive data)
+            sanitized_creds = sanitize_attributes(credentials, ['access_token', 'secret_access_key', 'client_secret'])
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_list",
+                "cloud.provider": provider,
+                "cloud.path": path,
+                "cloud.has_credentials": len(credentials) > 0
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService, GoogleDriveProvider, DropboxProvider, S3Provider
+            storage_service = CloudStorageService()
+            
+            # Configure provider
+            if provider == 'google_drive':
+                if not credentials.get('access_token') and not credentials.get('client_id'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Google Drive requires OAuth credentials. Provide access_token or client_id/client_secret.'
+                    }), 400
+                storage_service.configure_google_drive(
+                    credentials=credentials,
+                    access_token=credentials.get('access_token'),
+                    client_id=credentials.get('client_id'),
+                    client_secret=credentials.get('client_secret')
+                )
+            elif provider == 'dropbox':
+                if not credentials.get('access_token'):
+                    return jsonify({'success': False, 'error': 'Dropbox access_token required.'}), 400
+                storage_service.configure_dropbox(
+                    access_token=credentials.get('access_token'),
+                    app_key=credentials.get('app_key'),
+                    app_secret=credentials.get('app_secret')
+                )
+            elif provider == 's3':
+                if not credentials.get('access_key_id') or not credentials.get('secret_access_key'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'S3 requires access_key_id and secret_access_key.'
+                    }), 400
+                storage_service.configure_s3(
+                    bucket=credentials.get('bucket'),
+                    access_key_id=credentials.get('access_key_id'),
+                    secret_access_key=credentials.get('secret_access_key'),
+                    region=credentials.get('region')
+                )
+            
+            # List files
+            files = storage_service.list_files(provider, path)
+            files_list = [{
+                'id': f.id,
+                'name': f.name,
+                'path': f.path,
+                'size': f.size,
+                'mime_type': f.mime_type,
+                'modified_at': f.modified_at.isoformat() if f.modified_at else None,
+                'is_folder': f.is_folder,
+                'download_url': f.download_url
+            } for f in files]
+            
+            set_span_attributes(span, {
+                "cloud.files_count": len(files_list)
+            })
+            
+            return jsonify({
+                'success': True,
+                'files': files_list,
+                'provider': provider,
+                'path': path
+            })
+            
+        except ImportError as e:
+            logger.error(f"Cloud storage import error: {e}")
+            span.record_exception(e)
+            return jsonify({
+                'success': False,
+                'error': f'Cloud storage dependencies not installed: {e}. See documentation for required packages.'
+            }), 500
+        except Exception as e:
+            logger.error(f"Error listing cloud files: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/cloud/download', methods=['POST'])
+@rate_limit(requests=30, window=3600, error_message="Cloud download rate limit exceeded.")
+@validate_json_body({
+    'provider': {'type': str, 'required': True},
+    'file_id': {'type': str, 'required': True},
+    'credentials': {'type': dict, 'required': True}
+})
 def download_cloud_file():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  file_id=data.get('file_id')
-  credentials=data.get('credentials',{})
-  if not provider or not file_id:
-   return jsonify({'success':False,'error':'Provider and file_id are required.'}),400
-  from shared.services.cloud_storage import CloudStorageService
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'))
-  elif provider=='dropbox':
-   storage_service.configure_dropbox(access_token=credentials.get('access_token'))
-  elif provider=='s3':
-   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'))
-  else:
-   return jsonify({'success':False,'error':f'Unsupported provider: {provider}'}),400
-  with tempfile.NamedTemporaryFile(delete=False)as temp_file:
-   local_path=temp_file.name
-  storage_service.download_file(provider,file_id,local_path)
-  return send_file(local_path,as_attachment=True)
- except ImportError as e:
-  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}'}),500
- except Exception as e:logger.error(f"Error downloading cloud file: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/auth',methods=['POST'])
+    """
+    Download a file from cloud storage.
+    
+    Rate Limited: 30 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.download") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            file_id = data.get('file_id')
+            credentials = data.get('credentials', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_download",
+                "cloud.provider": provider,
+                "cloud.file_id": file_id[:10] + "..." if len(file_id) > 10 else file_id
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService
+            storage_service = CloudStorageService()
+            
+            # Configure provider
+            if provider == 'google_drive':
+                storage_service.configure_google_drive(
+                    credentials=credentials,
+                    access_token=credentials.get('access_token')
+                )
+            elif provider == 'dropbox':
+                storage_service.configure_dropbox(
+                    access_token=credentials.get('access_token')
+                )
+            elif provider == 's3':
+                storage_service.configure_s3(
+                    bucket=credentials.get('bucket'),
+                    access_key_id=credentials.get('access_key_id'),
+                    secret_access_key=credentials.get('secret_access_key')
+                )
+            else:
+                return jsonify({'success': False, 'error': f'Unsupported provider: {provider}'}), 400
+            
+            # Download file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                local_path = temp_file.name
+            
+            storage_service.download_file(provider, file_id, local_path)
+            
+            # Get file size for telemetry
+            import os
+            file_size = os.path.getsize(local_path) if os.path.exists(local_path) else 0
+            
+            set_span_attributes(span, {
+                "cloud.download_size": file_size
+            })
+            
+            logger.info(f"Downloaded file from {provider}: {file_id}, size: {file_size}")
+            return send_file(local_path, as_attachment=True)
+            
+        except ImportError as e:
+            span.record_exception(e)
+            return jsonify({
+                'success': False,
+                'error': f'Cloud storage dependencies not installed: {e}'
+            }), 500
+        except Exception as e:
+            logger.error(f"Error downloading cloud file: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/cloud/auth', methods=['POST'])
+@validate_json_body({
+    'provider': {'type': str, 'required': True},
+    'auth_code': {'type': str},
+    'credentials': {'type': dict}
+})
 def cloud_auth():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  auth_code=data.get('auth_code')
-  credentials=data.get('credentials',{})
-  if not provider:
-   return jsonify({'success':False,'error':'Provider is required.'}),400
-  from shared.services.cloud_storage import CloudStorageService
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   storage_service.configure_google_drive(client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
-   result=storage_service.authenticate(provider,auth_code)
-   return jsonify({'success':True,'auth':result})
-  elif provider=='dropbox':
-   storage_service.configure_dropbox(app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
-   result=storage_service.authenticate(provider,auth_code)
-   return jsonify({'success':True,'auth':result})
-  else:
-   return jsonify({'success':False,'error':f'OAuth not supported for provider: {provider}'}),400
- except Exception as e:logger.error(f"Error in cloud auth: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Authenticate with cloud storage provider.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.auth") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            auth_code = data.get('auth_code')
+            credentials = data.get('credentials', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_auth",
+                "cloud.provider": provider,
+                "cloud.has_auth_code": auth_code is not None
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService
+            storage_service = CloudStorageService()
+            
+            if provider == 'google_drive':
+                storage_service.configure_google_drive(
+                    client_id=credentials.get('client_id'),
+                    client_secret=credentials.get('client_secret')
+                )
+                result = storage_service.authenticate(provider, auth_code)
+                
+                set_span_attributes(span, {
+                    "cloud.auth_success": True
+                })
+                
+                return jsonify({'success': True, 'auth': result})
+            elif provider == 'dropbox':
+                storage_service.configure_dropbox(
+                    app_key=credentials.get('app_key'),
+                    app_secret=credentials.get('app_secret')
+                )
+                result = storage_service.authenticate(provider, auth_code)
+                
+                set_span_attributes(span, {
+                    "cloud.auth_success": True
+                })
+                
+                return jsonify({'success': True, 'auth': result})
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'OAuth not supported for provider: {provider}'
+                }), 400
+                
+        except Exception as e:
+            logger.error(f"Error in cloud auth: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(model_manager.get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)
