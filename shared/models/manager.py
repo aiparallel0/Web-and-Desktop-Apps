@@ -87,6 +87,7 @@ from abc import ABC, abstractmethod
 
 # Import circular exchange decorator to reduce boilerplate
 from shared.utils.decorators import circular_exchange_module
+from shared.utils.telemetry import get_tracer, set_span_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -667,47 +668,83 @@ class ModelManager:
             ValueError: If model is not found
             ImportError: If required dependencies are not installed
         """
-        with self._lock:
-            # Resolve model ID
-            if model_id is None:
-                model_id = self.current_model
-            if model_id is None:
-                model_id = self.get_default_model()
-                self.current_model = model_id
-            
-            # Check cache
-            if model_id in self.loaded_processors:
-                logger.debug(f"Using cached processor for {model_id}")
-                self.model_last_used[model_id] = datetime.now()
-                return self.loaded_processors[model_id]
-            
-            # Evict if necessary
-            if len(self.loaded_processors) >= self.max_loaded_models:
-                self._evict_least_recently_used()
-            
-            # Get model config
-            model_config = self.get_model_info(model_id)
-            if not model_config:
-                raise ValueError(f"Model {model_id} not found")
-            
-            # Create processor
-            try:
-                processor = ProcessorFactory.create(model_config)
+        tracer = get_tracer()
+        with tracer.start_as_current_span("model_manager.get_processor") as span:
+            with self._lock:
+                # Resolve model ID
+                if model_id is None:
+                    model_id = self.current_model
+                if model_id is None:
+                    model_id = self.get_default_model()
+                    self.current_model = model_id
                 
-                # Cache processor
-                self.loaded_processors[model_id] = processor
-                self.model_last_used[model_id] = datetime.now()
-                self.model_load_times[model_id] = datetime.now()
+                # Set span attributes
+                set_span_attributes(span, {
+                    "operation.type": "model_loading",
+                    "model.id": model_id,
+                    "cache.size": len(self.loaded_processors),
+                    "cache.max_size": self.max_loaded_models
+                })
                 
-                logger.info(f"✓ Loaded and cached processor for {model_id}")
-                return processor
+                # Check cache
+                if model_id in self.loaded_processors:
+                    logger.debug(f"Using cached processor for {model_id}")
+                    self.model_last_used[model_id] = datetime.now()
+                    set_span_attributes(span, {
+                        "cache.hit": True,
+                        "model.loaded_from_cache": True
+                    })
+                    return self.loaded_processors[model_id]
                 
-            except ImportError as e:
-                logger.error(f"❌ Failed to load processor {model_id}: {e}")
-                raise
-            except Exception as e:
-                logger.error(f"❌ Failed to load processor {model_id}: {e}")
-                raise
+                # Cache miss
+                set_span_attributes(span, {"cache.hit": False})
+                
+                # Evict if necessary
+                if len(self.loaded_processors) >= self.max_loaded_models:
+                    self._evict_least_recently_used()
+                
+                # Get model config
+                model_config = self.get_model_info(model_id)
+                if not model_config:
+                    span.set_attribute("error", True)
+                    raise ValueError(f"Model {model_id} not found")
+                
+                # Create processor
+                try:
+                    processor = ProcessorFactory.create(model_config)
+                    
+                    # Cache processor
+                    self.loaded_processors[model_id] = processor
+                    self.model_last_used[model_id] = datetime.now()
+                    self.model_load_times[model_id] = datetime.now()
+                    
+                    # Set success attributes
+                    set_span_attributes(span, {
+                        "model.loaded": True,
+                        "model.type": model_config.get('type', 'unknown')
+                    })
+                    
+                    logger.info(f"✓ Loaded and cached processor for {model_id}")
+                    return processor
+                    
+                except ImportError as e:
+                    logger.error(f"❌ Failed to load processor {model_id}: {e}")
+                    span.record_exception(e)
+                    try:
+                        from opentelemetry.trace import Status, StatusCode
+                        span.set_status(Status(StatusCode.ERROR, f"Import error: {str(e)}"))
+                    except ImportError:
+                        pass
+                    raise
+                except Exception as e:
+                    logger.error(f"❌ Failed to load processor {model_id}: {e}")
+                    span.record_exception(e)
+                    try:
+                        from opentelemetry.trace import Status, StatusCode
+                        span.set_status(Status(StatusCode.ERROR, str(e)))
+                    except ImportError:
+                        pass
+                    raise
     
     def _evict_least_recently_used(self) -> None:
         """Evict the least recently used model from cache."""
