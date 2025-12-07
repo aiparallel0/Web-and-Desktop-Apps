@@ -31,6 +31,7 @@ from .base import (
     TrainingError, TrainingStartError
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,22 @@ trainer.save_model('./output/final_model')
             logger.error("HuggingFace Hub not available")
             return
         
-        self.api_key = self.api_key or os.getenv('HUGGINGFACE_API_KEY') or os.getenv('HUGGINGFACE_TOKEN')
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={
+                    'api_key': 'HUGGINGFACE_API_KEY'
+                }
+            )
+            # Also check HUGGINGFACE_TOKEN as alternative
+            if not config.get('api_key'):
+                config['api_key'] = os.getenv('HUGGINGFACE_TOKEN')
+            
+            # Override with constructor value if provided
+            self.api_key = self.api_key or config.get('api_key')
+            
+        except Exception as e:
+            logger.warning(f"Failed to load HuggingFace config from environment: {e}")
         
         if not self.api_key:
             logger.warning("HUGGINGFACE_API_KEY not configured")
@@ -136,7 +152,7 @@ trainer.save_model('./output/final_model')
             # Verify token works
             self._api.whoami()
             self._configured = True
-            logger.info("HuggingFace trainer initialized")
+            log_handler_event("HFTrainer", "initialized")
         except Exception as e:
             logger.error(f"HuggingFace initialization error: {e}")
     

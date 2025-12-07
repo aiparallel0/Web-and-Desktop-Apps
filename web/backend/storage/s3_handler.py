@@ -33,6 +33,7 @@ from .base import (
     StorageProvider
 )
 from shared.utils.optional_imports import OptionalImport
+from shared.utils.base_handler import load_env_config, log_handler_event
 
 logger = logging.getLogger(__name__)
 
@@ -88,10 +89,26 @@ class S3StorageHandler(BaseStorageHandler):
             logger.error("boto3 not available")
             return
         
-        self.bucket_name = self.bucket_name or os.getenv('AWS_S3_BUCKET')
-        self.region = self.region or os.getenv('AWS_REGION', 'us-east-1')
-        self.access_key = self.access_key or os.getenv('AWS_ACCESS_KEY_ID')
-        self.secret_key = self.secret_key or os.getenv('AWS_SECRET_ACCESS_KEY')
+        # Load configuration from environment
+        try:
+            config = load_env_config(
+                env_map={
+                    'bucket_name': 'AWS_S3_BUCKET',
+                    'region': 'AWS_REGION',
+                    'access_key': 'AWS_ACCESS_KEY_ID',
+                    'secret_key': 'AWS_SECRET_ACCESS_KEY'
+                },
+                defaults={'region': 'us-east-1'}
+            )
+            
+            # Override with constructor values if provided
+            self.bucket_name = self.bucket_name or config.get('bucket_name')
+            self.region = self.region or config.get('region')
+            self.access_key = self.access_key or config.get('access_key')
+            self.secret_key = self.secret_key or config.get('secret_key')
+            
+        except Exception as e:
+            logger.warning(f"Failed to load S3 config from environment: {e}")
         
         if not self.bucket_name:
             logger.warning("AWS_S3_BUCKET not configured")
@@ -111,7 +128,11 @@ class S3StorageHandler(BaseStorageHandler):
             self._client.head_bucket(Bucket=self.bucket_name)
             
             self._configured = True
-            logger.info(f"S3 storage initialized: bucket={self.bucket_name}")
+            log_handler_event(
+                "S3Storage",
+                "initialized",
+                {'bucket': self.bucket_name, 'region': self.region}
+            )
             
         except NoCredentialsError:
             logger.error("AWS credentials not found")
