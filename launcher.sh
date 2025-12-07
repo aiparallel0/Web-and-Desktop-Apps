@@ -1,9 +1,16 @@
 #!/bin/bash
 ###############################################################################
-# Receipt Extractor - Unified All-in-One Launcher v5.0
+# Receipt Extractor - Unified All-in-One Launcher v6.0 (CONSOLIDATED)
 #
-# This is the SINGLE launcher script for the entire project.
+# This is the SINGLE CONSOLIDATED launcher script for the entire project.
+# All redundant launcher scripts have been removed to avoid confusion.
 # Located at repository root for direct access after git pull.
+#
+# Consolidated from:
+# - launcher.sh v5.0 (full-featured with test reporting)
+# - launch.sh (comprehensive with cache cleaning)
+# - tools/launch.sh (Circular Exchange Framework integration)
+# - tools/launch_enhanced.sh (performance metrics and ASCII visualizations)
 #
 # Features:
 # - Automatic dependency installation and validation
@@ -13,6 +20,8 @@
 # - Database migrations
 # - System health monitoring
 # - Alternative deployment documentation
+# - Performance metrics tracking
+# - ASCII-based data visualizations
 #
 # Usage:
 #   ./launcher.sh                 # Interactive menu
@@ -25,6 +34,8 @@
 #   ./launcher.sh report          # Generate comprehensive test report
 #   ./launcher.sh alternatives    # Show alternative deployment options
 #   ./launcher.sh help            # Show help
+#
+# For quick testing during development, use: ./run.sh
 #
 # Works from any directory - auto-detects project root
 ###############################################################################
@@ -95,7 +106,7 @@ print_banner() {
     echo -e "${CYAN}${BOLD}"
     echo "╔════════════════════════════════════════════════════════════════════════╗"
     echo "║                                                                        ║"
-    echo "║           Receipt Extractor - Unified Launcher v5.0                    ║"
+    echo "║           Receipt Extractor - Unified Launcher v6.0 (CONSOLIDATED)    ║"
     echo "║                                                                        ║"
     echo "║      AI-Powered Receipt Processing with Comprehensive Testing          ║"
     echo "║                                                                        ║"

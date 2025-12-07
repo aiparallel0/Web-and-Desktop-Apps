@@ -517,7 +517,7 @@ pytest tools/tests/test_integration.py # Integration tests
 
 7. **Launch Application**
    ```bash
-   ./launch.sh
+   ./launcher.sh  # Consolidated v6.0 launcher
    # Or manually:
    cd web/backend && python app.py
    ```
