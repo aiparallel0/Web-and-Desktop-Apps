@@ -34,6 +34,7 @@ from .base import (
 )
 from shared.utils.optional_imports import OptionalImport
 from shared.utils.base_handler import load_env_config, log_handler_event
+from shared.utils.telemetry import get_tracer, set_span_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -160,12 +161,23 @@ class S3StorageHandler(BaseStorageHandler):
         Returns:
             UploadResult with success status and URL
         """
-        if not self._configured:
-            return UploadResult(
-                success=False,
-                key=key,
-                error="S3 not configured"
-            )
+        tracer = get_tracer()
+        with tracer.start_as_current_span("s3_storage.upload_file") as span:
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "storage_upload",
+                "storage.provider": "s3",
+                "storage.bucket": self.bucket_name or "unconfigured",
+                "storage.key": key
+            })
+            
+            if not self._configured:
+                span.set_attribute("error", True)
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error="S3 not configured"
+                )
         
         try:
             # Convert bytes to file-like object
@@ -196,6 +208,13 @@ class S3StorageHandler(BaseStorageHandler):
             # Generate URL
             url = self.get_file_url(key)
             
+            # Set success attributes
+            set_span_attributes(span, {
+                "upload.success": True,
+                "upload.size": size,
+                "upload.url": url
+            })
+            
             logger.info(f"Uploaded file to S3: {key}")
             
             return UploadResult(
@@ -209,6 +228,12 @@ class S3StorageHandler(BaseStorageHandler):
         except ClientError as e:
             error_msg = str(e)
             logger.error(f"S3 upload error: {error_msg}")
+            span.record_exception(e)
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, error_msg))
+            except ImportError:
+                pass
             return UploadResult(
                 success=False,
                 key=key,
