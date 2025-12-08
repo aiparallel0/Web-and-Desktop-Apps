@@ -10,6 +10,7 @@ AI-powered receipt text extraction with **Web Application** and **Electron Deskt
 - [Project Overview](#project-overview)
 - [External Integration Roadmap](#external-integration-roadmap)
 - [Project Structure](#project-structure)
+- [Repository Analysis](#repository-analysis)
 - [Available Models](#available-models)
 - [API Reference](#api-reference)
 - [Circular Exchange Framework](#circular-exchange-framework)
@@ -210,6 +211,71 @@ This generates detailed reports with:
 ├── Dockerfile           # Container configuration (optional) (NEW)
 └── requirements.txt     # Python dependencies
 ```
+
+---
+
+## 🔍 Repository Analysis
+
+**Comprehensive Codebase Screening Tool**
+
+The repository includes an automated analysis tool that screens the entire codebase for potential issues and areas of improvement.
+
+### Quick Analysis
+
+Run the repository screener to generate a comprehensive report:
+
+```bash
+python tools/scripts/repo_screener.py
+```
+
+This generates:
+- **REPOSITORY_ANALYSIS.md**: Human-readable markdown report
+- **repository_analysis.json**: Machine-readable JSON data
+
+### What It Analyzes
+
+The tool performs deep analysis to identify:
+
+1. **Missing Implementations** (512 found): Functions imported but not defined
+2. **Orphaned Imports** (218 found): Unused imports in files
+3. **Files Without Tests** (79 found): Code lacking test coverage
+4. **Missing Files** (85 found): Referenced files that don't exist
+5. **Unused Functions** (2698 found): Potentially unused code (heuristic)
+6. **Documentation Mismatches** (14 found): README vs. code inconsistencies
+
+### Current Repository Statistics
+
+Based on latest analysis:
+
+| Metric | Count |
+|--------|-------|
+| **Total Files** | 197 |
+| **Python Files** | 154 |
+| **JavaScript Files** | 43 |
+| **Total Functions** | 2,959 |
+| **Total Classes** | 612 |
+
+### Files by Category
+
+- **Backend Files**: 44 (Flask API, authentication, billing, storage)
+- **Frontend/Desktop Files**: 44 (Web UI and Electron app)
+- **Shared Module Files**: 67 (AI models, utilities, CEFR framework)
+- **Test Files**: 37 (~1055 tests total)
+
+### Documentation
+
+For detailed information about the analysis tool and how to interpret results:
+
+- **[Repository Analysis Report](REPOSITORY_ANALYSIS.md)**: Full analysis results
+- **[Repository Screener Documentation](docs/REPOSITORY_SCREENER.md)**: Tool usage guide
+
+### Re-running Analysis
+
+The analysis should be re-run after:
+- Major refactoring
+- Adding new modules or features
+- Before releases
+- When investigating code quality issues
 
 ---
 
@@ -643,6 +709,8 @@ git pull
 ## 📚 Additional Resources
 
 ### Documentation
+- [Repository Analysis Report](REPOSITORY_ANALYSIS.md) - **NEW**: Comprehensive codebase analysis
+- [Repository Screener Tool](docs/REPOSITORY_SCREENER.md) - **NEW**: Documentation for the analysis tool
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Stripe API Reference](https://stripe.com/docs/api)

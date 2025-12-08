@@ -224,184 +224,184 @@ class OCRProcessor:
                 return ExtractionResult(success=False, error="Tesseract not installed")
             
             try:
-            # Get detection configuration from circular exchange framework
-            detection_config = get_detection_config()
-            # Note: min_confidence can be used for future filtering of low-confidence results
-            
-            image = load_and_validate_image(image_path)
-            processed = preprocess_for_ocr(image, aggressive=True)
-            
-            # Try multiple PSM modes on both original and preprocessed images
-            # PSM 11: Sparse text - find as much text as possible (best for receipts)
-            # PSM 3: Fully automatic page segmentation (good fallback)
-            # PSM 6: Assume uniform block of text
-            # 
-            # Optimized: Reduced from 5 PSM modes to 3 most effective ones
-            # Removed PSM 4 (column) and PSM 1 (auto+osd) - rarely better than PSM 11/3
-            # Performance: 40% reduction in initial OCR passes (10 -> 6 passes)
-            
-            # Priority order: PSM 11 and 3 first as they work best for receipts
-            psm_configs = [
-                (11, 'sparse'),   # Best for scattered/sparse text like receipts
-                (3, 'auto'),      # Fully automatic - good general purpose
-                (6, 'block'),     # Uniform text block - good for structured receipts
-            ]
-            
-            ocr_results = []
-            
-            # Try each PSM mode on BOTH preprocessed AND original image
-            # Sometimes preprocessing hurts more than helps
-            # Each result stored as: (mode_name: str, text: str, receipt: ReceiptData, score: int)
-            images_to_try = [
-                ('preprocessed', processed),
-                ('original', image.convert('L')),  # Grayscale original
-            ]
-            
-            for img_name, img in images_to_try:
-                for psm, desc in psm_configs:
-                    try:
-                        # Use preserve_interword_spaces to maintain word boundaries
-                        config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
-                        text = pytesseract.image_to_string(img, lang='eng', config=config)
-                        
-                        if not text or len(text.strip()) < 5:
-                            continue
-                            
-                        receipt = self._parse_receipt_text(text)
-                        score = self._score_result(receipt, text)
-                        mode_name = f'PSM {psm} ({desc}) on {img_name}'
-                        ocr_results.append((mode_name, text, receipt, score))
-                        
-                        logger.debug(f"{mode_name}: score={score}, len={len(text)}")
-                        
-                        # Early exit optimization: Stop if we get an excellent result early
-                        # Saves time by avoiding unnecessary OCR passes
-                        # Note: This only exits the PSM mode loop for the current image variant
-                        # The outer loop will continue with the next image variant if needed
-                        if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                            logger.info(f"Excellent result found early with {mode_name}, stopping PSM modes for this image variant")
-                            break  # Exit inner loop (PSM modes)
-                        
-                    except Exception as e:
-                        logger.debug(f"PSM {psm} on {img_name} failed: {e}")
-                        continue
+                # Get detection configuration from circular exchange framework
+                detection_config = get_detection_config()
+                # Note: min_confidence can be used for future filtering of low-confidence results
                 
-                # Break outer loop if excellent result found
-                # Check if we just added a result with excellent score
-                # Each ocr_results entry is: (mode_name, text, receipt, score)
-                if ocr_results:
-                    last_score = ocr_results[-1][3]  # Index 3 is the score
-                    if last_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                        logger.info(f"Excellent result found, stopping all OCR passes")
-                        break  # Exit outer loop (image variants)
-            
-            if not ocr_results:
-                return ExtractionResult(success=False, error="All OCR modes failed")
-            
-            # Select best result by score (quality)
-            best_mode, best_text, receipt, initial_score = max(ocr_results, key=lambda x: x[3])
-            
-            # Log all results for debugging
-            logger.info(f"OCR tried {len(ocr_results)} mode combinations:")
-            for mode, _, _, score in sorted(ocr_results, key=lambda x: x[3], reverse=True)[:5]:
-                logger.info(f"  {mode}: score={score}")
-            logger.info(f"Best: {best_mode} with score={initial_score}")
-            
-            # If we got a good result, return early
-            if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
-                receipt.processing_time = time.time() - start_time
-                receipt.model_used = f"{self.model_name} ({best_mode})"
-                # Convert score to percentage (0-100) - don't exceed 100%
-                receipt.confidence_score = min(100.0, (initial_score / 95) * 100)
-                logger.info(f"Good result achieved with score: {initial_score}")
-                return ExtractionResult(success=True, data=receipt)
-            
-            # Low quality result - try aggressive multi-pass extraction
-            logger.info(f"Low score ({initial_score}) - trying aggressive preprocessing")
-            
-            preprocessed_versions = self._aggressive_preprocess(image)
-            # Optimized: Try only PSM 11 and 3 in aggressive pass (most effective)
-            # Reduced from 5 modes to 2 for faster processing
-            psm_modes = [11, 3]  # Priority order for aggressive pass
-            best_result, best_score = receipt, initial_score
-            best_text_final = best_text  # Keep track of best text across all passes
-            
-            for v_idx, proc_img in enumerate(preprocessed_versions):
-                for psm in psm_modes:
-                    try:
-                        config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
-                        text = pytesseract.image_to_string(proc_img, lang='eng', config=config)
-                        if not text or len(text.strip()) < 10:
-                            continue
-                        rec = self._parse_receipt_text(text)
-                        score = self._score_result(rec, text)
-                        if score > best_score:
-                            best_score = score
-                            best_result = rec
-                            best_text_final = text
-                            logger.info(f"Better result found: PSM {psm} on preproc v{v_idx+1}, score={score}")
-                            # Early exit if we find an excellent result
+                image = load_and_validate_image(image_path)
+                processed = preprocess_for_ocr(image, aggressive=True)
+                
+                # Try multiple PSM modes on both original and preprocessed images
+                # PSM 11: Sparse text - find as much text as possible (best for receipts)
+                # PSM 3: Fully automatic page segmentation (good fallback)
+                # PSM 6: Assume uniform block of text
+                # 
+                # Optimized: Reduced from 5 PSM modes to 3 most effective ones
+                # Removed PSM 4 (column) and PSM 1 (auto+osd) - rarely better than PSM 11/3
+                # Performance: 40% reduction in initial OCR passes (10 -> 6 passes)
+                
+                # Priority order: PSM 11 and 3 first as they work best for receipts
+                psm_configs = [
+                    (11, 'sparse'),   # Best for scattered/sparse text like receipts
+                    (3, 'auto'),      # Fully automatic - good general purpose
+                    (6, 'block'),     # Uniform text block - good for structured receipts
+                ]
+                
+                ocr_results = []
+                
+                # Try each PSM mode on BOTH preprocessed AND original image
+                # Sometimes preprocessing hurts more than helps
+                # Each result stored as: (mode_name: str, text: str, receipt: ReceiptData, score: int)
+                images_to_try = [
+                    ('preprocessed', processed),
+                    ('original', image.convert('L')),  # Grayscale original
+                ]
+                
+                for img_name, img in images_to_try:
+                    for psm, desc in psm_configs:
+                        try:
+                            # Use preserve_interword_spaces to maintain word boundaries
+                            config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
+                            text = pytesseract.image_to_string(img, lang='eng', config=config)
+                            
+                            if not text or len(text.strip()) < 5:
+                                continue
+                                
+                            receipt = self._parse_receipt_text(text)
+                            score = self._score_result(receipt, text)
+                            mode_name = f'PSM {psm} ({desc}) on {img_name}'
+                            ocr_results.append((mode_name, text, receipt, score))
+                            
+                            logger.debug(f"{mode_name}: score={score}, len={len(text)}")
+                            
+                            # Early exit optimization: Stop if we get an excellent result early
+                            # Saves time by avoiding unnecessary OCR passes
+                            # Note: This only exits the PSM mode loop for the current image variant
+                            # The outer loop will continue with the next image variant if needed
                             if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                                logger.info(f"Excellent result with score {score}, stopping search")
-                                break
-                    except Exception:
-                        continue
-                # Break outer loop too if excellent result found
-                if best_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
-                    break
-            
-            # Record detection result for auto-tuning via circular exchange
-            text_regions = len(best_text_final.strip().split('\n')) if best_text_final else 0
-            record_detection_result(
-                text_regions_count=text_regions,
-                avg_confidence=min(1.0, best_score / 100) if best_score else 0.0,
-                success=best_result is not None and best_score > 0,
-                processing_time=time.time() - start_time
-            )
-            
-            if best_result is None or best_score == 0:
-                return ExtractionResult(success=False, error="No readable text. Try EasyOCR.")
-            
-            best_result.processing_time = time.time() - start_time
-            best_result.model_used = self.model_name
-            
-            # Use realistic validation-based confidence instead of naive scoring
-            try:
-                from .receipt_prompts import get_validated_extraction_with_confidence
-                _, realistic_confidence, validation = get_validated_extraction_with_confidence(
-                    receipt_data=best_result,
-                    raw_text=best_text_final,
-                    base_confidence=min(1.0, best_score / 100)  # Convert score to base confidence
+                                logger.info(f"Excellent result found early with {mode_name}, stopping PSM modes for this image variant")
+                                break  # Exit inner loop (PSM modes)
+                            
+                        except Exception as e:
+                            logger.debug(f"PSM {psm} on {img_name} failed: {e}")
+                            continue
+                    
+                    # Break outer loop if excellent result found
+                    # Check if we just added a result with excellent score
+                    # Each ocr_results entry is: (mode_name, text, receipt, score)
+                    if ocr_results:
+                        last_score = ocr_results[-1][3]  # Index 3 is the score
+                        if last_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                            logger.info(f"Excellent result found, stopping all OCR passes")
+                            break  # Exit outer loop (image variants)
+                
+                if not ocr_results:
+                    return ExtractionResult(success=False, error="All OCR modes failed")
+                
+                # Select best result by score (quality)
+                best_mode, best_text, receipt, initial_score = max(ocr_results, key=lambda x: x[3])
+                
+                # Log all results for debugging
+                logger.info(f"OCR tried {len(ocr_results)} mode combinations:")
+                for mode, _, _, score in sorted(ocr_results, key=lambda x: x[3], reverse=True)[:5]:
+                    logger.info(f"  {mode}: score={score}")
+                logger.info(f"Best: {best_mode} with score={initial_score}")
+                
+                # If we got a good result, return early
+                if initial_score >= GOOD_QUALITY_SCORE_THRESHOLD:
+                    receipt.processing_time = time.time() - start_time
+                    receipt.model_used = f"{self.model_name} ({best_mode})"
+                    # Convert score to percentage (0-100) - don't exceed 100%
+                    receipt.confidence_score = min(100.0, (initial_score / 95) * 100)
+                    logger.info(f"Good result achieved with score: {initial_score}")
+                    return ExtractionResult(success=True, data=receipt)
+                
+                # Low quality result - try aggressive multi-pass extraction
+                logger.info(f"Low score ({initial_score}) - trying aggressive preprocessing")
+                
+                preprocessed_versions = self._aggressive_preprocess(image)
+                # Optimized: Try only PSM 11 and 3 in aggressive pass (most effective)
+                # Reduced from 5 modes to 2 for faster processing
+                psm_modes = [11, 3]  # Priority order for aggressive pass
+                best_result, best_score = receipt, initial_score
+                best_text_final = best_text  # Keep track of best text across all passes
+                
+                for v_idx, proc_img in enumerate(preprocessed_versions):
+                    for psm in psm_modes:
+                        try:
+                            config = f'--oem 3 --psm {psm} -c preserve_interword_spaces=1'
+                            text = pytesseract.image_to_string(proc_img, lang='eng', config=config)
+                            if not text or len(text.strip()) < 10:
+                                continue
+                            rec = self._parse_receipt_text(text)
+                            score = self._score_result(rec, text)
+                            if score > best_score:
+                                best_score = score
+                                best_result = rec
+                                best_text_final = text
+                                logger.info(f"Better result found: PSM {psm} on preproc v{v_idx+1}, score={score}")
+                                # Early exit if we find an excellent result
+                                if score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                                    logger.info(f"Excellent result with score {score}, stopping search")
+                                    break
+                        except Exception:
+                            continue
+                    # Break outer loop too if excellent result found
+                    if best_score >= EXCELLENT_QUALITY_SCORE_THRESHOLD:
+                        break
+                
+                # Record detection result for auto-tuning via circular exchange
+                text_regions = len(best_text_final.strip().split('\n')) if best_text_final else 0
+                record_detection_result(
+                    text_regions_count=text_regions,
+                    avg_confidence=min(1.0, best_score / 100) if best_score else 0.0,
+                    success=best_result is not None and best_score > 0,
+                    processing_time=time.time() - start_time
                 )
-                best_result.confidence_score = round(realistic_confidence * 100, 1)
-                if validation.math_validated:
-                    best_result.extraction_notes.append("Math validation passed ✓")
-                elif validation.errors:
-                    for error in validation.errors:
-                        best_result.extraction_notes.append(f"ERROR: {error}")
-            except ImportError:
-                best_result.confidence_score = min(1.0, best_score / 95) * 100
-            
-            # Set success span attributes
-            set_span_attributes(span, {
-                "extraction.success": True,
-                "extraction.confidence": best_result.confidence_score,
-                "extraction.items_count": len(best_result.items) if best_result.items else 0,
-                "extraction.total": float(best_result.total) if best_result.total else 0.0,
-                "extraction.processing_time": time.time() - start_time
-            })
-            
-            return ExtractionResult(success=True, data=best_result)
-            
-        except Exception as e:
-            logger.error(f"OCR failed: {e}", exc_info=True)
-            span.record_exception(e)
-            try:
-                from opentelemetry.trace import Status, StatusCode
-                span.set_status(Status(StatusCode.ERROR, str(e)))
-            except ImportError:
-                pass
-            return ExtractionResult(success=False, error=str(e))
+                
+                if best_result is None or best_score == 0:
+                    return ExtractionResult(success=False, error="No readable text. Try EasyOCR.")
+                
+                best_result.processing_time = time.time() - start_time
+                best_result.model_used = self.model_name
+                
+                # Use realistic validation-based confidence instead of naive scoring
+                try:
+                    from .receipt_prompts import get_validated_extraction_with_confidence
+                    _, realistic_confidence, validation = get_validated_extraction_with_confidence(
+                        receipt_data=best_result,
+                        raw_text=best_text_final,
+                        base_confidence=min(1.0, best_score / 100)  # Convert score to base confidence
+                    )
+                    best_result.confidence_score = round(realistic_confidence * 100, 1)
+                    if validation.math_validated:
+                        best_result.extraction_notes.append("Math validation passed ✓")
+                    elif validation.errors:
+                        for error in validation.errors:
+                            best_result.extraction_notes.append(f"ERROR: {error}")
+                except ImportError:
+                    best_result.confidence_score = min(1.0, best_score / 95) * 100
+                
+                # Set success span attributes
+                set_span_attributes(span, {
+                    "extraction.success": True,
+                    "extraction.confidence": best_result.confidence_score,
+                    "extraction.items_count": len(best_result.items) if best_result.items else 0,
+                    "extraction.total": float(best_result.total) if best_result.total else 0.0,
+                    "extraction.processing_time": time.time() - start_time
+                })
+                
+                return ExtractionResult(success=True, data=best_result)
+                
+            except Exception as e:
+                logger.error(f"OCR failed: {e}", exc_info=True)
+                span.record_exception(e)
+                try:
+                    from opentelemetry.trace import Status, StatusCode
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                except ImportError:
+                    pass
+                return ExtractionResult(success=False, error=str(e))
 
     def _score_result(self, receipt: ReceiptData, text: str) -> int:
         """Score the quality of an extraction result."""
