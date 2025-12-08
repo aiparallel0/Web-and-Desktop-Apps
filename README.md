@@ -708,9 +708,42 @@ git pull
 
 ## 📚 Additional Resources
 
-### Documentation
-- [Repository Analysis Report](REPOSITORY_ANALYSIS.md) - **NEW**: Comprehensive codebase analysis
-- [Repository Screener Tool](docs/REPOSITORY_SCREENER.md) - **NEW**: Documentation for the analysis tool
+### 📖 Project Documentation
+
+**Architecture & Design**:
+- [CEFR Framework Status](docs/architecture/CEFR_STATUS.md) - **Honest assessment**: CEFR is optional/experimental
+- [Production Hardening Summary](PRODUCTION_HARDENING_SUMMARY.md) - **NEW**: Quality gates and infrastructure improvements
+
+**Development Guides**:
+- [Testing Strategy](docs/development/TESTING_STRATEGY.md) - **Comprehensive**: Testing principles and standards
+- [Code Quality Standards](docs/development/CODE_QUALITY.md) - **Standards**: CI/CD, linting, security
+
+**Project History**:
+- [Changelog](docs/history/CHANGELOG.md) - **Consolidated**: All project summaries and milestones
+- [Repository Analysis](REPOSITORY_ANALYSIS.md) - Comprehensive codebase analysis
+
+**API & Operations**:
+- [API Documentation](docs/API.md) - REST API endpoints
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment
+- [User Guide](docs/USER_GUIDE.md) - End-user documentation
+
+### 🛠️ Development Tools
+
+**Local Development**:
+```bash
+# Using Docker (recommended)
+docker-compose up              # Start all services
+
+# Validation scripts
+python tools/scripts/validate_imports.py   # Check imports
+python tools/scripts/validate_env.py       # Check environment
+
+# Pre-commit hooks
+pre-commit install             # Install hooks
+pre-commit run --all-files     # Run manually
+```
+
+### External Documentation
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Stripe API Reference](https://stripe.com/docs/api)
