@@ -1,8 +1,8 @@
 # GitHub Copilot Instructions - Receipt Extractor
 
-> **Last Updated:** 2025-12-07  
-> **Version:** 2.0.0  
-> **Purpose:** Comprehensive guide for GitHub Copilot to understand project architecture, conventions, and mandatory integration patterns
+> **Last Updated:** 2025-12-08  
+> **Version:** 2.1.0  
+> **Purpose:** Comprehensive guide for GitHub Copilot to understand project architecture, conventions, and integration patterns
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. [Project Overview](#-project-overview)
 2. [Project Structure](#-project-structure)
-3. [Circular Exchange Framework (CEFR) - MANDATORY](#-circular-exchange-framework-cefr---mandatory)
+3. [Circular Exchange Framework (CEFR) - OPTIONAL](#-circular-exchange-framework-cefr---optional)
 4. [Testing Requirements](#-testing-requirements)
 5. [AI Model Guidelines](#-ai-model-guidelines)
 6. [Security & Authentication](#-security--authentication)
@@ -55,15 +55,15 @@ CSS:        5 files   (Styling)
 ### Core Objectives
 
 1. **Text Detection Excellence**: Support 7 OCR/AI algorithms with unified output schema
-2. **Framework Integration**: ALL modules MUST integrate with CEFR for auto-tuning
+2. **Framework Integration**: Modules MAY optionally integrate with CEFR for auto-tuning (disabled by default)
 3. **Production Quality**: ~1055 tests with strict synchronization requirements
 4. **Scalable SaaS**: Multi-tier subscriptions, usage tracking, cloud integrations
 5. **Developer Experience**: Clear patterns, comprehensive docs, easy onboarding
 
 ### Success Metrics
 
-- ✅ Test Coverage: 80%+ on critical modules
-- ✅ CEFR Integration: 100% of new modules
+- ✅ Test Coverage: 70%+ on new code, 80%+ on critical modules
+- 🟡 CEFR Integration: Optional (ENABLE_CEFR=false by default)
 - ✅ Test Synchronization: 0 skipped tests for missing functions
 - ✅ API Response Time: <500ms for extraction endpoints
 - ✅ Model Accuracy: 90%+ on standard receipt datasets
@@ -174,24 +174,29 @@ Web-and-Desktop-Apps/
 
 ---
 
-## 🔴 Circular Exchange Framework (CEFR) - MANDATORY
+## 🟡 Circular Exchange Framework (CEFR) - OPTIONAL
 
-### ⚠️ CRITICAL: ALL NEW MODULES MUST INTEGRATE WITH CEFR
+### ℹ️ CEFR is EXPERIMENTAL and OPTIONAL
 
-The Circular Exchange Framework (CEFR) is a **mandatory** auto-tuning system that enables:
+The Circular Exchange Framework (CEFR) is an **optional experimental** auto-tuning system that enables:
 - Runtime parameter optimization
 - Production metrics analysis
 - Auto-refactoring suggestions
 - Reactive configuration updates
 - Dependency tracking
 
-**Every new module, processor, or utility MUST register with CEFR.**
+**CEFR is disabled by default** (`ENABLE_CEFR=false`). New modules MAY optionally integrate with CEFR if:
+- The module has tunable parameters that would benefit from auto-optimization
+- You are actively experimenting with runtime configuration
+- Team is familiar with CEFR patterns
+
+**For CEFR status and evaluation**: See `docs/architecture/CEFR_STATUS.md`
 
 ---
 
-### Required Integration Pattern
+### Optional Integration Pattern (When Enabled)
 
-#### Step 1: Import CEFR Components
+#### Step 1: Import CEFR Components (Optional)
 
 ```python
 """
@@ -199,21 +204,21 @@ Your Module Description
 """
 import logging
 
-# 🔴 MANDATORY: Import CEFR components
+# 🟡 OPTIONAL: Import CEFR components (only if using CEFR)
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
     CIRCULAR_EXCHANGE_AVAILABLE = True
 except ImportError:
-    # Fallback for environments without CEFR
+    # CEFR not available or disabled - module works fine without it
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 ```
 
-#### Step 2: Register Module
+#### Step 2: Register Module (Optional)
 
 ```python
-# 🔴 MANDATORY: Register module with PROJECT_CONFIG
+# 🟡 OPTIONAL: Register module with PROJECT_CONFIG (only if using CEFR)
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
         PROJECT_CONFIG.register_module(ModuleRegistration(
@@ -227,25 +232,22 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         logger.debug(f"Module registration skipped: {e}")
 ```
 
-#### Step 3: Use VariablePackage for Configuration
+#### Step 3: Use VariablePackage for Configuration (Optional)
 
 ```python
-# 🔴 RECOMMENDED: Use VariablePackage for tunable parameters
+# 🟡 OPTIONAL: Use VariablePackage for tunable parameters (only if using CEFR)
 if CIRCULAR_EXCHANGE_AVAILABLE:
     registry = PackageRegistry()
     
     # Create tunable configuration parameters
-    registry.create_package(
+    confidence_threshold = registry.create_package(
         name='module.param.confidence_threshold',
         initial_value=0.7,
         source_module='your.module.name',
         description='Minimum confidence threshold for detection'
-    )
-    
-    # Use package value
-    confidence_threshold = registry.get_value('module.param.confidence_threshold', default=0.7)
+    ).get_value()
 else:
-    # Fallback when CEFR not available
+    # Standard configuration when CEFR not available
     confidence_threshold = 0.7
 ```
 

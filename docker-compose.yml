@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for production-like environment
+  postgres:
+    image: postgres:13-alpine
+    container_name: receipt-extractor-db
+    environment:
+      POSTGRES_DB: receipt_extractor
+      POSTGRES_USER: receipt_user
+      POSTGRES_PASSWORD: dev_password_change_in_production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receipt_user -d receipt_extractor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and background jobs
+  redis:
+    image: redis:7-alpine
+    container_name: receipt-extractor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Flask backend application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: receipt-extractor-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://receipt_user:dev_password_change_in_production@postgres:5432/receipt_extractor
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Security (CHANGE THESE IN PRODUCTION)
+      SECRET_KEY: dev-secret-key-change-in-production-min-32-chars
+      JWT_SECRET_KEY: dev-jwt-secret-change-in-production-min-32-chars
+      
+      # Application
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+      
+      # CEFR Framework (optional)
+      ENABLE_CEFR: "false"
+      
+      # Optional integrations (add your keys in .env)
+      # STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      # HUGGINGFACE_TOKEN: ${HUGGINGFACE_TOKEN}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+      - uploads:/app/uploads
+    command: python web/backend/app.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery worker for background tasks (optional)
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: receipt-extractor-celery
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://receipt_user:dev_password_change_in_production@postgres:5432/receipt_extractor
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production-min-32-chars
+      ENABLE_CEFR: "false"
+    volumes:
+      - ./:/app
+    command: celery -A shared.services.background_tasks worker --loglevel=info
+    profiles:
+      - with-celery  # Only start with: docker-compose --profile with-celery up
+
+volumes:
+  postgres_data:
+    name: receipt-extractor-postgres-data
+  redis_data:
+    name: receipt-extractor-redis-data
+  uploads:
+    name: receipt-extractor-uploads
+
+networks:
+  default:
+    name: receipt-extractor-network
