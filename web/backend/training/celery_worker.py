@@ -95,6 +95,26 @@ if CELERY_AVAILABLE:
         from .base import TrainingConfig, TrainingDataset
         from . import TrainingFactory
         
+        # Import telemetry
+        try:
+            from shared.utils.telemetry import get_tracer, set_span_attributes
+            tracer = get_tracer()
+            TELEMETRY_AVAILABLE = True
+        except ImportError:
+            tracer = None
+            TELEMETRY_AVAILABLE = False
+        
+        span = None
+        if TELEMETRY_AVAILABLE and tracer:
+            span = tracer.start_span("celery.training.start_training_task")
+            set_span_attributes(span, {
+                "operation.type": "background_training",
+                "training.provider": provider,
+                "training.dataset_id": dataset_id[:8] if dataset_id else None,
+                "user.id": user_id[:8] if user_id else None,
+                "celery.task_id": self.request.id
+            })
+        
         logger.info(f"Starting training task: provider={provider}, dataset={dataset_id}")
         
         try:
@@ -109,6 +129,13 @@ if CELERY_AVAILABLE:
             
             # Start training
             job = trainer.start_training(config, dataset, user_id)
+            
+            if span:
+                set_span_attributes(span, {
+                    "training.job_id": job.job_id[:8],
+                    "training.model_id": config.model_id,
+                    "training.dataset_size": len(dataset) if dataset else 0
+                })
             
             # Update task state
             self.update_state(
@@ -143,6 +170,14 @@ if CELERY_AVAILABLE:
                 import time
                 time.sleep(30)
             
+            if span:
+                set_span_attributes(span, {
+                    "training.final_status": job.status.value,
+                    "training.final_progress": job.progress,
+                    "training.output_model_id": job.output_model_id,
+                    "operation.success": True
+                })
+            
             return {
                 'success': True,
                 'job_id': job.job_id,
@@ -153,10 +188,20 @@ if CELERY_AVAILABLE:
             
         except Exception as e:
             logger.error(f"Training task failed: {e}")
+            if span:
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "operation.success": False,
+                    "error.type": type(e).__name__,
+                    "error.message": str(e)
+                })
             return {
                 'success': False,
                 'error': str(e)
             }
+        finally:
+            if span:
+                span.end()
     
     
     @celery_app.task(name='training.check_job_status')

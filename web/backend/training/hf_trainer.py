@@ -33,6 +33,13 @@ from .base import (
 from shared.utils.optional_imports import OptionalImport
 from shared.utils.base_handler import load_env_config, log_handler_event
 
+# Telemetry imports
+try:
+    from opentelemetry import trace
+    TRACE_AVAILABLE = True
+except ImportError:
+    TRACE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Import HuggingFace libraries
@@ -173,52 +180,62 @@ trainer.save_model('./output/final_model')
         Returns:
             TrainingJob with job ID and initial status
         """
-        if not self._configured:
-            raise TrainingStartError("HuggingFace trainer not configured")
-        
-        # Validate inputs
-        self.validate_config(config)
-        self.validate_dataset(dataset)
-        
-        # Generate job ID
-        job_id = self.generate_job_id()
-        
-        # Create job
-        job = TrainingJob(
-            job_id=job_id,
-            provider=self.provider,
-            model_id=config.model_id,
-            config=config,
-            user_id=user_id,
-            status=TrainingStatus.PREPARING
-        )
-        
-        job.add_log(f"Starting training job: {job_id}")
-        job.add_log(f"Model: {config.model_id}")
-        job.add_log(f"Dataset size: {len(dataset)} samples")
+        span = self._start_telemetry_span('start_training', user_id)
         
         try:
-            # Create a private Space for training
-            space_id = self._create_training_space(job, config, dataset)
+            if not self._configured:
+                raise TrainingStartError("HuggingFace trainer not configured")
             
-            job.metadata['space_id'] = space_id
-            job.update_status(TrainingStatus.QUEUED)
-            job.add_log(f"Created training Space: {space_id}")
+            # Validate inputs
+            self.validate_config(config)
+            self.validate_dataset(dataset)
             
-            # Store job
-            self._jobs[job_id] = job
+            # Generate job ID
+            job_id = self.generate_job_id()
             
-            # Emit event
-            self._emit_event('started', job)
+            # Create job
+            job = TrainingJob(
+                job_id=job_id,
+                provider=self.provider,
+                model_id=config.model_id,
+                config=config,
+                user_id=user_id,
+                status=TrainingStatus.PREPARING
+            )
             
-            return job
+            job.add_log(f"Starting training job: {job_id}")
+            job.add_log(f"Model: {config.model_id}")
+            job.add_log(f"Dataset size: {len(dataset)} samples")
             
+            try:
+                # Create a private Space for training
+                space_id = self._create_training_space(job, config, dataset)
+                
+                job.metadata['space_id'] = space_id
+                job.update_status(TrainingStatus.QUEUED)
+                job.add_log(f"Created training Space: {space_id}")
+                
+                # Store job
+                self._jobs[job_id] = job
+                
+                # Emit event
+                self._emit_event('started', job)
+                
+                self._end_telemetry_span(span, job, success=True)
+                return job
+                
+            except Exception as e:
+                job.update_status(TrainingStatus.FAILED)
+                job.error = str(e)
+                job.add_log(f"ERROR: {e}")
+                self._jobs[job_id] = job
+                self._end_telemetry_span(span, job, success=False, error=str(e))
+                raise TrainingStartError(f"Failed to start training: {e}")
         except Exception as e:
-            job.update_status(TrainingStatus.FAILED)
-            job.error = str(e)
-            job.add_log(f"ERROR: {e}")
-            self._jobs[job_id] = job
-            raise TrainingStartError(f"Failed to start training: {e}")
+            if span:
+                span.record_exception(e)
+                span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+            raise
     
     def _create_training_space(
         self,

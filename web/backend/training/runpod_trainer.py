@@ -33,6 +33,13 @@ from .base import (
 from shared.utils.optional_imports import OptionalImport
 from shared.utils.base_handler import load_env_config, log_handler_event
 
+# Telemetry imports
+try:
+    from opentelemetry import trace
+    TRACE_AVAILABLE = True
+except ImportError:
+    TRACE_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Import RunPod SDK
@@ -117,57 +124,67 @@ class RunPodTrainer(BaseTrainer):
         Returns:
             TrainingJob with job ID and initial status
         """
-        if not self._configured:
-            raise TrainingStartError("RunPod trainer not configured")
-        
-        # Validate inputs
-        self.validate_config(config)
-        self.validate_dataset(dataset)
-        
-        # Generate job ID
-        job_id = self.generate_job_id()
-        
-        # Get GPU type from config or use default
-        gpu_type = config.extra_params.get('gpu_type', self.DEFAULT_GPU)
-        
-        # Create job
-        job = TrainingJob(
-            job_id=job_id,
-            provider=self.provider,
-            model_id=config.model_id,
-            config=config,
-            user_id=user_id,
-            status=TrainingStatus.PREPARING
-        )
-        
-        job.add_log(f"Starting RunPod training job: {job_id}")
-        job.add_log(f"Model: {config.model_id}")
-        job.add_log(f"GPU: {gpu_type}")
-        job.add_log(f"Dataset size: {len(dataset)} samples")
+        span = self._start_telemetry_span('start_training', user_id)
         
         try:
-            # Create serverless endpoint job
-            endpoint_id = self._create_endpoint_job(job, config, dataset, gpu_type)
+            if not self._configured:
+                raise TrainingStartError("RunPod trainer not configured")
             
-            job.metadata['runpod_endpoint_id'] = endpoint_id
-            job.metadata['gpu_type'] = gpu_type
-            job.update_status(TrainingStatus.QUEUED)
-            job.add_log(f"Created RunPod endpoint: {endpoint_id}")
+            # Validate inputs
+            self.validate_config(config)
+            self.validate_dataset(dataset)
             
-            # Store job
-            self._jobs[job_id] = job
+            # Generate job ID
+            job_id = self.generate_job_id()
             
-            # Emit event
-            self._emit_event('started', job)
+            # Get GPU type from config or use default
+            gpu_type = config.extra_params.get('gpu_type', self.DEFAULT_GPU)
             
-            return job
+            # Create job
+            job = TrainingJob(
+                job_id=job_id,
+                provider=self.provider,
+                model_id=config.model_id,
+                config=config,
+                user_id=user_id,
+                status=TrainingStatus.PREPARING
+            )
             
+            job.add_log(f"Starting RunPod training job: {job_id}")
+            job.add_log(f"Model: {config.model_id}")
+            job.add_log(f"GPU: {gpu_type}")
+            job.add_log(f"Dataset size: {len(dataset)} samples")
+            
+            try:
+                # Create serverless endpoint job
+                endpoint_id = self._create_endpoint_job(job, config, dataset, gpu_type)
+                
+                job.metadata['runpod_endpoint_id'] = endpoint_id
+                job.metadata['gpu_type'] = gpu_type
+                job.update_status(TrainingStatus.QUEUED)
+                job.add_log(f"Created RunPod endpoint: {endpoint_id}")
+                
+                # Store job
+                self._jobs[job_id] = job
+                
+                # Emit event
+                self._emit_event('started', job)
+                
+                self._end_telemetry_span(span, job, success=True)
+                return job
+                
+            except Exception as e:
+                job.update_status(TrainingStatus.FAILED)
+                job.error = str(e)
+                job.add_log(f"ERROR: {e}")
+                self._jobs[job_id] = job
+                self._end_telemetry_span(span, job, success=False, error=str(e))
+                raise TrainingStartError(f"Failed to start training: {e}")
         except Exception as e:
-            job.update_status(TrainingStatus.FAILED)
-            job.error = str(e)
-            job.add_log(f"ERROR: {e}")
-            self._jobs[job_id] = job
-            raise TrainingStartError(f"Failed to start training: {e}")
+            if span:
+                span.record_exception(e)
+                span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+            raise
     
     def _create_endpoint_job(
         self,
