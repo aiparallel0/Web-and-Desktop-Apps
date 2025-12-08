@@ -131,3 +131,34 @@ tools/data/receipts/*.tiff
 tools/data/receipts/*.tif
 *.backup
 test-model-selector.html
+
+# Binary files - images (should be in examples/ or Git LFS)
+# Prevent binary image files in root directory
+/*.jpg
+/*.JPG
+/*.jpeg
+/*.JPEG
+/*.png
+/*.PNG
+/*.gif
+/*.GIF
+/*.bmp
+/*.BMP
+/*.tiff
+/*.TIFF
+/*.webp
+/*.WEBP
+
+# Auto-generated files (cache busting, etc.)
+web/frontend/version.json
+
+# Pre-commit hooks cache
+.pre-commit-cache/
+
+# CI/CD artifacts
+bandit-report.json
+security-reports/
+
+# Local development tools
+.python-version
+.tool-versions

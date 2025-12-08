@@ -368,18 +368,14 @@ class DropboxStorageHandler(BaseStorageHandler):
                     key=key,
                     error=error_msg
                 )
-                success=False,
-                key=key,
-                error=error_msg
-            )
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Upload failed: {error_msg}")
-            return UploadResult(
-                success=False,
-                key=key,
-                error=error_msg
-            )
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Upload failed: {error_msg}")
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error=error_msg
+                )
     
     def _chunked_upload(self, file_data: bytes, path: str):
         """

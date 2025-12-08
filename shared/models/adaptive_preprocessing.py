@@ -155,127 +155,134 @@ def assess_image_quality(image: Image.Image) -> QualityMetrics:
         height, width = gray.shape
         
         metrics = QualityMetrics()
-    
-    # 1. Blur Detection (Laplacian variance)
-    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-    metrics.blur_score = float(laplacian.var())
-    
-    # 2. Noise Level Estimation
-    # Use median absolute deviation of Laplacian
-    median_lap = np.median(np.abs(laplacian - np.median(laplacian)))
-    metrics.noise_level = float(median_lap)
-    
-    # 3. Contrast Measurement
-    metrics.contrast = float(np.std(gray))
-    
-    # 4. Brightness
-    metrics.brightness = float(np.mean(gray))
-    
-    # 5. Resolution Score
-    # Higher resolution is better, but normalize to 0-100
-    min_dim = min(width, height)
-    if min_dim >= 2000:
-        metrics.resolution_score = 100
-    elif min_dim >= 1000:
-        metrics.resolution_score = 80
-    elif min_dim >= 500:
-        metrics.resolution_score = 60
-    else:
-        metrics.resolution_score = max(20, min_dim / 25)
-    
-    # 6. Skew Angle Detection
-    try:
-        coords = np.column_stack(np.where(gray > 0))
-        if len(coords) >= 10:
-            angle = cv2.minAreaRect(coords)[-1]
-            if angle < -45:
-                angle = 90 + angle
-            elif angle > 45:
-                angle = angle - 90
-            metrics.skew_angle = float(angle)
-    except Exception:
-        metrics.skew_angle = 0.0
-    
-    # 7. Text Density Estimation
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    text_pixels = np.sum(binary < 128)
-    metrics.text_density = float(text_pixels / gray.size)
-    
-    # 8. Lighting Uniformity (using local means)
-    try:
-        # Divide image into regions and check variance of means
-        block_size = max(50, min(width, height) // 8)
-        local_means = []
-        for y in range(0, height - block_size, block_size):
-            for x in range(0, width - block_size, block_size):
-                block = gray[y:y+block_size, x:x+block_size]
-                local_means.append(np.mean(block))
-        if local_means:
-            uniformity = 1 - (np.std(local_means) / max(np.mean(local_means), 1))
-            metrics.lighting_uniformity = max(0, min(1, uniformity)) * 100
-    except Exception:
-        metrics.lighting_uniformity = 50
-    
-    # Calculate overall score (weighted combination)
-    # Weights based on importance for OCR
-    weights = {
-        'blur': 0.25,      # Sharpness is critical
-        'contrast': 0.20,   # Good contrast helps text detection
-        'noise': 0.15,      # Noise affects recognition
-        'resolution': 0.15, # Higher resolution is better
-        'lighting': 0.10,   # Uniform lighting helps
-        'skew': 0.10,       # Skew affects reading order
-        'density': 0.05     # Text density indicates document type
-    }
-    
-    # Normalization thresholds for quality metrics
-    # BLUR_NORMALIZATION_FACTOR: Laplacian variance of ~1000 indicates sharp image
-    # Values below 100 suggest significant blur
-    BLUR_NORMALIZATION_FACTOR = 10  # Divide blur score by this to get 0-100 scale
-    
-    # CONTRAST_NORMALIZATION_FACTOR: Standard deviation of ~80 represents good contrast
-    # for grayscale images with typical text documents
-    CONTRAST_NORMALIZATION_FACTOR = 0.8  # Divide contrast by this (results in std ~80 = score 100)
-    
-    # Normalize and score each component (0-100 scale)
-    blur_norm = min(100, metrics.blur_score / BLUR_NORMALIZATION_FACTOR)  # Higher variance = sharper
-    contrast_norm = min(100, metrics.contrast / CONTRAST_NORMALIZATION_FACTOR)  # Higher std = better contrast
-    noise_norm = max(0, 100 - metrics.noise_level * 5)  # Lower noise = better
-    skew_norm = max(0, 100 - abs(metrics.skew_angle) * 5)  # Near 0° is best
-    density_norm = 100 if 0.05 < metrics.text_density < 0.30 else 50  # Typical document range
-    
-    metrics.overall_score = (
-        weights['blur'] * blur_norm +
-        weights['contrast'] * contrast_norm +
-        weights['noise'] * noise_norm +
-        weights['resolution'] * metrics.resolution_score +
-        weights['lighting'] * metrics.lighting_uniformity +
-        weights['skew'] * skew_norm +
-        weights['density'] * density_norm
-    )
-    
-    logger.info(f"Image quality assessment: score={metrics.overall_score:.1f}, "
-                f"blur={metrics.blur_score:.1f}, contrast={metrics.contrast:.1f}")
-    
-    if span and TELEMETRY_AVAILABLE:
-        set_span_attributes(span, {
-            "image.width": width,
-            "image.height": height,
-            "quality.overall_score": round(metrics.overall_score, 1),
-            "quality.blur_score": round(metrics.blur_score, 1),
-            "quality.contrast": round(metrics.contrast, 1),
-            "quality.noise_level": round(metrics.noise_level, 2),
-            "quality.brightness": round(metrics.brightness, 1),
-            "quality.resolution_score": round(metrics.resolution_score, 1),
-            "quality.skew_angle": round(metrics.skew_angle, 2),
-            "quality.text_density": round(metrics.text_density, 3),
-            "quality.lighting_uniformity": round(metrics.lighting_uniformity, 1),
-            "quality.level": metrics.get_quality_level(),
-            "opencv.available": True
-        })
-        span.end()
-    
-    return metrics
+        
+        # 1. Blur Detection (Laplacian variance)
+        laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+        metrics.blur_score = float(laplacian.var())
+        
+        # 2. Noise Level Estimation
+        # Use median absolute deviation of Laplacian
+        median_lap = np.median(np.abs(laplacian - np.median(laplacian)))
+        metrics.noise_level = float(median_lap)
+        
+        # 3. Contrast Measurement
+        metrics.contrast = float(np.std(gray))
+        
+        # 4. Brightness
+        metrics.brightness = float(np.mean(gray))
+        
+        # 5. Resolution Score
+        # Higher resolution is better, but normalize to 0-100
+        min_dim = min(width, height)
+        if min_dim >= 2000:
+            metrics.resolution_score = 100
+        elif min_dim >= 1000:
+            metrics.resolution_score = 80
+        elif min_dim >= 500:
+            metrics.resolution_score = 60
+        else:
+            metrics.resolution_score = max(20, min_dim / 25)
+        
+        # 6. Skew Angle Detection
+        try:
+            coords = np.column_stack(np.where(gray > 0))
+            if len(coords) >= 10:
+                angle = cv2.minAreaRect(coords)[-1]
+                if angle < -45:
+                    angle = 90 + angle
+                elif angle > 45:
+                    angle = angle - 90
+                metrics.skew_angle = float(angle)
+        except Exception:
+            metrics.skew_angle = 0.0
+        
+        # 7. Text Density Estimation
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text_pixels = np.sum(binary < 128)
+        metrics.text_density = float(text_pixels / gray.size)
+        
+        # 8. Lighting Uniformity (using local means)
+        try:
+            # Divide image into regions and check variance of means
+            block_size = max(50, min(width, height) // 8)
+            local_means = []
+            for y in range(0, height - block_size, block_size):
+                for x in range(0, width - block_size, block_size):
+                    block = gray[y:y+block_size, x:x+block_size]
+                    local_means.append(np.mean(block))
+            if local_means:
+                uniformity = 1 - (np.std(local_means) / max(np.mean(local_means), 1))
+                metrics.lighting_uniformity = max(0, min(1, uniformity)) * 100
+        except Exception:
+            metrics.lighting_uniformity = 50
+        
+        # Calculate overall score (weighted combination)
+        # Weights based on importance for OCR
+        weights = {
+            'blur': 0.25,      # Sharpness is critical
+            'contrast': 0.20,   # Good contrast helps text detection
+            'noise': 0.15,      # Noise affects recognition
+            'resolution': 0.15, # Higher resolution is better
+            'lighting': 0.10,   # Uniform lighting helps
+            'skew': 0.10,       # Skew affects reading order
+            'density': 0.05     # Text density indicates document type
+        }
+        
+        # Normalization thresholds for quality metrics
+        # BLUR_NORMALIZATION_FACTOR: Laplacian variance of ~1000 indicates sharp image
+        # Values below 100 suggest significant blur
+        BLUR_NORMALIZATION_FACTOR = 10  # Divide blur score by this to get 0-100 scale
+        
+        # CONTRAST_NORMALIZATION_FACTOR: Standard deviation of ~80 represents good contrast
+        # for grayscale images with typical text documents
+        CONTRAST_NORMALIZATION_FACTOR = 0.8  # Divide contrast by this (results in std ~80 = score 100)
+        
+        # Normalize and score each component (0-100 scale)
+        blur_norm = min(100, metrics.blur_score / BLUR_NORMALIZATION_FACTOR)  # Higher variance = sharper
+        contrast_norm = min(100, metrics.contrast / CONTRAST_NORMALIZATION_FACTOR)  # Higher std = better contrast
+        noise_norm = max(0, 100 - metrics.noise_level * 5)  # Lower noise = better
+        skew_norm = max(0, 100 - abs(metrics.skew_angle) * 5)  # Near 0° is best
+        density_norm = 100 if 0.05 < metrics.text_density < 0.30 else 50  # Typical document range
+        
+        metrics.overall_score = (
+            weights['blur'] * blur_norm +
+            weights['contrast'] * contrast_norm +
+            weights['noise'] * noise_norm +
+            weights['resolution'] * metrics.resolution_score +
+            weights['lighting'] * metrics.lighting_uniformity +
+            weights['skew'] * skew_norm +
+            weights['density'] * density_norm
+        )
+        
+        logger.info(f"Image quality assessment: score={metrics.overall_score:.1f}, "
+                    f"blur={metrics.blur_score:.1f}, contrast={metrics.contrast:.1f}")
+        
+        if span and TELEMETRY_AVAILABLE:
+            set_span_attributes(span, {
+                "image.width": width,
+                "image.height": height,
+                "quality.overall_score": round(metrics.overall_score, 1),
+                "quality.blur_score": round(metrics.blur_score, 1),
+                "quality.contrast": round(metrics.contrast, 1),
+                "quality.noise_level": round(metrics.noise_level, 2),
+                "quality.brightness": round(metrics.brightness, 1),
+                "quality.resolution_score": round(metrics.resolution_score, 1),
+                "quality.skew_angle": round(metrics.skew_angle, 2),
+                "quality.text_density": round(metrics.text_density, 3),
+                "quality.lighting_uniformity": round(metrics.lighting_uniformity, 1),
+                "quality.level": metrics.get_quality_level(),
+                "opencv.available": True
+            })
+            span.end()
+        
+        return metrics
+    except Exception as e:
+        logger.error(f"Error during quality assessment: {e}")
+        if span and TELEMETRY_AVAILABLE:
+            span.set_attribute("error", True)
+            span.set_attribute("error.message", str(e))
+            span.end()
+        return QualityMetrics(overall_score=50)
 
 
 class AdaptivePreprocessor:
