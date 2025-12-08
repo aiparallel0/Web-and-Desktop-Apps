@@ -1,22 +1,22 @@
 # Repository Analysis Report
 
-**Generated:** 2025-12-08 06:42:29
+**Generated:** 2025-12-08 07:11:51
 
 ## 📊 Summary
 
 - **Total Files Analyzed:** 197
 - **Python Files:** 154
 - **JavaScript Files:** 43
-- **Total Functions:** 2959
-- **Total Classes:** 612
+- **Total Functions:** 2967
+- **Total Classes:** 613
 
 ## ⚠️ Issues Found
 
-- **Missing Implementations:** 172
-- **Orphaned Imports:** 218
-- **Files Without Tests:** 79
+- **Missing Implementations:** 173
+- **Orphaned Imports:** 241
+- **Files Without Tests:** 80
 - **Missing Files:** 85
-- **Potentially Unused Functions:** 2698
+- **Potentially Unused Functions:** 2706
 - **Documentation Mismatches:** 14
 
 ## 🔴 Missing Implementations
@@ -223,7 +223,7 @@ Functions or classes that are imported but not defined in the expected module.
   - **Import:** `from ocr import PRICE_MAX`
   - **Missing:** `PRICE_MAX` from module `ocr`
 
-*...and 122 more*
+*...and 123 more*
 
 ## 🗑️ Orphaned Imports
 
@@ -379,7 +379,7 @@ Imports that appear to be unused in their files.
 - **File:** `tools/scripts/run_cefr_full.py`
   - **Unused:** `tempfile` from ``
 
-*...and 168 more*
+*...and 191 more*
 
 ## 🧪 Files Without Tests
 
@@ -532,10 +532,10 @@ Python files with functions/classes that lack corresponding test files.
 - **File:** `shared/models/manager.py`
   - Functions: 30, Classes: 8
 
-- **File:** `shared/models/config.py`
-  - Functions: 48, Classes: 2
+- **File:** `shared/models/ocr_processor.py`
+  - Functions: 8, Classes: 1
 
-*...and 29 more*
+*...and 30 more*
 
 ## 📁 Missing Files
 
@@ -722,7 +722,7 @@ Files that are imported but don't exist in the repository.
   - **Expected at:** `concurrent/futures/__init__.py`, `concurrent/futures.py`
 
 - **Module:** `ocr_common`
-  - **Referenced in:** `shared/models/engine.py`
+  - **Referenced in:** `shared/models/ocr_processor.py`
   - **Expected at:** `ocr_common/__init__.py`, `ocr_common.py`
 
 - **Module:** `data`
@@ -897,14 +897,18 @@ Functions that appear to be defined but never called (heuristic analysis).
 - **File:** `web/backend/database.py`
   - **Function:** `get_engine`
 
-*...and 2648 more*
+*...and 2656 more*
 
 ## 📝 Documentation Mismatches
 
 References in documentation that don't match the actual code.
 
 - **Type:** README reference
-  - **Name:** `STRIPE_WEBHOOK_SECRET`
+  - **Name:** `DB_POOL_SIZE`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `craft_detector`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -912,15 +916,7 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `ocr_tesseract`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `DATABASE_URL`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `JWT_SECRET`
+  - **Name:** `ocr_easyocr`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -932,15 +928,11 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `DB_POOL_SIZE`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `ocr_easyocr`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
   - **Name:** `spatial_multi`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `JWT_SECRET`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -948,7 +940,11 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `craft_detector`
+  - **Name:** `DATABASE_URL`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `donut_cord`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -956,7 +952,11 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `donut_cord`
+  - **Name:** `STRIPE_WEBHOOK_SECRET`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_tesseract`
   - **Issue:** Referenced in README but not found in code
 
 ## 📄 File Analysis Details
@@ -992,11 +992,6 @@ References in documentation that don't match the actual code.
 | `web/frontend/components/unified-extractor-controls.js` | 946 | 0 | 1 | ❌ |
 | `shared/circular_exchange/refactor/feedback_loop.py` | 943 | 38 | 9 | ❌ |
 | `web/frontend/js/form-validation.js` | 931 | 0 | 4 | ❌ |
-
-## ❗ Files with Analysis Errors
-
-- **File:** `shared/models/ocr_processor.py`
-  - Syntax error: expected an indented block after 'try' statement on line 226 (ocr_processor.py, line 228)
 
 
 ---

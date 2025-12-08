@@ -3,8 +3,8 @@
     "total_files": 197,
     "total_python_files": 154,
     "total_javascript_files": 43,
-    "total_functions": 2959,
-    "total_classes": 612
+    "total_functions": 2967,
+    "total_classes": 613
   },
   "issues": {
     "missing_implementations": [
@@ -395,6 +395,13 @@
       },
       {
         "file": "shared/models/ocr.py",
+        "module": "decimal",
+        "name": "Decimal",
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
         "module": "decimal",
         "name": "Decimal",
         "import_statement": "from decimal import Decimal",
@@ -1845,6 +1852,121 @@
         "name": "abstractmethod"
       },
       {
+        "file": "shared/models/ocr_processor.py",
+        "module": "",
+        "name": "re"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "PIL",
+        "name": "ImageEnhance"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "PIL",
+        "name": "ImageFilter"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "",
+        "name": "numpy"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "SKIP_KEYWORDS"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "PRICE_MIN"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "PRICE_MAX"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "normalize_price"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_date"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_total"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_phone"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_address"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "should_skip_line"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "should_skip_item_name"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_store_name"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "LINE_ITEM_PATTERNS"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "clean_item_name"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_subtotal"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_tax"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "validate_receipt_totals"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_sku"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "extract_line_items"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "module": "ocr_common",
+        "name": "parse_receipt_text"
+      },
+      {
         "file": "shared/models/config.py",
         "module": "typing",
         "name": "Callable"
@@ -2355,6 +2477,7 @@
       "shared/models/adaptive_preprocessing.py",
       "shared/models/florence_finetuner.py",
       "shared/models/manager.py",
+      "shared/models/ocr_processor.py",
       "shared/models/config.py",
       "shared/models/engine.py",
       "shared/models/craft_detector.py",
@@ -2749,7 +2872,7 @@
       },
       {
         "module": "ocr_common",
-        "referenced_in": "shared/models/engine.py",
+        "referenced_in": "shared/models/ocr_processor.py",
         "expected_paths": [
           "ocr_common/__init__.py",
           "ocr_common.py"
@@ -12755,6 +12878,46 @@
         "type": "function"
       },
       {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor.__init__",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._verify_tesseract",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._find_tesseract",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._aggressive_preprocess",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor.extract",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._score_result",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._parse_receipt_text",
+        "type": "function"
+      },
+      {
+        "file": "shared/models/ocr_processor.py",
+        "function": "OCRProcessor._extract_line_items",
+        "type": "function"
+      },
+      {
         "file": "shared/models/config.py",
         "function": "OCRPipelineStage.record_result",
         "type": "function"
@@ -16563,7 +16726,12 @@
     "documentation_mismatches": [
       {
         "type": "README reference",
-        "name": "STRIPE_WEBHOOK_SECRET",
+        "name": "DB_POOL_SIZE",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "craft_detector",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -16573,17 +16741,7 @@
       },
       {
         "type": "README reference",
-        "name": "ocr_tesseract",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "DATABASE_URL",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "JWT_SECRET",
+        "name": "ocr_easyocr",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -16598,17 +16756,12 @@
       },
       {
         "type": "README reference",
-        "name": "DB_POOL_SIZE",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "ocr_easyocr",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
         "name": "spatial_multi",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "JWT_SECRET",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -16618,7 +16771,12 @@
       },
       {
         "type": "README reference",
-        "name": "craft_detector",
+        "name": "DATABASE_URL",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "donut_cord",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -16628,7 +16786,12 @@
       },
       {
         "type": "README reference",
-        "name": "donut_cord",
+        "name": "STRIPE_WEBHOOK_SECRET",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "ocr_tesseract",
         "issue": "Referenced in README but not found in code"
       }
     ]
@@ -21997,16 +22160,73 @@
     },
     {
       "path": "shared/models/ocr_processor.py",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "docstring": "",
-      "line_count": 0,
+      "functions": [
+        "OCRProcessor.__init__",
+        "OCRProcessor._verify_tesseract",
+        "OCRProcessor._find_tesseract",
+        "OCRProcessor._aggressive_preprocess",
+        "OCRProcessor.extract",
+        "OCRProcessor._score_result",
+        "OCRProcessor._parse_receipt_text",
+        "OCRProcessor._extract_line_items"
+      ],
+      "classes": [
+        "OCRProcessor"
+      ],
+      "imports": [
+        "os",
+        "sys",
+        "re",
+        "logging",
+        "time",
+        "subprocess",
+        "decimal.Decimal",
+        "typing.Dict",
+        "typing.List",
+        "typing.Optional",
+        "PIL.Image",
+        "PIL.ImageEnhance",
+        "PIL.ImageFilter",
+        "cv2",
+        "numpy",
+        "shared.utils.data.LineItem",
+        "shared.utils.data.ReceiptData",
+        "shared.utils.data.ExtractionResult",
+        "shared.utils.image.load_and_validate_image",
+        "shared.utils.image.preprocess_for_ocr",
+        "shared.utils.telemetry.get_tracer",
+        "shared.utils.telemetry.set_span_attributes",
+        "ocr_common.SKIP_KEYWORDS",
+        "ocr_common.PRICE_MIN",
+        "ocr_common.PRICE_MAX",
+        "ocr_common.normalize_price",
+        "ocr_common.extract_date",
+        "ocr_common.extract_total",
+        "ocr_common.extract_phone",
+        "ocr_common.extract_address",
+        "ocr_common.should_skip_line",
+        "ocr_common.should_skip_item_name",
+        "ocr_common.extract_store_name",
+        "ocr_common.LINE_ITEM_PATTERNS",
+        "ocr_common.clean_item_name",
+        "ocr_common.extract_subtotal",
+        "ocr_common.extract_tax",
+        "ocr_common.validate_receipt_totals",
+        "ocr_common.extract_sku",
+        "ocr_common.extract_line_items",
+        "ocr_common.parse_receipt_text",
+        "ocr_common.get_detection_config",
+        "ocr_common.record_detection_result"
+      ],
+      "exports": [
+        "OCRProcessor",
+        "GOOD_QUALITY_SCORE_THRESHOLD",
+        "EXCELLENT_QUALITY_SCORE_THRESHOLD"
+      ],
+      "docstring": "OCR Processor Module with Circular Exchange Integration\n\nThis module provides Tesseract OCR-based receipt data extraction with:\n- Dynamic parameter configuration via circular exchange framework\n- Early-exit optimization for faster processing\n- Multi-pass extraction for challenging images\n- Auto-tuning based on detection results\n\nThe OCRProcessor class integrates with the circular exchange framework for\nruntime parameter tuning and automatic optimization.",
+      "line_count": 484,
       "has_tests": false,
-      "errors": [
-        "Syntax error: expected an indented block after 'try' statement on line 226 (ocr_processor.py, line 228)"
-      ]
+      "errors": []
     },
     {
       "path": "shared/models/config.py",
