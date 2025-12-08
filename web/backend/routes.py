@@ -185,74 +185,110 @@ def login():
         200: Login successful with tokens
         401: Invalid credentials
     """
-    try:
-        from .password import verify_password
-        from .jwt_handler import create_access_token, create_refresh_token
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'Request body is required'}), 400
-        
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        
-        if not email or not password:
-            return jsonify({'success': False, 'error': 'Email and password are required'}), 400
-        
-        User, RefreshToken = _get_models()
-        
-        with _get_db_context()() as db:
-            # Find user
-            user = db.query(User).filter(User.email == email).first()
+    tracer = get_tracer()
+    with tracer.start_as_current_span("auth.login") as span:
+        try:
+            from .password import verify_password
+            from .jwt_handler import create_access_token, create_refresh_token
             
-            if not user or not verify_password(password, user.password_hash):
-                logger.warning(f"Failed login attempt for: {email}")
-                return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'error': 'Request body is required'}), 400
             
-            if not user.is_active:
-                return jsonify({'success': False, 'error': 'Account is disabled'}), 401
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
             
-            # Update last login
-            user.last_login_at = datetime.now(timezone.utc)
-
-            # Create tokens
-            access_token = create_access_token(str(user.id), user.email, user.is_admin)
-            refresh_token, token_hash = create_refresh_token()
+            # Sanitize email for logging (show domain only)
+            email_domain = email.split('@')[1] if '@' in email else 'unknown'
             
-            # Store refresh token
-            import uuid
-            refresh_token_record = RefreshToken(
-                id=uuid.uuid4(),
-                user_id=user.id,
-                token_hash=token_hash,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-                device_info=request.headers.get('User-Agent', '')[:255],
-                ip_address=request.remote_addr
-            )
-            db.add(refresh_token_record)
-            db.commit()
-            
-            logger.info(f"User logged in: {email}")
-            
-            return jsonify({
-                'success': True,
-                'message': 'Login successful',
-                'user': {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'full_name': user.full_name,
-                    'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan),
-                    'is_admin': user.is_admin
-                },
-                'access_token': access_token,
-                'refresh_token': refresh_token,
-                'token_type': 'Bearer',
-                'expires_in': 900  # 15 minutes
+            set_span_attributes(span, {
+                "auth.operation": "login",
+                "auth.email_domain": email_domain,
+                "auth.has_password": len(password) > 0,
+                "client.ip": request.remote_addr
             })
             
-    except Exception as e:
-        logger.error(f"Login error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Login failed'}), 500
+            if not email or not password:
+                set_span_attributes(span, {
+                    "auth.success": False,
+                    "auth.error": "missing_credentials"
+                })
+                return jsonify({'success': False, 'error': 'Email and password are required'}), 400
+            
+            User, RefreshToken = _get_models()
+            
+            with _get_db_context()() as db:
+                # Find user
+                user = db.query(User).filter(User.email == email).first()
+                
+                if not user or not verify_password(password, user.password_hash):
+                    logger.warning(f"Failed login attempt for: {email}")
+                    set_span_attributes(span, {
+                        "auth.success": False,
+                        "auth.error": "invalid_credentials",
+                        "auth.user_exists": user is not None
+                    })
+                    return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
+                
+                if not user.is_active:
+                    set_span_attributes(span, {
+                        "auth.success": False,
+                        "auth.error": "account_disabled"
+                    })
+                    return jsonify({'success': False, 'error': 'Account is disabled'}), 401
+                
+                # Update last login
+                user.last_login_at = datetime.now(timezone.utc)
+
+                # Create tokens
+                access_token = create_access_token(str(user.id), user.email, user.is_admin)
+                refresh_token, token_hash = create_refresh_token()
+                
+                # Store refresh token
+                import uuid
+                refresh_token_record = RefreshToken(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    token_hash=token_hash,
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+                    device_info=request.headers.get('User-Agent', '')[:255],
+                    ip_address=request.remote_addr
+                )
+                db.add(refresh_token_record)
+                db.commit()
+                
+                set_span_attributes(span, {
+                    "auth.success": True,
+                    "auth.user_plan": user.plan.value if hasattr(user.plan, 'value') else str(user.plan),
+                    "auth.is_admin": user.is_admin
+                })
+                
+                logger.info(f"User logged in: {email}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Login successful',
+                    'user': {
+                        'id': str(user.id),
+                        'email': user.email,
+                        'full_name': user.full_name,
+                        'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan),
+                        'is_admin': user.is_admin
+                    },
+                    'access_token': access_token,
+                    'refresh_token': refresh_token,
+                    'token_type': 'Bearer',
+                    'expires_in': 900  # 15 minutes
+                })
+                
+        except Exception as e:
+            logger.error(f"Login error: {e}", exc_info=True)
+            span.record_exception(e)
+            set_span_attributes(span, {
+                "auth.success": False,
+                "auth.error_type": type(e).__name__
+            })
+            return jsonify({'success': False, 'error': 'Login failed'}), 500
 
 
 @auth_bp.route('/refresh', methods=['POST'])
@@ -269,51 +305,88 @@ def refresh_token():
         200: New access token
         401: Invalid or expired refresh token
     """
-    try:
-        from .jwt_handler import create_access_token, verify_refresh_token
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'Request body is required'}), 400
-        
-        token = data.get('refresh_token', '')
-        if not token:
-            return jsonify({'success': False, 'error': 'Refresh token is required'}), 400
-        
-        User, RefreshToken = _get_models()
-        
-        import hashlib
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        
-        with _get_db_context()() as db:
-            # Find refresh token
-            refresh_record = db.query(RefreshToken).filter(
-                RefreshToken.token_hash == token_hash,
-                RefreshToken.revoked.is_(False),
-                RefreshToken.expires_at > datetime.now(timezone.utc)
-            ).first()
+    tracer = get_tracer()
+    with tracer.start_as_current_span("auth.refresh_token") as span:
+        try:
+            from .jwt_handler import create_access_token, verify_refresh_token
             
-            if not refresh_record:
-                return jsonify({'success': False, 'error': 'Invalid or expired refresh token'}), 401
-            
-            # Get user
-            user = db.query(User).filter(User.id == refresh_record.user_id).first()
-            if not user or not user.is_active:
-                return jsonify({'success': False, 'error': 'User not found or disabled'}), 401
-            
-            # Create new access token
-            access_token = create_access_token(str(user.id), user.email, user.is_admin)
-            
-            return jsonify({
-                'success': True,
-                'access_token': access_token,
-                'token_type': 'Bearer',
-                'expires_in': 900  # 15 minutes
+            set_span_attributes(span, {
+                "auth.operation": "refresh_token",
+                "client.ip": request.remote_addr
             })
             
-    except Exception as e:
-        logger.error(f"Token refresh error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Token refresh failed'}), 500
+            data = request.get_json()
+            if not data:
+                set_span_attributes(span, {
+                    "auth.success": False,
+                    "auth.error": "missing_body"
+                })
+                return jsonify({'success': False, 'error': 'Request body is required'}), 400
+            
+            token = data.get('refresh_token', '')
+            if not token:
+                set_span_attributes(span, {
+                    "auth.success": False,
+                    "auth.error": "missing_token"
+                })
+                return jsonify({'success': False, 'error': 'Refresh token is required'}), 400
+            
+            User, RefreshToken = _get_models()
+            
+            import hashlib
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            
+            with _get_db_context()() as db:
+                # Find refresh token
+                refresh_record = db.query(RefreshToken).filter(
+                    RefreshToken.token_hash == token_hash,
+                    RefreshToken.revoked.is_(False),
+                    RefreshToken.expires_at > datetime.now(timezone.utc)
+                ).first()
+                
+                if not refresh_record:
+                    set_span_attributes(span, {
+                        "auth.success": False,
+                        "auth.error": "invalid_or_expired_token"
+                    })
+                    return jsonify({'success': False, 'error': 'Invalid or expired refresh token'}), 401
+                
+                # Get user
+                user = db.query(User).filter(User.id == refresh_record.user_id).first()
+                if not user or not user.is_active:
+                    set_span_attributes(span, {
+                        "auth.success": False,
+                        "auth.error": "user_not_found_or_disabled",
+                        "auth.user_exists": user is not None
+                    })
+                    return jsonify({'success': False, 'error': 'User not found or disabled'}), 401
+                
+                # Create new access token
+                access_token = create_access_token(str(user.id), user.email, user.is_admin)
+                
+                set_span_attributes(span, {
+                    "auth.success": True,
+                    "auth.user_plan": user.plan.value if hasattr(user.plan, 'value') else str(user.plan),
+                    "auth.is_admin": user.is_admin
+                })
+                
+                logger.info(f"Token refreshed for user: {user.email}")
+                
+                return jsonify({
+                    'success': True,
+                    'access_token': access_token,
+                    'token_type': 'Bearer',
+                    'expires_in': 900  # 15 minutes
+                })
+                
+        except Exception as e:
+            logger.error(f"Token refresh error: {e}", exc_info=True)
+            span.record_exception(e)
+            set_span_attributes(span, {
+                "auth.success": False,
+                "auth.error_type": type(e).__name__
+            })
+            return jsonify({'success': False, 'error': 'Token refresh failed'}), 500
 
 
 @auth_bp.route('/logout', methods=['POST'])
