@@ -10,6 +10,8 @@ Uses Fernet symmetric encryption from the cryptography library.
 Environment Variables:
 - ENCRYPTION_KEY: Base64-encoded Fernet key (generated if not set)
 
+Telemetry: Tracks encryption/decryption operations for security monitoring.
+
 Usage:
     from integrations.encryption import encrypt_token, decrypt_token
     
@@ -25,6 +27,13 @@ import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# Telemetry integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
 
 # Try to import cryptography
 try:
@@ -101,7 +110,7 @@ class CredentialEncryption:
     
     def encrypt(self, plaintext: str) -> str:
         """
-        Encrypt a string.
+        Encrypt a string with telemetry tracking.
         
         Args:
             plaintext: String to encrypt
@@ -112,16 +121,45 @@ class CredentialEncryption:
         if not plaintext:
             return ""
         
-        try:
-            encrypted = self._fernet.encrypt(plaintext.encode())
-            return encrypted.decode()
-        except Exception as e:
-            logger.error(f"Encryption failed: {e}")
-            raise
+        if TELEMETRY_AVAILABLE:
+            tracer = get_tracer()
+            with tracer.start_as_current_span("encryption.encrypt") as span:
+                try:
+                    set_span_attributes(span, {
+                        "operation.type": "encrypt",
+                        "plaintext.length": len(plaintext),
+                        "encryption.algorithm": "fernet"
+                    })
+                    
+                    encrypted = self._fernet.encrypt(plaintext.encode())
+                    result = encrypted.decode()
+                    
+                    set_span_attributes(span, {
+                        "operation.success": True,
+                        "ciphertext.length": len(result)
+                    })
+                    
+                    return result
+                except Exception as e:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "operation.success": False,
+                        "error.type": type(e).__name__
+                    })
+                    logger.error(f"Encryption failed: {e}")
+                    raise
+        else:
+            # Fallback without telemetry
+            try:
+                encrypted = self._fernet.encrypt(plaintext.encode())
+                return encrypted.decode()
+            except Exception as e:
+                logger.error(f"Encryption failed: {e}")
+                raise
     
     def decrypt(self, ciphertext: str) -> Optional[str]:
         """
-        Decrypt a string.
+        Decrypt a string with telemetry tracking.
         
         Args:
             ciphertext: Base64-encoded encrypted string
@@ -132,15 +170,52 @@ class CredentialEncryption:
         if not ciphertext:
             return None
         
-        try:
-            decrypted = self._fernet.decrypt(ciphertext.encode())
-            return decrypted.decode()
-        except InvalidToken:
-            logger.error("Decryption failed: Invalid token")
-            return None
-        except Exception as e:
-            logger.error(f"Decryption failed: {e}")
-            return None
+        if TELEMETRY_AVAILABLE:
+            tracer = get_tracer()
+            with tracer.start_as_current_span("encryption.decrypt") as span:
+                try:
+                    set_span_attributes(span, {
+                        "operation.type": "decrypt",
+                        "ciphertext.length": len(ciphertext),
+                        "encryption.algorithm": "fernet"
+                    })
+                    
+                    decrypted = self._fernet.decrypt(ciphertext.encode())
+                    result = decrypted.decode()
+                    
+                    set_span_attributes(span, {
+                        "operation.success": True,
+                        "plaintext.length": len(result)
+                    })
+                    
+                    return result
+                except InvalidToken:
+                    span.record_exception(InvalidToken("Invalid token"))
+                    set_span_attributes(span, {
+                        "operation.success": False,
+                        "error.type": "InvalidToken"
+                    })
+                    logger.error("Decryption failed: Invalid token")
+                    return None
+                except Exception as e:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "operation.success": False,
+                        "error.type": type(e).__name__
+                    })
+                    logger.error(f"Decryption failed: {e}")
+                    return None
+        else:
+            # Fallback without telemetry
+            try:
+                decrypted = self._fernet.decrypt(ciphertext.encode())
+                return decrypted.decode()
+            except InvalidToken:
+                logger.error("Decryption failed: Invalid token")
+                return None
+            except Exception as e:
+                logger.error(f"Decryption failed: {e}")
+                return None
     
     @staticmethod
     def generate_key() -> str:

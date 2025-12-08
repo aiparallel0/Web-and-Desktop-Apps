@@ -2,6 +2,7 @@
 Database module - Models and connection management
 
 Integrated with Circular Exchange Framework for dynamic configuration.
+Telemetry: Tracks database operations for query performance monitoring.
 """
 
 import os
@@ -10,6 +11,14 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
 import logging
+import time
+
+# Telemetry integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
 
 # Circular Exchange Framework Integration
 try:
@@ -163,7 +172,7 @@ def drop_all():
 
 def get_db():
     """
-    Dependency for getting database session
+    Dependency for getting database session with telemetry tracking.
 
     Usage in Flask:
         @app.route('/api/endpoint')
@@ -178,67 +187,180 @@ def get_db():
             users = db.query(User).all()
             return users
     """
-    db = get_session_factory()()
-    try:
-        yield db
-    finally:
-        db.close()
+    if TELEMETRY_AVAILABLE:
+        tracer = get_tracer()
+        with tracer.start_as_current_span("database.get_session") as span:
+            set_span_attributes(span, {
+                "operation.type": "create_session",
+                "database.type": "postgresql" if not DATABASE_URL.startswith('sqlite') else "sqlite"
+            })
+            
+            db = get_session_factory()()
+            try:
+                yield db
+            finally:
+                db.close()
+                set_span_attributes(span, {
+                    "operation.success": True
+                })
+    else:
+        # Fallback without telemetry
+        db = get_session_factory()()
+        try:
+            yield db
+        finally:
+            db.close()
 
 
 @contextmanager
 def get_db_context():
     """
-    Context manager for database session
+    Context manager for database session with telemetry tracking.
 
     Usage:
         with get_db_context() as db:
             user = db.query(User).filter(User.email == email).first()
             # ... do work ...
     """
-    db = get_session_factory()()
-    try:
-        yield db
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
+    if TELEMETRY_AVAILABLE:
+        tracer = get_tracer()
+        with tracer.start_as_current_span("database.context_session") as span:
+            start_time = time.time()
+            set_span_attributes(span, {
+                "operation.type": "context_session",
+                "database.type": "postgresql" if not DATABASE_URL.startswith('sqlite') else "sqlite"
+            })
+            
+            db = get_session_factory()()
+            try:
+                yield db
+                db.commit()
+                set_span_attributes(span, {
+                    "operation.success": True,
+                    "session.duration": time.time() - start_time,
+                    "session.committed": True
+                })
+            except Exception as e:
+                db.rollback()
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "operation.success": False,
+                    "session.rolled_back": True,
+                    "error.type": type(e).__name__
+                })
+                raise
+            finally:
+                db.close()
+    else:
+        # Fallback without telemetry
+        db = get_session_factory()()
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
 
 def cleanup_expired_tokens():
     """
-    Clean up expired refresh tokens
+    Clean up expired refresh tokens with telemetry tracking.
 
     Should be run periodically (e.g., daily cron job)
     """
     from datetime import datetime, timezone
     from .models import RefreshToken
 
-    with get_db_context() as db:
-        expired_count = db.query(RefreshToken).filter(
-            RefreshToken.expires_at < datetime.now(timezone.utc)
-        ).delete()
+    if TELEMETRY_AVAILABLE:
+        tracer = get_tracer()
+        with tracer.start_as_current_span("database.cleanup_expired_tokens") as span:
+            start_time = time.time()
+            set_span_attributes(span, {
+                "operation.type": "cleanup",
+                "cleanup.target": "expired_refresh_tokens"
+            })
+            
+            try:
+                with get_db_context() as db:
+                    expired_count = db.query(RefreshToken).filter(
+                        RefreshToken.expires_at < datetime.now(timezone.utc)
+                    ).delete()
 
-        logger.info(f"Cleaned up {expired_count} expired refresh tokens")
-        return expired_count
+                    set_span_attributes(span, {
+                        "operation.success": True,
+                        "cleanup.deleted_count": expired_count,
+                        "cleanup.duration": time.time() - start_time
+                    })
+                    
+                    logger.info(f"Cleaned up {expired_count} expired refresh tokens")
+                    return expired_count
+            except Exception as e:
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "operation.success": False,
+                    "error.type": type(e).__name__
+                })
+                raise
+    else:
+        # Fallback without telemetry
+        with get_db_context() as db:
+            expired_count = db.query(RefreshToken).filter(
+                RefreshToken.expires_at < datetime.now(timezone.utc)
+            ).delete()
+
+            logger.info(f"Cleaned up {expired_count} expired refresh tokens")
+            return expired_count
 
 
 def reset_monthly_usage():
     """
-    Reset monthly usage counters
+    Reset monthly usage counters with telemetry tracking.
 
     Should be run on the 1st of each month
     """
     from .models import User
 
-    with get_db_context() as db:
-        user_count = db.query(User).update({
-            User.receipts_processed_month: 0
-        })
+    if TELEMETRY_AVAILABLE:
+        tracer = get_tracer()
+        with tracer.start_as_current_span("database.reset_monthly_usage") as span:
+            start_time = time.time()
+            set_span_attributes(span, {
+                "operation.type": "reset_usage",
+                "reset.target": "monthly_usage_counters"
+            })
+            
+            try:
+                with get_db_context() as db:
+                    user_count = db.query(User).update({
+                        User.receipts_processed_month: 0
+                    })
 
-        logger.info(f"Reset monthly usage for {user_count} users")
-        return user_count
+                    set_span_attributes(span, {
+                        "operation.success": True,
+                        "reset.user_count": user_count,
+                        "reset.duration": time.time() - start_time
+                    })
+                    
+                    logger.info(f"Reset monthly usage for {user_count} users")
+                    return user_count
+            except Exception as e:
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "operation.success": False,
+                    "error.type": type(e).__name__
+                })
+                raise
+    else:
+        # Fallback without telemetry
+        with get_db_context() as db:
+            user_count = db.query(User).update({
+                User.receipts_processed_month: 0
+            })
+
+            logger.info(f"Reset monthly usage for {user_count} users")
+            return user_count
 """
 Database models for Receipt Extractor SaaS Platform
 Implements Priority 1: MVP Backend Infrastructure
