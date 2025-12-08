@@ -1,6 +1,6 @@
 # Repository Analysis Report
 
-**Generated:** 2025-12-08 06:19:44
+**Generated:** 2025-12-08 06:24:50
 
 ## 📊 Summary
 
@@ -904,39 +904,15 @@ Functions that appear to be defined but never called (heuristic analysis).
 References in documentation that don't match the actual code.
 
 - **Type:** README reference
-  - **Name:** `DB_POOL_MAX_OVERFLOW`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
   - **Name:** `ocr_paddleocr`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `PROJECT_CONFIG`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `ocr_tesseract`
+  - **Name:** `craft_detector`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
   - **Name:** `donut_sroie`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `DATABASE_URL`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `DB_POOL_SIZE`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `donut_cord`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `spatial_multi`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -948,15 +924,39 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `ocr_easyocr`
+  - **Name:** `DB_POOL_MAX_OVERFLOW`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `craft_detector`
+  - **Name:** `donut_cord`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `DATABASE_URL`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `DB_POOL_SIZE`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_tesseract`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
   - **Name:** `ocr_paddle`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_easyocr`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `PROJECT_CONFIG`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `spatial_multi`
   - **Issue:** Referenced in README but not found in code
 
 ## 📄 File Analysis Details
