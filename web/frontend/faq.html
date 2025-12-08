@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Frequently Asked Questions about Receipt Extractor - Get answers to common questions about OCR, pricing, security, and more">
+    <meta name="keywords" content="receipt extractor FAQ, OCR questions, receipt scanning help, pricing FAQ">
+    
+    <title>FAQ - Frequently Asked Questions | Receipt Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/cookie-consent.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+    
+    <style>
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-4);
+        }
+
+        .faq-category {
+            margin-bottom: var(--space-8);
+        }
+
+        .faq-category-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--color-gray-900);
+            margin-bottom: var(--space-4);
+            padding-bottom: var(--space-2);
+            border-bottom: 2px solid var(--color-primary);
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-3);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: var(--space-4);
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--color-gray-900);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .faq-question:hover {
+            color: var(--color-primary);
+        }
+
+        .faq-toggle {
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--color-primary);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .faq-item.open .faq-toggle {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0 var(--space-4);
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 1000px;
+            padding: 0 var(--space-4) var(--space-4);
+        }
+
+        .faq-answer p {
+            margin: 0 0 var(--space-2) 0;
+            color: var(--color-gray-600);
+            line-height: 1.7;
+        }
+
+        .faq-answer p:last-child {
+            margin-bottom: 0;
+        }
+
+        .faq-answer ul, .faq-answer ol {
+            margin: var(--space-2) 0;
+            padding-left: var(--space-4);
+            color: var(--color-gray-600);
+        }
+
+        .faq-answer li {
+            margin-bottom: var(--space-1);
+        }
+
+        .faq-answer code {
+            background: var(--color-gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .faq-cta {
+            background: var(--color-primary-50);
+            padding: var(--space-6);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            margin-top: var(--space-8);
+        }
+
+        .faq-cta h3 {
+            margin: 0 0 var(--space-2) 0;
+            color: var(--color-gray-900);
+        }
+
+        .faq-cta p {
+            margin: 0 0 var(--space-4) 0;
+            color: var(--color-gray-600);
+        }
+
+        .faq-search {
+            margin-bottom: var(--space-6);
+        }
+
+        .faq-search input {
+            width: 100%;
+            padding: var(--space-3);
+            border: 2px solid var(--color-gray-200);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .faq-search input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: var(--space-8);
+            color: var(--color-gray-500);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 2l7 7-7 7"></path>
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <a href="help.html" class="nav-link">Help</a>
+                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>Frequently Asked Questions</h1>
+            <p class="page-subtitle">Find answers to common questions about Receipt Extractor</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="content-section">
+        <div class="faq-container">
+            <!-- Search Box -->
+            <div class="faq-search">
+                <input type="text" id="faqSearch" placeholder="Search questions..." aria-label="Search FAQ">
+            </div>
+
+            <!-- Getting Started -->
+            <div class="faq-category">
+                <h2 class="faq-category-title">Getting Started</h2>
+                
+                <div class="faq-item" data-keywords="start begin new account signup register">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How do I get started with Receipt Extractor?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Getting started is easy:</p>
+                        <ol>
+                            <li>Visit our <a href="index.html">homepage</a> and upload your first receipt - no signup required!</li>
+                            <li>For more features, create a free account by clicking "Sign In" and then "Register"</li>
+                            <li>Choose a subscription plan from our <a href="pricing.html">pricing page</a> if you need more extractions</li>
+                            <li>Start uploading receipts and let our AI do the work</li>
+                        </ol>
+                        <p>The free tier gives you 10 receipts per month with basic OCR models.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="models ocr tesseract easyocr paddle florence choose select">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Which OCR model should I use?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We offer 7 different OCR models. Here's when to use each:</p>
+                        <ul>
+                            <li><strong>Tesseract:</strong> Fast and reliable for clear, high-quality receipts</li>
+                            <li><strong>EasyOCR:</strong> Great for multilingual receipts and diverse fonts</li>
+                            <li><strong>PaddleOCR:</strong> Excellent for production use, especially Asian languages (Pro+ plans)</li>
+                            <li><strong>Florence-2:</strong> Advanced AI model for challenging or damaged receipts (Pro+ plans)</li>
+                            <li><strong>Spatial Multi-Method:</strong> Combines multiple models for maximum accuracy</li>
+                        </ul>
+                        <p>For best results, try the Spatial Multi-Method model which uses ensemble techniques.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="formats supported jpg png pdf tiff image types">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What file formats are supported?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We support all common image formats:</p>
+                        <ul>
+                            <li>JPEG/JPG</li>
+                            <li>PNG</li>
+                            <li>BMP</li>
+                            <li>TIFF/TIF</li>
+                            <li>PDF (single page receipts)</li>
+                        </ul>
+                        <p>Maximum file size: 10MB per receipt. For batch processing, you can upload up to 100 receipts at once (Pro+ plans).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing & Plans -->
+            <div class="faq-category">
+                <h2 class="faq-category-title">Pricing & Plans</h2>
+                
+                <div class="faq-item" data-keywords="free trial test demo try">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Is there a free trial?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! We offer two ways to try our service:</p>
+                        <ol>
+                            <li><strong>No-account trial:</strong> Upload receipts directly on our homepage without creating an account</li>
+                            <li><strong>Free tier:</strong> Create a free account to get 10 receipts per month with basic features</li>
+                            <li><strong>14-day Pro trial:</strong> Pro and Business plans come with a 14-day free trial</li>
+                        </ol>
+                        <p>No credit card required for the free tier or homepage uploads!</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="pricing cost plan upgrade downgrade change">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I change my plan anytime?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Absolutely! You have full flexibility:</p>
+                        <ul>
+                            <li><strong>Upgrade:</strong> Instant upgrade with prorated billing - you only pay the difference</li>
+                            <li><strong>Downgrade:</strong> Takes effect at the end of your current billing period</li>
+                            <li><strong>Cancel:</strong> Cancel anytime - you keep access until the end of your billing period</li>
+                        </ul>
+                        <p>All plan changes can be made from your account dashboard.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="payment methods credit card stripe invoice billing">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What payment methods do you accept?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We accept all major payment methods through Stripe:</p>
+                        <ul>
+                            <li>Credit cards (Visa, Mastercard, American Express, Discover)</li>
+                            <li>Debit cards</li>
+                            <li>ACH transfers (for annual plans)</li>
+                            <li>Invoice billing (Enterprise plans only)</li>
+                        </ul>
+                        <p>All payments are processed securely through Stripe - we never store your card details.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="refund money back guarantee satisfaction">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Do you offer refunds?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! We offer a 14-day money-back guarantee on all paid plans.</p>
+                        <p>If you're not satisfied with our service within the first 14 days, contact our support team at <a href="mailto:support@receiptextractor.com">support@receiptextractor.com</a> for a full refund.</p>
+                        <p>After 14 days, refunds are evaluated on a case-by-case basis for exceptional circumstances.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security & Privacy -->
+            <div class="faq-category">
+                <h2 class="faq-category-title">Security & Privacy</h2>
+                
+                <div class="faq-item" data-keywords="security safe secure encryption data protection">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Is my data secure?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Security is our top priority. We implement industry-leading practices:</p>
+                        <ul>
+                            <li><strong>Encryption:</strong> All data encrypted in transit (TLS 1.3) and at rest (AES-256)</li>
+                            <li><strong>Auto-deletion:</strong> Receipt images automatically deleted 24 hours after processing</li>
+                            <li><strong>Secure infrastructure:</strong> Hosted on enterprise-grade cloud platforms with SOC 2 compliance</li>
+                            <li><strong>Regular audits:</strong> Quarterly security audits and penetration testing</li>
+                            <li><strong>Access controls:</strong> Strict employee access policies and authentication requirements</li>
+                        </ul>
+                        <p>Read our full <a href="privacy.html">Privacy Policy</a> for details.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="privacy gdpr ccpa data retention delete">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How long do you keep my receipts?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p><strong>Images:</strong> Automatically deleted 24 hours after processing. No exceptions.</p>
+                        <p><strong>Extracted data:</strong> Stored in your account indefinitely (or until you delete it) so you can:</p>
+                        <ul>
+                            <li>Access your extraction history</li>
+                            <li>Re-export data in different formats</li>
+                            <li>Search and filter past receipts</li>
+                        </ul>
+                        <p>You can delete any extraction from your dashboard at any time. When you delete your account, all data is permanently removed within 30 days.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="share sell data third party privacy">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Do you share or sell my data?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p><strong>No, we never sell your data. Period.</strong></p>
+                        <p>We only share data with:</p>
+                        <ul>
+                            <li><strong>Service providers:</strong> Cloud hosting (AWS/GCP) and payment processing (Stripe) - under strict contracts</li>
+                            <li><strong>Legal requirements:</strong> When required by law or to protect our rights</li>
+                        </ul>
+                        <p>Your receipt data and extracted information remain private and are never used for advertising or sold to third parties.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical Questions -->
+            <div class="faq-category">
+                <h2 class="faq-category-title">Technical Questions</h2>
+                
+                <div class="faq-item" data-keywords="api integration webhook developer code">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Do you offer an API?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! API access is available on Pro plans and above.</p>
+                        <p><strong>Features:</strong></p>
+                        <ul>
+                            <li>RESTful API with JSON responses</li>
+                            <li>All 7 OCR models available</li>
+                            <li>Batch processing endpoints</li>
+                            <li>Webhook support for async processing</li>
+                            <li>Comprehensive documentation and SDKs</li>
+                        </ul>
+                        <p>Check out our <a href="api.html">API Documentation</a> for integration guides and code examples.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="accuracy rate quality performance results">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What is the accuracy rate?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Accuracy varies by model and receipt quality:</p>
+                        <ul>
+                            <li><strong>Standard receipts (clear, good lighting):</strong> 95-98% accuracy</li>
+                            <li><strong>Challenging receipts (faded, crumpled):</strong> 85-92% accuracy</li>
+                            <li><strong>Spatial Multi-Method:</strong> Up to 99% accuracy through ensemble processing</li>
+                        </ul>
+                        <p>Accuracy improves with:</p>
+                        <ul>
+                            <li>High-resolution images (min 1200x1600 recommended)</li>
+                            <li>Good lighting and minimal glare</li>
+                            <li>Flat, unfolded receipts</li>
+                            <li>Using advanced models like Florence-2</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="batch bulk multiple receipts upload process">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I process multiple receipts at once?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! Batch processing is available on Pro plans and above.</p>
+                        <p><strong>Features:</strong></p>
+                        <ul>
+                            <li>Upload up to 100 receipts simultaneously</li>
+                            <li>Automatic parallel processing</li>
+                            <li>Progress tracking for each receipt</li>
+                            <li>Bulk export to CSV/Excel</li>
+                            <li>Failed receipt retry options</li>
+                        </ul>
+                        <p>Access batch processing from your dashboard under the "Batch Processing" tab.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="languages multilingual international foreign">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What languages are supported?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Our models support 50+ languages including:</p>
+                        <ul>
+                            <li><strong>Western:</strong> English, Spanish, French, German, Italian, Portuguese</li>
+                            <li><strong>Asian:</strong> Chinese, Japanese, Korean, Thai, Vietnamese</li>
+                            <li><strong>Other:</strong> Russian, Arabic, Hebrew, Hindi, and more</li>
+                        </ul>
+                        <p><strong>Best models for multilingual:</strong></p>
+                        <ul>
+                            <li><strong>EasyOCR:</strong> 80+ languages</li>
+                            <li><strong>PaddleOCR:</strong> Excellent for Asian languages</li>
+                            <li><strong>Florence-2:</strong> Auto-detects language</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="faq-category">
+                <h2 class="faq-category-title">Troubleshooting</h2>
+                
+                <div class="faq-item" data-keywords="error failed processing not working broken">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What if my receipt fails to process?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>If processing fails, try these steps:</p>
+                        <ol>
+                            <li><strong>Check image quality:</strong> Ensure the receipt is clear and well-lit</li>
+                            <li><strong>Try a different model:</strong> Some models work better for certain receipt types</li>
+                            <li><strong>Reduce file size:</strong> Large files (>10MB) may timeout</li>
+                            <li><strong>Check format:</strong> Verify your file is in a supported format</li>
+                            <li><strong>Use preprocessing:</strong> Enable image enhancement in advanced settings</li>
+                        </ol>
+                        <p>Still having issues? Contact support at <a href="mailto:support@receiptextractor.com">support@receiptextractor.com</a> with your receipt ID.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="slow performance timeout long time processing">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Why is processing taking so long?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Processing time depends on several factors:</p>
+                        <ul>
+                            <li><strong>Model choice:</strong> Tesseract is fastest (~2s), Florence-2 can take ~30s</li>
+                            <li><strong>Image size:</strong> Larger images take longer to process</li>
+                            <li><strong>Server load:</strong> Peak times may have slight delays</li>
+                            <li><strong>Preprocessing:</strong> Image enhancement adds processing time</li>
+                        </ul>
+                        <p><strong>Average processing times:</strong></p>
+                        <ul>
+                            <li>Tesseract: 2-5 seconds</li>
+                            <li>EasyOCR: 5-10 seconds</li>
+                            <li>Florence-2: 15-30 seconds</li>
+                            <li>Spatial Multi-Method: 20-40 seconds</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-keywords="export download csv excel json format data">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How do I export my extracted data?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Export options vary by plan:</p>
+                        <p><strong>Free tier:</strong></p>
+                        <ul>
+                            <li>JSON format only</li>
+                        </ul>
+                        <p><strong>Pro and above:</strong></p>
+                        <ul>
+                            <li>JSON (structured data)</li>
+                            <li>CSV (spreadsheet compatible)</li>
+                            <li>Excel (.xlsx)</li>
+                            <li>PDF (formatted report - Business+)</li>
+                        </ul>
+                        <p>Export from your dashboard by clicking the export button on any extraction or use bulk export for multiple receipts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Still Need Help? -->
+            <div class="faq-cta">
+                <h3>Still have questions?</h3>
+                <p>Can't find what you're looking for? Our support team is here to help!</p>
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <a href="contact.html" class="btn btn-primary">Contact Support</a>
+                    <a href="help.html" class="btn btn-outline">Visit Help Center</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Receipt Extractor</h4>
+                    <p>AI-powered OCR for modern businesses</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="index.html#features">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="api.html">API</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="about.html">About</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="help.html">Help Center</a>
+                    <a href="faq.html">FAQ</a>
+                    <a href="contact.html">Contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/analytics-integration.js"></script>
+    <script>
+        // Toggle FAQ item
+        function toggleFaq(button) {
+            const item = button.parentElement;
+            const wasOpen = item.classList.contains('open');
+            
+            // Close all items
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            
+            // Open clicked item if it wasn't open
+            if (!wasOpen) {
+                item.classList.add('open');
+            }
+        }
+
+        // Search functionality
+        const searchInput = document.getElementById('faqSearch');
+        const faqItems = document.querySelectorAll('.faq-item');
+        const categories = document.querySelectorAll('.faq-category');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            let hasResults = false;
+
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question span').textContent.toLowerCase();
+                const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+                const keywords = item.dataset.keywords || '';
+                
+                const matches = question.includes(query) || 
+                              answer.includes(query) || 
+                              keywords.includes(query);
+
+                if (matches || query === '') {
+                    item.style.display = 'block';
+                    hasResults = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide categories based on visible items
+            categories.forEach(category => {
+                const visibleItems = category.querySelectorAll('.faq-item[style="display: block"]').length;
+                category.style.display = visibleItems > 0 ? 'block' : 'none';
+            });
+
+            // Show "no results" message
+            const existingNoResults = document.querySelector('.no-results');
+            if (existingNoResults) {
+                existingNoResults.remove();
+            }
+
+            if (!hasResults && query !== '') {
+                const noResults = document.createElement('div');
+                noResults.className = 'no-results';
+                noResults.innerHTML = `
+                    <h3>No results found for "${query}"</h3>
+                    <p>Try searching with different keywords or <a href="contact.html">contact our support team</a>.</p>
+                `;
+                document.querySelector('.faq-container').appendChild(noResults);
+            }
+        });
+
+        // Track page view
+        if (window.analyticsIntegration) {
+            analyticsIntegration.trackPageView('/faq.html');
+        }
+    </script>
+</body>
+</html>
