@@ -34,6 +34,14 @@ from PIL import Image, ImageEnhance
 
 logger = logging.getLogger(__name__)
 
+# Telemetry integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
+    logger.debug("Telemetry not available for adaptive preprocessing")
+
 # Try to import OpenCV
 try:
     import cv2
@@ -125,15 +133,28 @@ def assess_image_quality(image: Image.Image) -> QualityMetrics:
     Returns:
         QualityMetrics with detailed measurements
     """
-    if not CV2_AVAILABLE:
-        logger.warning("OpenCV not available for quality assessment")
-        return QualityMetrics(overall_score=50)
+    if TELEMETRY_AVAILABLE:
+        tracer = get_tracer()
+        span = tracer.start_span("preprocessing.assess_quality")
+    else:
+        span = None
     
-    # Convert to grayscale numpy array
-    gray = np.array(image.convert('L'))
-    height, width = gray.shape
-    
-    metrics = QualityMetrics()
+    try:
+        if not CV2_AVAILABLE:
+            logger.warning("OpenCV not available for quality assessment")
+            if span and TELEMETRY_AVAILABLE:
+                set_span_attributes(span, {
+                    "opencv.available": False,
+                    "quality.score": 50
+                })
+                span.end()
+            return QualityMetrics(overall_score=50)
+        
+        # Convert to grayscale numpy array
+        gray = np.array(image.convert('L'))
+        height, width = gray.shape
+        
+        metrics = QualityMetrics()
     
     # 1. Blur Detection (Laplacian variance)
     laplacian = cv2.Laplacian(gray, cv2.CV_64F)
@@ -235,6 +256,24 @@ def assess_image_quality(image: Image.Image) -> QualityMetrics:
     
     logger.info(f"Image quality assessment: score={metrics.overall_score:.1f}, "
                 f"blur={metrics.blur_score:.1f}, contrast={metrics.contrast:.1f}")
+    
+    if span and TELEMETRY_AVAILABLE:
+        set_span_attributes(span, {
+            "image.width": width,
+            "image.height": height,
+            "quality.overall_score": round(metrics.overall_score, 1),
+            "quality.blur_score": round(metrics.blur_score, 1),
+            "quality.contrast": round(metrics.contrast, 1),
+            "quality.noise_level": round(metrics.noise_level, 2),
+            "quality.brightness": round(metrics.brightness, 1),
+            "quality.resolution_score": round(metrics.resolution_score, 1),
+            "quality.skew_angle": round(metrics.skew_angle, 2),
+            "quality.text_density": round(metrics.text_density, 3),
+            "quality.lighting_uniformity": round(metrics.lighting_uniformity, 1),
+            "quality.level": metrics.get_quality_level(),
+            "opencv.available": True
+        })
+        span.end()
     
     return metrics
 
@@ -373,34 +412,62 @@ class AdaptivePreprocessor:
         Returns:
             List of (strategy_name, processed_image) tuples
         """
-        if strategies is None:
-            strategies = self.select_strategy(image)
+        if TELEMETRY_AVAILABLE:
+            tracer = get_tracer()
+            span = tracer.start_span("preprocessing.process")
+        else:
+            span = None
         
-        results = []
-        
-        # Always include the original (grayscale)
-        gray = image.convert('L')
-        results.append(('original', gray))
-        
-        # Apply each strategy
-        for strategy in strategies:
-            try:
-                processed = self.apply_strategy(image, strategy)
-                results.append((strategy.value, processed))
-            except Exception as e:
-                logger.warning(f"Strategy {strategy.value} failed: {e}")
-        
-        # Add combined preprocessing (all selected strategies in sequence)
         try:
-            combined = image
+            if strategies is None:
+                strategies = self.select_strategy(image)
+            
+            results = []
+            
+            # Always include the original (grayscale)
+            gray = image.convert('L')
+            results.append(('original', gray))
+            
+            # Apply each strategy
             for strategy in strategies:
-                combined = self.apply_strategy(combined, strategy)
-            results.append(('combined', combined))
+                try:
+                    processed = self.apply_strategy(image, strategy)
+                    results.append((strategy.value, processed))
+                except Exception as e:
+                    logger.warning(f"Strategy {strategy.value} failed: {e}")
+            
+            # Add combined preprocessing (all selected strategies in sequence)
+            try:
+                combined = image
+                for strategy in strategies:
+                    combined = self.apply_strategy(combined, strategy)
+                results.append(('combined', combined))
+            except Exception as e:
+                logger.warning(f"Combined preprocessing failed: {e}")
+            
+            logger.info(f"Generated {len(results)} preprocessed versions")
+            
+            if span and TELEMETRY_AVAILABLE:
+                set_span_attributes(span, {
+                    "preprocessing.strategies_count": len(strategies),
+                    "preprocessing.strategies": ','.join(s.value for s in strategies),
+                    "preprocessing.versions_generated": len(results),
+                    "preprocessing.success": True,
+                    "quality.overall_score": round(self.quality_metrics.overall_score, 1) if self.quality_metrics else None
+                })
+                span.end()
+            
+            return results
         except Exception as e:
-            logger.warning(f"Combined preprocessing failed: {e}")
-        
-        logger.info(f"Generated {len(results)} preprocessed versions")
-        return results
+            logger.error(f"Preprocessing failed: {e}")
+            if span and TELEMETRY_AVAILABLE:
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "preprocessing.success": False,
+                    "error.type": type(e).__name__
+                })
+                span.end()
+            raise
     
     def select_best(
         self,

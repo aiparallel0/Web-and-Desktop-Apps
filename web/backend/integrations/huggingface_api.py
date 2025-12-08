@@ -31,6 +31,14 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+# Telemetry integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
+    logger.debug("Telemetry not available for HuggingFace API")
+
 # Pre-compiled regex patterns for receipt text parsing (performance optimization)
 _TOTAL_PATTERN = re.compile(r'(?:total|sum|amount)[:\s]*\$?(\d+\.?\d*)', re.IGNORECASE)
 _SUBTOTAL_PATTERN = re.compile(r'(?:subtotal|sub-total)[:\s]*\$?(\d+\.?\d*)', re.IGNORECASE)
@@ -160,15 +168,25 @@ class HuggingFaceInference:
         if model_id is None:
             model_id = 'naver-clova-ix/donut-base-finetuned-cord-v2'
         
+        if TELEMETRY_AVAILABLE:
+            tracer = get_tracer()
+            span = tracer.start_span("huggingface.extract_text")
+        else:
+            span = None
+        
         start_time = time.time()
         
         try:
             # Convert base64 to bytes if needed
+            image_size = 0
             if isinstance(image, str):
                 if image.startswith('data:'):
                     # Remove data URL prefix
                     image = image.split(',')[1]
                 image = base64.b64decode(image)
+                image_size = len(image)
+            elif isinstance(image, bytes):
+                image_size = len(image)
             
             # Apply rate limiting
             self._rate_limit()
@@ -181,6 +199,19 @@ class HuggingFaceInference:
             
             processing_time = time.time() - start_time
             self._request_count += 1
+            
+            if span and TELEMETRY_AVAILABLE:
+                set_span_attributes(span, {
+                    "huggingface.model_id": model_id,
+                    "huggingface.image_size_bytes": image_size,
+                    "huggingface.processing_time": round(processing_time, 3),
+                    "huggingface.success": True,
+                    "huggingface.request_count": self._request_count,
+                    "huggingface.confidence": result.get('confidence') if result.get('confidence') else None,
+                    "extraction.success": bool(result.get('data')),
+                    "extraction.raw_text_length": len(result.get('raw_text', ''))
+                })
+                span.end()
             
             return InferenceResult(
                 success=True,
@@ -195,6 +226,17 @@ class HuggingFaceInference:
         except Exception as e:
             processing_time = time.time() - start_time
             logger.error(f"HuggingFace inference error: {e}")
+            
+            if span and TELEMETRY_AVAILABLE:
+                span.record_exception(e)
+                set_span_attributes(span, {
+                    "huggingface.model_id": model_id,
+                    "huggingface.success": False,
+                    "error.type": type(e).__name__,
+                    "error.message": str(e),
+                    "huggingface.processing_time": round(processing_time, 3)
+                })
+                span.end()
             
             return InferenceResult(
                 success=False,
