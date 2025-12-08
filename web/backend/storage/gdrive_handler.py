@@ -35,6 +35,9 @@ from .base import (
 from shared.utils.optional_imports import OptionalImport
 from shared.utils.base_handler import load_env_config, log_handler_event
 
+# Import telemetry utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+
 logger = logging.getLogger(__name__)
 
 # Import Google Drive libraries
@@ -147,30 +150,42 @@ class GoogleDriveHandler(BaseStorageHandler):
         Returns:
             Authorization URL string
         """
-        if not GDRIVE_AVAILABLE:
-            raise StorageError("Google Drive SDK not available")
-        
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [self.redirect_uri]
-                }
-            },
-            scopes=self.SCOPES
-        )
-        flow.redirect_uri = self.redirect_uri
-        
-        auth_url, _ = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true',
-            state=state
-        )
-        
-        return auth_url
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.gdrive.get_auth_url") as span:
+            set_span_attributes(span, {
+                "storage.provider": "google_drive",
+                "storage.operation": "get_authorization_url",
+                "oauth.has_state": state is not None
+            })
+            
+            if not GDRIVE_AVAILABLE:
+                raise StorageError("Google Drive SDK not available")
+            
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [self.redirect_uri]
+                    }
+                },
+                scopes=self.SCOPES
+            )
+            flow.redirect_uri = self.redirect_uri
+            
+            auth_url, _ = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                state=state
+            )
+            
+            set_span_attributes(span, {
+                "oauth.url_generated": True
+            })
+            
+            return auth_url
     
     def handle_oauth_callback(self, code: str) -> Dict:
         """
@@ -182,39 +197,53 @@ class GoogleDriveHandler(BaseStorageHandler):
         Returns:
             Credentials dictionary
         """
-        if not GDRIVE_AVAILABLE:
-            raise StorageError("Google Drive SDK not available")
-        
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [self.redirect_uri]
-                }
-            },
-            scopes=self.SCOPES
-        )
-        flow.redirect_uri = self.redirect_uri
-        
-        flow.fetch_token(code=code)
-        credentials = flow.credentials
-        
-        # Store credentials and initialize service
-        self._credentials = {
-            'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': list(credentials.scopes)
-        }
-        
-        self._service = build('drive', 'v3', credentials=credentials)
-        
-        return self._credentials
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.gdrive.oauth_callback") as span:
+            set_span_attributes(span, {
+                "storage.provider": "google_drive",
+                "storage.operation": "oauth_callback"
+            })
+            
+            if not GDRIVE_AVAILABLE:
+                raise StorageError("Google Drive SDK not available")
+            
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [self.redirect_uri]
+                    }
+                },
+                scopes=self.SCOPES
+            )
+            flow.redirect_uri = self.redirect_uri
+            
+            flow.fetch_token(code=code)
+            credentials = flow.credentials
+            
+            # Store credentials and initialize service
+            self._credentials = {
+                'token': credentials.token,
+                'refresh_token': credentials.refresh_token,
+                'token_uri': credentials.token_uri,
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'scopes': list(credentials.scopes)
+            }
+            
+            self._service = build('drive', 'v3', credentials=credentials)
+            
+            set_span_attributes(span, {
+                "oauth.token_exchanged": True,
+                "oauth.has_refresh_token": credentials.refresh_token is not None,
+                "oauth.scopes_count": len(credentials.scopes)
+            })
+            
+            logger.info("Google Drive OAuth callback handled successfully")
+            return self._credentials
     
     def set_credentials(self, credentials: Dict) -> None:
         """
@@ -251,75 +280,102 @@ class GoogleDriveHandler(BaseStorageHandler):
         Returns:
             UploadResult with success status and URL
         """
-        if not self._service:
-            return UploadResult(
-                success=False,
-                key=key,
-                error="Google Drive not authenticated"
-            )
-        
-        try:
-            # Get filename from key
-            filename = key.split('/')[-1]
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.gdrive.upload") as span:
+            if not self._service:
+                set_span_attributes(span, {
+                    "storage.provider": "google_drive",
+                    "storage.operation": "upload",
+                    "storage.authenticated": False
+                })
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error="Google Drive not authenticated"
+                )
             
-            # Ensure folder exists
-            folder_id = self._ensure_folder_exists(key)
-            
-            # Prepare file metadata
-            file_metadata = {
-                'name': filename,
-                'parents': [folder_id] if folder_id else []
-            }
-            
-            # Convert bytes to file-like object
-            if isinstance(file_data, bytes):
-                file_obj = BytesIO(file_data)
-                size = len(file_data)
-            else:
-                file_obj = file_data
-                file_obj.seek(0, 2)
-                size = file_obj.tell()
-                file_obj.seek(0)
-            
-            # Determine content type
-            if not content_type:
-                content_type = self.get_content_type(filename)
-            
-            # Create media upload
-            media = MediaIoBaseUpload(
-                file_obj,
-                mimetype=content_type,
-                resumable=True
-            )
-            
-            # Upload file
-            file = self._service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, webViewLink, webContentLink'
-            ).execute()
-            
-            file_id = file.get('id')
-            url = file.get('webViewLink')
-            
-            logger.info(f"Uploaded file to Google Drive: {key}")
-            
-            return UploadResult(
-                success=True,
-                key=file_id,
-                url=url,
-                size=size,
-                metadata={'original_key': key}
-            )
-            
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Google Drive upload error: {error_msg}")
-            return UploadResult(
-                success=False,
-                key=key,
-                error=error_msg
-            )
+            try:
+                # Get filename from key
+                filename = key.split('/')[-1]
+                
+                # Ensure folder exists
+                folder_id = self._ensure_folder_exists(key)
+                
+                # Prepare file metadata
+                file_metadata = {
+                    'name': filename,
+                    'parents': [folder_id] if folder_id else []
+                }
+                
+                # Convert bytes to file-like object
+                if isinstance(file_data, bytes):
+                    file_obj = BytesIO(file_data)
+                    size = len(file_data)
+                else:
+                    file_obj = file_data
+                    file_obj.seek(0, 2)
+                    size = file_obj.tell()
+                    file_obj.seek(0)
+                
+                # Determine content type
+                if not content_type:
+                    content_type = self.get_content_type(filename)
+                
+                set_span_attributes(span, {
+                    "storage.provider": "google_drive",
+                    "storage.operation": "upload",
+                    "storage.file_size": size,
+                    "storage.content_type": content_type,
+                    "storage.has_folder": folder_id is not None
+                })
+                
+                # Create media upload
+                media = MediaIoBaseUpload(
+                    file_obj,
+                    mimetype=content_type,
+                    resumable=True
+                )
+                
+                # Upload file
+                file = self._service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id, webViewLink, webContentLink'
+                ).execute()
+                
+                file_id = file.get('id')
+                url = file.get('webViewLink')
+                
+                set_span_attributes(span, {
+                    "storage.success": True,
+                    "storage.file_id": file_id[:8] + "..." if file_id else None
+                })
+                
+                logger.info(f"Uploaded file to Google Drive: {key}")
+                
+                return UploadResult(
+                    success=True,
+                    key=file_id,
+                    url=url,
+                    size=size,
+                    metadata={'original_key': key}
+                )
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Google Drive upload error: {error_msg}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "storage.success": False,
+                    "storage.error_type": type(e).__name__
+                })
+                
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error=error_msg
+                )
     
     def download_file(self, key: str) -> Optional[bytes]:
         """
@@ -331,24 +387,52 @@ class GoogleDriveHandler(BaseStorageHandler):
         Returns:
             File content as bytes
         """
-        if not self._service:
-            logger.error("Google Drive not authenticated")
-            return None
-        
-        try:
-            request = self._service.files().get_media(fileId=key)
-            file_data = BytesIO()
-            downloader = MediaIoBaseDownload(file_data, request)
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.gdrive.download") as span:
+            set_span_attributes(span, {
+                "storage.provider": "google_drive",
+                "storage.operation": "download",
+                "storage.file_id": key[:8] + "..." if len(key) > 8 else key
+            })
             
-            done = False
-            while not done:
-                _, done = downloader.next_chunk()
+            if not self._service:
+                logger.error("Google Drive not authenticated")
+                set_span_attributes(span, {
+                    "storage.authenticated": False,
+                    "storage.success": False
+                })
+                return None
             
-            return file_data.getvalue()
-            
-        except Exception as e:
-            logger.error(f"Google Drive download error: {e}")
-            return None
+            try:
+                request = self._service.files().get_media(fileId=key)
+                file_data = BytesIO()
+                downloader = MediaIoBaseDownload(file_data, request)
+                
+                done = False
+                while not done:
+                    _, done = downloader.next_chunk()
+                
+                content = file_data.getvalue()
+                
+                set_span_attributes(span, {
+                    "storage.authenticated": True,
+                    "storage.success": True,
+                    "storage.file_size": len(content)
+                })
+                
+                logger.info(f"Downloaded file from Google Drive: {key}, size: {len(content)} bytes")
+                return content
+                
+            except Exception as e:
+                logger.error(f"Google Drive download error: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "storage.success": False,
+                    "storage.error_type": type(e).__name__
+                })
+                
+                return None
     
     def delete_file(self, key: str) -> bool:
         """
