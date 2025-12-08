@@ -20,6 +20,10 @@ from flask import Blueprint, request, jsonify, g
 from .plans import SUBSCRIPTION_PLANS, get_plan_features
 from .stripe_handler import StripeHandler, STRIPE_AVAILABLE
 
+# Import telemetry and security utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes, sanitize_attributes
+from web.backend.security.rate_limiting import rate_limit
+
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
@@ -91,20 +95,35 @@ def get_plans():
     Returns:
         200: List of plans with features
     """
-    plans = []
-    for plan_id, plan_data in SUBSCRIPTION_PLANS.items():
-        plans.append({
-            'id': plan_id,
-            'name': plan_data['name'],
-            'price': plan_data['price'],
-            'description': plan_data.get('description', ''),
-            'features': plan_data['features']
-        })
-    
-    return jsonify({
-        'success': True,
-        'plans': plans
-    })
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.get_plans") as span:
+        try:
+            set_span_attributes(span, {
+                "operation.type": "get_plans"
+            })
+            
+            plans = []
+            for plan_id, plan_data in SUBSCRIPTION_PLANS.items():
+                plans.append({
+                    'id': plan_id,
+                    'name': plan_data['name'],
+                    'price': plan_data['price'],
+                    'description': plan_data.get('description', ''),
+                    'features': plan_data['features']
+                })
+            
+            set_span_attributes(span, {
+                "plans.count": len(plans)
+            })
+            
+            return jsonify({
+                'success': True,
+                'plans': plans
+            })
+        except Exception as e:
+            logger.error(f"Get plans error: {e}", exc_info=True)
+            span.record_exception(e)
+            return jsonify({'success': False, 'error': 'Failed to get plans'}), 500
 
 
 @billing_bp.route('/subscription', methods=['GET'])
@@ -117,42 +136,62 @@ def get_subscription():
         200: Subscription details
         404: No subscription found
     """
-    try:
-        User, Subscription = _get_models()
-        
-        with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == g.user_id).first()
-            if not user:
-                return jsonify({'success': False, 'error': 'User not found'}), 404
-            
-            # Get active subscription
-            subscription = db.query(Subscription).filter(
-                Subscription.user_id == user.id,
-                Subscription.status == 'active'
-            ).first()
-            
-            plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
-            plan_features = get_plan_features(plan_name)
-            
-            return jsonify({
-                'success': True,
-                'subscription': {
-                    'plan': plan_name,
-                    'features': plan_features,
-                    'stripe_subscription_id': subscription.stripe_subscription_id if subscription else None,
-                    'current_period_end': subscription.current_period_end.isoformat() if subscription and subscription.current_period_end else None,
-                    'cancel_at_period_end': subscription.cancel_at_period_end if subscription else False
-                },
-                'usage': {
-                    'receipts_processed_month': user.receipts_processed_month,
-                    'receipts_limit': plan_features.get('receipts_per_month', 10),
-                    'storage_used_bytes': user.storage_used_bytes,
-                    'storage_limit_gb': plan_features.get('storage_gb', 0.1)
-                }
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.get_subscription") as span:
+        try:
+            set_span_attributes(span, {
+                "operation.type": "get_subscription",
+                "user.id": g.user_id
             })
-    except Exception as e:
-        logger.error(f"Get subscription error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to get subscription'}), 500
+            
+            User, Subscription = _get_models()
+            
+            with _get_db_context()() as db:
+                user = db.query(User).filter(User.id == g.user_id).first()
+                if not user:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
+                
+                # Get active subscription
+                subscription = db.query(Subscription).filter(
+                    Subscription.user_id == user.id,
+                    Subscription.status == 'active'
+                ).first()
+                
+                plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                plan_features = get_plan_features(plan_name)
+                
+                set_span_attributes(span, {
+                    "subscription.plan": plan_name,
+                    "subscription.has_stripe_sub": subscription is not None
+                })
+                
+                return jsonify({
+                    'success': True,
+                    'subscription': {
+                        'plan': plan_name,
+                        'features': plan_features,
+                        'stripe_subscription_id': subscription.stripe_subscription_id if subscription else None,
+                        'current_period_end': subscription.current_period_end.isoformat() if subscription and subscription.current_period_end else None,
+                        'cancel_at_period_end': subscription.cancel_at_period_end if subscription else False
+                    },
+                    'usage': {
+                        'receipts_processed_month': user.receipts_processed_month,
+                        'receipts_limit': plan_features.get('receipts_per_month', 10),
+                        'storage_used_bytes': user.storage_used_bytes,
+                        'storage_limit_gb': plan_features.get('storage_gb', 0.1)
+                    }
+                })
+        except Exception as e:
+            logger.error(f"Get subscription error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': 'Failed to get subscription'}), 500
 
 
 @billing_bp.route('/usage', methods=['GET'])
@@ -164,46 +203,69 @@ def get_usage():
     Returns:
         200: Usage statistics
     """
-    try:
-        User, _ = _get_models()
-        
-        with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == g.user_id).first()
-            if not user:
-                return jsonify({'success': False, 'error': 'User not found'}), 404
-            
-            plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
-            plan_features = get_plan_features(plan_name)
-            
-            receipts_limit = plan_features.get('receipts_per_month', 10)
-            if receipts_limit == 'unlimited':
-                receipts_percent = 0
-            else:
-                receipts_percent = min(100, (user.receipts_processed_month / receipts_limit) * 100)
-            
-            storage_limit_bytes = plan_features.get('storage_gb', 0.1) * 1024 * 1024 * 1024
-            storage_percent = min(100, (user.storage_used_bytes / storage_limit_bytes) * 100)
-            
-            return jsonify({
-                'success': True,
-                'usage': {
-                    'receipts': {
-                        'used': user.receipts_processed_month,
-                        'limit': receipts_limit,
-                        'percent': round(receipts_percent, 1)
-                    },
-                    'storage': {
-                        'used_bytes': user.storage_used_bytes,
-                        'used_gb': round(user.storage_used_bytes / (1024 ** 3), 2),
-                        'limit_gb': plan_features.get('storage_gb', 0.1),
-                        'percent': round(storage_percent, 1)
-                    }
-                },
-                'plan': plan_name
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.get_usage") as span:
+        try:
+            set_span_attributes(span, {
+                "operation.type": "get_usage",
+                "user.id": g.user_id
             })
-    except Exception as e:
-        logger.error(f"Get usage error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to get usage'}), 500
+            
+            User, _ = _get_models()
+            
+            with _get_db_context()() as db:
+                user = db.query(User).filter(User.id == g.user_id).first()
+                if not user:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
+                
+                plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                plan_features = get_plan_features(plan_name)
+                
+                receipts_limit = plan_features.get('receipts_per_month', 10)
+                if receipts_limit == 'unlimited':
+                    receipts_percent = 0
+                else:
+                    receipts_percent = min(100, (user.receipts_processed_month / receipts_limit) * 100)
+                
+                storage_limit_bytes = plan_features.get('storage_gb', 0.1) * 1024 * 1024 * 1024
+                storage_percent = min(100, (user.storage_used_bytes / storage_limit_bytes) * 100)
+                
+                set_span_attributes(span, {
+                    "usage.receipts_used": user.receipts_processed_month,
+                    "usage.receipts_limit": str(receipts_limit),
+                    "usage.receipts_percent": round(receipts_percent, 1),
+                    "usage.storage_percent": round(storage_percent, 1),
+                    "usage.plan": plan_name
+                })
+                
+                return jsonify({
+                    'success': True,
+                    'usage': {
+                        'receipts': {
+                            'used': user.receipts_processed_month,
+                            'limit': receipts_limit,
+                            'percent': round(receipts_percent, 1)
+                        },
+                        'storage': {
+                            'used_bytes': user.storage_used_bytes,
+                            'used_gb': round(user.storage_used_bytes / (1024 ** 3), 2),
+                            'limit_gb': plan_features.get('storage_gb', 0.1),
+                            'percent': round(storage_percent, 1)
+                        }
+                    },
+                    'plan': plan_name
+                })
+        except Exception as e:
+            logger.error(f"Get usage error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': 'Failed to get usage'}), 500
 
 
 # =============================================================================
@@ -212,9 +274,12 @@ def get_usage():
 
 @billing_bp.route('/create-checkout', methods=['POST'])
 @require_auth_billing
+@rate_limit(requests=5, window=3600, error_message="Checkout rate limit exceeded. Please try again later.")
 def create_checkout():
     """
     Create a Stripe Checkout session for subscription.
+    
+    Rate Limited: 5 requests per hour
     
     Request body:
         {
@@ -227,68 +292,109 @@ def create_checkout():
         200: Checkout session URL
         400: Invalid plan or Stripe not configured
     """
-    if not STRIPE_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Stripe is not configured. Please contact support.'
-        }), 400
-    
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'Request body required'}), 400
-        
-        plan_id = data.get('plan')
-        success_url = data.get('success_url', f"{request.host_url}billing/success")
-        cancel_url = data.get('cancel_url', f"{request.host_url}billing/cancel")
-        
-        if plan_id not in SUBSCRIPTION_PLANS:
-            return jsonify({'success': False, 'error': 'Invalid plan'}), 400
-        
-        plan = SUBSCRIPTION_PLANS[plan_id]
-        if not plan.get('price_id'):
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.create_checkout") as span:
+        if not STRIPE_AVAILABLE:
             return jsonify({
                 'success': False,
-                'error': f'Plan {plan_id} is not available for self-service. Contact sales.'
+                'error': 'Stripe is not configured. Please contact support.'
             }), 400
         
-        User, _ = _get_models()
-        handler = StripeHandler()
-        
-        with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == g.user_id).first()
-            if not user:
-                return jsonify({'success': False, 'error': 'User not found'}), 404
+        try:
+            set_span_attributes(span, {
+                "operation.type": "create_checkout",
+                "user.id": g.user_id,
+                "stripe.available": STRIPE_AVAILABLE
+            })
             
-            # Create or get Stripe customer
-            if not user.stripe_customer_id:
-                customer = handler.create_customer(user.email, user.full_name)
-                if customer:
-                    user.stripe_customer_id = customer.id
-                    db.commit()
-                else:
-                    return jsonify({'success': False, 'error': 'Failed to create customer'}), 500
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'error': 'Request body required'}), 400
             
-            # Create checkout session
-            session = handler.create_checkout_session(
-                customer_id=user.stripe_customer_id,
-                price_id=plan['price_id'],
-                success_url=success_url,
-                cancel_url=cancel_url
-            )
+            plan_id = data.get('plan')
+            success_url = data.get('success_url', f"{request.host_url}billing/success")
+            cancel_url = data.get('cancel_url', f"{request.host_url}billing/cancel")
             
-            if session:
-                return jsonify({
-                    'success': True,
-                    'checkout_url': session.url,
-                    'session_id': session.id
+            # Validate plan
+            if plan_id not in SUBSCRIPTION_PLANS:
+                set_span_attributes(span, {
+                    "error.type": "invalid_plan",
+                    "checkout.plan": plan_id
                 })
-            else:
-                return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+                return jsonify({'success': False, 'error': 'Invalid plan'}), 400
+            
+            plan = SUBSCRIPTION_PLANS[plan_id]
+            if not plan.get('price_id'):
+                return jsonify({
+                    'success': False,
+                    'error': f'Plan {plan_id} is not available for self-service. Contact sales.'
+                }), 400
+            
+            set_span_attributes(span, {
+                "checkout.plan": plan_id,
+                "checkout.plan_price": plan.get('price', 0)
+            })
+            
+            User, _ = _get_models()
+            handler = StripeHandler()
+            
+            with _get_db_context()() as db:
+                user = db.query(User).filter(User.id == g.user_id).first()
+                if not user:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
                 
-    except Exception as e:
-        logger.error(f"Create checkout error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to create checkout'}), 500
+                # Create or get Stripe customer
+                if not user.stripe_customer_id:
+                    set_span_attributes(span, {
+                        "stripe.customer_creation": True
+                    })
+                    customer = handler.create_customer(user.email, user.full_name)
+                    if customer:
+                        user.stripe_customer_id = customer.id
+                        db.commit()
+                    else:
+                        span.record_exception(Exception("Failed to create Stripe customer"))
+                        return jsonify({'success': False, 'error': 'Failed to create customer'}), 500
+                
+                set_span_attributes(span, {
+                    "stripe.customer_id": user.stripe_customer_id[:8] + "..." if user.stripe_customer_id else None
+                })
+                
+                # Create checkout session
+                session = handler.create_checkout_session(
+                    customer_id=user.stripe_customer_id,
+                    price_id=plan['price_id'],
+                    success_url=success_url,
+                    cancel_url=cancel_url
+                )
+                
+                if session:
+                    set_span_attributes(span, {
+                        "checkout.session_created": True,
+                        "checkout.session_id": session.id[:8] + "..." if session.id else None
+                    })
+                    
+                    logger.info(f"Checkout session created for user {g.user_id}, plan {plan_id}")
+                    return jsonify({
+                        'success': True,
+                        'checkout_url': session.url,
+                        'session_id': session.id
+                    })
+                else:
+                    span.record_exception(Exception("Failed to create checkout session"))
+                    return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+                    
+        except Exception as e:
+            logger.error(f"Create checkout error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': 'Failed to create checkout'}), 500
 
 
 @billing_bp.route('/create-portal', methods=['POST'])
@@ -354,49 +460,80 @@ def cancel_subscription():
         200: Subscription cancelled
         404: No subscription found
     """
-    if not STRIPE_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Stripe is not configured'
-        }), 400
-    
-    try:
-        User, Subscription = _get_models()
-        handler = StripeHandler()
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.cancel_subscription") as span:
+        if not STRIPE_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'Stripe is not configured'
+            }), 400
         
-        with _get_db_context()() as db:
-            user = db.query(User).filter(User.id == g.user_id).first()
-            if not user:
-                return jsonify({'success': False, 'error': 'User not found'}), 404
+        try:
+            set_span_attributes(span, {
+                "operation.type": "cancel_subscription",
+                "user.id": g.user_id
+            })
             
-            subscription = db.query(Subscription).filter(
-                Subscription.user_id == user.id,
-                Subscription.status == 'active'
-            ).first()
+            User, Subscription = _get_models()
+            handler = StripeHandler()
             
-            if not subscription:
-                return jsonify({'success': False, 'error': 'No active subscription'}), 404
-            
-            result = handler.cancel_subscription(
-                subscription.stripe_subscription_id,
-                at_period_end=True
-            )
-            
-            if result:
-                subscription.cancel_at_period_end = True
-                db.commit()
+            with _get_db_context()() as db:
+                user = db.query(User).filter(User.id == g.user_id).first()
+                if not user:
+                    return jsonify({'success': False, 'error': 'User not found'}), 404
                 
-                return jsonify({
-                    'success': True,
-                    'message': 'Subscription will be cancelled at end of billing period',
-                    'cancel_at': subscription.current_period_end.isoformat() if subscription.current_period_end else None
+                subscription = db.query(Subscription).filter(
+                    Subscription.user_id == user.id,
+                    Subscription.status == 'active'
+                ).first()
+                
+                if not subscription:
+                    set_span_attributes(span, {
+                        "cancel.has_subscription": False
+                    })
+                    return jsonify({'success': False, 'error': 'No active subscription'}), 404
+                
+                plan_name = user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                set_span_attributes(span, {
+                    "cancel.plan": plan_name,
+                    "cancel.stripe_subscription_id": subscription.stripe_subscription_id[:8] + "..." if subscription.stripe_subscription_id else None
                 })
-            else:
-                return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
                 
-    except Exception as e:
-        logger.error(f"Cancel subscription error: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
+                result = handler.cancel_subscription(
+                    subscription.stripe_subscription_id,
+                    at_period_end=True
+                )
+                
+                if result:
+                    subscription.cancel_at_period_end = True
+                    db.commit()
+                    
+                    set_span_attributes(span, {
+                        "cancel.success": True,
+                        "cancel.at_period_end": True
+                    })
+                    
+                    logger.info(f"Subscription cancelled for user {g.user_id}, plan {plan_name}")
+                    return jsonify({
+                        'success': True,
+                        'message': 'Subscription will be cancelled at end of billing period',
+                        'cancel_at': subscription.current_period_end.isoformat() if subscription.current_period_end else None
+                    })
+                else:
+                    span.record_exception(Exception("Failed to cancel subscription via Stripe"))
+                    return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
+                    
+        except Exception as e:
+            logger.error(f"Cancel subscription error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': 'Failed to cancel subscription'}), 500
 
 
 # =============================================================================
@@ -415,50 +552,78 @@ def webhook():
     - invoice.payment_succeeded
     - invoice.payment_failed
     """
-    if not STRIPE_AVAILABLE:
-        return jsonify({'error': 'Stripe not configured'}), 400
-    
-    payload = request.get_data()
-    sig_header = request.headers.get('Stripe-Signature')
-    
-    if not sig_header:
-        return jsonify({'error': 'Missing signature'}), 400
-    
-    try:
-        handler = StripeHandler()
-        event = handler.construct_webhook_event(payload, sig_header)
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.billing.webhook") as span:
+        if not STRIPE_AVAILABLE:
+            return jsonify({'error': 'Stripe not configured'}), 400
         
-        if not event:
-            return jsonify({'error': 'Invalid signature'}), 400
+        payload = request.get_data()
+        sig_header = request.headers.get('Stripe-Signature')
         
-        event_type = event['type']
-        logger.info(f"Processing webhook event: {event_type}")
+        set_span_attributes(span, {
+            "operation.type": "webhook",
+            "webhook.has_signature": sig_header is not None,
+            "webhook.payload_size": len(payload)
+        })
         
-        User, Subscription = _get_models()
+        if not sig_header:
+            return jsonify({'error': 'Missing signature'}), 400
         
-        with _get_db_context()() as db:
-            if event_type == 'customer.subscription.created':
-                _handle_subscription_created(db, event['data']['object'], User, Subscription)
+        try:
+            handler = StripeHandler()
+            event = handler.construct_webhook_event(payload, sig_header)
             
-            elif event_type == 'customer.subscription.updated':
-                _handle_subscription_updated(db, event['data']['object'], User, Subscription)
+            if not event:
+                set_span_attributes(span, {
+                    "webhook.signature_valid": False
+                })
+                return jsonify({'error': 'Invalid signature'}), 400
             
-            elif event_type == 'customer.subscription.deleted':
-                _handle_subscription_deleted(db, event['data']['object'], User, Subscription)
+            event_type = event['type']
+            set_span_attributes(span, {
+                "webhook.event_type": event_type,
+                "webhook.signature_valid": True
+            })
             
-            elif event_type == 'invoice.payment_succeeded':
-                _handle_payment_succeeded(db, event['data']['object'], User)
+            logger.info(f"Processing webhook event: {event_type}")
             
-            elif event_type == 'invoice.payment_failed':
-                _handle_payment_failed(db, event['data']['object'], User, Subscription)
+            User, Subscription = _get_models()
             
-            db.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        logger.error(f"Webhook error: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+            with _get_db_context()() as db:
+                if event_type == 'customer.subscription.created':
+                    _handle_subscription_created(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'customer.subscription.updated':
+                    _handle_subscription_updated(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'customer.subscription.deleted':
+                    _handle_subscription_deleted(db, event['data']['object'], User, Subscription)
+                
+                elif event_type == 'invoice.payment_succeeded':
+                    _handle_payment_succeeded(db, event['data']['object'], User)
+                
+                elif event_type == 'invoice.payment_failed':
+                    _handle_payment_failed(db, event['data']['object'], User, Subscription)
+                
+                db.commit()
+            
+            set_span_attributes(span, {
+                "webhook.processed": True
+            })
+            
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            logger.error(f"Webhook error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'error': str(e)}), 500
 
 
 def _handle_subscription_created(db, subscription_data, User, Subscription):

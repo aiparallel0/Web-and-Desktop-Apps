@@ -16,6 +16,7 @@ The spatial analysis helps with:
 
 import logging
 import re
+import time
 from decimal import Decimal
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
@@ -28,6 +29,24 @@ try:
     CIRCULAR_EXCHANGE_AVAILABLE = True
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
+
+# Telemetry Integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
+    def get_tracer(*args, **kwargs):
+        class NoOpTracer:
+            def start_as_current_span(self, *args, **kwargs):
+                from contextmanager import contextmanager
+                @contextmanager
+                def noop():
+                    yield None
+                return noop()
+        return NoOpTracer()
+    def set_span_attributes(*args, **kwargs):
+        pass
 
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 
@@ -581,49 +600,66 @@ class SpatialOCRProcessor:
         if not self.has_tesseract:
             return []
         
-        try:
-            import pytesseract
-            from PIL import Image
-            
-            image = Image.open(image_path)
-            
-            # Use image_to_data to get bounding box information
-            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-            
-            regions = []
-            n_boxes = len(data['text'])
-            
-            for i in range(n_boxes):
-                text = data['text'][i].strip()
+        tracer = get_tracer()
+        with tracer.start_as_current_span("spatial_ocr.extract_tesseract") as span:
+            start_time = time.time()
+            try:
+                import pytesseract
+                from PIL import Image
                 
-                # Skip empty text
-                if not text or data['conf'][i] < 0:
-                    continue
+                set_span_attributes(span, {"ocr.engine": "tesseract"})
                 
-                # Create bounding box
-                bbox = BoundingBox(
-                    x=float(data['left'][i]),
-                    y=float(data['top'][i]),
-                    width=float(data['width'][i]),
-                    height=float(data['height'][i])
-                )
+                image = Image.open(image_path)
                 
-                # Create text region
-                region = TextRegion(
-                    text=text,
-                    bbox=bbox,
-                    confidence=float(data['conf'][i]) / 100.0,  # Convert to 0-1 range
-                    source='tesseract'
-                )
+                # Use image_to_data to get bounding box information
+                data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
                 
-                regions.append(region)
-            
-            logger.info(f"Tesseract extracted {len(regions)} text regions")
-            return regions
-            
-        except Exception as e:
-            logger.error(f"Tesseract extraction failed: {e}")
-            return []
+                regions = []
+                n_boxes = len(data['text'])
+                
+                for i in range(n_boxes):
+                    text = data['text'][i].strip()
+                    
+                    # Skip empty text
+                    if not text or data['conf'][i] < 0:
+                        continue
+                    
+                    # Create bounding box
+                    bbox = BoundingBox(
+                        x=float(data['left'][i]),
+                        y=float(data['top'][i]),
+                        width=float(data['width'][i]),
+                        height=float(data['height'][i])
+                    )
+                    
+                    # Create text region
+                    region = TextRegion(
+                        text=text,
+                        bbox=bbox,
+                        confidence=float(data['conf'][i]) / 100.0,  # Convert to 0-1 range
+                        source='tesseract'
+                    )
+                    
+                    regions.append(region)
+                
+                processing_time = time.time() - start_time
+                logger.info(f"Tesseract extracted {len(regions)} text regions")
+                set_span_attributes(span, {
+                    "ocr.regions.count": len(regions),
+                    "ocr.processing_time": round(processing_time, 3),
+                    "ocr.success": True
+                })
+                return regions
+                
+            except Exception as e:
+                logger.error(f"Tesseract extraction failed: {e}")
+                if span:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "ocr.success": False,
+                        "ocr.error_type": type(e).__name__
+                    })
+                return []
     
     def extract_with_easyocr(self, image_path: str) -> List[TextRegion]:
         """
@@ -641,46 +677,63 @@ class SpatialOCRProcessor:
         if not self.has_easyocr:
             return []
         
-        try:
-            import easyocr
-            
-            # Use cached reader instance if available (major performance improvement)
-            if SpatialOCRProcessor._easyocr_reader_cache is None:
-                logger.info("Initializing EasyOCR Reader (one-time setup)...")
-                SpatialOCRProcessor._easyocr_reader_cache = easyocr.Reader(['en'], gpu=False)
-            
-            reader = SpatialOCRProcessor._easyocr_reader_cache
-            results = reader.readtext(image_path)
-            
-            regions = []
-            
-            for bbox_points, text, confidence in results:
-                # EasyOCR returns 4 corner points, convert to x, y, width, height
-                xs = [p[0] for p in bbox_points]
-                ys = [p[1] for p in bbox_points]
+        tracer = get_tracer()
+        with tracer.start_as_current_span("spatial_ocr.extract_easyocr") as span:
+            start_time = time.time()
+            try:
+                import easyocr
                 
-                x = min(xs)
-                y = min(ys)
-                width = max(xs) - x
-                height = max(ys) - y
+                set_span_attributes(span, {"ocr.engine": "easyocr"})
                 
-                bbox = BoundingBox(x=x, y=y, width=width, height=height)
+                # Use cached reader instance if available (major performance improvement)
+                if SpatialOCRProcessor._easyocr_reader_cache is None:
+                    logger.info("Initializing EasyOCR Reader (one-time setup)...")
+                    SpatialOCRProcessor._easyocr_reader_cache = easyocr.Reader(['en'], gpu=False)
                 
-                region = TextRegion(
-                    text=text,
-                    bbox=bbox,
-                    confidence=confidence,
-                    source='easyocr'
-                )
+                reader = SpatialOCRProcessor._easyocr_reader_cache
+                results = reader.readtext(image_path)
                 
-                regions.append(region)
-            
-            logger.info(f"EasyOCR extracted {len(regions)} text regions")
-            return regions
-            
-        except Exception as e:
-            logger.error(f"EasyOCR extraction failed: {e}")
-            return []
+                regions = []
+                
+                for bbox_points, text, confidence in results:
+                    # EasyOCR returns 4 corner points, convert to x, y, width, height
+                    xs = [p[0] for p in bbox_points]
+                    ys = [p[1] for p in bbox_points]
+                    
+                    x = min(xs)
+                    y = min(ys)
+                    width = max(xs) - x
+                    height = max(ys) - y
+                    
+                    bbox = BoundingBox(x=x, y=y, width=width, height=height)
+                    
+                    region = TextRegion(
+                        text=text,
+                        bbox=bbox,
+                        confidence=confidence,
+                        source='easyocr'
+                    )
+                    
+                    regions.append(region)
+                
+                processing_time = time.time() - start_time
+                logger.info(f"EasyOCR extracted {len(regions)} text regions")
+                set_span_attributes(span, {
+                    "ocr.regions.count": len(regions),
+                    "ocr.processing_time": round(processing_time, 3),
+                    "ocr.success": True
+                })
+                return regions
+                
+            except Exception as e:
+                logger.error(f"EasyOCR extraction failed: {e}")
+                if span:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "ocr.success": False,
+                        "ocr.error_type": type(e).__name__
+                    })
+                return []
     
     def extract_with_paddleocr(self, image_path: str) -> List[TextRegion]:
         """
@@ -698,52 +751,69 @@ class SpatialOCRProcessor:
         if not self.has_paddleocr:
             return []
         
-        try:
-            from paddleocr import PaddleOCR
-            
-            # Use cached PaddleOCR instance if available (major performance improvement)
-            if SpatialOCRProcessor._paddleocr_cache is None:
-                logger.info("Initializing PaddleOCR (one-time setup)...")
-                SpatialOCRProcessor._paddleocr_cache = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
-            
-            ocr = SpatialOCRProcessor._paddleocr_cache
-            results = ocr.ocr(image_path, cls=True)
-            
-            regions = []
-            
-            if results and results[0]:
-                for line in results[0]:
-                    bbox_points = line[0]
-                    text_info = line[1]
-                    text = text_info[0]
-                    confidence = text_info[1]
-                    
-                    # Convert points to bounding box
-                    xs = [p[0] for p in bbox_points]
-                    ys = [p[1] for p in bbox_points]
-                    
-                    x = min(xs)
-                    y = min(ys)
-                    width = max(xs) - x
-                    height = max(ys) - y
-                    
-                    bbox = BoundingBox(x=x, y=y, width=width, height=height)
-                    
-                    region = TextRegion(
-                        text=text,
-                        bbox=bbox,
-                        confidence=confidence,
-                        source='paddleocr'
-                    )
-                    
-                    regions.append(region)
-            
-            logger.info(f"PaddleOCR extracted {len(regions)} text regions")
-            return regions
-            
-        except Exception as e:
-            logger.error(f"PaddleOCR extraction failed: {e}")
-            return []
+        tracer = get_tracer()
+        with tracer.start_as_current_span("spatial_ocr.extract_paddleocr") as span:
+            start_time = time.time()
+            try:
+                from paddleocr import PaddleOCR
+                
+                set_span_attributes(span, {"ocr.engine": "paddleocr"})
+                
+                # Use cached PaddleOCR instance if available (major performance improvement)
+                if SpatialOCRProcessor._paddleocr_cache is None:
+                    logger.info("Initializing PaddleOCR (one-time setup)...")
+                    SpatialOCRProcessor._paddleocr_cache = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
+                
+                ocr = SpatialOCRProcessor._paddleocr_cache
+                results = ocr.ocr(image_path, cls=True)
+                
+                regions = []
+                
+                if results and results[0]:
+                    for line in results[0]:
+                        bbox_points = line[0]
+                        text_info = line[1]
+                        text = text_info[0]
+                        confidence = text_info[1]
+                        
+                        # Convert points to bounding box
+                        xs = [p[0] for p in bbox_points]
+                        ys = [p[1] for p in bbox_points]
+                        
+                        x = min(xs)
+                        y = min(ys)
+                        width = max(xs) - x
+                        height = max(ys) - y
+                        
+                        bbox = BoundingBox(x=x, y=y, width=width, height=height)
+                        
+                        region = TextRegion(
+                            text=text,
+                            bbox=bbox,
+                            confidence=confidence,
+                            source='paddleocr'
+                        )
+                        
+                        regions.append(region)
+                
+                processing_time = time.time() - start_time
+                logger.info(f"PaddleOCR extracted {len(regions)} text regions")
+                set_span_attributes(span, {
+                    "ocr.regions.count": len(regions),
+                    "ocr.processing_time": round(processing_time, 3),
+                    "ocr.success": True
+                })
+                return regions
+                
+            except Exception as e:
+                logger.error(f"PaddleOCR extraction failed: {e}")
+                if span:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "ocr.success": False,
+                        "ocr.error_type": type(e).__name__
+                    })
+                return []
     
     def combine_results(self, regions_list: List[List[TextRegion]], 
                        min_confidence: float = MIN_CONFIDENCE_THRESHOLD) -> List[TextRegion]:
@@ -795,57 +865,91 @@ class SpatialOCRProcessor:
         Returns:
             ExtractionResult containing extracted receipt data
         """
-        try:
-            # Extract with all available engines
-            regions_list = []
-            
-            if self.has_tesseract:
-                tesseract_regions = self.extract_with_tesseract(image_path)
-                if tesseract_regions:
-                    regions_list.append(tesseract_regions)
-            
-            if self.has_easyocr:
-                easyocr_regions = self.extract_with_easyocr(image_path)
-                if easyocr_regions:
-                    regions_list.append(easyocr_regions)
-            
-            if self.has_paddleocr:
-                paddleocr_regions = self.extract_with_paddleocr(image_path)
-                if paddleocr_regions:
-                    regions_list.append(paddleocr_regions)
-            
-            if not regions_list:
-                return ExtractionResult(
-                    success=False,
-                    error="No OCR engines available"
+        tracer = get_tracer()
+        with tracer.start_as_current_span("spatial_ocr.extract") as span:
+            start_time = time.time()
+            try:
+                set_span_attributes(span, {
+                    "operation.type": "spatial_multi_method_ocr",
+                    "ocr.engines.available": f"tesseract={self.has_tesseract},easyocr={self.has_easyocr},paddleocr={self.has_paddleocr}"
+                })
+                
+                # Extract with all available engines
+                regions_list = []
+                engines_used = []
+                
+                if self.has_tesseract:
+                    tesseract_regions = self.extract_with_tesseract(image_path)
+                    if tesseract_regions:
+                        regions_list.append(tesseract_regions)
+                        engines_used.append("tesseract")
+                
+                if self.has_easyocr:
+                    easyocr_regions = self.extract_with_easyocr(image_path)
+                    if easyocr_regions:
+                        regions_list.append(easyocr_regions)
+                        engines_used.append("easyocr")
+                
+                if self.has_paddleocr:
+                    paddleocr_regions = self.extract_with_paddleocr(image_path)
+                    if paddleocr_regions:
+                        regions_list.append(paddleocr_regions)
+                        engines_used.append("paddleocr")
+                
+                set_span_attributes(span, {
+                    "ocr.engines.used": ",".join(engines_used),
+                    "ocr.engines.count": len(engines_used)
+                })
+                
+                if not regions_list:
+                    set_span_attributes(span, {"extraction.success": False, "extraction.error": "no_engines_available"})
+                    return ExtractionResult(
+                        success=False,
+                        error="No OCR engines available"
+                    )
+                
+                # Combine results using spatial analysis
+                combined_regions = self.combine_results(regions_list)
+                set_span_attributes(span, {"ocr.regions.combined": len(combined_regions)})
+                
+                # Analyze spatial structure
+                analyzer = SpatialAnalyzer()
+                analyzer.add_regions(combined_regions)
+                
+                # Extract structured text
+                structured_lines = analyzer.extract_structured_text()
+                set_span_attributes(span, {"ocr.lines.extracted": len(structured_lines)})
+                
+                # Parse receipt data from structured text
+                receipt_data = self._parse_receipt_from_lines(structured_lines)
+                
+                # Add metadata
+                receipt_data.model_used = f"Multi-method ({len(regions_list)} engines)"
+                receipt_data.confidence_score = self._calculate_confidence(combined_regions)
+                receipt_data.extraction_notes.append(
+                    f"Combined results from {len(regions_list)} OCR engines using unified spatial "
+                    f"and text-based merging with {MIN_CONFIDENCE_THRESHOLD:.0%} confidence threshold"
                 )
-            
-            # Combine results using spatial analysis
-            combined_regions = self.combine_results(regions_list)
-            
-            # Analyze spatial structure
-            analyzer = SpatialAnalyzer()
-            analyzer.add_regions(combined_regions)
-            
-            # Extract structured text
-            structured_lines = analyzer.extract_structured_text()
-            
-            # Parse receipt data from structured text
-            receipt_data = self._parse_receipt_from_lines(structured_lines)
-            
-            # Add metadata
-            receipt_data.model_used = f"Multi-method ({len(regions_list)} engines)"
-            receipt_data.confidence_score = self._calculate_confidence(combined_regions)
-            receipt_data.extraction_notes.append(
-                f"Combined results from {len(regions_list)} OCR engines using unified spatial "
-                f"and text-based merging with {MIN_CONFIDENCE_THRESHOLD:.0%} confidence threshold"
-            )
-            
-            return ExtractionResult(success=True, data=receipt_data)
-            
-        except Exception as e:
-            logger.error(f"Spatial OCR extraction failed: {e}", exc_info=True)
-            return ExtractionResult(success=False, error=str(e))
+                
+                processing_time = time.time() - start_time
+                set_span_attributes(span, {
+                    "extraction.success": True,
+                    "extraction.processing_time": round(processing_time, 3),
+                    "extraction.confidence": round(receipt_data.confidence_score, 2),
+                    "extraction.items_count": len(receipt_data.line_items)
+                })
+                
+                return ExtractionResult(success=True, data=receipt_data)
+                
+            except Exception as e:
+                logger.error(f"Spatial OCR extraction failed: {e}", exc_info=True)
+                if span:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "extraction.success": False,
+                        "extraction.error_type": type(e).__name__
+                    })
+                return ExtractionResult(success=False, error=str(e))
     
     def _parse_receipt_from_lines(self, lines: List[str]) -> ReceiptData:
         """

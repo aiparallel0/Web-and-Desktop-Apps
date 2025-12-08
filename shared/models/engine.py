@@ -17,6 +17,9 @@ from shared.utils.image import load_and_validate_image,enhance_image
 # Import centralized pricing utilities
 from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
 
+# Import telemetry utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration

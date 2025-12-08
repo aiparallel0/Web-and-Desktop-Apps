@@ -35,6 +35,9 @@ from .base import (
 from shared.utils.optional_imports import OptionalImport
 from shared.utils.base_handler import load_env_config, log_handler_event
 
+# Import telemetry utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+
 logger = logging.getLogger(__name__)
 
 # Import Dropbox SDK
@@ -146,24 +149,37 @@ class DropboxStorageHandler(BaseStorageHandler):
         Returns:
             Authorization URL string
         """
-        if not DROPBOX_AVAILABLE:
-            raise StorageError("Dropbox SDK not available")
-        
-        redirect_uri = redirect_uri or os.getenv(
-            'DROPBOX_REDIRECT_URI',
-            'http://localhost:5000/api/auth/dropbox/callback'
-        )
-        
-        auth_flow = dropbox.DropboxOAuth2Flow(
-            consumer_key=self.app_key,
-            consumer_secret=self.app_secret,
-            redirect_uri=redirect_uri,
-            session={},
-            csrf_token_session_key='dropbox-auth-csrf-token',
-            token_access_type='offline'
-        )
-        
-        return auth_flow.start()
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.dropbox.get_auth_url") as span:
+            set_span_attributes(span, {
+                "storage.provider": "dropbox",
+                "storage.operation": "get_authorization_url"
+            })
+            
+            if not DROPBOX_AVAILABLE:
+                raise StorageError("Dropbox SDK not available")
+            
+            redirect_uri = redirect_uri or os.getenv(
+                'DROPBOX_REDIRECT_URI',
+                'http://localhost:5000/api/auth/dropbox/callback'
+            )
+            
+            auth_flow = dropbox.DropboxOAuth2Flow(
+                consumer_key=self.app_key,
+                consumer_secret=self.app_secret,
+                redirect_uri=redirect_uri,
+                session={},
+                csrf_token_session_key='dropbox-auth-csrf-token',
+                token_access_type='offline'
+            )
+            
+            auth_url = auth_flow.start()
+            
+            set_span_attributes(span, {
+                "oauth.url_generated": True
+            })
+            
+            return auth_url
     
     def handle_oauth_callback(
         self,
@@ -180,39 +196,54 @@ class DropboxStorageHandler(BaseStorageHandler):
         Returns:
             Dictionary with access_token and refresh_token
         """
-        if not DROPBOX_AVAILABLE:
-            raise StorageError("Dropbox SDK not available")
-        
-        redirect_uri = redirect_uri or os.getenv(
-            'DROPBOX_REDIRECT_URI',
-            'http://localhost:5000/api/auth/dropbox/callback'
-        )
-        
-        # Exchange code for tokens
-        auth_flow = dropbox.DropboxOAuth2FlowNoRedirect(
-            consumer_key=self.app_key,
-            consumer_secret=self.app_secret,
-            token_access_type='offline'
-        )
-        
-        oauth_result = auth_flow.finish(code)
-        
-        self.access_token = oauth_result.access_token
-        self.refresh_token = oauth_result.refresh_token
-        
-        # Initialize client with new tokens
-        self._client = dropbox.Dropbox(
-            oauth2_access_token=self.access_token,
-            oauth2_refresh_token=self.refresh_token,
-            app_key=self.app_key,
-            app_secret=self.app_secret
-        )
-        
-        return {
-            'access_token': self.access_token,
-            'refresh_token': self.refresh_token,
-            'account_id': oauth_result.account_id
-        }
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.dropbox.oauth_callback") as span:
+            set_span_attributes(span, {
+                "storage.provider": "dropbox",
+                "storage.operation": "oauth_callback"
+            })
+            
+            if not DROPBOX_AVAILABLE:
+                raise StorageError("Dropbox SDK not available")
+            
+            redirect_uri = redirect_uri or os.getenv(
+                'DROPBOX_REDIRECT_URI',
+                'http://localhost:5000/api/auth/dropbox/callback'
+            )
+            
+            # Exchange code for tokens
+            auth_flow = dropbox.DropboxOAuth2FlowNoRedirect(
+                consumer_key=self.app_key,
+                consumer_secret=self.app_secret,
+                token_access_type='offline'
+            )
+            
+            oauth_result = auth_flow.finish(code)
+            
+            self.access_token = oauth_result.access_token
+            self.refresh_token = oauth_result.refresh_token
+            
+            # Initialize client with new tokens
+            self._client = dropbox.Dropbox(
+                oauth2_access_token=self.access_token,
+                oauth2_refresh_token=self.refresh_token,
+                app_key=self.app_key,
+                app_secret=self.app_secret
+            )
+            
+            set_span_attributes(span, {
+                "oauth.token_exchanged": True,
+                "oauth.has_refresh_token": self.refresh_token is not None,
+                "oauth.account_id": oauth_result.account_id[:8] + "..." if oauth_result.account_id else None
+            })
+            
+            logger.info("Dropbox OAuth callback handled successfully")
+            
+            return {
+                'access_token': self.access_token,
+                'refresh_token': self.refresh_token,
+                'account_id': oauth_result.account_id
+            }
     
     def set_tokens(self, access_token: str, refresh_token: str = None) -> None:
         """
@@ -252,59 +283,91 @@ class DropboxStorageHandler(BaseStorageHandler):
         Returns:
             UploadResult with success status and URL
         """
-        if not self._client:
-            return UploadResult(
-                success=False,
-                key=key,
-                error="Dropbox not authenticated"
-            )
-        
-        # Ensure key starts with /
-        if not key.startswith('/'):
-            key = '/' + key
-        
-        try:
-            # Convert to bytes if file-like object
-            if hasattr(file_data, 'read'):
-                file_data = file_data.read()
-            
-            size = len(file_data)
-            
-            # Use chunked upload for large files
-            if size > self.CHUNK_SIZE:
-                result = self._chunked_upload(file_data, key)
-            else:
-                result = self._client.files_upload(
-                    file_data,
-                    key,
-                    mode=WriteMode.overwrite
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.dropbox.upload") as span:
+            if not self._client:
+                set_span_attributes(span, {
+                    "storage.provider": "dropbox",
+                    "storage.operation": "upload",
+                    "storage.authenticated": False
+                })
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error="Dropbox not authenticated"
                 )
             
-            # Try to get a shared link
+            # Ensure key starts with /
+            if not key.startswith('/'):
+                key = '/' + key
+            
             try:
-                shared_link = self._client.sharing_create_shared_link_with_settings(
-                    key
+                # Convert to bytes if file-like object
+                if hasattr(file_data, 'read'):
+                    file_data = file_data.read()
+                
+                size = len(file_data)
+                use_chunked = size > self.CHUNK_SIZE
+                
+                set_span_attributes(span, {
+                    "storage.provider": "dropbox",
+                    "storage.operation": "upload",
+                    "storage.file_size": size,
+                    "storage.use_chunked_upload": use_chunked
+                })
+                
+                # Use chunked upload for large files
+                if use_chunked:
+                    result = self._chunked_upload(file_data, key)
+                else:
+                    result = self._client.files_upload(
+                        file_data,
+                        key,
+                        mode=WriteMode.overwrite
+                    )
+                
+                # Try to get a shared link
+                url = None
+                try:
+                    shared_link = self._client.sharing_create_shared_link_with_settings(
+                        key
+                    )
+                    url = shared_link.url
+                except ApiError:
+                    # Link might already exist
+                    links = self._client.sharing_list_shared_links(path=key)
+                    url = links.links[0].url if links.links else None
+                
+                set_span_attributes(span, {
+                    "storage.success": True,
+                    "storage.has_shared_link": url is not None
+                })
+                
+                logger.info(f"Uploaded file to Dropbox: {key}")
+                
+                return UploadResult(
+                    success=True,
+                    key=key,
+                    url=url,
+                    size=size,
+                    metadata=metadata
                 )
-                url = shared_link.url
-            except ApiError:
-                # Link might already exist
-                links = self._client.sharing_list_shared_links(path=key)
-                url = links.links[0].url if links.links else None
-            
-            logger.info(f"Uploaded file to Dropbox: {key}")
-            
-            return UploadResult(
-                success=True,
-                key=key,
-                url=url,
-                size=size,
-                metadata=metadata
-            )
-            
-        except ApiError as e:
-            error_msg = str(e)
-            logger.error(f"Dropbox upload error: {error_msg}")
-            return UploadResult(
+                
+            except ApiError as e:
+                error_msg = str(e)
+                logger.error(f"Dropbox upload error: {error_msg}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "storage.success": False,
+                    "storage.error_type": "ApiError"
+                })
+                
+                return UploadResult(
+                    success=False,
+                    key=key,
+                    error=error_msg
+                )
                 success=False,
                 key=key,
                 error=error_msg
@@ -371,24 +434,58 @@ class DropboxStorageHandler(BaseStorageHandler):
         Returns:
             File content as bytes
         """
-        if not self._client:
-            logger.error("Dropbox not authenticated")
-            return None
-        
-        # Ensure key starts with /
-        if not key.startswith('/'):
-            key = '/' + key
-        
-        try:
-            _, response = self._client.files_download(key)
-            return response.content
+        tracer = get_tracer()
+        with tracer.start_as_current_span("storage.dropbox.download") as span:
+            set_span_attributes(span, {
+                "storage.provider": "dropbox",
+                "storage.operation": "download"
+            })
             
-        except ApiError as e:
-            logger.error(f"Dropbox download error: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Download failed: {e}")
-            return None
+            if not self._client:
+                logger.error("Dropbox not authenticated")
+                set_span_attributes(span, {
+                    "storage.authenticated": False,
+                    "storage.success": False
+                })
+                return None
+            
+            # Ensure key starts with /
+            if not key.startswith('/'):
+                key = '/' + key
+            
+            try:
+                _, response = self._client.files_download(key)
+                content = response.content
+                
+                set_span_attributes(span, {
+                    "storage.authenticated": True,
+                    "storage.success": True,
+                    "storage.file_size": len(content)
+                })
+                
+                logger.info(f"Downloaded file from Dropbox: {key}, size: {len(content)} bytes")
+                return content
+                
+            except ApiError as e:
+                logger.error(f"Dropbox download error: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "storage.success": False,
+                    "storage.error_type": "ApiError"
+                })
+                
+                return None
+            except Exception as e:
+                logger.error(f"Download failed: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "storage.success": False,
+                    "storage.error_type": type(e).__name__
+                })
+                
+                return None
     
     def delete_file(self, key: str) -> bool:
         """

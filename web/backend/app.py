@@ -49,6 +49,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from shared.models.manager import ModelManager
 from shared.models.engine import ModelTrainer, DataAugmenter
 
+# Import telemetry and security utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+from shared.utils.validation import validate_file_upload, validate_json_body, sanitize_filename
+from web.backend.security.rate_limiting import rate_limit
+
 # Circular Exchange Framework Integration
 try:
     from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
@@ -473,61 +478,208 @@ def select_model():
   if success:return jsonify({'success':True,'model_id':model_id,'message':f'Model {model_id} selected successfully'})
   else:return jsonify({'success':False,'error':f'Model {model_id} not found'}),404
  except Exception as e:logger.error(f"Error selecting model: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract',methods=['POST'])
+@app.route('/api/extract', methods=['POST'])
+@rate_limit(requests=100, window=3600, error_message="Extraction rate limit exceeded. Please try again later.")
+@validate_file_upload(param_name='image', max_size=100*1024*1024)
 def extract_receipt():
- try:
-  if 'image'not in request.files:return jsonify({'success':False,'error':'No image file provided'}),400
-  file=request.files['image']
-  if file.filename=='':return jsonify({'success':False,'error':'No file selected'}),400
-  if not allowed_file(file.filename):return jsonify({'success':False,'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}),400
-  model_id=request.form.get('model_id')
-  # Get new detection parameters
-  detection_mode=request.form.get('detection_mode','auto')
-  enable_deskew=request.form.get('enable_deskew','true').lower()=='true'
-  enable_enhancement=request.form.get('enable_enhancement','true').lower()=='true'
-  column_mode=request.form.get('column_mode','false').lower()=='true'
-  manual_regions=request.form.get('manual_regions')
-  # NOTE: These parameters are logged but not yet integrated with the OCR processor.
-  # Full integration requires updating shared/models/processor.py to accept preprocessing options.
-  # This provides backward compatibility while the backend processing is enhanced.
-  filename=secure_filename(file.filename)
-  with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
-  try:
-   processor=model_manager.get_processor(model_id)
-   logger.info(f"Processing image with model: {model_manager.get_current_model()}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
-   # Note: The processor.extract() method would need to be updated to accept these parameters
-   # For now, we just log them. Full integration would require updating the shared/models code
-   result=processor.extract(temp_path)
-   return jsonify(result.to_dict())
-  finally:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract/batch',methods=['POST'])
+    """
+    Extract text from a receipt image using OCR.
+    
+    Rate Limited: 100 requests per hour
+    Max File Size: 100MB
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract") as span:
+        temp_path = None
+        try:
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "single_extract",
+                "request.authenticated": True
+            })
+            
+            # Get file from request
+            file = request.files['image']
+            
+            # Get model_id and detection parameters
+            model_id = request.form.get('model_id')
+            detection_mode = request.form.get('detection_mode', 'auto')
+            enable_deskew = request.form.get('enable_deskew', 'true').lower() == 'true'
+            enable_enhancement = request.form.get('enable_enhancement', 'true').lower() == 'true'
+            column_mode = request.form.get('column_mode', 'false').lower() == 'true'
+            manual_regions = request.form.get('manual_regions')
+            
+            # Sanitize filename
+            filename = sanitize_filename(file.filename)
+            
+            # Set file attributes in span
+            file.seek(0, 2)  # Seek to end
+            file_size = file.tell()
+            file.seek(0)  # Reset to beginning
+            
+            set_span_attributes(span, {
+                "file.name": filename,
+                "file.size": file_size,
+                "model.id": model_id or "default",
+                "detection.mode": detection_mode,
+                "preprocessing.deskew": enable_deskew,
+                "preprocessing.enhancement": enable_enhancement
+            })
+            
+            # Save file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                temp_path = temp_file.name
+                file.save(temp_path)
+            
+            # Process image
+            logger.info(f"Processing image with model: {model_id or 'default'}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
+            
+            processor = model_manager.get_processor(model_id)
+            result = processor.extract(temp_path)
+            
+            # Set extraction result attributes
+            set_span_attributes(span, {
+                "extraction.success": result.success,
+                "extraction.processing_time": getattr(result, 'processing_time', 0),
+                "extraction.items_count": len(getattr(result.data, 'items', [])) if hasattr(result, 'data') and result.data else 0
+            })
+            
+            logger.info(f"Extraction completed successfully for {filename}")
+            return jsonify(result.to_dict())
+            
+        except Exception as e:
+            logger.error(f"Extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            # Clean up temp file
+            if temp_path:
+                safe_delete_temp_file(temp_path)
+@app.route('/api/extract/batch', methods=['POST'])
+@rate_limit(requests=10, window=3600, error_message="Batch extraction rate limit exceeded. Please try again later.")
+@validate_file_upload(param_name='image', max_size=100*1024*1024)
 def extract_batch():
- try:
-  if 'image'not in request.files:return jsonify({'success':False,'error':'No image file provided'}),400
-  file=request.files['image']
-  if file.filename=='':return jsonify({'success':False,'error':'No file selected'}),400
-  if not allowed_file(file.filename):return jsonify({'success':False,'error':f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}),400
-  filename=secure_filename(file.filename)
-  with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path)
-  try:
-   available_models=model_manager.get_available_models()
-   logger.info(f"Running batch extraction with {len(available_models)} models")
-   batch_results={'success':True,'image_filename':filename,'models_count':len(available_models),'results':{}}
-   for model_info in available_models:
-    model_id=model_info['id']
-    model_name=model_info['name']
-    logger.info(f"Processing with model: {model_name} ({model_id})")
-    try:
-     processor=model_manager.get_processor(model_id)
-     result=processor.extract(temp_path)
-     batch_results['results'][model_id]={'model_name':model_name,'model_id':model_id,'extraction':result.to_dict()}
-     logger.info(f"✓ {model_name}: {'Success'if result.success else'Failed'}")
-    except Exception as e:logger.error(f"Model {model_name} failed: {e}");batch_results['results'][model_id]={'model_name':model_name,'model_id':model_id,'extraction':{'success':False,'error':str(e)}}
-   logger.info(f"Batch extraction complete: {len(batch_results['results'])} models processed")
-   return jsonify(batch_results)
-  finally:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Batch extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
+    """
+    Extract text from a receipt image using all available models.
+    
+    Rate Limited: 10 requests per hour
+    Max File Size: 100MB
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract.batch") as span:
+        temp_path = None
+        try:
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "batch_extract",
+                "request.authenticated": True
+            })
+            
+            # Get file from request
+            file = request.files['image']
+            filename = sanitize_filename(file.filename)
+            
+            # Get file size
+            file.seek(0, 2)
+            file_size = file.tell()
+            file.seek(0)
+            
+            set_span_attributes(span, {
+                "file.name": filename,
+                "file.size": file_size
+            })
+            
+            # Save file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                temp_path = temp_file.name
+                file.save(temp_path)
+            
+            # Get available models
+            available_models = model_manager.get_available_models()
+            models_count = len(available_models)
+            
+            set_span_attributes(span, {
+                "batch.models_count": models_count
+            })
+            
+            logger.info(f"Running batch extraction with {models_count} models")
+            
+            batch_results = {
+                'success': True,
+                'image_filename': filename,
+                'models_count': models_count,
+                'results': {}
+            }
+            
+            # Process with each model
+            successful_count = 0
+            failed_count = 0
+            
+            for model_info in available_models:
+                model_id = model_info['id']
+                model_name = model_info['name']
+                
+                logger.info(f"Processing with model: {model_name} ({model_id})")
+                
+                try:
+                    processor = model_manager.get_processor(model_id)
+                    result = processor.extract(temp_path)
+                    
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': result.to_dict()
+                    }
+                    
+                    if result.success:
+                        successful_count += 1
+                        logger.info(f"✓ {model_name}: Success")
+                    else:
+                        failed_count += 1
+                        logger.warning(f"✗ {model_name}: Failed")
+                        
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Model {model_name} failed: {e}")
+                    batch_results['results'][model_id] = {
+                        'model_name': model_name,
+                        'model_id': model_id,
+                        'extraction': {'success': False, 'error': str(e)}
+                    }
+            
+            # Set batch result attributes
+            set_span_attributes(span, {
+                "batch.successful_count": successful_count,
+                "batch.failed_count": failed_count,
+                "batch.total_processed": models_count
+            })
+            
+            logger.info(f"Batch extraction complete: {successful_count}/{models_count} models succeeded")
+            return jsonify(batch_results)
+            
+        except Exception as e:
+            logger.error(f"Batch extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            if temp_path:
+                safe_delete_temp_file(temp_path)
 @app.route('/api/models/<model_id>/info',methods=['GET'])
 def get_model_info(model_id):
  try:
@@ -539,49 +691,147 @@ def get_model_info(model_id):
 def unload_models():
  try:model_manager.unload_all_models();return jsonify({'success':True,'message':'All models unloaded successfully'})
  except Exception as e:logger.error(f"Error unloading models: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/extract/batch-multi',methods=['POST'])
+@app.route('/api/extract/batch-multi', methods=['POST'])
+@rate_limit(requests=5, window=3600, error_message="Batch multi-model extraction rate limit exceeded. Please try again later.")
 def extract_batch_multi():
- try:
-  if 'images'not in request.files:return jsonify({'success':False,'error':'No image files provided'}),400
-  files=request.files.getlist('images')
-  if not files or len(files)==0:return jsonify({'success':False,'error':'No files selected'}),400
-  model_id=request.form.get('model_id')
-  use_all_models=request.form.get('use_all_models','false').lower()=='true'
-  temp_paths=[]
-  try:
-   batch_results={'success':True,'images_count':len(files),'results':[]}
-   if use_all_models:
-    available_models=model_manager.get_available_models()
-    logger.info(f"Batch processing {len(files)} images with {len(available_models)} models")
-    for file in files:
-     if file.filename==''or not allowed_file(file.filename):continue
-     filename=secure_filename(file.filename)
-     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
-     file_results={'filename':filename,'models':{}}
-     for model_info in available_models:
-      mid=model_info['id']
-      try:
-       processor=model_manager.get_processor(mid)
-       result=processor.extract(temp_path)
-       file_results['models'][mid]={'model_name':model_info['name'],'extraction':result.to_dict()}
-      except Exception as e:logger.error(f"Model {mid} failed on {filename}: {e}");file_results['models'][mid]={'model_name':model_info['name'],'extraction':{'success':False,'error':str(e)}}
-     batch_results['results'].append(file_results)
-     logger.info(f"Processed {filename} with {len(available_models)} models")
-   else:
-    for file in files:
-     if file.filename==''or not allowed_file(file.filename):continue
-     filename=secure_filename(file.filename)
-     with tempfile.NamedTemporaryFile(delete=False,suffix=os.path.splitext(filename)[1])as temp_file:temp_path=temp_file.name;file.save(temp_path);temp_paths.append(temp_path)
-     try:
-      processor=model_manager.get_processor(model_id)
-      result=processor.extract(temp_path)
-      batch_results['results'].append({'filename':filename,'extraction':result.to_dict()})
-      logger.info(f"Processed {filename}: {'Success'if result.success else'Failed'}")
-     except Exception as e:logger.error(f"Failed to process {filename}: {e}");batch_results['results'].append({'filename':filename,'extraction':{'success':False,'error':str(e)}})
-   return jsonify(batch_results)
-  finally:
-   for temp_path in temp_paths:safe_delete_temp_file(temp_path)
- except Exception as e:logger.error(f"Batch multi extraction error: {e}",exc_info=True);return jsonify({'success':False,'error':str(e)}),500
+    """
+    Extract text from multiple images using one or all models.
+    
+    Rate Limited: 5 requests per hour (very expensive operation)
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.extract.batch_multi") as span:
+        temp_paths = []
+        try:
+            # Validate images parameter
+            if 'images' not in request.files:
+                return jsonify({'success': False, 'error': 'No image files provided'}), 400
+            
+            files = request.files.getlist('images')
+            if not files or len(files) == 0:
+                return jsonify({'success': False, 'error': 'No files selected'}), 400
+            
+            model_id = request.form.get('model_id')
+            use_all_models = request.form.get('use_all_models', 'false').lower() == 'true'
+            
+            # Set span attributes
+            set_span_attributes(span, {
+                "operation.type": "batch_multi_extract",
+                "batch.images_count": len(files),
+                "batch.use_all_models": use_all_models,
+                "batch.model_id": model_id or "all"
+            })
+            
+            batch_results = {'success': True, 'images_count': len(files), 'results': []}
+            successful_count = 0
+            failed_count = 0
+            
+            if use_all_models:
+                available_models = model_manager.get_available_models()
+                models_count = len(available_models)
+                
+                set_span_attributes(span, {
+                    "batch.models_count": models_count
+                })
+                
+                logger.info(f"Batch processing {len(files)} images with {models_count} models")
+                
+                for file in files:
+                    if file.filename == '' or not allowed_file(file.filename):
+                        continue
+                    
+                    filename = sanitize_filename(file.filename)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                        temp_path = temp_file.name
+                        file.save(temp_path)
+                        temp_paths.append(temp_path)
+                    
+                    file_results = {'filename': filename, 'models': {}}
+                    file_success = False
+                    
+                    for model_info in available_models:
+                        mid = model_info['id']
+                        try:
+                            processor = model_manager.get_processor(mid)
+                            result = processor.extract(temp_path)
+                            file_results['models'][mid] = {
+                                'model_name': model_info['name'],
+                                'extraction': result.to_dict()
+                            }
+                            if result.success:
+                                file_success = True
+                        except Exception as e:
+                            logger.error(f"Model {mid} failed on {filename}: {e}")
+                            file_results['models'][mid] = {
+                                'model_name': model_info['name'],
+                                'extraction': {'success': False, 'error': str(e)}
+                            }
+                    
+                    batch_results['results'].append(file_results)
+                    if file_success:
+                        successful_count += 1
+                    else:
+                        failed_count += 1
+                    
+                    logger.info(f"Processed {filename} with {models_count} models")
+            else:
+                for file in files:
+                    if file.filename == '' or not allowed_file(file.filename):
+                        continue
+                    
+                    filename = sanitize_filename(file.filename)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+                        temp_path = temp_file.name
+                        file.save(temp_path)
+                        temp_paths.append(temp_path)
+                    
+                    try:
+                        processor = model_manager.get_processor(model_id)
+                        result = processor.extract(temp_path)
+                        batch_results['results'].append({
+                            'filename': filename,
+                            'extraction': result.to_dict()
+                        })
+                        
+                        if result.success:
+                            successful_count += 1
+                        else:
+                            failed_count += 1
+                        
+                        logger.info(f"Processed {filename}: {'Success' if result.success else 'Failed'}")
+                    except Exception as e:
+                        logger.error(f"Failed to process {filename}: {e}")
+                        batch_results['results'].append({
+                            'filename': filename,
+                            'extraction': {'success': False, 'error': str(e)}
+                        })
+                        failed_count += 1
+            
+            # Set result attributes
+            set_span_attributes(span, {
+                "batch.successful_count": successful_count,
+                "batch.failed_count": failed_count,
+                "batch.total_processed": successful_count + failed_count
+            })
+            
+            logger.info(f"Batch multi extraction complete: {successful_count}/{successful_count + failed_count} succeeded")
+            return jsonify(batch_results)
+            
+        except Exception as e:
+            logger.error(f"Batch multi extraction error: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+        
+        finally:
+            for temp_path in temp_paths:
+                safe_delete_temp_file(temp_path)
 
 @app.route('/api/extract-stream',methods=['POST'])
 def extract_receipt_stream():
@@ -698,40 +948,137 @@ def extract_receipt_stream():
   logger.error(f"SSE endpoint error: {e}",exc_info=True)
   return jsonify({'success':False,'error':str(e)}),500
 
-@app.route('/api/finetune/prepare',methods=['POST'])
+@app.route('/api/finetune/prepare', methods=['POST'])
+@rate_limit(requests=3, window=3600, error_message="Finetuning preparation rate limit exceeded.")
+@validate_json_body({
+    'model_id': {'type': str, 'required': True},
+    'mode': {'type': str, 'choices': ['local', 'cloud']},
+    'config': {'type': dict}
+})
 def prepare_finetune():
- try:
-  data=request.get_json()
-  model_id=data.get('model_id')
-  mode=data.get('mode','local')
-  config=data.get('config',{})
-  if not model_id:return jsonify({'success':False,'error':'model_id is required'}),400
-  job_id=f"ft_{model_id}_{int(time.time())}"
-  finetune_jobs[job_id]={'status':'preparing','model_id':model_id,'mode':mode,'config':config,'created':time.time(),'training_data':[],'progress':0}
-  logger.info(f"Created finetuning job {job_id} for model {model_id} in {mode} mode")
-  return jsonify({'success':True,'job_id':job_id,'message':'Finetuning job created'})
- except Exception as e:logger.error(f"Error preparing finetune: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/finetune/<job_id>/add-data',methods=['POST'])
+    """
+    Prepare a finetuning job for a model.
+    
+    Rate Limited: 3 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.prepare") as span:
+        try:
+            data = request.get_json()
+            model_id = data.get('model_id')
+            mode = data.get('mode', 'local')
+            config = data.get('config', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_prepare",
+                "finetune.model_id": model_id,
+                "finetune.mode": mode
+            })
+            
+            job_id = f"ft_{model_id}_{int(time.time())}"
+            finetune_jobs[job_id] = {
+                'status': 'preparing',
+                'model_id': model_id,
+                'mode': mode,
+                'config': config,
+                'created': time.time(),
+                'training_data': [],
+                'progress': 0
+            }
+            
+            set_span_attributes(span, {
+                "finetune.job_id": job_id
+            })
+            
+            logger.info(f"Created finetuning job {job_id} for model {model_id} in {mode} mode")
+            return jsonify({
+                'success': True,
+                'job_id': job_id,
+                'message': 'Finetuning job created'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error preparing finetune: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/finetune/<job_id>/add-data', methods=['POST'])
 def add_finetune_data(job_id):
- try:
-  if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
-  if 'images'not in request.files:return jsonify({'success':False,'error':'No image files provided'}),400
-  files=request.files.getlist('images')
-  labels=json.loads(request.form.get('labels','{}'))
-  job=finetune_jobs[job_id]
-  upload_dir=Path(tempfile.gettempdir())/job_id
-  upload_dir.mkdir(exist_ok=True)
-  for file in files:
-   if file.filename==''or not allowed_file(file.filename):continue
-   filename=secure_filename(file.filename)
-   file_path=upload_dir/filename
-   file.save(str(file_path))
-   ground_truth=labels.get(filename,{})
-   job['training_data'].append({'image':str(file_path),'truth':ground_truth,'filename':filename})
-   logger.info(f"Added training data: {filename}")
-  job['status']='data_ready'
-  return jsonify({'success':True,'samples_added':len(files),'total_samples':len(job['training_data'])})
- except Exception as e:logger.error(f"Error adding finetune data: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Add training data to a finetuning job.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.add_data") as span:
+        try:
+            # Validate job exists
+            if job_id not in finetune_jobs:
+                return jsonify({'success': False, 'error': 'Job not found'}), 404
+            
+            # Validate files
+            if 'images' not in request.files:
+                return jsonify({'success': False, 'error': 'No image files provided'}), 400
+            
+            files = request.files.getlist('images')
+            labels = json.loads(request.form.get('labels', '{}'))
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_add_data",
+                "finetune.job_id": job_id,
+                "finetune.files_count": len(files)
+            })
+            
+            job = finetune_jobs[job_id]
+            upload_dir = Path(tempfile.gettempdir()) / job_id
+            upload_dir.mkdir(exist_ok=True)
+            
+            added_count = 0
+            for file in files:
+                if file.filename == '' or not allowed_file(file.filename):
+                    continue
+                
+                filename = sanitize_filename(file.filename)
+                file_path = upload_dir / filename
+                file.save(str(file_path))
+                
+                ground_truth = labels.get(filename, {})
+                job['training_data'].append({
+                    'image': str(file_path),
+                    'truth': ground_truth,
+                    'filename': filename
+                })
+                added_count += 1
+                logger.info(f"Added training data: {filename}")
+            
+            job['status'] = 'data_ready'
+            
+            set_span_attributes(span, {
+                "finetune.samples_added": added_count,
+                "finetune.total_samples": len(job['training_data'])
+            })
+            
+            return jsonify({
+                'success': True,
+                'samples_added': added_count,
+                'total_samples': len(job['training_data'])
+            })
+            
+        except Exception as e:
+            logger.error(f"Error adding finetune data: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/start',methods=['POST'])
 def start_finetune(job_id):
  try:
@@ -837,13 +1184,51 @@ def start_finetune(job_id):
   thread.start()
   return jsonify({'success':True,'message':'Finetuning started','job_id':job_id})
  except Exception as e:logger.error(f"Error starting finetune: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/finetune/<job_id>/status',methods=['GET'])
+@app.route('/api/finetune/<job_id>/status', methods=['GET'])
 def get_finetune_status(job_id):
- try:
-  if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
-  job=finetune_jobs[job_id]
-  return jsonify({'success':True,'job':{'id':job_id,'status':job['status'],'progress':job.get('progress',0),'metrics':job.get('metrics'),'error':job.get('error'),'model_path':job.get('model_path'),'cloud_url':job.get('cloud_url'),'samples_count':len(job.get('training_data',[]))}})
- except Exception as e:logger.error(f"Error getting finetune status: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Get the status of a finetuning job.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.finetune.status") as span:
+        try:
+            if job_id not in finetune_jobs:
+                return jsonify({'success': False, 'error': 'Job not found'}), 404
+            
+            job = finetune_jobs[job_id]
+            
+            set_span_attributes(span, {
+                "operation.type": "finetune_status",
+                "finetune.job_id": job_id,
+                "finetune.status": job['status'],
+                "finetune.progress": job.get('progress', 0)
+            })
+            
+            return jsonify({
+                'success': True,
+                'job': {
+                    'id': job_id,
+                    'status': job['status'],
+                    'progress': job.get('progress', 0),
+                    'metrics': job.get('metrics'),
+                    'error': job.get('error'),
+                    'model_path': job.get('model_path'),
+                    'cloud_url': job.get('cloud_url'),
+                    'samples_count': len(job.get('training_data', []))
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting finetune status: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/export',methods=['GET'])
 def export_finetuned_model(job_id):
  try:
@@ -864,84 +1249,265 @@ def list_finetune_jobs():
   jobs_list=[{'id':job_id,'model_id':job['model_id'],'status':job['status'],'progress':job.get('progress',0),'created':job['created'],'samples':len(job.get('training_data',[]))}for job_id,job in finetune_jobs.items()]
   return jsonify({'success':True,'jobs':jobs_list})
  except Exception as e:logger.error(f"Error listing jobs: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/list',methods=['POST'])
+@app.route('/api/cloud/list', methods=['POST'])
+@rate_limit(requests=30, window=3600, error_message="Cloud listing rate limit exceeded.")
+@validate_json_body({
+    'provider': {'type': str, 'required': True, 'choices': ['google_drive', 'dropbox', 's3']},
+    'credentials': {'type': dict, 'required': True},
+    'path': {'type': str}
+})
 def list_cloud_files():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  credentials=data.get('credentials',{})
-  path=data.get('path','/')
-  if not provider:
-   return jsonify({'success':False,'error':'Provider is required. Supported: google_drive, dropbox, s3'}),400
-  from shared.services.cloud_storage import CloudStorageService,GoogleDriveProvider,DropboxProvider,S3Provider
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   if not credentials.get('access_token')and not credentials.get('client_id'):
-    return jsonify({'success':False,'error':'Google Drive requires OAuth credentials. Provide access_token or client_id/client_secret.'}),400
-   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'),client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
-  elif provider=='dropbox':
-   if not credentials.get('access_token'):
-    return jsonify({'success':False,'error':'Dropbox access_token required.'}),400
-   storage_service.configure_dropbox(access_token=credentials.get('access_token'),app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
-  elif provider=='s3':
-   if not credentials.get('access_key_id')or not credentials.get('secret_access_key'):
-    return jsonify({'success':False,'error':'S3 requires access_key_id and secret_access_key.'}),400
-   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'),region=credentials.get('region'))
-  else:
-   return jsonify({'success':False,'error':f'Unsupported provider: {provider}. Supported: google_drive, dropbox, s3'}),400
-  files=storage_service.list_files(provider,path)
-  files_list=[{'id':f.id,'name':f.name,'path':f.path,'size':f.size,'mime_type':f.mime_type,'modified_at':f.modified_at.isoformat()if f.modified_at else None,'is_folder':f.is_folder,'download_url':f.download_url}for f in files]
-  return jsonify({'success':True,'files':files_list,'provider':provider,'path':path})
- except ImportError as e:
-  logger.error(f"Cloud storage import error: {e}")
-  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}. See documentation for required packages.'}),500
- except Exception as e:logger.error(f"Error listing cloud files: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/download',methods=['POST'])
+    """
+    List files from cloud storage provider.
+    
+    Rate Limited: 30 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.list") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            credentials = data.get('credentials', {})
+            path = data.get('path', '/')
+            
+            # Sanitize credentials for logging (don't log sensitive data)
+            sanitized_creds = sanitize_attributes(credentials, ['access_token', 'secret_access_key', 'client_secret'])
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_list",
+                "cloud.provider": provider,
+                "cloud.path": path,
+                "cloud.has_credentials": len(credentials) > 0
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService, GoogleDriveProvider, DropboxProvider, S3Provider
+            storage_service = CloudStorageService()
+            
+            # Configure provider
+            if provider == 'google_drive':
+                if not credentials.get('access_token') and not credentials.get('client_id'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Google Drive requires OAuth credentials. Provide access_token or client_id/client_secret.'
+                    }), 400
+                storage_service.configure_google_drive(
+                    credentials=credentials,
+                    access_token=credentials.get('access_token'),
+                    client_id=credentials.get('client_id'),
+                    client_secret=credentials.get('client_secret')
+                )
+            elif provider == 'dropbox':
+                if not credentials.get('access_token'):
+                    return jsonify({'success': False, 'error': 'Dropbox access_token required.'}), 400
+                storage_service.configure_dropbox(
+                    access_token=credentials.get('access_token'),
+                    app_key=credentials.get('app_key'),
+                    app_secret=credentials.get('app_secret')
+                )
+            elif provider == 's3':
+                if not credentials.get('access_key_id') or not credentials.get('secret_access_key'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'S3 requires access_key_id and secret_access_key.'
+                    }), 400
+                storage_service.configure_s3(
+                    bucket=credentials.get('bucket'),
+                    access_key_id=credentials.get('access_key_id'),
+                    secret_access_key=credentials.get('secret_access_key'),
+                    region=credentials.get('region')
+                )
+            
+            # List files
+            files = storage_service.list_files(provider, path)
+            files_list = [{
+                'id': f.id,
+                'name': f.name,
+                'path': f.path,
+                'size': f.size,
+                'mime_type': f.mime_type,
+                'modified_at': f.modified_at.isoformat() if f.modified_at else None,
+                'is_folder': f.is_folder,
+                'download_url': f.download_url
+            } for f in files]
+            
+            set_span_attributes(span, {
+                "cloud.files_count": len(files_list)
+            })
+            
+            return jsonify({
+                'success': True,
+                'files': files_list,
+                'provider': provider,
+                'path': path
+            })
+            
+        except ImportError as e:
+            logger.error(f"Cloud storage import error: {e}")
+            span.record_exception(e)
+            return jsonify({
+                'success': False,
+                'error': f'Cloud storage dependencies not installed: {e}. See documentation for required packages.'
+            }), 500
+        except Exception as e:
+            logger.error(f"Error listing cloud files: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/cloud/download', methods=['POST'])
+@rate_limit(requests=30, window=3600, error_message="Cloud download rate limit exceeded.")
+@validate_json_body({
+    'provider': {'type': str, 'required': True},
+    'file_id': {'type': str, 'required': True},
+    'credentials': {'type': dict, 'required': True}
+})
 def download_cloud_file():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  file_id=data.get('file_id')
-  credentials=data.get('credentials',{})
-  if not provider or not file_id:
-   return jsonify({'success':False,'error':'Provider and file_id are required.'}),400
-  from shared.services.cloud_storage import CloudStorageService
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   storage_service.configure_google_drive(credentials=credentials,access_token=credentials.get('access_token'))
-  elif provider=='dropbox':
-   storage_service.configure_dropbox(access_token=credentials.get('access_token'))
-  elif provider=='s3':
-   storage_service.configure_s3(bucket=credentials.get('bucket'),access_key_id=credentials.get('access_key_id'),secret_access_key=credentials.get('secret_access_key'))
-  else:
-   return jsonify({'success':False,'error':f'Unsupported provider: {provider}'}),400
-  with tempfile.NamedTemporaryFile(delete=False)as temp_file:
-   local_path=temp_file.name
-  storage_service.download_file(provider,file_id,local_path)
-  return send_file(local_path,as_attachment=True)
- except ImportError as e:
-  return jsonify({'success':False,'error':f'Cloud storage dependencies not installed: {e}'}),500
- except Exception as e:logger.error(f"Error downloading cloud file: {e}");return jsonify({'success':False,'error':str(e)}),500
-@app.route('/api/cloud/auth',methods=['POST'])
+    """
+    Download a file from cloud storage.
+    
+    Rate Limited: 30 requests per hour
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.download") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            file_id = data.get('file_id')
+            credentials = data.get('credentials', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_download",
+                "cloud.provider": provider,
+                "cloud.file_id": file_id[:10] + "..." if len(file_id) > 10 else file_id
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService
+            storage_service = CloudStorageService()
+            
+            # Configure provider
+            if provider == 'google_drive':
+                storage_service.configure_google_drive(
+                    credentials=credentials,
+                    access_token=credentials.get('access_token')
+                )
+            elif provider == 'dropbox':
+                storage_service.configure_dropbox(
+                    access_token=credentials.get('access_token')
+                )
+            elif provider == 's3':
+                storage_service.configure_s3(
+                    bucket=credentials.get('bucket'),
+                    access_key_id=credentials.get('access_key_id'),
+                    secret_access_key=credentials.get('secret_access_key')
+                )
+            else:
+                return jsonify({'success': False, 'error': f'Unsupported provider: {provider}'}), 400
+            
+            # Download file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                local_path = temp_file.name
+            
+            storage_service.download_file(provider, file_id, local_path)
+            
+            # Get file size for telemetry
+            import os
+            file_size = os.path.getsize(local_path) if os.path.exists(local_path) else 0
+            
+            set_span_attributes(span, {
+                "cloud.download_size": file_size
+            })
+            
+            logger.info(f"Downloaded file from {provider}: {file_id}, size: {file_size}")
+            return send_file(local_path, as_attachment=True)
+            
+        except ImportError as e:
+            span.record_exception(e)
+            return jsonify({
+                'success': False,
+                'error': f'Cloud storage dependencies not installed: {e}'
+            }), 500
+        except Exception as e:
+            logger.error(f"Error downloading cloud file: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/cloud/auth', methods=['POST'])
+@validate_json_body({
+    'provider': {'type': str, 'required': True},
+    'auth_code': {'type': str},
+    'credentials': {'type': dict}
+})
 def cloud_auth():
- try:
-  data=request.get_json()
-  provider=data.get('provider')
-  auth_code=data.get('auth_code')
-  credentials=data.get('credentials',{})
-  if not provider:
-   return jsonify({'success':False,'error':'Provider is required.'}),400
-  from shared.services.cloud_storage import CloudStorageService
-  storage_service=CloudStorageService()
-  if provider=='google_drive':
-   storage_service.configure_google_drive(client_id=credentials.get('client_id'),client_secret=credentials.get('client_secret'))
-   result=storage_service.authenticate(provider,auth_code)
-   return jsonify({'success':True,'auth':result})
-  elif provider=='dropbox':
-   storage_service.configure_dropbox(app_key=credentials.get('app_key'),app_secret=credentials.get('app_secret'))
-   result=storage_service.authenticate(provider,auth_code)
-   return jsonify({'success':True,'auth':result})
-  else:
-   return jsonify({'success':False,'error':f'OAuth not supported for provider: {provider}'}),400
- except Exception as e:logger.error(f"Error in cloud auth: {e}");return jsonify({'success':False,'error':str(e)}),500
+    """
+    Authenticate with cloud storage provider.
+    """
+    tracer = get_tracer()
+    with tracer.start_as_current_span("api.cloud.auth") as span:
+        try:
+            data = request.get_json()
+            provider = data.get('provider')
+            auth_code = data.get('auth_code')
+            credentials = data.get('credentials', {})
+            
+            set_span_attributes(span, {
+                "operation.type": "cloud_auth",
+                "cloud.provider": provider,
+                "cloud.has_auth_code": auth_code is not None
+            })
+            
+            from shared.services.cloud_storage import CloudStorageService
+            storage_service = CloudStorageService()
+            
+            if provider == 'google_drive':
+                storage_service.configure_google_drive(
+                    client_id=credentials.get('client_id'),
+                    client_secret=credentials.get('client_secret')
+                )
+                result = storage_service.authenticate(provider, auth_code)
+                
+                set_span_attributes(span, {
+                    "cloud.auth_success": True
+                })
+                
+                return jsonify({'success': True, 'auth': result})
+            elif provider == 'dropbox':
+                storage_service.configure_dropbox(
+                    app_key=credentials.get('app_key'),
+                    app_secret=credentials.get('app_secret')
+                )
+                result = storage_service.authenticate(provider, auth_code)
+                
+                set_span_attributes(span, {
+                    "cloud.auth_success": True
+                })
+                
+                return jsonify({'success': True, 'auth': result})
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'OAuth not supported for provider: {provider}'
+                }), 400
+                
+        except Exception as e:
+            logger.error(f"Error in cloud auth: {e}", exc_info=True)
+            span.record_exception(e)
+            
+            try:
+                from opentelemetry.trace import Status, StatusCode
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+            except ImportError:
+                pass
+            
+            return jsonify({'success': False, 'error': str(e)}), 500
 if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(model_manager.get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)

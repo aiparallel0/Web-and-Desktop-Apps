@@ -9,6 +9,9 @@ import time
 from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
+# Import telemetry utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+
 logger = logging.getLogger(__name__)
 
 # Global SocketIO instance (will be initialized by app)
@@ -51,17 +54,41 @@ def register_handlers():
     @socketio.on('connect')
     def handle_connect():
         """Handle client connection"""
-        logger.info(f"Client connected: {request.sid}")
-        emit('connection_established', {
-            'status': 'connected',
-            'session_id': request.sid,
-            'timestamp': time.time()
-        })
+        tracer = get_tracer()
+        with tracer.start_as_current_span("websocket.connect") as span:
+            try:
+                client_ip = request.remote_addr or 'unknown'
+                set_span_attributes(span, {
+                    "operation.type": "websocket_connect",
+                    "client.session_id": request.sid,
+                    "client.ip": client_ip
+                })
+                
+                logger.info(f"Client connected: {request.sid} from {client_ip}")
+                emit('connection_established', {
+                    'status': 'connected',
+                    'session_id': request.sid,
+                    'timestamp': time.time()
+                })
+            except Exception as e:
+                logger.error(f"Connection error: {e}")
+                span.record_exception(e)
 
     @socketio.on('disconnect')
     def handle_disconnect():
         """Handle client disconnection"""
-        logger.info(f"Client disconnected: {request.sid}")
+        tracer = get_tracer()
+        with tracer.start_as_current_span("websocket.disconnect") as span:
+            try:
+                set_span_attributes(span, {
+                    "operation.type": "websocket_disconnect",
+                    "client.session_id": request.sid
+                })
+                
+                logger.info(f"Client disconnected: {request.sid}")
+            except Exception as e:
+                logger.error(f"Disconnect error: {e}")
+                span.record_exception(e)
 
     @socketio.on('join_extraction')
     def handle_join_extraction(data):
@@ -71,17 +98,31 @@ def register_handlers():
         Args:
             data: {'job_id': 'extraction_job_id'}
         """
-        job_id = data.get('job_id')
-        if not job_id:
-            emit('error', {'message': 'job_id required'})
-            return
+        tracer = get_tracer()
+        with tracer.start_as_current_span("websocket.join_extraction") as span:
+            try:
+                job_id = data.get('job_id')
+                
+                set_span_attributes(span, {
+                    "operation.type": "join_extraction",
+                    "client.session_id": request.sid,
+                    "extraction.job_id": job_id or "none"
+                })
+                
+                if not job_id:
+                    emit('error', {'message': 'job_id required'})
+                    return
 
-        join_room(job_id)
-        logger.info(f"Client {request.sid} joined room {job_id}")
-        emit('joined', {
-            'job_id': job_id,
-            'message': 'Subscribed to extraction updates'
-        })
+                join_room(job_id)
+                logger.info(f"Client {request.sid} joined room {job_id}")
+                emit('joined', {
+                    'job_id': job_id,
+                    'message': 'Subscribed to extraction updates'
+                })
+            except Exception as e:
+                logger.error(f"Join extraction error: {e}")
+                span.record_exception(e)
+                emit('error', {'message': 'Failed to join extraction room'})
 
     @socketio.on('leave_extraction')
     def handle_leave_extraction(data):
@@ -91,18 +132,42 @@ def register_handlers():
         Args:
             data: {'job_id': 'extraction_job_id'}
         """
-        job_id = data.get('job_id')
-        if not job_id:
-            return
+        tracer = get_tracer()
+        with tracer.start_as_current_span("websocket.leave_extraction") as span:
+            try:
+                job_id = data.get('job_id')
+                
+                set_span_attributes(span, {
+                    "operation.type": "leave_extraction",
+                    "client.session_id": request.sid,
+                    "extraction.job_id": job_id or "none"
+                })
+                
+                if not job_id:
+                    return
 
-        leave_room(job_id)
-        logger.info(f"Client {request.sid} left room {job_id}")
-        emit('left', {'job_id': job_id})
+                leave_room(job_id)
+                logger.info(f"Client {request.sid} left room {job_id}")
+                emit('left', {'job_id': job_id})
+            except Exception as e:
+                logger.error(f"Leave extraction error: {e}")
+                span.record_exception(e)
 
     @socketio.on('ping')
     def handle_ping():
         """Handle ping for keep-alive"""
-        emit('pong', {'timestamp': time.time()})
+        tracer = get_tracer()
+        with tracer.start_as_current_span("websocket.ping") as span:
+            try:
+                set_span_attributes(span, {
+                    "operation.type": "ping",
+                    "client.session_id": request.sid
+                })
+                
+                emit('pong', {'timestamp': time.time()})
+            except Exception as e:
+                logger.error(f"Ping error: {e}")
+                span.record_exception(e)
 
 # =============================================================================
 # PROGRESS UPDATE FUNCTIONS

@@ -27,6 +27,14 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
+# Telemetry integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
+    logger.debug("Telemetry not available for training services")
+
 
 class TrainingStatus(Enum):
     """Training job status."""
@@ -408,6 +416,75 @@ class BaseTrainer(ABC):
                 callback(job)
             except Exception as e:
                 logger.error(f"Callback error for {event}: {e}")
+    
+    def _start_telemetry_span(self, operation: str) -> Any:
+        """
+        Start a telemetry span for training operations.
+        
+        Args:
+            operation: Operation name (e.g., "start_training", "get_status")
+            
+        Returns:
+            Span object or None if telemetry unavailable
+        """
+        if TELEMETRY_AVAILABLE:
+            tracer = get_tracer()
+            return tracer.start_span(f"training.{operation}")
+        return None
+    
+    def _end_telemetry_span(
+        self,
+        span: Any,
+        job: Optional[TrainingJob] = None,
+        success: bool = True,
+        error: Exception = None
+    ) -> None:
+        """
+        End a telemetry span with training job attributes.
+        
+        Args:
+            span: Span object
+            job: Optional training job
+            success: Whether operation succeeded
+            error: Optional exception
+        """
+        if span and TELEMETRY_AVAILABLE:
+            attributes = {
+                "training.provider": self.provider.value,
+                "training.success": success
+            }
+            
+            if job:
+                attributes.update({
+                    "training.job_id": job.job_id,
+                    "training.model_id": job.model_id,
+                    "training.status": job.status.value,
+                    "training.progress": round(job.progress, 2),
+                    "training.user_id": job.user_id if job.user_id else None
+                })
+                
+                if job.config:
+                    attributes.update({
+                        "training.epochs": job.config.epochs,
+                        "training.batch_size": job.config.batch_size,
+                        "training.learning_rate": job.config.learning_rate
+                    })
+                
+                if job.metrics:
+                    attributes.update({
+                        "training.loss": round(job.metrics.loss, 4) if job.metrics.loss else None,
+                        "training.step": job.metrics.step
+                    })
+                
+                if job.error:
+                    attributes["error.message"] = job.error[:200]  # Truncate
+            
+            if error:
+                span.record_exception(error)
+                attributes["error.type"] = type(error).__name__
+            
+            set_span_attributes(span, attributes)
+            span.end()
     
     def estimate_cost(
         self,
