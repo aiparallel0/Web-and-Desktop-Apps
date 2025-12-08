@@ -7,6 +7,7 @@ AI-powered receipt text extraction with **Web Application** and **Electron Deskt
 ## 📋 Table of Contents
 
 - [Quick Start](#quick-start)
+- [Quick Start (MVP Mode)](#quick-start-mvp-mode)
 - [Project Overview](#project-overview)
 - [External Integration Roadmap](#external-integration-roadmap)
 - [Project Structure](#project-structure)
@@ -14,6 +15,7 @@ AI-powered receipt text extraction with **Web Application** and **Electron Deskt
 - [Available Models](#available-models)
 - [API Reference](#api-reference)
 - [Circular Exchange Framework](#circular-exchange-framework)
+- [Feature Flags](#feature-flags)
 - [Installation](#installation)
 - [Desktop Application](#desktop-application)
 - [Testing](#testing)
@@ -47,6 +49,52 @@ cd web/frontend && python -m http.server 3000  # Frontend: http://localhost:3000
 
 ---
 
+## 🎯 Quick Start (MVP Mode)
+
+**MVP Mode** launches the application with minimal dependencies - all cloud features disabled, local processing only.
+
+### Why MVP Mode?
+
+- ✅ **Fast Setup**: No cloud credentials required
+- ✅ **Zero Cost**: No cloud service charges
+- ✅ **Full Functionality**: All 7 OCR models work locally
+- ✅ **Privacy**: All data stays on your machine
+
+### 3-Step MVP Setup
+
+```bash
+# 1. Copy environment files (already configured for MVP)
+cp .env.example .env
+cp web/backend/.env.example web/backend/.env
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start the application
+./launcher.sh dev
+```
+
+**That's it!** The app is ready to use with:
+- ✅ All 7 OCR models (Tesseract, EasyOCR, PaddleOCR, Donut, Florence-2, CRAFT, Spatial)
+- ✅ Web and Desktop applications
+- ✅ Batch processing
+- ✅ Real-time progress tracking
+- ✅ Export to JSON/CSV/TXT
+
+### What's Disabled in MVP Mode
+
+❌ Circular Exchange Framework (CEFR) auto-tuning  
+❌ AWS S3 cloud storage  
+❌ Google Drive integration  
+❌ Dropbox integration  
+❌ HuggingFace cloud training  
+❌ Replicate cloud training  
+❌ RunPod cloud training  
+
+**Want to enable these?** See [Feature Flags](#feature-flags) documentation.
+
+---
+
 ## 📖 Project Overview
 
 Receipt Extractor is an enterprise-grade SaaS platform that uses multiple OCR engines and AI models to extract structured data from receipt images. The application supports:
@@ -67,7 +115,52 @@ Receipt Extractor is an enterprise-grade SaaS platform that uses multiple OCR en
 - **Database**: PostgreSQL (production), SQLite (development)
 - **AI/ML**: PyTorch, HuggingFace Transformers, EasyOCR
 - **Authentication**: JWT tokens with refresh tokens
-- **Framework**: Circular Exchange Framework (CEFR) for auto-tuning
+- **Framework**: Circular Exchange Framework (CEFR) for auto-tuning (optional)
+
+---
+
+## 🎛️ Feature Flags
+
+Receipt Extractor supports **MVP Mode** and **Full Mode** through feature flags. Control which features are enabled to match your deployment needs.
+
+### Default Configuration (MVP Mode)
+
+All cloud integrations are **disabled by default** for easy local development:
+
+```bash
+ENABLE_CEFR=false              # Circular Exchange Framework
+ENABLE_S3_STORAGE=false        # AWS S3 storage
+ENABLE_GDRIVE_STORAGE=false    # Google Drive
+ENABLE_DROPBOX_STORAGE=false   # Dropbox
+ENABLE_HF_TRAINING=false       # HuggingFace cloud training
+ENABLE_REPLICATE_TRAINING=false # Replicate training
+ENABLE_RUNPOD_TRAINING=false   # RunPod GPU training
+```
+
+### Enabling Features
+
+To enable cloud integrations, edit `.env` and `web/backend/.env`:
+
+```bash
+# Enable specific features
+ENABLE_CEFR=true              # Enable auto-tuning framework
+ENABLE_S3_STORAGE=true        # Enable AWS S3 storage
+ENABLE_HF_TRAINING=true       # Enable HuggingFace training
+
+# Add required credentials
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+HUGGINGFACE_TOKEN=hf_your_token
+```
+
+### Documentation
+
+For complete feature flag documentation, see **[docs/FEATURE_FLAGS.md](docs/FEATURE_FLAGS.md)**:
+- Available feature flags and defaults
+- How to enable/disable features
+- Required credentials for each feature
+- MVP vs Full mode comparison
+- Troubleshooting guide
 
 ---
 
