@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Trial is Expiring Soon</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F9FAFB;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 0;">
+                            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td>
+                                        <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #111827;">Receipt Extractor</h1>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <!-- Icon -->
+                            <div style="text-align: center; margin-bottom: 32px;">
+                                <div style="display: inline-block; width: 80px; height: 80px; background: linear-gradient(135deg, #3B82F6, #2563EB); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <span style="font-size: 40px;">⏰</span>
+                                </div>
+                            </div>
+
+                            <!-- Heading -->
+                            <h2 style="margin: 0 0 16px; font-size: 28px; font-weight: 700; color: #111827; text-align: center;">Your Trial is Expiring Soon</h2>
+                            
+                            <!-- Subheading -->
+                            <p style="margin: 0 0 24px; font-size: 16px; color: #6B7280; text-align: center; line-height: 1.6;">
+                                Hi {{user_name}},<br><br>
+                                Your <strong>{{plan_name}}</strong> trial ends in <strong>{{days_remaining}} days</strong> on {{expiration_date}}.
+                            </p>
+
+                            <!-- Stats Box -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; background: #F9FAFB; border-radius: 8px; margin-bottom: 32px; padding: 24px;">
+                                <tr>
+                                    <td style="padding: 8px; text-align: center; border-right: 1px solid #E5E7EB;">
+                                        <div style="font-size: 32px; font-weight: 700; color: #3B82F6;">{{receipts_processed}}</div>
+                                        <div style="font-size: 14px; color: #6B7280; margin-top: 4px;">Receipts Processed</div>
+                                    </td>
+                                    <td style="padding: 8px; text-align: center; border-right: 1px solid #E5E7EB;">
+                                        <div style="font-size: 32px; font-weight: 700; color: #10B981;">{{time_saved}}</div>
+                                        <div style="font-size: 14px; color: #6B7280; margin-top: 4px;">Hours Saved</div>
+                                    </td>
+                                    <td style="padding: 8px; text-align: center;">
+                                        <div style="font-size: 32px; font-weight: 700; color: #8B5CF6;">{{accuracy_rate}}%</div>
+                                        <div style="font-size: 14px; color: #6B7280; margin-top: 4px;">Avg. Accuracy</div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Message -->
+                            <p style="margin: 0 0 24px; font-size: 16px; color: #374151; line-height: 1.6;">
+                                You've been doing great! Don't lose access to:
+                            </p>
+
+                            <!-- Benefits List -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <div style="display: flex; align-items: start;">
+                                            <span style="color: #10B981; font-size: 20px; margin-right: 12px;">✓</span>
+                                            <span style="color: #374151; font-size: 15px; line-height: 1.6;">All 7 AI models including Florence-2 and Spatial Multi-Method</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <div style="display: flex; align-items: start;">
+                                            <span style="color: #10B981; font-size: 20px; margin-right: 12px;">✓</span>
+                                            <span style="color: #374151; font-size: 15px; line-height: 1.6;">Batch processing up to 100 receipts at once</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <div style="display: flex; align-items: start;">
+                                            <span style="color: #10B981; font-size: 20px; margin-right: 12px;">✓</span>
+                                            <span style="color: #374151; font-size: 15px; line-height: 1.6;">Full API access with webhooks</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <div style="display: flex; align-items: start;">
+                                            <span style="color: #10B981; font-size: 20px; margin-right: 12px;">✓</span>
+                                            <span style="color: #374151; font-size: 15px; line-height: 1.6;">Priority email support</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td align="center" style="padding: 0 0 24px;">
+                                        <a href="{{upgrade_url}}" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #3B82F6, #2563EB); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                            Continue with {{plan_name}}
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Pricing Reminder -->
+                            <div style="text-align: center; padding: 24px; background: #FEF3C7; border-radius: 8px; margin-bottom: 24px;">
+                                <p style="margin: 0 0 8px; font-size: 14px; color: #92400E; font-weight: 500;">Special Offer</p>
+                                <p style="margin: 0; font-size: 24px; font-weight: 700; color: #78350F;">
+                                    ${{monthly_price}}<span style="font-size: 16px; font-weight: 400; color: #92400E;">/month</span>
+                                </p>
+                                <p style="margin: 8px 0 0; font-size: 14px; color: #92400E;">
+                                    or save 20% with annual billing
+                                </p>
+                            </div>
+
+                            <!-- Alternative Action -->
+                            <p style="margin: 0 0 16px; font-size: 14px; color: #6B7280; text-align: center;">
+                                Not ready yet? <a href="{{dashboard_url}}" style="color: #3B82F6; text-decoration: none;">View your dashboard</a> or 
+                                <a href="{{contact_url}}" style="color: #3B82F6; text-decoration: none;">contact us</a> if you have questions.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 32px 40px; background: #F9FAFB; border-top: 1px solid #E5E7EB; border-radius: 0 0 12px 12px;">
+                            <p style="margin: 0 0 16px; font-size: 14px; color: #6B7280; text-align: center;">
+                                Questions? We're here to help!<br>
+                                <a href="mailto:support@receiptextractor.com" style="color: #3B82F6; text-decoration: none;">support@receiptextractor.com</a>
+                            </p>
+                            
+                            <table role="presentation" style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{website_url}}" style="color: #6B7280; text-decoration: none; font-size: 12px; margin: 0 8px;">Website</a>
+                                        <span style="color: #D1D5DB;">|</span>
+                                        <a href="{{pricing_url}}" style="color: #6B7280; text-decoration: none; font-size: 12px; margin: 0 8px;">Pricing</a>
+                                        <span style="color: #D1D5DB;">|</span>
+                                        <a href="{{help_url}}" style="color: #6B7280; text-decoration: none; font-size: 12px; margin: 0 8px;">Help Center</a>
+                                        <span style="color: #D1D5DB;">|</span>
+                                        <a href="{{unsubscribe_url}}" style="color: #6B7280; text-decoration: none; font-size: 12px; margin: 0 8px;">Unsubscribe</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 16px 0 0; font-size: 12px; color: #9CA3AF; text-align: center;">
+                                &copy; 2024 Receipt Extractor. All rights reserved.<br>
+                                123 Tech Street, San Francisco, CA 94107
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

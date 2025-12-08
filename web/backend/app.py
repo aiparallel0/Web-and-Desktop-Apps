@@ -128,6 +128,14 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register quick extract routes: {e}")
 
+# Register analytics tracking routes
+try:
+    from analytics_routes import analytics_bp
+    app.register_blueprint(analytics_bp)
+    logger.info("Analytics tracking routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register analytics routes: {e}")
+
 # Initialize telemetry (OpenTelemetry tracing and metrics)
 try:
     from telemetry import setup_telemetry
