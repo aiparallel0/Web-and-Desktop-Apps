@@ -16,6 +16,7 @@
     
     <title>Pricing | Receipt Extractor</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/cookie-consent.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
     
@@ -58,6 +59,54 @@
                     <span class="toggle-slider" id="toggleSlider"></span>
                 </button>
                 <span id="annualLabel" class="toggle-label">Annual <span class="save-badge">Save 20%</span></span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Signals -->
+    <section style="background: #F9FAFB; padding: 24px 0; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB;">
+        <div class="container">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 48px; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                    </svg>
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">Secure & Encrypted</div>
+                        <div style="font-size: 0.875rem; color: #6B7280;">AES-256 + TLS 1.3</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">GDPR Compliant</div>
+                        <div style="font-size: 0.875rem; color: #6B7280;">Privacy guaranteed</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">SOC 2 Certified</div>
+                        <div style="font-size: 0.875rem; color: #6B7280;">Enterprise-grade security</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">10,000+ Users</div>
+                        <div style="font-size: 0.875rem; color: #6B7280;">Trusted worldwide</div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -652,5 +701,7 @@
             initStripe();
         });
     </script>
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/analytics-integration.js"></script>
 </body>
 </html>
