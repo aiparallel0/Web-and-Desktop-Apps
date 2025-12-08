@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email - Receipt Extractor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333333;
+        }
+        .message {
+            margin-bottom: 30px;
+            color: #555555;
+            font-size: 16px;
+        }
+        .verify-button {
+            display: inline-block;
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .verify-button:hover {
+            transform: translateY(-2px);
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .alternative-link {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #666666;
+        }
+        .alternative-link p {
+            margin: 5px 0;
+        }
+        .link-text {
+            word-break: break-all;
+            color: #667eea;
+            font-family: monospace;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666666;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 30px 0;
+        }
+        .features {
+            margin: 30px 0;
+        }
+        .feature-item {
+            padding: 10px 0;
+            color: #555555;
+        }
+        .feature-item strong {
+            color: #333333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Verify Your Email</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hi {{user_name}},
+            </div>
+            
+            <div class="message">
+                Welcome to Receipt Extractor! We're excited to have you on board.
+            </div>
+            
+            <div class="message">
+                To get started with your account, please verify your email address by clicking the button below:
+            </div>
+            
+            <div class="button-container">
+                <a href="{{verification_url}}" class="verify-button">Verify Email Address</a>
+            </div>
+            
+            <div class="alternative-link">
+                <p><strong>Button not working?</strong> Copy and paste this link into your browser:</p>
+                <p class="link-text">{{verification_url}}</p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="features">
+                <p><strong>Once verified, you'll have access to:</strong></p>
+                <div class="feature-item">✨ <strong>14-Day Pro Trial</strong> - Full access to all features</div>
+                <div class="feature-item">🚀 <strong>All 7 OCR Models</strong> - Best-in-class text extraction</div>
+                <div class="feature-item">📊 <strong>Batch Processing</strong> - Process multiple receipts at once</div>
+                <div class="feature-item">☁️ <strong>Cloud Storage</strong> - Securely store your receipts</div>
+                <div class="feature-item">🎁 <strong>Referral Rewards</strong> - Earn free months by referring friends</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="message">
+                This verification link will expire in 24 hours. If you didn't create this account, you can safely ignore this email.
+            </div>
+            
+            <div class="message">
+                Need help? We're here for you at <a href="mailto:support@receiptextractor.com">support@receiptextractor.com</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Receipt Extractor</strong></p>
+            <p>AI-Powered Receipt Text Extraction</p>
+            <p style="margin-top: 15px;">
+                <a href="{{base_url}}/help">Help Center</a> | 
+                <a href="{{base_url}}/privacy">Privacy Policy</a> | 
+                <a href="{{base_url}}/terms">Terms of Service</a>
+            </p>
+            <p style="margin-top: 15px; font-size: 12px; color: #999999;">
+                © 2024 Receipt Extractor. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

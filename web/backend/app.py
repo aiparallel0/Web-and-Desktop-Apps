@@ -112,6 +112,14 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register auth routes: {e}")
 
+# Register enhanced auth routes (email verification, trial, referrals)
+try:
+    from enhanced_auth_routes import register_enhanced_auth_routes
+    register_enhanced_auth_routes(app)
+    logger.info("Enhanced auth routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register enhanced auth routes: {e}")
+
 # Register billing routes
 try:
     from billing import register_billing_routes

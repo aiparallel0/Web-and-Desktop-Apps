@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usage Alert - Receipt Extractor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333333;
+        }
+        .message {
+            margin-bottom: 20px;
+            color: #555555;
+            font-size: 16px;
+        }
+        .usage-card {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        .usage-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .usage-stat:last-child {
+            border-bottom: none;
+        }
+        .usage-label {
+            font-weight: 600;
+            color: #333333;
+        }
+        .usage-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f5576c;
+        }
+        .progress-bar-container {
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        .upgrade-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .upgrade-banner h2 {
+            margin: 0 0 15px 0;
+            font-size: 24px;
+        }
+        .upgrade-banner p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .upgrade-button {
+            display: inline-block;
+            padding: 14px 40px;
+            background-color: #ffffff;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            margin: 20px 0 10px 0;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .upgrade-button:hover {
+            transform: translateY(-2px);
+        }
+        .plan-comparison {
+            margin: 30px 0;
+        }
+        .plan-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .plan-card h3 {
+            margin: 0 0 10px 0;
+            color: #333333;
+        }
+        .plan-feature {
+            padding: 8px 0;
+            color: #555555;
+        }
+        .plan-feature strong {
+            color: #667eea;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666666;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Usage Alert</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hi {{user_name}},
+            </div>
+            
+            <div class="message">
+                You've reached <strong>{{usage_percentage}}%</strong> of your monthly receipt processing limit.
+            </div>
+            
+            <div class="usage-card">
+                <div class="usage-stat">
+                    <span class="usage-label">Receipts Processed</span>
+                    <span class="usage-value">{{receipts_processed}} / {{receipts_limit}}</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: {{usage_percentage}}%"></div>
+                </div>
+                <div class="usage-stat">
+                    <span class="usage-label">Current Plan</span>
+                    <span class="usage-value">{{current_plan}}</span>
+                </div>
+                <div class="usage-stat">
+                    <span class="usage-label">Resets On</span>
+                    <span class="usage-value">{{reset_date}}</span>
+                </div>
+            </div>
+            
+            <div class="message">
+                {{#if near_limit}}
+                Don't let your workflow be interrupted! Upgrade now to process unlimited receipts and unlock premium features.
+                {{else}}
+                You're making great progress! Consider upgrading to avoid hitting your limit.
+                {{/if}}
+            </div>
+            
+            <div class="upgrade-banner">
+                <h2>🚀 Upgrade to Pro</h2>
+                <p>Process up to 500 receipts/month</p>
+                <p>5GB secure cloud storage</p>
+                <p>All 7 premium OCR models</p>
+                <p>Batch processing & API access</p>
+                <p style="font-size: 20px; font-weight: 700; margin-top: 20px;">Only $19/month</p>
+                <a href="{{upgrade_url}}" class="upgrade-button">Upgrade Now</a>
+            </div>
+            
+            <div class="plan-comparison">
+                <h3 style="color: #333333; margin-bottom: 20px;">Choose Your Plan</h3>
+                
+                <div class="plan-card">
+                    <h3>Pro - $19/month</h3>
+                    <div class="plan-feature">✓ <strong>500 receipts</strong> per month</div>
+                    <div class="plan-feature">✓ <strong>5GB</strong> cloud storage</div>
+                    <div class="plan-feature">✓ All 7 OCR models</div>
+                    <div class="plan-feature">✓ Batch processing</div>
+                    <div class="plan-feature">✓ API access</div>
+                </div>
+                
+                <div class="plan-card">
+                    <h3>Business - $49/month</h3>
+                    <div class="plan-feature">✓ <strong>2,000 receipts</strong> per month</div>
+                    <div class="plan-feature">✓ <strong>20GB</strong> cloud storage</div>
+                    <div class="plan-feature">✓ Priority support</div>
+                    <div class="plan-feature">✓ Custom models</div>
+                    <div class="plan-feature">✓ Team collaboration</div>
+                </div>
+            </div>
+            
+            <div class="message">
+                Questions about upgrading? Contact us at <a href="mailto:support@receiptextractor.com">support@receiptextractor.com</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Receipt Extractor</strong></p>
+            <p>AI-Powered Receipt Text Extraction</p>
+            <p style="margin-top: 15px;">
+                <a href="{{base_url}}/dashboard">Dashboard</a> | 
+                <a href="{{base_url}}/pricing">View All Plans</a> | 
+                <a href="{{base_url}}/help">Help Center</a>
+            </p>
+            <p style="margin-top: 15px; font-size: 12px; color: #999999;">
+                © 2024 Receipt Extractor. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

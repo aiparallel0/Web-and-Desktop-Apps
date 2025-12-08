@@ -36,7 +36,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             description="Database models and connection management for SQLAlchemy",
             dependencies=["shared.circular_exchange"],
             exports=["Base", "User", "Receipt", "Subscription", "APIKey", 
-                    "RefreshToken", "AuditLog", "get_db", "init_db", "CloudStorageProvider"]
+                    "RefreshToken", "AuditLog", "Referral", "get_db", "init_db", "CloudStorageProvider"]
         ))
     except Exception:
         pass  # Ignore registration errors during import
@@ -485,6 +485,21 @@ class User(Base):
     plan = Column(SQLEnum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
     stripe_customer_id = Column(String(255), nullable=True, unique=True)
 
+    # Trial Management
+    trial_start_date = Column(DateTime, nullable=True)
+    trial_end_date = Column(DateTime, nullable=True)
+    trial_activated = Column(Boolean, default=False)
+
+    # Referral System
+    referral_code = Column(String(20), unique=True, nullable=True, index=True)
+    referred_by = Column(GUID(), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    referral_count = Column(Integer, default=0)
+    referral_reward_months = Column(Integer, default=0)
+
+    # Onboarding
+    onboarding_completed = Column(Boolean, default=False)
+    onboarding_step = Column(Integer, default=0)
+
     # Usage Tracking
     receipts_processed_month = Column(Integer, default=0)
     storage_used_bytes = Column(Integer, default=0)
@@ -516,6 +531,8 @@ class User(Base):
         Index('idx_user_email', 'email'),
         Index('idx_user_plan', 'plan'),
         Index('idx_user_created_at', 'created_at'),
+        Index('idx_user_referral_code', 'referral_code'),
+        Index('idx_user_trial_end', 'trial_end_date'),
     )
 
     def __repr__(self):
@@ -730,6 +747,46 @@ class AuditLog(Base):
         return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id})>"
 
 
+class Referral(Base):
+    """Referral tracking for referral program"""
+    __tablename__ = "referrals"
+
+    # Primary Key
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
+
+    # Referrer (user who sent the referral)
+    referrer_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+
+    # Referred user (user who was referred)
+    referred_user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+
+    # Referral Details
+    referral_code = Column(String(20), nullable=False, index=True)
+    email = Column(String(255), nullable=True)  # Email of referred user (before signup)
+    
+    # Status
+    status = Column(String(50), default='pending')  # pending, signed_up, rewarded
+    
+    # Reward Tracking
+    reward_granted = Column(Boolean, default=False)
+    reward_granted_at = Column(DateTime, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)  # When referred user signed up
+
+    # Indexes
+    __table_args__ = (
+        Index('idx_referral_referrer_id', 'referrer_id'),
+        Index('idx_referral_referred_user_id', 'referred_user_id'),
+        Index('idx_referral_code', 'referral_code'),
+        Index('idx_referral_status', 'status'),
+    )
+
+    def __repr__(self):
+        return f"<Referral(id={self.id}, referrer_id={self.referrer_id}, status='{self.status}')>"
+
+
 # Module exports
 __all__ = [
     'Base',
@@ -739,6 +796,7 @@ __all__ = [
     'APIKey',
     'RefreshToken',
     'AuditLog',
+    'Referral',
     'SubscriptionPlan',
     'SubscriptionStatus',
     'CloudStorageProvider',

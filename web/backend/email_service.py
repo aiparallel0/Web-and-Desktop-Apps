@@ -192,6 +192,129 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send trial expiration reminder: {e}")
             return False
+    
+    def send_verification_email(
+        self,
+        user_email: str,
+        user_name: str,
+        verification_token: str
+    ) -> bool:
+        """
+        Send email verification email.
+        
+        Args:
+            user_email: User's email address
+            user_name: User's name
+            verification_token: Email verification token
+            
+        Returns:
+            True if sent successfully
+        """
+        try:
+            template = self.load_template('email_verification.html')
+            
+            base_url = os.getenv('BASE_URL', 'http://localhost:3000')
+            context = {
+                'user_name': user_name or 'there',
+                'verification_url': f"{base_url}/api/auth/verify-email?token={verification_token}",
+                'base_url': base_url
+            }
+            
+            html_content = self.render_template(template, context)
+            subject = "Verify your email - Receipt Extractor"
+            return self.send_email(user_email, subject, html_content)
+            
+        except Exception as e:
+            logger.error(f"Failed to send verification email: {e}")
+            return False
+    
+    def send_welcome_email(
+        self,
+        user_email: str,
+        user_name: str,
+        referral_code: str,
+        trial_end_date: str
+    ) -> bool:
+        """
+        Send welcome email after email verification.
+        
+        Args:
+            user_email: User's email address
+            user_name: User's name
+            referral_code: User's referral code
+            trial_end_date: Trial expiration date
+            
+        Returns:
+            True if sent successfully
+        """
+        try:
+            template = self.load_template('welcome.html')
+            
+            base_url = os.getenv('BASE_URL', 'http://localhost:3000')
+            context = {
+                'user_name': user_name or 'there',
+                'referral_code': referral_code,
+                'trial_end_date': trial_end_date,
+                'dashboard_url': f"{base_url}/dashboard.html",
+                'base_url': base_url
+            }
+            
+            html_content = self.render_template(template, context)
+            subject = "Welcome to Receipt Extractor - Your 14-Day Pro Trial Starts Now!"
+            return self.send_email(user_email, subject, html_content)
+            
+        except Exception as e:
+            logger.error(f"Failed to send welcome email: {e}")
+            return False
+    
+    def send_usage_alert(
+        self,
+        user_email: str,
+        user_name: str,
+        receipts_processed: int,
+        receipts_limit: int,
+        current_plan: str,
+        reset_date: str
+    ) -> bool:
+        """
+        Send usage alert email when approaching limit.
+        
+        Args:
+            user_email: User's email address
+            user_name: User's name
+            receipts_processed: Number of receipts processed
+            receipts_limit: Monthly limit
+            current_plan: Current subscription plan
+            reset_date: Date when usage resets
+            
+        Returns:
+            True if sent successfully
+        """
+        try:
+            template = self.load_template('usage_alert.html')
+            
+            usage_percentage = int((receipts_processed / receipts_limit) * 100)
+            base_url = os.getenv('BASE_URL', 'http://localhost:3000')
+            
+            context = {
+                'user_name': user_name or 'there',
+                'usage_percentage': usage_percentage,
+                'receipts_processed': receipts_processed,
+                'receipts_limit': receipts_limit,
+                'current_plan': current_plan.title(),
+                'reset_date': reset_date,
+                'near_limit': usage_percentage >= 90,
+                'upgrade_url': f"{base_url}/pricing.html",
+                'base_url': base_url
+            }
+            
+            html_content = self.render_template(template, context)
+            subject = f"Usage Alert: {usage_percentage}% of your monthly limit reached"
+            return self.send_email(user_email, subject, html_content)
+            
+        except Exception as e:
+            logger.error(f"Failed to send usage alert: {e}")
+            return False
 
 
 # Singleton instance
