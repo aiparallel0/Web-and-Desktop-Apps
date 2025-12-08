@@ -128,6 +128,14 @@ try:
 except ImportError as e:
     logger.warning(f"Could not register billing routes: {e}")
 
+# Register usage tracking routes
+try:
+    from usage_routes import register_usage_routes
+    register_usage_routes(app)
+    logger.info("Usage tracking routes registered")
+except ImportError as e:
+    logger.warning(f"Could not register usage routes: {e}")
+
 # Register quick extract routes (no auth required)
 try:
     from api import quick_extract_bp
