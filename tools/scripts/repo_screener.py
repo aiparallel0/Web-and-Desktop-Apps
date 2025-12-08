@@ -287,12 +287,51 @@ class RepositoryScreener:
         print("🔎 Finding missing implementations...")
         missing = []
         
+        # Extended list of known third-party and standard library modules
+        known_modules = {
+            'os', 'sys', 'json', 're', 'time', 'datetime', 'pathlib', 'typing',
+            'collections', 'dataclasses', 'ast', 'logging', 'unittest', 'pytest',
+            'flask', 'flask_cors', 'flask_sqlalchemy', 'werkzeug', 'sqlalchemy',
+            'bcrypt', 'jwt', 'stripe', 'boto3', 'botocore', 'google', 'dropbox',
+            'torch', 'transformers', 'PIL', 'numpy', 'cv2', 'easyocr', 'paddleocr',
+            'opentelemetry', 'redis', 'celery', 'requests', 'urllib', 'http',
+            'functools', 'itertools', 'hashlib', 'secrets', 'uuid', 'tempfile',
+            'subprocess', 'shutil', 'glob', 'platform', 'socket', 'threading',
+            'multiprocessing', 'queue', 'enum', 'abc', 'contextlib', 'warnings'
+        }
+        
         for file_path, imports in self.all_imports.items():
             for module, name in imports:
                 if not module:
                     continue
                 
-                # Convert module path to file path
+                # Skip known third-party and standard library modules
+                module_root = module.split('.')[0]
+                if module_root in known_modules:
+                    continue
+                
+                # Handle relative imports within the same package
+                # e.g., web/backend/auth.py importing from password (same directory)
+                if '/' in file_path:
+                    file_dir = '/'.join(file_path.split('/')[:-1])
+                    # Try sibling module (relative import)
+                    sibling_paths = [
+                        f"{file_dir}/{module}.py",
+                        f"{file_dir}/{module}/__init__.py",
+                    ]
+                    
+                    found = False
+                    for sibling_path in sibling_paths:
+                        if sibling_path in self.file_analyses:
+                            analysis = self.file_analyses[sibling_path]
+                            if name in analysis.functions or name in analysis.classes or name in analysis.exports or name == '*':
+                                found = True
+                                break
+                    
+                    if found:
+                        continue
+                
+                # Convert module path to file path (absolute imports)
                 module_parts = module.split('.')
                 
                 # Try to find the module file
@@ -313,15 +352,13 @@ class RepositoryScreener:
                             found = True
                             break
                 
-                if not found and not module.startswith(('os', 'sys', 'json', 're', 'time', 
-                                                        'datetime', 'pathlib', 'typing',
-                                                        'collections', 'dataclasses', 'ast',
-                                                        'logging', 'unittest', 'pytest')):
+                if not found:
                     missing.append({
                         'file': file_path,
                         'module': module,
                         'name': name,
-                        'import_statement': f"from {module} import {name}" if module else f"import {name}"
+                        'import_statement': f"from {module} import {name}" if module else f"import {name}",
+                        'likely_third_party': module_root in {'flask', 'sqlalchemy', 'werkzeug', 'bcrypt', 'jwt', 'stripe', 'torch', 'transformers'}
                     })
         
         print(f"   Found {len(missing)} potentially missing implementations")

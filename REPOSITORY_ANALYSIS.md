@@ -1,6 +1,6 @@
 # Repository Analysis Report
 
-**Generated:** 2025-12-08 06:24:50
+**Generated:** 2025-12-08 06:42:29
 
 ## 📊 Summary
 
@@ -12,7 +12,7 @@
 
 ## ⚠️ Issues Found
 
-- **Missing Implementations:** 512
+- **Missing Implementations:** 172
 - **Orphaned Imports:** 218
 - **Files Without Tests:** 79
 - **Missing Files:** 85
@@ -24,206 +24,206 @@
 Functions or classes that are imported but not defined in the expected module.
 
 - **File:** `web/backend/auth.py`
-  - **Import:** `from password import hash_password`
-  - **Missing:** `hash_password` from module `password`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from password import verify_password`
-  - **Missing:** `verify_password` from module `password`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from password import is_password_strong`
-  - **Missing:** `is_password_strong` from module `password`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from jwt_handler import create_access_token`
-  - **Missing:** `create_access_token` from module `jwt_handler`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from jwt_handler import create_refresh_token`
-  - **Missing:** `create_refresh_token` from module `jwt_handler`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from jwt_handler import verify_access_token`
-  - **Missing:** `verify_access_token` from module `jwt_handler`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from jwt_handler import verify_refresh_token`
-  - **Missing:** `verify_refresh_token` from module `jwt_handler`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from jwt_handler import revoke_refresh_token`
-  - **Missing:** `revoke_refresh_token` from module `jwt_handler`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from decorators import require_auth`
-  - **Missing:** `require_auth` from module `decorators`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from decorators import require_admin`
-  - **Missing:** `require_admin` from module `decorators`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from decorators import rate_limit`
-  - **Missing:** `rate_limit` from module `decorators`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from decorators import require_plan`
-  - **Missing:** `require_plan` from module `decorators`
-
-- **File:** `web/backend/auth.py`
-  - **Import:** `from decorators import check_usage_limit`
-  - **Missing:** `check_usage_limit` from module `decorators`
-
-- **File:** `web/backend/auth.py`
   - **Import:** `from routes import auth_bp`
   - **Missing:** `auth_bp` from module `routes`
 
-- **File:** `web/backend/auth.py`
-  - **Import:** `from routes import register_auth_routes`
-  - **Missing:** `register_auth_routes` from module `routes`
+- **File:** `web/backend/errors.py`
+  - **Import:** `from shared.utils.errors import ERROR_METADATA`
+  - **Missing:** `ERROR_METADATA` from module `shared.utils.errors`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import create_engine`
-  - **Missing:** `create_engine` from module `sqlalchemy`
+- **File:** `web/backend/api/websocket.py`
+  - **Import:** `from flask_socketio import SocketIO`
+  - **Missing:** `SocketIO` from module `flask_socketio`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.orm import sessionmaker`
-  - **Missing:** `sessionmaker` from module `sqlalchemy.orm`
+- **File:** `web/backend/api/websocket.py`
+  - **Import:** `from flask_socketio import emit`
+  - **Missing:** `emit` from module `flask_socketio`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.orm import scoped_session`
-  - **Missing:** `scoped_session` from module `sqlalchemy.orm`
+- **File:** `web/backend/api/websocket.py`
+  - **Import:** `from flask_socketio import join_room`
+  - **Missing:** `join_room` from module `flask_socketio`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.pool import NullPool`
-  - **Missing:** `NullPool` from module `sqlalchemy.pool`
+- **File:** `web/backend/api/websocket.py`
+  - **Import:** `from flask_socketio import leave_room`
+  - **Missing:** `leave_room` from module `flask_socketio`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from contextlib import contextmanager`
-  - **Missing:** `contextmanager` from module `contextlib`
+- **File:** `web/backend/api/websocket.py`
+  - **Import:** `from flask_socketio import disconnect`
+  - **Missing:** `disconnect` from module `flask_socketio`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Column`
-  - **Missing:** `Column` from module `sqlalchemy`
+- **File:** `web/backend/api/__init__.py`
+  - **Import:** `from quick_extract import quick_extract_bp`
+  - **Missing:** `quick_extract_bp` from module `quick_extract`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import String`
-  - **Missing:** `String` from module `sqlalchemy`
+- **File:** `web/backend/billing/middleware.py`
+  - **Import:** `from plans import SUBSCRIPTION_PLANS`
+  - **Missing:** `SUBSCRIPTION_PLANS` from module `plans`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import DateTime`
-  - **Missing:** `DateTime` from module `sqlalchemy`
+- **File:** `web/backend/billing/middleware.py`
+  - **Import:** `from plans import PLAN_HIERARCHY`
+  - **Missing:** `PLAN_HIERARCHY` from module `plans`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Boolean`
-  - **Missing:** `Boolean` from module `sqlalchemy`
+- **File:** `web/backend/billing/__init__.py`
+  - **Import:** `from plans import SUBSCRIPTION_PLANS`
+  - **Missing:** `SUBSCRIPTION_PLANS` from module `plans`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Integer`
-  - **Missing:** `Integer` from module `sqlalchemy`
+- **File:** `web/backend/billing/__init__.py`
+  - **Import:** `from routes import billing_bp`
+  - **Missing:** `billing_bp` from module `routes`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Float`
-  - **Missing:** `Float` from module `sqlalchemy`
+- **File:** `web/backend/billing/routes.py`
+  - **Import:** `from plans import SUBSCRIPTION_PLANS`
+  - **Missing:** `SUBSCRIPTION_PLANS` from module `plans`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import ForeignKey`
-  - **Missing:** `ForeignKey` from module `sqlalchemy`
+- **File:** `web/backend/billing/routes.py`
+  - **Import:** `from stripe_handler import STRIPE_AVAILABLE`
+  - **Missing:** `STRIPE_AVAILABLE` from module `stripe_handler`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Text`
-  - **Missing:** `Text` from module `sqlalchemy`
+- **File:** `web/backend/storage/gdrive_handler.py`
+  - **Import:** `from io import BytesIO`
+  - **Missing:** `BytesIO` from module `io`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import JSON`
-  - **Missing:** `JSON` from module `sqlalchemy`
+- **File:** `web/backend/storage/s3_handler.py`
+  - **Import:** `from io import BytesIO`
+  - **Missing:** `BytesIO` from module `io`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Enum`
-  - **Missing:** `Enum` from module `sqlalchemy`
+- **File:** `web/backend/storage/dropbox_handler.py`
+  - **Import:** `from io import BytesIO`
+  - **Missing:** `BytesIO` from module `io`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy import Index`
-  - **Missing:** `Index` from module `sqlalchemy`
+- **File:** `migrations/versions/002_cloud_storage_fields.py`
+  - **Import:** `from alembic import op`
+  - **Missing:** `op` from module `alembic`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.orm import declarative_base`
-  - **Missing:** `declarative_base` from module `sqlalchemy.orm`
+- **File:** `migrations/versions/001_initial_schema.py`
+  - **Import:** `from alembic import op`
+  - **Missing:** `op` from module `alembic`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.orm import relationship`
-  - **Missing:** `relationship` from module `sqlalchemy.orm`
+- **File:** `tools/scripts/check_dependencies.py`
+  - **Import:** `from __future__ import annotations`
+  - **Missing:** `annotations` from module `__future__`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.types import TypeDecorator`
-  - **Missing:** `TypeDecorator` from module `sqlalchemy.types`
+- **File:** `tools/tests/pytest_custom_output.py`
+  - **Import:** `from _pytest.terminal import TerminalReporter`
+  - **Missing:** `TerminalReporter` from module `_pytest.terminal`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from sqlalchemy.types import CHAR`
-  - **Missing:** `CHAR` from module `sqlalchemy.types`
+- **File:** `tools/tests/test_shared_helpers.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from flask import Blueprint`
-  - **Missing:** `Blueprint` from module `flask`
+- **File:** `tools/tests/test_validation.py`
+  - **Import:** `from shared.utils.validation import MAX_FILE_SIZES`
+  - **Missing:** `MAX_FILE_SIZES` from module `shared.utils.validation`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from flask import request`
-  - **Missing:** `request` from module `flask`
+- **File:** `tools/tests/test_plan_enhancements.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from flask import jsonify`
-  - **Missing:** `jsonify` from module `flask`
+- **File:** `tools/tests/integration/test_receipt_workflow.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/database.py`
-  - **Import:** `from flask import g`
-  - **Missing:** `g` from module `flask`
+- **File:** `tools/tests/circular_exchange/test_persist.py`
+  - **Import:** `from shared.circular_exchange.persist.persistence import PERSISTENCE_LAYER`
+  - **Missing:** `PERSISTENCE_LAYER` from module `shared.circular_exchange.persist.persistence`
 
-- **File:** `web/backend/decorators.py`
-  - **Import:** `from functools import wraps`
-  - **Missing:** `wraps` from module `functools`
+- **File:** `tools/tests/circular_exchange/test_persist.py`
+  - **Import:** `from shared.circular_exchange.analysis.data_collector import TestResult`
+  - **Missing:** `TestResult` from module `shared.circular_exchange.analysis.data_collector`
 
-- **File:** `web/backend/decorators.py`
-  - **Import:** `from flask import request`
-  - **Missing:** `request` from module `flask`
+- **File:** `tools/tests/circular_exchange/test_persist.py`
+  - **Import:** `from shared.circular_exchange.analysis.data_collector import TestStatus`
+  - **Missing:** `TestStatus` from module `shared.circular_exchange.analysis.data_collector`
 
-- **File:** `web/backend/decorators.py`
-  - **Import:** `from flask import jsonify`
-  - **Missing:** `jsonify` from module `flask`
+- **File:** `tools/tests/circular_exchange/test_persist.py`
+  - **Import:** `from shared.circular_exchange.persist.webhook_notifier import WEBHOOK_NOTIFIER`
+  - **Missing:** `WEBHOOK_NOTIFIER` from module `shared.circular_exchange.persist.webhook_notifier`
 
-- **File:** `web/backend/decorators.py`
-  - **Import:** `from flask import g`
-  - **Missing:** `g` from module `flask`
+- **File:** `tools/tests/circular_exchange/test_analysis.py`
+  - **Import:** `from shared.circular_exchange.analysis.intelligent_analyzer import INTELLIGENT_ANALYZER`
+  - **Missing:** `INTELLIGENT_ANALYZER` from module `shared.circular_exchange.analysis.intelligent_analyzer`
 
-- **File:** `web/backend/config.py`
-  - **Import:** `from functools import lru_cache`
-  - **Missing:** `lru_cache` from module `functools`
+- **File:** `tools/tests/circular_exchange/test_core.py`
+  - **Import:** `from shared.circular_exchange.core.project_config import PROJECT_CONFIG`
+  - **Missing:** `PROJECT_CONFIG` from module `shared.circular_exchange.core.project_config`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from flask import Flask`
-  - **Missing:** `Flask` from module `flask`
+- **File:** `tools/tests/shared/test_ocr.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from flask import request`
-  - **Missing:** `request` from module `flask`
+- **File:** `tools/tests/shared/test_ocr.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from flask import jsonify`
-  - **Missing:** `jsonify` from module `flask`
+- **File:** `tools/tests/shared/test_models.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from flask import send_file`
-  - **Missing:** `send_file` from module `flask`
+- **File:** `tools/tests/shared/test_models.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from flask_cors import CORS`
-  - **Missing:** `CORS` from module `flask_cors`
+- **File:** `tools/tests/shared/test_models.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-- **File:** `web/backend/app.py`
-  - **Import:** `from werkzeug.utils import secure_filename`
-  - **Missing:** `secure_filename` from module `werkzeug.utils`
+- **File:** `tools/tests/shared/test_models.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
 
-*...and 462 more*
+- **File:** `tools/tests/shared/test_spatial_ocr.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `tools/tests/shared/test_utils.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `tools/tests/shared/test_utils.py`
+  - **Import:** `from shared.utils.image import BRIGHTNESS_THRESHOLD`
+  - **Missing:** `BRIGHTNESS_THRESHOLD` from module `shared.utils.image`
+
+- **File:** `tools/tests/shared/test_utils.py`
+  - **Import:** `from shared.utils.image import CONTRAST_THRESHOLD`
+  - **Missing:** `CONTRAST_THRESHOLD` from module `shared.utils.image`
+
+- **File:** `tools/tests/shared/test_utils.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `shared/models/semantic_validation.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `shared/models/semantic_validation.py`
+  - **Import:** `from decimal import InvalidOperation`
+  - **Missing:** `InvalidOperation` from module `decimal`
+
+- **File:** `shared/models/spatial_ocr.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `shared/models/receipt_prompts.py`
+  - **Import:** `from decimal import Decimal`
+  - **Missing:** `Decimal` from module `decimal`
+
+- **File:** `shared/models/receipt_prompts.py`
+  - **Import:** `from decimal import InvalidOperation`
+  - **Missing:** `InvalidOperation` from module `decimal`
+
+- **File:** `shared/models/ocr_common.py`
+  - **Import:** `from ocr import SKIP_KEYWORDS`
+  - **Missing:** `SKIP_KEYWORDS` from module `ocr`
+
+- **File:** `shared/models/ocr_common.py`
+  - **Import:** `from ocr import PRICE_MIN`
+  - **Missing:** `PRICE_MIN` from module `ocr`
+
+- **File:** `shared/models/ocr_common.py`
+  - **Import:** `from ocr import PRICE_MAX`
+  - **Missing:** `PRICE_MAX` from module `ocr`
+
+*...and 122 more*
 
 ## 🗑️ Orphaned Imports
 
@@ -904,11 +904,7 @@ Functions that appear to be defined but never called (heuristic analysis).
 References in documentation that don't match the actual code.
 
 - **Type:** README reference
-  - **Name:** `ocr_paddleocr`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `craft_detector`
+  - **Name:** `STRIPE_WEBHOOK_SECRET`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -916,19 +912,7 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `JWT_SECRET`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `STRIPE_WEBHOOK_SECRET`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `DB_POOL_MAX_OVERFLOW`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `donut_cord`
+  - **Name:** `ocr_tesseract`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -936,19 +920,7 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
-  - **Name:** `DB_POOL_SIZE`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `ocr_tesseract`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `ocr_paddle`
-  - **Issue:** Referenced in README but not found in code
-
-- **Type:** README reference
-  - **Name:** `ocr_easyocr`
+  - **Name:** `JWT_SECRET`
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
@@ -956,7 +928,35 @@ References in documentation that don't match the actual code.
   - **Issue:** Referenced in README but not found in code
 
 - **Type:** README reference
+  - **Name:** `DB_POOL_MAX_OVERFLOW`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `DB_POOL_SIZE`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_easyocr`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
   - **Name:** `spatial_multi`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_paddle`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `craft_detector`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `ocr_paddleocr`
+  - **Issue:** Referenced in README but not found in code
+
+- **Type:** README reference
+  - **Name:** `donut_cord`
   - **Issue:** Referenced in README but not found in code
 
 ## 📄 File Analysis Details

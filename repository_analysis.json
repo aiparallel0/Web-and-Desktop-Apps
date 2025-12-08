@@ -10,3075 +10,1207 @@
     "missing_implementations": [
       {
         "file": "web/backend/auth.py",
-        "module": "password",
-        "name": "hash_password",
-        "import_statement": "from password import hash_password"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "password",
-        "name": "verify_password",
-        "import_statement": "from password import verify_password"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "password",
-        "name": "is_password_strong",
-        "import_statement": "from password import is_password_strong"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "jwt_handler",
-        "name": "create_access_token",
-        "import_statement": "from jwt_handler import create_access_token"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "jwt_handler",
-        "name": "create_refresh_token",
-        "import_statement": "from jwt_handler import create_refresh_token"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "jwt_handler",
-        "name": "verify_access_token",
-        "import_statement": "from jwt_handler import verify_access_token"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "jwt_handler",
-        "name": "verify_refresh_token",
-        "import_statement": "from jwt_handler import verify_refresh_token"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "jwt_handler",
-        "name": "revoke_refresh_token",
-        "import_statement": "from jwt_handler import revoke_refresh_token"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "decorators",
-        "name": "require_auth",
-        "import_statement": "from decorators import require_auth"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "decorators",
-        "name": "require_admin",
-        "import_statement": "from decorators import require_admin"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "decorators",
-        "name": "rate_limit",
-        "import_statement": "from decorators import rate_limit"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "decorators",
-        "name": "require_plan",
-        "import_statement": "from decorators import require_plan"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "decorators",
-        "name": "check_usage_limit",
-        "import_statement": "from decorators import check_usage_limit"
-      },
-      {
-        "file": "web/backend/auth.py",
         "module": "routes",
         "name": "auth_bp",
-        "import_statement": "from routes import auth_bp"
-      },
-      {
-        "file": "web/backend/auth.py",
-        "module": "routes",
-        "name": "register_auth_routes",
-        "import_statement": "from routes import register_auth_routes"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "create_engine",
-        "import_statement": "from sqlalchemy import create_engine"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.orm",
-        "name": "sessionmaker",
-        "import_statement": "from sqlalchemy.orm import sessionmaker"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.orm",
-        "name": "scoped_session",
-        "import_statement": "from sqlalchemy.orm import scoped_session"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.pool",
-        "name": "NullPool",
-        "import_statement": "from sqlalchemy.pool import NullPool"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "contextlib",
-        "name": "contextmanager",
-        "import_statement": "from contextlib import contextmanager"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Column",
-        "import_statement": "from sqlalchemy import Column"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "String",
-        "import_statement": "from sqlalchemy import String"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "DateTime",
-        "import_statement": "from sqlalchemy import DateTime"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Boolean",
-        "import_statement": "from sqlalchemy import Boolean"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Integer",
-        "import_statement": "from sqlalchemy import Integer"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Float",
-        "import_statement": "from sqlalchemy import Float"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "ForeignKey",
-        "import_statement": "from sqlalchemy import ForeignKey"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Text",
-        "import_statement": "from sqlalchemy import Text"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "JSON",
-        "import_statement": "from sqlalchemy import JSON"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Enum",
-        "import_statement": "from sqlalchemy import Enum"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy",
-        "name": "Index",
-        "import_statement": "from sqlalchemy import Index"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.orm",
-        "name": "declarative_base",
-        "import_statement": "from sqlalchemy.orm import declarative_base"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.orm",
-        "name": "relationship",
-        "import_statement": "from sqlalchemy.orm import relationship"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.types",
-        "name": "TypeDecorator",
-        "import_statement": "from sqlalchemy.types import TypeDecorator"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "sqlalchemy.types",
-        "name": "CHAR",
-        "import_statement": "from sqlalchemy.types import CHAR"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "flask",
-        "name": "Blueprint",
-        "import_statement": "from flask import Blueprint"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/database.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
-      },
-      {
-        "file": "web/backend/decorators.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
-      },
-      {
-        "file": "web/backend/decorators.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/decorators.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/decorators.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
-      },
-      {
-        "file": "web/backend/config.py",
-        "module": "functools",
-        "name": "lru_cache",
-        "import_statement": "from functools import lru_cache"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "flask",
-        "name": "Flask",
-        "import_statement": "from flask import Flask"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "flask",
-        "name": "send_file",
-        "import_statement": "from flask import send_file"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "flask_cors",
-        "name": "CORS",
-        "import_statement": "from flask_cors import CORS"
-      },
-      {
-        "file": "web/backend/app.py",
-        "module": "werkzeug.utils",
-        "name": "secure_filename",
-        "import_statement": "from werkzeug.utils import secure_filename"
+        "import_statement": "from routes import auth_bp",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/errors.py",
         "module": "shared.utils.errors",
         "name": "ERROR_METADATA",
-        "import_statement": "from shared.utils.errors import ERROR_METADATA"
-      },
-      {
-        "file": "web/backend/routes.py",
-        "module": "flask",
-        "name": "Blueprint",
-        "import_statement": "from flask import Blueprint"
-      },
-      {
-        "file": "web/backend/routes.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/routes.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/routes.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
-      },
-      {
-        "file": "web/backend/routes.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
-      },
-      {
-        "file": "web/backend/api/websocket.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
+        "import_statement": "from shared.utils.errors import ERROR_METADATA",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/websocket.py",
         "module": "flask_socketio",
         "name": "SocketIO",
-        "import_statement": "from flask_socketio import SocketIO"
+        "import_statement": "from flask_socketio import SocketIO",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/websocket.py",
         "module": "flask_socketio",
         "name": "emit",
-        "import_statement": "from flask_socketio import emit"
+        "import_statement": "from flask_socketio import emit",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/websocket.py",
         "module": "flask_socketio",
         "name": "join_room",
-        "import_statement": "from flask_socketio import join_room"
+        "import_statement": "from flask_socketio import join_room",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/websocket.py",
         "module": "flask_socketio",
         "name": "leave_room",
-        "import_statement": "from flask_socketio import leave_room"
+        "import_statement": "from flask_socketio import leave_room",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/websocket.py",
         "module": "flask_socketio",
         "name": "disconnect",
-        "import_statement": "from flask_socketio import disconnect"
-      },
-      {
-        "file": "web/backend/api/quick_extract.py",
-        "module": "flask",
-        "name": "Blueprint",
-        "import_statement": "from flask import Blueprint"
-      },
-      {
-        "file": "web/backend/api/quick_extract.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/api/quick_extract.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
+        "import_statement": "from flask_socketio import disconnect",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/api/__init__.py",
         "module": "quick_extract",
         "name": "quick_extract_bp",
-        "import_statement": "from quick_extract import quick_extract_bp"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "BaseTrainer",
-        "import_statement": "from base import BaseTrainer"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingJob",
-        "import_statement": "from base import TrainingJob"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingConfig",
-        "import_statement": "from base import TrainingConfig"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingDataset",
-        "import_statement": "from base import TrainingDataset"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingStatus",
-        "import_statement": "from base import TrainingStatus"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingProvider",
-        "import_statement": "from base import TrainingProvider"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingMetrics",
-        "import_statement": "from base import TrainingMetrics"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingError",
-        "import_statement": "from base import TrainingError"
-      },
-      {
-        "file": "web/backend/training/hf_trainer.py",
-        "module": "base",
-        "name": "TrainingStartError",
-        "import_statement": "from base import TrainingStartError"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "BaseTrainer",
-        "import_statement": "from base import BaseTrainer"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingJob",
-        "import_statement": "from base import TrainingJob"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingConfig",
-        "import_statement": "from base import TrainingConfig"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingDataset",
-        "import_statement": "from base import TrainingDataset"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingStatus",
-        "import_statement": "from base import TrainingStatus"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingProvider",
-        "import_statement": "from base import TrainingProvider"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingMetrics",
-        "import_statement": "from base import TrainingMetrics"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingError",
-        "import_statement": "from base import TrainingError"
-      },
-      {
-        "file": "web/backend/training/runpod_trainer.py",
-        "module": "base",
-        "name": "TrainingStartError",
-        "import_statement": "from base import TrainingStartError"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "BaseTrainer",
-        "import_statement": "from base import BaseTrainer"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingJob",
-        "import_statement": "from base import TrainingJob"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingConfig",
-        "import_statement": "from base import TrainingConfig"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingDataset",
-        "import_statement": "from base import TrainingDataset"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingStatus",
-        "import_statement": "from base import TrainingStatus"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingProvider",
-        "import_statement": "from base import TrainingProvider"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingMetrics",
-        "import_statement": "from base import TrainingMetrics"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingError",
-        "import_statement": "from base import TrainingError"
-      },
-      {
-        "file": "web/backend/training/replicate_trainer.py",
-        "module": "base",
-        "name": "TrainingStartError",
-        "import_statement": "from base import TrainingStartError"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "base",
-        "name": "BaseTrainer",
-        "import_statement": "from base import BaseTrainer"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "base",
-        "name": "TrainingJob",
-        "import_statement": "from base import TrainingJob"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "base",
-        "name": "TrainingConfig",
-        "import_statement": "from base import TrainingConfig"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "base",
-        "name": "TrainingStatus",
-        "import_statement": "from base import TrainingStatus"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "hf_trainer",
-        "name": "HuggingFaceTrainer",
-        "import_statement": "from hf_trainer import HuggingFaceTrainer"
-      },
-      {
-        "file": "web/backend/training/__init__.py",
-        "module": "runpod_trainer",
-        "name": "RunPodTrainer",
-        "import_statement": "from runpod_trainer import RunPodTrainer"
-      },
-      {
-        "file": "web/backend/training/base.py",
-        "module": "abc",
-        "name": "ABC",
-        "import_statement": "from abc import ABC"
-      },
-      {
-        "file": "web/backend/training/base.py",
-        "module": "abc",
-        "name": "abstractmethod",
-        "import_statement": "from abc import abstractmethod"
-      },
-      {
-        "file": "web/backend/training/base.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "web/backend/billing/middleware.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
-      },
-      {
-        "file": "web/backend/billing/middleware.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
-      },
-      {
-        "file": "web/backend/billing/middleware.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/billing/middleware.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
+        "import_statement": "from quick_extract import quick_extract_bp",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/middleware.py",
         "module": "plans",
         "name": "SUBSCRIPTION_PLANS",
-        "import_statement": "from plans import SUBSCRIPTION_PLANS"
+        "import_statement": "from plans import SUBSCRIPTION_PLANS",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/middleware.py",
         "module": "plans",
         "name": "PLAN_HIERARCHY",
-        "import_statement": "from plans import PLAN_HIERARCHY"
-      },
-      {
-        "file": "web/backend/billing/middleware.py",
-        "module": "plans",
-        "name": "get_plan_features",
-        "import_statement": "from plans import get_plan_features"
+        "import_statement": "from plans import PLAN_HIERARCHY",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/__init__.py",
         "module": "plans",
         "name": "SUBSCRIPTION_PLANS",
-        "import_statement": "from plans import SUBSCRIPTION_PLANS"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "plans",
-        "name": "get_plan_features",
-        "import_statement": "from plans import get_plan_features"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "plans",
-        "name": "is_feature_available",
-        "import_statement": "from plans import is_feature_available"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "stripe_handler",
-        "name": "StripeHandler",
-        "import_statement": "from stripe_handler import StripeHandler"
+        "import_statement": "from plans import SUBSCRIPTION_PLANS",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/__init__.py",
         "module": "routes",
         "name": "billing_bp",
-        "import_statement": "from routes import billing_bp"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "routes",
-        "name": "register_billing_routes",
-        "import_statement": "from routes import register_billing_routes"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "middleware",
-        "name": "require_subscription",
-        "import_statement": "from middleware import require_subscription"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "middleware",
-        "name": "check_usage_limits",
-        "import_statement": "from middleware import check_usage_limits"
-      },
-      {
-        "file": "web/backend/billing/__init__.py",
-        "module": "middleware",
-        "name": "UsageLimitExceeded",
-        "import_statement": "from middleware import UsageLimitExceeded"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "flask",
-        "name": "Blueprint",
-        "import_statement": "from flask import Blueprint"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
+        "import_statement": "from routes import billing_bp",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/routes.py",
         "module": "plans",
         "name": "SUBSCRIPTION_PLANS",
-        "import_statement": "from plans import SUBSCRIPTION_PLANS"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "plans",
-        "name": "get_plan_features",
-        "import_statement": "from plans import get_plan_features"
-      },
-      {
-        "file": "web/backend/billing/routes.py",
-        "module": "stripe_handler",
-        "name": "StripeHandler",
-        "import_statement": "from stripe_handler import StripeHandler"
+        "import_statement": "from plans import SUBSCRIPTION_PLANS",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/billing/routes.py",
         "module": "stripe_handler",
         "name": "STRIPE_AVAILABLE",
-        "import_statement": "from stripe_handler import STRIPE_AVAILABLE"
+        "import_statement": "from stripe_handler import STRIPE_AVAILABLE",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/storage/gdrive_handler.py",
         "module": "io",
         "name": "BytesIO",
-        "import_statement": "from io import BytesIO"
-      },
-      {
-        "file": "web/backend/storage/gdrive_handler.py",
-        "module": "base",
-        "name": "BaseStorageHandler",
-        "import_statement": "from base import BaseStorageHandler"
-      },
-      {
-        "file": "web/backend/storage/gdrive_handler.py",
-        "module": "base",
-        "name": "StorageFile",
-        "import_statement": "from base import StorageFile"
-      },
-      {
-        "file": "web/backend/storage/gdrive_handler.py",
-        "module": "base",
-        "name": "UploadResult",
-        "import_statement": "from base import UploadResult"
-      },
-      {
-        "file": "web/backend/storage/gdrive_handler.py",
-        "module": "base",
-        "name": "StorageError",
-        "import_statement": "from base import StorageError"
-      },
-      {
-        "file": "web/backend/storage/gdrive_handler.py",
-        "module": "base",
-        "name": "StorageProvider",
-        "import_statement": "from base import StorageProvider"
+        "import_statement": "from io import BytesIO",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/storage/s3_handler.py",
         "module": "io",
         "name": "BytesIO",
-        "import_statement": "from io import BytesIO"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "BaseStorageHandler",
-        "import_statement": "from base import BaseStorageHandler"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "StorageFile",
-        "import_statement": "from base import StorageFile"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "UploadResult",
-        "import_statement": "from base import UploadResult"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "StorageError",
-        "import_statement": "from base import StorageError"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "UploadError",
-        "import_statement": "from base import UploadError"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "DownloadError",
-        "import_statement": "from base import DownloadError"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "DeleteError",
-        "import_statement": "from base import DeleteError"
-      },
-      {
-        "file": "web/backend/storage/s3_handler.py",
-        "module": "base",
-        "name": "StorageProvider",
-        "import_statement": "from base import StorageProvider"
+        "import_statement": "from io import BytesIO",
+        "likely_third_party": false
       },
       {
         "file": "web/backend/storage/dropbox_handler.py",
         "module": "io",
         "name": "BytesIO",
-        "import_statement": "from io import BytesIO"
-      },
-      {
-        "file": "web/backend/storage/dropbox_handler.py",
-        "module": "base",
-        "name": "BaseStorageHandler",
-        "import_statement": "from base import BaseStorageHandler"
-      },
-      {
-        "file": "web/backend/storage/dropbox_handler.py",
-        "module": "base",
-        "name": "StorageFile",
-        "import_statement": "from base import StorageFile"
-      },
-      {
-        "file": "web/backend/storage/dropbox_handler.py",
-        "module": "base",
-        "name": "UploadResult",
-        "import_statement": "from base import UploadResult"
-      },
-      {
-        "file": "web/backend/storage/dropbox_handler.py",
-        "module": "base",
-        "name": "StorageError",
-        "import_statement": "from base import StorageError"
-      },
-      {
-        "file": "web/backend/storage/dropbox_handler.py",
-        "module": "base",
-        "name": "StorageProvider",
-        "import_statement": "from base import StorageProvider"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "base",
-        "name": "BaseStorageHandler",
-        "import_statement": "from base import BaseStorageHandler"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "base",
-        "name": "StorageFile",
-        "import_statement": "from base import StorageFile"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "base",
-        "name": "StorageError",
-        "import_statement": "from base import StorageError"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "s3_handler",
-        "name": "S3StorageHandler",
-        "import_statement": "from s3_handler import S3StorageHandler"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "gdrive_handler",
-        "name": "GoogleDriveHandler",
-        "import_statement": "from gdrive_handler import GoogleDriveHandler"
-      },
-      {
-        "file": "web/backend/storage/__init__.py",
-        "module": "dropbox_handler",
-        "name": "DropboxStorageHandler",
-        "import_statement": "from dropbox_handler import DropboxStorageHandler"
-      },
-      {
-        "file": "web/backend/storage/base.py",
-        "module": "abc",
-        "name": "ABC",
-        "import_statement": "from abc import ABC"
-      },
-      {
-        "file": "web/backend/storage/base.py",
-        "module": "abc",
-        "name": "abstractmethod",
-        "import_statement": "from abc import abstractmethod"
-      },
-      {
-        "file": "web/backend/storage/base.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "web/backend/telemetry/otel_config.py",
-        "module": "functools",
-        "name": "lru_cache",
-        "import_statement": "from functools import lru_cache"
-      },
-      {
-        "file": "web/backend/telemetry/custom_metrics.py",
-        "module": "functools",
-        "name": "lru_cache",
-        "import_statement": "from functools import lru_cache"
-      },
-      {
-        "file": "web/backend/telemetry/custom_metrics.py",
-        "module": "otel_config",
-        "name": "get_meter",
-        "import_statement": "from otel_config import get_meter"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "otel_config",
-        "name": "setup_telemetry",
-        "import_statement": "from otel_config import setup_telemetry"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "otel_config",
-        "name": "get_tracer",
-        "import_statement": "from otel_config import get_tracer"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "otel_config",
-        "name": "get_meter",
-        "import_statement": "from otel_config import get_meter"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "custom_metrics",
-        "name": "track_extraction",
-        "import_statement": "from custom_metrics import track_extraction"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "custom_metrics",
-        "name": "track_error",
-        "import_statement": "from custom_metrics import track_error"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "custom_metrics",
-        "name": "track_api_request",
-        "import_statement": "from custom_metrics import track_api_request"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "custom_metrics",
-        "name": "get_metrics_summary",
-        "import_statement": "from custom_metrics import get_metrics_summary"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "analytics",
-        "name": "AnalyticsTracker",
-        "import_statement": "from analytics import AnalyticsTracker"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "analytics",
-        "name": "track_event",
-        "import_statement": "from analytics import track_event"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "analytics",
-        "name": "track_user_action",
-        "import_statement": "from analytics import track_user_action"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "cefr_bridge",
-        "name": "CEFRBridge",
-        "import_statement": "from cefr_bridge import CEFRBridge"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "cefr_bridge",
-        "name": "get_cefr_bridge",
-        "import_statement": "from cefr_bridge import get_cefr_bridge"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "cefr_bridge",
-        "name": "report_to_cefr",
-        "import_statement": "from cefr_bridge import report_to_cefr"
-      },
-      {
-        "file": "web/backend/telemetry/__init__.py",
-        "module": "cefr_bridge",
-        "name": "report_feedback_to_cefr",
-        "import_statement": "from cefr_bridge import report_feedback_to_cefr"
-      },
-      {
-        "file": "web/backend/security/headers.py",
-        "module": "flask",
-        "name": "Flask",
-        "import_statement": "from flask import Flask"
-      },
-      {
-        "file": "web/backend/security/headers.py",
-        "module": "flask",
-        "name": "Response",
-        "import_statement": "from flask import Response"
-      },
-      {
-        "file": "web/backend/security/validation_schemas.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
-      },
-      {
-        "file": "web/backend/security/validation_schemas.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/security/validation_schemas.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/security/rate_limiting.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
-      },
-      {
-        "file": "web/backend/security/rate_limiting.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "web/backend/security/rate_limiting.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "web/backend/security/rate_limiting.py",
-        "module": "flask",
-        "name": "g",
-        "import_statement": "from flask import g"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "rate_limiting",
-        "name": "RateLimiter",
-        "import_statement": "from rate_limiting import RateLimiter"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "rate_limiting",
-        "name": "rate_limit",
-        "import_statement": "from rate_limiting import rate_limit"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "rate_limiting",
-        "name": "create_limiter",
-        "import_statement": "from rate_limiting import create_limiter"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "validation_schemas",
-        "name": "validate_request",
-        "import_statement": "from validation_schemas import validate_request"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "validation_schemas",
-        "name": "ValidationError",
-        "import_statement": "from validation_schemas import ValidationError"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "validation_schemas",
-        "name": "sanitize_input",
-        "import_statement": "from validation_schemas import sanitize_input"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "validation_schemas",
-        "name": "validate_email",
-        "import_statement": "from validation_schemas import validate_email"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "validation_schemas",
-        "name": "validate_model_id",
-        "import_statement": "from validation_schemas import validate_model_id"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "headers",
-        "name": "add_security_headers",
-        "import_statement": "from headers import add_security_headers"
-      },
-      {
-        "file": "web/backend/security/__init__.py",
-        "module": "headers",
-        "name": "SecurityHeadersMiddleware",
-        "import_statement": "from headers import SecurityHeadersMiddleware"
-      },
-      {
-        "file": "web/backend/integrations/__init__.py",
-        "module": "huggingface_api",
-        "name": "HuggingFaceInference",
-        "import_statement": "from huggingface_api import HuggingFaceInference"
-      },
-      {
-        "file": "web/backend/integrations/__init__.py",
-        "module": "huggingface_api",
-        "name": "get_hf_inference",
-        "import_statement": "from huggingface_api import get_hf_inference"
-      },
-      {
-        "file": "web/backend/integrations/__init__.py",
-        "module": "encryption",
-        "name": "CredentialEncryption",
-        "import_statement": "from encryption import CredentialEncryption"
-      },
-      {
-        "file": "web/backend/integrations/__init__.py",
-        "module": "encryption",
-        "name": "encrypt_token",
-        "import_statement": "from encryption import encrypt_token"
-      },
-      {
-        "file": "web/backend/integrations/__init__.py",
-        "module": "encryption",
-        "name": "decrypt_token",
-        "import_statement": "from encryption import decrypt_token"
+        "import_statement": "from io import BytesIO",
+        "likely_third_party": false
       },
       {
         "file": "migrations/versions/002_cloud_storage_fields.py",
         "module": "alembic",
         "name": "op",
-        "import_statement": "from alembic import op"
-      },
-      {
-        "file": "migrations/versions/002_cloud_storage_fields.py",
-        "module": "sqlalchemy",
-        "name": "inspect",
-        "import_statement": "from sqlalchemy import inspect"
+        "import_statement": "from alembic import op",
+        "likely_third_party": false
       },
       {
         "file": "migrations/versions/001_initial_schema.py",
         "module": "alembic",
         "name": "op",
-        "import_statement": "from alembic import op"
-      },
-      {
-        "file": "migrations/versions/001_initial_schema.py",
-        "module": "sqlalchemy.dialects",
-        "name": "postgresql",
-        "import_statement": "from sqlalchemy.dialects import postgresql"
+        "import_statement": "from alembic import op",
+        "likely_third_party": false
       },
       {
         "file": "tools/scripts/check_dependencies.py",
         "module": "__future__",
         "name": "annotations",
-        "import_statement": "from __future__ import annotations"
-      },
-      {
-        "file": "tools/scripts/batch_receipt_processor.py",
-        "module": "contextlib",
-        "name": "contextmanager",
-        "import_statement": "from contextlib import contextmanager"
+        "import_statement": "from __future__ import annotations",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/pytest_custom_output.py",
         "module": "_pytest.terminal",
         "name": "TerminalReporter",
-        "import_statement": "from _pytest.terminal import TerminalReporter"
+        "import_statement": "from _pytest.terminal import TerminalReporter",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/test_shared_helpers.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/test_validation.py",
         "module": "shared.utils.validation",
         "name": "MAX_FILE_SIZES",
-        "import_statement": "from shared.utils.validation import MAX_FILE_SIZES"
-      },
-      {
-        "file": "tools/tests/test_security_integration.py",
-        "module": "flask",
-        "name": "Flask",
-        "import_statement": "from flask import Flask"
-      },
-      {
-        "file": "tools/tests/test_security_integration.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "tools/tests/test_security_integration.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "tools/tests/test_plan_enhancements.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from shared.utils.validation import MAX_FILE_SIZES",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/test_plan_enhancements.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "tools/tests/conftest.py",
-        "module": "sqlalchemy",
-        "name": "create_engine",
-        "import_statement": "from sqlalchemy import create_engine"
-      },
-      {
-        "file": "tools/tests/conftest.py",
-        "module": "sqlalchemy.orm",
-        "name": "sessionmaker",
-        "import_statement": "from sqlalchemy.orm import sessionmaker"
-      },
-      {
-        "file": "tools/tests/conftest.py",
-        "module": "sqlalchemy.orm",
-        "name": "scoped_session",
-        "import_statement": "from sqlalchemy.orm import scoped_session"
-      },
-      {
-        "file": "tools/tests/integration/test_receipt_workflow.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/integration/test_receipt_workflow.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_persist.py",
         "module": "shared.circular_exchange.persist.persistence",
         "name": "PERSISTENCE_LAYER",
-        "import_statement": "from shared.circular_exchange.persist.persistence import PERSISTENCE_LAYER"
+        "import_statement": "from shared.circular_exchange.persist.persistence import PERSISTENCE_LAYER",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_persist.py",
         "module": "shared.circular_exchange.analysis.data_collector",
         "name": "TestResult",
-        "import_statement": "from shared.circular_exchange.analysis.data_collector import TestResult"
+        "import_statement": "from shared.circular_exchange.analysis.data_collector import TestResult",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_persist.py",
         "module": "shared.circular_exchange.analysis.data_collector",
         "name": "TestStatus",
-        "import_statement": "from shared.circular_exchange.analysis.data_collector import TestStatus"
+        "import_statement": "from shared.circular_exchange.analysis.data_collector import TestStatus",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_persist.py",
         "module": "shared.circular_exchange.persist.webhook_notifier",
         "name": "WEBHOOK_NOTIFIER",
-        "import_statement": "from shared.circular_exchange.persist.webhook_notifier import WEBHOOK_NOTIFIER"
+        "import_statement": "from shared.circular_exchange.persist.webhook_notifier import WEBHOOK_NOTIFIER",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_analysis.py",
         "module": "shared.circular_exchange.analysis.intelligent_analyzer",
         "name": "INTELLIGENT_ANALYZER",
-        "import_statement": "from shared.circular_exchange.analysis.intelligent_analyzer import INTELLIGENT_ANALYZER"
+        "import_statement": "from shared.circular_exchange.analysis.intelligent_analyzer import INTELLIGENT_ANALYZER",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/circular_exchange/test_core.py",
         "module": "shared.circular_exchange.core.project_config",
         "name": "PROJECT_CONFIG",
-        "import_statement": "from shared.circular_exchange.core.project_config import PROJECT_CONFIG"
-      },
-      {
-        "file": "tools/tests/backend/test_backend.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from shared.circular_exchange.core.project_config import PROJECT_CONFIG",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_ocr.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_ocr.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_models.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_models.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_models.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "tools/tests/shared/test_models.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_models.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "tools/tests/shared/test_infra.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_spatial_ocr.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_utils.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "tools/tests/shared/test_utils.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_utils.py",
         "module": "shared.utils.image",
         "name": "BRIGHTNESS_THRESHOLD",
-        "import_statement": "from shared.utils.image import BRIGHTNESS_THRESHOLD"
+        "import_statement": "from shared.utils.image import BRIGHTNESS_THRESHOLD",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_utils.py",
         "module": "shared.utils.image",
         "name": "CONTRAST_THRESHOLD",
-        "import_statement": "from shared.utils.image import CONTRAST_THRESHOLD"
+        "import_statement": "from shared.utils.image import CONTRAST_THRESHOLD",
+        "likely_third_party": false
       },
       {
         "file": "tools/tests/shared/test_utils.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/semantic_validation.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/semantic_validation.py",
         "module": "decimal",
         "name": "InvalidOperation",
-        "import_statement": "from decimal import InvalidOperation"
-      },
-      {
-        "file": "shared/models/semantic_validation.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
+        "import_statement": "from decimal import InvalidOperation",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/spatial_ocr.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "shared/models/processors.py",
-        "module": "engine",
-        "name": "BaseProcessor",
-        "import_statement": "from engine import BaseProcessor"
-      },
-      {
-        "file": "shared/models/processors.py",
-        "module": "engine",
-        "name": "EasyOCRProcessor",
-        "import_statement": "from engine import EasyOCRProcessor"
-      },
-      {
-        "file": "shared/models/processors.py",
-        "module": "engine",
-        "name": "PaddleProcessor",
-        "import_statement": "from engine import PaddleProcessor"
-      },
-      {
-        "file": "shared/models/processors.py",
-        "module": "engine",
-        "name": "ProcessorInitializationError",
-        "import_statement": "from engine import ProcessorInitializationError"
-      },
-      {
-        "file": "shared/models/processors.py",
-        "module": "engine",
-        "name": "ProcessorHealthCheckError",
-        "import_statement": "from engine import ProcessorHealthCheckError"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/receipt_prompts.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/receipt_prompts.py",
         "module": "decimal",
         "name": "InvalidOperation",
-        "import_statement": "from decimal import InvalidOperation"
-      },
-      {
-        "file": "shared/models/adaptive_preprocessing.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/models/adaptive_preprocessing.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/models/adaptive_preprocessing.py",
-        "module": "PIL",
-        "name": "ImageEnhance",
-        "import_statement": "from PIL import ImageEnhance"
-      },
-      {
-        "file": "shared/models/florence_finetuner.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/models/schemas.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
+        "import_statement": "from decimal import InvalidOperation",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "SKIP_KEYWORDS",
-        "import_statement": "from ocr import SKIP_KEYWORDS"
+        "import_statement": "from ocr import SKIP_KEYWORDS",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "PRICE_MIN",
-        "import_statement": "from ocr import PRICE_MIN"
+        "import_statement": "from ocr import PRICE_MIN",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "PRICE_MAX",
-        "import_statement": "from ocr import PRICE_MAX"
+        "import_statement": "from ocr import PRICE_MAX",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "normalize_price",
-        "import_statement": "from ocr import normalize_price"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_date",
-        "import_statement": "from ocr import extract_date"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_total",
-        "import_statement": "from ocr import extract_total"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_phone",
-        "import_statement": "from ocr import extract_phone"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_address",
-        "import_statement": "from ocr import extract_address"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "should_skip_line",
-        "import_statement": "from ocr import should_skip_line"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "should_skip_item_name",
-        "import_statement": "from ocr import should_skip_item_name"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_store_name",
-        "import_statement": "from ocr import extract_store_name"
+        "import_statement": "from ocr import normalize_price",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "LINE_ITEM_PATTERNS",
-        "import_statement": "from ocr import LINE_ITEM_PATTERNS"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "clean_item_name",
-        "import_statement": "from ocr import clean_item_name"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_line_items",
-        "import_statement": "from ocr import extract_line_items"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "parse_receipt_text",
-        "import_statement": "from ocr import parse_receipt_text"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "get_detection_config",
-        "import_statement": "from ocr import get_detection_config"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "record_detection_result",
-        "import_statement": "from ocr import record_detection_result"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_subtotal",
-        "import_statement": "from ocr import extract_subtotal"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_tax",
-        "import_statement": "from ocr import extract_tax"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "validate_receipt_totals",
-        "import_statement": "from ocr import validate_receipt_totals"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "extract_sku",
-        "import_statement": "from ocr import extract_sku"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "fix_concatenated_text",
-        "import_statement": "from ocr import fix_concatenated_text"
-      },
-      {
-        "file": "shared/models/ocr_common.py",
-        "module": "ocr",
-        "name": "is_garbage_text",
-        "import_statement": "from ocr import is_garbage_text"
+        "import_statement": "from ocr import LINE_ITEM_PATTERNS",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr_common.py",
         "module": "ocr",
         "name": "MAX_REALISTIC_ITEM_PRICE",
-        "import_statement": "from ocr import MAX_REALISTIC_ITEM_PRICE"
-      },
-      {
-        "file": "shared/models/ai_models.py",
-        "module": "engine",
-        "name": "BaseDonutProcessor",
-        "import_statement": "from engine import BaseDonutProcessor"
-      },
-      {
-        "file": "shared/models/ai_models.py",
-        "module": "engine",
-        "name": "DonutProcessor",
-        "import_statement": "from engine import DonutProcessor"
-      },
-      {
-        "file": "shared/models/ai_models.py",
-        "module": "engine",
-        "name": "FlorenceProcessor",
-        "import_statement": "from engine import FlorenceProcessor"
+        "import_statement": "from ocr import MAX_REALISTIC_ITEM_PRICE",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/manager.py",
         "module": "__future__",
         "name": "annotations",
-        "import_statement": "from __future__ import annotations"
+        "import_statement": "from __future__ import annotations",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/manager.py",
         "module": "concurrent.futures",
         "name": "ThreadPoolExecutor",
-        "import_statement": "from concurrent.futures import ThreadPoolExecutor"
-      },
-      {
-        "file": "shared/models/manager.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/models/manager.py",
-        "module": "abc",
-        "name": "ABC",
-        "import_statement": "from abc import ABC"
-      },
-      {
-        "file": "shared/models/manager.py",
-        "module": "abc",
-        "name": "abstractmethod",
-        "import_statement": "from abc import abstractmethod"
-      },
-      {
-        "file": "shared/models/donut_finetuner.py",
-        "module": "engine",
-        "name": "DonutFinetuner",
-        "import_statement": "from engine import DonutFinetuner"
+        "import_statement": "from concurrent.futures import ThreadPoolExecutor",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/ocr.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/config.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/engine.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/models/engine.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "abc",
-        "name": "ABC",
-        "import_statement": "from abc import ABC"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "abc",
-        "name": "abstractmethod",
-        "import_statement": "from abc import abstractmethod"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "SKIP_KEYWORDS",
-        "import_statement": "from ocr_common import SKIP_KEYWORDS"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "PRICE_MIN",
-        "import_statement": "from ocr_common import PRICE_MIN"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "PRICE_MAX",
-        "import_statement": "from ocr_common import PRICE_MAX"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "normalize_price",
-        "import_statement": "from ocr_common import normalize_price"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_date",
-        "import_statement": "from ocr_common import extract_date"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_total",
-        "import_statement": "from ocr_common import extract_total"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_phone",
-        "import_statement": "from ocr_common import extract_phone"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_address",
-        "import_statement": "from ocr_common import extract_address"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "should_skip_line",
-        "import_statement": "from ocr_common import should_skip_line"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_store_name",
-        "import_statement": "from ocr_common import extract_store_name"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "LINE_ITEM_PATTERNS",
-        "import_statement": "from ocr_common import LINE_ITEM_PATTERNS"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "clean_item_name",
-        "import_statement": "from ocr_common import clean_item_name"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "extract_line_items",
-        "import_statement": "from ocr_common import extract_line_items"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "parse_receipt_text",
-        "import_statement": "from ocr_common import parse_receipt_text"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "get_detection_config",
-        "import_statement": "from ocr_common import get_detection_config"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "ocr_common",
-        "name": "record_detection_result",
-        "import_statement": "from ocr_common import record_detection_result"
-      },
-      {
-        "file": "shared/models/engine.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/models/craft_detector.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/utils/base_handler.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/utils/pricing.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
-      },
-      {
-        "file": "shared/utils/telemetry.py",
-        "module": "contextlib",
-        "name": "contextmanager",
-        "import_statement": "from contextlib import contextmanager"
-      },
-      {
-        "file": "shared/utils/helpers.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/utils/helpers.py",
         "module": "shared.utils.errors",
         "name": "ERROR_METADATA",
-        "import_statement": "from shared.utils.errors import ERROR_METADATA"
-      },
-      {
-        "file": "shared/utils/helpers.py",
-        "module": "functools",
-        "name": "wraps",
-        "import_statement": "from functools import wraps"
+        "import_statement": "from shared.utils.errors import ERROR_METADATA",
+        "likely_third_party": false
       },
       {
         "file": "shared/utils/data.py",
         "module": "__future__",
         "name": "annotations",
-        "import_statement": "from __future__ import annotations"
+        "import_statement": "from __future__ import annotations",
+        "likely_third_party": false
       },
       {
         "file": "shared/utils/data.py",
         "module": "decimal",
         "name": "Decimal",
-        "import_statement": "from decimal import Decimal"
+        "import_statement": "from decimal import Decimal",
+        "likely_third_party": false
       },
       {
         "file": "shared/utils/data.py",
         "module": "decimal",
         "name": "InvalidOperation",
-        "import_statement": "from decimal import InvalidOperation"
-      },
-      {
-        "file": "shared/utils/data.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/utils/validation.py",
-        "module": "flask",
-        "name": "request",
-        "import_statement": "from flask import request"
-      },
-      {
-        "file": "shared/utils/validation.py",
-        "module": "flask",
-        "name": "jsonify",
-        "import_statement": "from flask import jsonify"
-      },
-      {
-        "file": "shared/utils/logging.py",
-        "module": "contextlib",
-        "name": "contextmanager",
-        "import_statement": "from contextlib import contextmanager"
-      },
-      {
-        "file": "shared/utils/logging.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/utils/image.py",
-        "module": "PIL",
-        "name": "Image",
-        "import_statement": "from PIL import Image"
-      },
-      {
-        "file": "shared/utils/image.py",
-        "module": "PIL",
-        "name": "ImageEnhance",
-        "import_statement": "from PIL import ImageEnhance"
-      },
-      {
-        "file": "shared/utils/image.py",
-        "module": "PIL",
-        "name": "ImageFilter",
-        "import_statement": "from PIL import ImageFilter"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "LineItem",
-        "import_statement": "from data import LineItem"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "ReceiptData",
-        "import_statement": "from data import ReceiptData"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "ExtractionResult",
-        "import_statement": "from data import ExtractionResult"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "StoreInfo",
-        "import_statement": "from data import StoreInfo"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "TransactionTotals",
-        "import_statement": "from data import TransactionTotals"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "data",
-        "name": "ExtractionStatus",
-        "import_statement": "from data import ExtractionStatus"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "load_and_validate_image",
-        "import_statement": "from image import load_and_validate_image"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "enhance_image",
-        "import_statement": "from image import enhance_image"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "assess_image_quality",
-        "import_statement": "from image import assess_image_quality"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "preprocess_for_ocr",
-        "import_statement": "from image import preprocess_for_ocr"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "resize_if_needed",
-        "import_statement": "from image import resize_if_needed"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "detect_text_regions",
-        "import_statement": "from image import detect_text_regions"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "image",
-        "name": "preprocess_multi_pass",
-        "import_statement": "from image import preprocess_multi_pass"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ErrorCategory",
-        "import_statement": "from helpers import ErrorCategory"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ErrorCode",
-        "import_statement": "from helpers import ErrorCode"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ReceiptExtractorError",
-        "import_statement": "from helpers import ReceiptExtractorError"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ValidationError",
-        "import_statement": "from helpers import ValidationError"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ProcessingError",
-        "import_statement": "from helpers import ProcessingError"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "ExternalServiceError",
-        "import_statement": "from helpers import ExternalServiceError"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "RateLimitError",
-        "import_statement": "from helpers import RateLimitError"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "create_error_response",
-        "import_statement": "from helpers import create_error_response"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "handle_exception",
-        "import_statement": "from helpers import handle_exception"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "LRUCache",
-        "import_statement": "from helpers import LRUCache"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "cache_result",
-        "import_statement": "from helpers import cache_result"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "get_cache_stats",
-        "import_statement": "from helpers import get_cache_stats"
-      },
-      {
-        "file": "shared/utils/__init__.py",
-        "module": "helpers",
-        "name": "clear_all_caches",
-        "import_statement": "from helpers import clear_all_caches"
-      },
-      {
-        "file": "shared/utils/progress.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/utils/progress.py",
-        "module": "queue",
-        "name": "Queue",
-        "import_statement": "from queue import Queue"
-      },
-      {
-        "file": "shared/utils/progress.py",
-        "module": "queue",
-        "name": "Empty",
-        "import_statement": "from queue import Empty"
-      },
-      {
-        "file": "shared/utils/errors.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/services/cloud_finetuning.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/services/cloud_storage.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "CloudFinetuningService",
-        "import_statement": "from cloud_finetuning import CloudFinetuningService"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "HuggingFaceTrainer",
-        "import_statement": "from cloud_finetuning import HuggingFaceTrainer"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "ReplicateTrainer",
-        "import_statement": "from cloud_finetuning import ReplicateTrainer"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "RunPodTrainer",
-        "import_statement": "from cloud_finetuning import RunPodTrainer"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "TrainingJob",
-        "import_statement": "from cloud_finetuning import TrainingJob"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_finetuning",
-        "name": "CloudProvider",
-        "import_statement": "from cloud_finetuning import CloudProvider"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "CloudStorageService",
-        "import_statement": "from cloud_storage import CloudStorageService"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "GoogleDriveProvider",
-        "import_statement": "from cloud_storage import GoogleDriveProvider"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "DropboxProvider",
-        "import_statement": "from cloud_storage import DropboxProvider"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "S3Provider",
-        "import_statement": "from cloud_storage import S3Provider"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "CloudFile",
-        "import_statement": "from cloud_storage import CloudFile"
-      },
-      {
-        "file": "shared/services/__init__.py",
-        "module": "cloud_storage",
-        "name": "StorageProvider",
-        "import_statement": "from cloud_storage import StorageProvider"
-      },
-      {
-        "file": "shared/circular_exchange/auto_tuning.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
+        "import_statement": "from decimal import InvalidOperation",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.dependency_registry",
         "name": "DependencyRegistry",
-        "import_statement": "from core.dependency_registry import DependencyRegistry"
+        "import_statement": "from core.dependency_registry import DependencyRegistry",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.dependency_registry",
         "name": "ModuleInfo",
-        "import_statement": "from core.dependency_registry import ModuleInfo"
+        "import_statement": "from core.dependency_registry import ModuleInfo",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.variable_package",
         "name": "VariablePackage",
-        "import_statement": "from core.variable_package import VariablePackage"
+        "import_statement": "from core.variable_package import VariablePackage",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.variable_package",
         "name": "PackageRegistry",
-        "import_statement": "from core.variable_package import PackageRegistry"
+        "import_statement": "from core.variable_package import PackageRegistry",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.variable_package",
         "name": "PackageChange",
-        "import_statement": "from core.variable_package import PackageChange"
+        "import_statement": "from core.variable_package import PackageChange",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.change_notifier",
         "name": "ChangeNotifier",
-        "import_statement": "from core.change_notifier import ChangeNotifier"
+        "import_statement": "from core.change_notifier import ChangeNotifier",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.change_notifier",
         "name": "ChangeType",
-        "import_statement": "from core.change_notifier import ChangeType"
+        "import_statement": "from core.change_notifier import ChangeType",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.change_notifier",
         "name": "ChangeEvent",
-        "import_statement": "from core.change_notifier import ChangeEvent"
+        "import_statement": "from core.change_notifier import ChangeEvent",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.change_notifier",
         "name": "NotificationResult",
-        "import_statement": "from core.change_notifier import NotificationResult"
+        "import_statement": "from core.change_notifier import NotificationResult",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.circular_exchange",
         "name": "CircularExchange",
-        "import_statement": "from core.circular_exchange import CircularExchange"
+        "import_statement": "from core.circular_exchange import CircularExchange",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.circular_exchange",
         "name": "ModuleExport",
-        "import_statement": "from core.circular_exchange import ModuleExport"
+        "import_statement": "from core.circular_exchange import ModuleExport",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.circular_exchange",
         "name": "ModuleImport",
-        "import_statement": "from core.circular_exchange import ModuleImport"
+        "import_statement": "from core.circular_exchange import ModuleImport",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "PROJECT_CONFIG",
-        "import_statement": "from core.project_config import PROJECT_CONFIG"
+        "import_statement": "from core.project_config import PROJECT_CONFIG",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "ProjectConfiguration",
-        "import_statement": "from core.project_config import ProjectConfiguration"
+        "import_statement": "from core.project_config import ProjectConfiguration",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "ModuleRegistration",
-        "import_statement": "from core.project_config import ModuleRegistration"
+        "import_statement": "from core.project_config import ModuleRegistration",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "SecurityPolicy",
-        "import_statement": "from core.project_config import SecurityPolicy"
+        "import_statement": "from core.project_config import SecurityPolicy",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "CodingStandards",
-        "import_statement": "from core.project_config import CodingStandards"
+        "import_statement": "from core.project_config import CodingStandards",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "GraphNode",
-        "import_statement": "from core.project_config import GraphNode"
+        "import_statement": "from core.project_config import GraphNode",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "GraphEdge",
-        "import_statement": "from core.project_config import GraphEdge"
+        "import_statement": "from core.project_config import GraphEdge",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.project_config",
         "name": "PropagationMode",
-        "import_statement": "from core.project_config import PropagationMode"
+        "import_statement": "from core.project_config import PropagationMode",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "CONTAINER_ORCHESTRATOR",
-        "import_statement": "from core.module_container import CONTAINER_ORCHESTRATOR"
+        "import_statement": "from core.module_container import CONTAINER_ORCHESTRATOR",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "ContainerOrchestrator",
-        "import_statement": "from core.module_container import ContainerOrchestrator"
+        "import_statement": "from core.module_container import ContainerOrchestrator",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "ModuleContainer",
-        "import_statement": "from core.module_container import ModuleContainer"
+        "import_statement": "from core.module_container import ModuleContainer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "ContainerPort",
-        "import_statement": "from core.module_container import ContainerPort"
+        "import_statement": "from core.module_container import ContainerPort",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "ContainerDependency",
-        "import_statement": "from core.module_container import ContainerDependency"
+        "import_statement": "from core.module_container import ContainerDependency",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "ContainerStatus",
-        "import_statement": "from core.module_container import ContainerStatus"
+        "import_statement": "from core.module_container import ContainerStatus",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "CompatibilityLevel",
-        "import_statement": "from core.module_container import CompatibilityLevel"
+        "import_statement": "from core.module_container import CompatibilityLevel",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "CompatibilityReport",
-        "import_statement": "from core.module_container import CompatibilityReport"
+        "import_statement": "from core.module_container import CompatibilityReport",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "create_container",
-        "import_statement": "from core.module_container import create_container"
+        "import_statement": "from core.module_container import create_container",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "check_compatibility",
-        "import_statement": "from core.module_container import check_compatibility"
+        "import_statement": "from core.module_container import check_compatibility",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "core.module_container",
         "name": "standardize_code",
-        "import_statement": "from core.module_container import standardize_code"
+        "import_statement": "from core.module_container import standardize_code",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "DATA_COLLECTOR",
-        "import_statement": "from analysis.data_collector import DATA_COLLECTOR"
+        "import_statement": "from analysis.data_collector import DATA_COLLECTOR",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "DataCollector",
-        "import_statement": "from analysis.data_collector import DataCollector"
+        "import_statement": "from analysis.data_collector import DataCollector",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "DataCategory",
-        "import_statement": "from analysis.data_collector import DataCategory"
+        "import_statement": "from analysis.data_collector import DataCategory",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "TestStatus",
-        "import_statement": "from analysis.data_collector import TestStatus"
+        "import_statement": "from analysis.data_collector import TestStatus",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "TestResult",
-        "import_statement": "from analysis.data_collector import TestResult"
+        "import_statement": "from analysis.data_collector import TestResult",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "LogEntry",
-        "import_statement": "from analysis.data_collector import LogEntry"
+        "import_statement": "from analysis.data_collector import LogEntry",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "MetricsSnapshot",
-        "import_statement": "from analysis.data_collector import MetricsSnapshot"
+        "import_statement": "from analysis.data_collector import MetricsSnapshot",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "ExtractionEvent",
-        "import_statement": "from analysis.data_collector import ExtractionEvent"
+        "import_statement": "from analysis.data_collector import ExtractionEvent",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.data_collector",
         "name": "RefactorSuggestion",
-        "import_statement": "from analysis.data_collector import RefactorSuggestion"
+        "import_statement": "from analysis.data_collector import RefactorSuggestion",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "METRICS_ANALYZER",
-        "import_statement": "from analysis.metrics_analyzer import METRICS_ANALYZER"
+        "import_statement": "from analysis.metrics_analyzer import METRICS_ANALYZER",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "MetricsAnalyzer",
-        "import_statement": "from analysis.metrics_analyzer import MetricsAnalyzer"
+        "import_statement": "from analysis.metrics_analyzer import MetricsAnalyzer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "Pattern",
-        "import_statement": "from analysis.metrics_analyzer import Pattern"
+        "import_statement": "from analysis.metrics_analyzer import Pattern",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "PatternType",
-        "import_statement": "from analysis.metrics_analyzer import PatternType"
+        "import_statement": "from analysis.metrics_analyzer import PatternType",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "Insight",
-        "import_statement": "from analysis.metrics_analyzer import Insight"
+        "import_statement": "from analysis.metrics_analyzer import Insight",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "InsightPriority",
-        "import_statement": "from analysis.metrics_analyzer import InsightPriority"
+        "import_statement": "from analysis.metrics_analyzer import InsightPriority",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "RefactorCategory",
-        "import_statement": "from analysis.metrics_analyzer import RefactorCategory"
+        "import_statement": "from analysis.metrics_analyzer import RefactorCategory",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "PerformanceBottleneck",
-        "import_statement": "from analysis.metrics_analyzer import PerformanceBottleneck"
+        "import_statement": "from analysis.metrics_analyzer import PerformanceBottleneck",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "TestHealthReport",
-        "import_statement": "from analysis.metrics_analyzer import TestHealthReport"
+        "import_statement": "from analysis.metrics_analyzer import TestHealthReport",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.metrics_analyzer",
         "name": "ModelPerformanceReport",
-        "import_statement": "from analysis.metrics_analyzer import ModelPerformanceReport"
+        "import_statement": "from analysis.metrics_analyzer import ModelPerformanceReport",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "INTELLIGENT_ANALYZER",
-        "import_statement": "from analysis.intelligent_analyzer import INTELLIGENT_ANALYZER"
+        "import_statement": "from analysis.intelligent_analyzer import INTELLIGENT_ANALYZER",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "IntelligentAnalyzer",
-        "import_statement": "from analysis.intelligent_analyzer import IntelligentAnalyzer"
+        "import_statement": "from analysis.intelligent_analyzer import IntelligentAnalyzer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "PatternClusterer",
-        "import_statement": "from analysis.intelligent_analyzer import PatternClusterer"
+        "import_statement": "from analysis.intelligent_analyzer import PatternClusterer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "AnomalyDetector",
-        "import_statement": "from analysis.intelligent_analyzer import AnomalyDetector"
+        "import_statement": "from analysis.intelligent_analyzer import AnomalyDetector",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "TrendAnalyzer",
-        "import_statement": "from analysis.intelligent_analyzer import TrendAnalyzer"
+        "import_statement": "from analysis.intelligent_analyzer import TrendAnalyzer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "CodeEmbeddings",
-        "import_statement": "from analysis.intelligent_analyzer import CodeEmbeddings"
+        "import_statement": "from analysis.intelligent_analyzer import CodeEmbeddings",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "PatternCluster",
-        "import_statement": "from analysis.intelligent_analyzer import PatternCluster"
+        "import_statement": "from analysis.intelligent_analyzer import PatternCluster",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "Anomaly",
-        "import_statement": "from analysis.intelligent_analyzer import Anomaly"
+        "import_statement": "from analysis.intelligent_analyzer import Anomaly",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "TrendAnalysis",
-        "import_statement": "from analysis.intelligent_analyzer import TrendAnalysis"
+        "import_statement": "from analysis.intelligent_analyzer import TrendAnalysis",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "CodeSimilarity",
-        "import_statement": "from analysis.intelligent_analyzer import CodeSimilarity"
+        "import_statement": "from analysis.intelligent_analyzer import CodeSimilarity",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "AnomalyType",
-        "import_statement": "from analysis.intelligent_analyzer import AnomalyType"
+        "import_statement": "from analysis.intelligent_analyzer import AnomalyType",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "TrendDirection",
-        "import_statement": "from analysis.intelligent_analyzer import TrendDirection"
+        "import_statement": "from analysis.intelligent_analyzer import TrendDirection",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "analysis.intelligent_analyzer",
         "name": "ClusterQuality",
-        "import_statement": "from analysis.intelligent_analyzer import ClusterQuality"
+        "import_statement": "from analysis.intelligent_analyzer import ClusterQuality",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "REFACTORING_ENGINE",
+        "import_statement": "from refactor.refactoring_engine import REFACTORING_ENGINE",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "RefactoringEngine",
+        "import_statement": "from refactor.refactoring_engine import RefactoringEngine",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "CodeSuggestion",
+        "import_statement": "from refactor.refactoring_engine import CodeSuggestion",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "RefactoringPlan",
+        "import_statement": "from refactor.refactoring_engine import RefactoringPlan",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "SuggestionType",
+        "import_statement": "from refactor.refactoring_engine import SuggestionType",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "ImpactLevel",
+        "import_statement": "from refactor.refactoring_engine import ImpactLevel",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "EffortLevel",
+        "import_statement": "from refactor.refactoring_engine import EffortLevel",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.refactoring_engine",
+        "name": "CodeLocation",
+        "import_statement": "from refactor.refactoring_engine import CodeLocation",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "AutonomousRefactor",
+        "import_statement": "from refactor.autonomous_refactor import AutonomousRefactor",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RefactorRisk",
+        "import_statement": "from refactor.autonomous_refactor import RefactorRisk",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RefactorStatus",
+        "import_statement": "from refactor.autonomous_refactor import RefactorStatus",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RefactorResult",
+        "import_statement": "from refactor.autonomous_refactor import RefactorResult",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "ABTest",
+        "import_statement": "from refactor.autonomous_refactor import ABTest",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "ABTestVariant",
+        "import_statement": "from refactor.autonomous_refactor import ABTestVariant",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "ABTestResult",
+        "import_statement": "from refactor.autonomous_refactor import ABTestResult",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "ABTestManager",
+        "import_statement": "from refactor.autonomous_refactor import ABTestManager",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RollbackManager",
+        "import_statement": "from refactor.autonomous_refactor import RollbackManager",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RollbackTrigger",
+        "import_statement": "from refactor.autonomous_refactor import RollbackTrigger",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "RollbackAction",
+        "import_statement": "from refactor.autonomous_refactor import RollbackAction",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "CodeTransformer",
+        "import_statement": "from refactor.autonomous_refactor import CodeTransformer",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "PRGenerator",
+        "import_statement": "from refactor.autonomous_refactor import PRGenerator",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.autonomous_refactor",
+        "name": "get_autonomous_refactor",
+        "import_statement": "from refactor.autonomous_refactor import get_autonomous_refactor",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "FEEDBACK_LOOP",
+        "import_statement": "from refactor.feedback_loop import FEEDBACK_LOOP",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "FeedbackLoop",
+        "import_statement": "from refactor.feedback_loop import FeedbackLoop",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "AutoTuner",
+        "import_statement": "from refactor.feedback_loop import AutoTuner",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "ModelTrainingPipeline",
+        "import_statement": "from refactor.feedback_loop import ModelTrainingPipeline",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "TuningDecision",
+        "import_statement": "from refactor.feedback_loop import TuningDecision",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "TrainingJob",
+        "import_statement": "from refactor.feedback_loop import TrainingJob",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "TuningAction",
+        "import_statement": "from refactor.feedback_loop import TuningAction",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "FeedbackType",
+        "import_statement": "from refactor.feedback_loop import FeedbackType",
+        "likely_third_party": false
+      },
+      {
+        "file": "shared/circular_exchange/__init__.py",
+        "module": "refactor.feedback_loop",
+        "name": "TrainingStatus",
+        "import_statement": "from refactor.feedback_loop import TrainingStatus",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.persistence",
         "name": "PERSISTENCE_LAYER",
-        "import_statement": "from persist.persistence import PERSISTENCE_LAYER"
+        "import_statement": "from persist.persistence import PERSISTENCE_LAYER",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.persistence",
         "name": "PersistenceLayer",
-        "import_statement": "from persist.persistence import PersistenceLayer"
+        "import_statement": "from persist.persistence import PersistenceLayer",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.persistence",
         "name": "DBConfig",
-        "import_statement": "from persist.persistence import DBConfig"
+        "import_statement": "from persist.persistence import DBConfig",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.persistence",
         "name": "ConnectionPool",
-        "import_statement": "from persist.persistence import ConnectionPool"
+        "import_statement": "from persist.persistence import ConnectionPool",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "WEBHOOK_NOTIFIER",
-        "import_statement": "from persist.webhook_notifier import WEBHOOK_NOTIFIER"
+        "import_statement": "from persist.webhook_notifier import WEBHOOK_NOTIFIER",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "WebhookNotifier",
-        "import_statement": "from persist.webhook_notifier import WebhookNotifier"
+        "import_statement": "from persist.webhook_notifier import WebhookNotifier",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "NotificationConfig",
-        "import_statement": "from persist.webhook_notifier import NotificationConfig"
+        "import_statement": "from persist.webhook_notifier import NotificationConfig",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "NotificationLevel",
-        "import_statement": "from persist.webhook_notifier import NotificationLevel"
+        "import_statement": "from persist.webhook_notifier import NotificationLevel",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "NotificationChannel",
-        "import_statement": "from persist.webhook_notifier import NotificationChannel"
+        "import_statement": "from persist.webhook_notifier import NotificationChannel",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/__init__.py",
         "module": "persist.webhook_notifier",
         "name": "Notification",
-        "import_statement": "from persist.webhook_notifier import Notification"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "AppConfig",
-        "import_statement": "from settings import AppConfig"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "ImageConfig",
-        "import_statement": "from settings import ImageConfig"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "OCRConfig",
-        "import_statement": "from settings import OCRConfig"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "APIConfig",
-        "import_statement": "from settings import APIConfig"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "SecurityConfig",
-        "import_statement": "from settings import SecurityConfig"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "get_config",
-        "import_statement": "from settings import get_config"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "reload_config",
-        "import_statement": "from settings import reload_config"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "validate_file_extension",
-        "import_statement": "from settings import validate_file_extension"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "validate_file_size",
-        "import_statement": "from settings import validate_file_size"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "validate_mime_type",
-        "import_statement": "from settings import validate_mime_type"
-      },
-      {
-        "file": "shared/config/__init__.py",
-        "module": "settings",
-        "name": "get_rate_limit_for_plan",
-        "import_statement": "from settings import get_rate_limit_for_plan"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/feedback_loop.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/autonomous_refactor.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/__init__.py",
-        "module": "autonomous_refactor",
-        "name": "AutonomousRefactor",
-        "import_statement": "from autonomous_refactor import AutonomousRefactor"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/__init__.py",
-        "module": "autonomous_refactor",
-        "name": "RefactorRisk",
-        "import_statement": "from autonomous_refactor import RefactorRisk"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/__init__.py",
-        "module": "autonomous_refactor",
-        "name": "RefactorStatus",
-        "import_statement": "from autonomous_refactor import RefactorStatus"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/__init__.py",
-        "module": "feedback_loop",
-        "name": "FeedbackLoop",
-        "import_statement": "from feedback_loop import FeedbackLoop"
-      },
-      {
-        "file": "shared/circular_exchange/refactor/refactoring_engine.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/persist/webhook_notifier.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/persist/webhook_notifier.py",
-        "module": "urllib.request",
-        "name": "Request",
-        "import_statement": "from urllib.request import Request"
-      },
-      {
-        "file": "shared/circular_exchange/persist/webhook_notifier.py",
-        "module": "urllib.request",
-        "name": "urlopen",
-        "import_statement": "from urllib.request import urlopen"
-      },
-      {
-        "file": "shared/circular_exchange/persist/webhook_notifier.py",
-        "module": "urllib.error",
-        "name": "URLError",
-        "import_statement": "from urllib.error import URLError"
-      },
-      {
-        "file": "shared/circular_exchange/persist/webhook_notifier.py",
-        "module": "urllib.error",
-        "name": "HTTPError",
-        "import_statement": "from urllib.error import HTTPError"
-      },
-      {
-        "file": "shared/circular_exchange/persist/persistence.py",
-        "module": "contextlib",
-        "name": "contextmanager",
-        "import_statement": "from contextlib import contextmanager"
-      },
-      {
-        "file": "shared/circular_exchange/persist/__init__.py",
-        "module": "persistence",
-        "name": "PersistenceLayer",
-        "import_statement": "from persistence import PersistenceLayer"
-      },
-      {
-        "file": "shared/circular_exchange/persist/__init__.py",
-        "module": "persistence",
-        "name": "DBConfig",
-        "import_statement": "from persistence import DBConfig"
-      },
-      {
-        "file": "shared/circular_exchange/persist/__init__.py",
-        "module": "webhook_notifier",
-        "name": "WebhookNotifier",
-        "import_statement": "from webhook_notifier import WebhookNotifier"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "dependency_registry",
-        "name": "DependencyRegistry",
-        "import_statement": "from dependency_registry import DependencyRegistry"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "dependency_registry",
-        "name": "ModuleInfo",
-        "import_statement": "from dependency_registry import ModuleInfo"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "variable_package",
-        "name": "VariablePackage",
-        "import_statement": "from variable_package import VariablePackage"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "variable_package",
-        "name": "PackageRegistry",
-        "import_statement": "from variable_package import PackageRegistry"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "variable_package",
-        "name": "PackageChange",
-        "import_statement": "from variable_package import PackageChange"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "change_notifier",
-        "name": "ChangeNotifier",
-        "import_statement": "from change_notifier import ChangeNotifier"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "change_notifier",
-        "name": "ChangeType",
-        "import_statement": "from change_notifier import ChangeType"
-      },
-      {
-        "file": "shared/circular_exchange/core/circular_exchange.py",
-        "module": "change_notifier",
-        "name": "ChangeEvent",
-        "import_statement": "from change_notifier import ChangeEvent"
+        "import_statement": "from persist.webhook_notifier import Notification",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/core/variable_package.py",
         "module": "copy",
         "name": "deepcopy",
-        "import_statement": "from copy import deepcopy"
-      },
-      {
-        "file": "shared/circular_exchange/core/project_config.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/core/project_config.py",
-        "module": "variable_package",
-        "name": "VariablePackage",
-        "import_statement": "from variable_package import VariablePackage"
-      },
-      {
-        "file": "shared/circular_exchange/core/project_config.py",
-        "module": "variable_package",
-        "name": "PackageChange",
-        "import_statement": "from variable_package import PackageChange"
-      },
-      {
-        "file": "shared/circular_exchange/core/change_notifier.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/core/module_container.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "variable_package",
-        "name": "VariablePackage",
-        "import_statement": "from variable_package import VariablePackage"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "variable_package",
-        "name": "PackageRegistry",
-        "import_statement": "from variable_package import PackageRegistry"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "variable_package",
-        "name": "PackageChange",
-        "import_statement": "from variable_package import PackageChange"
+        "import_statement": "from copy import deepcopy",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/core/__init__.py",
         "module": "project_config",
         "name": "PROJECT_CONFIG",
-        "import_statement": "from project_config import PROJECT_CONFIG"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "project_config",
-        "name": "ModuleRegistration",
-        "import_statement": "from project_config import ModuleRegistration"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "change_notifier",
-        "name": "ChangeNotifier",
-        "import_statement": "from change_notifier import ChangeNotifier"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "dependency_registry",
-        "name": "DependencyRegistry",
-        "import_statement": "from dependency_registry import DependencyRegistry"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "circular_exchange",
-        "name": "CircularExchange",
-        "import_statement": "from circular_exchange import CircularExchange"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "module_container",
-        "name": "ModuleContainer",
-        "import_statement": "from module_container import ModuleContainer"
-      },
-      {
-        "file": "shared/circular_exchange/core/__init__.py",
-        "module": "style_checker",
-        "name": "StyleChecker",
-        "import_statement": "from style_checker import StyleChecker"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/intelligent_analyzer.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/metrics_analyzer.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "data_collector",
-        "name": "DataCollector",
-        "import_statement": "from data_collector import DataCollector"
+        "import_statement": "from project_config import PROJECT_CONFIG",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/analysis/__init__.py",
         "module": "data_collector",
         "name": "TestResult",
-        "import_statement": "from data_collector import TestResult"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "data_collector",
-        "name": "LogEntry",
-        "import_statement": "from data_collector import LogEntry"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "data_collector",
-        "name": "ExtractionEvent",
-        "import_statement": "from data_collector import ExtractionEvent"
+        "import_statement": "from data_collector import TestResult",
+        "likely_third_party": false
       },
       {
         "file": "shared/circular_exchange/analysis/__init__.py",
         "module": "data_collector",
         "name": "TestStatus",
-        "import_statement": "from data_collector import TestStatus"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "metrics_analyzer",
-        "name": "MetricsAnalyzer",
-        "import_statement": "from metrics_analyzer import MetricsAnalyzer"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "metrics_analyzer",
-        "name": "Pattern",
-        "import_statement": "from metrics_analyzer import Pattern"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "intelligent_analyzer",
-        "name": "IntelligentAnalyzer",
-        "import_statement": "from intelligent_analyzer import IntelligentAnalyzer"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "intelligent_analyzer",
-        "name": "AnomalyType",
-        "import_statement": "from intelligent_analyzer import AnomalyType"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "intelligent_analyzer",
-        "name": "TrendDirection",
-        "import_statement": "from intelligent_analyzer import TrendDirection"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/__init__.py",
-        "module": "intelligent_analyzer",
-        "name": "PatternCluster",
-        "import_statement": "from intelligent_analyzer import PatternCluster"
-      },
-      {
-        "file": "shared/circular_exchange/analysis/data_collector.py",
-        "module": "enum",
-        "name": "Enum",
-        "import_statement": "from enum import Enum"
+        "import_statement": "from data_collector import TestStatus",
+        "likely_third_party": false
       }
     ],
     "orphaned_imports": [
@@ -18431,12 +16563,7 @@
     "documentation_mismatches": [
       {
         "type": "README reference",
-        "name": "ocr_paddleocr",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "craft_detector",
+        "name": "STRIPE_WEBHOOK_SECRET",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -18446,22 +16573,7 @@
       },
       {
         "type": "README reference",
-        "name": "JWT_SECRET",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "STRIPE_WEBHOOK_SECRET",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "DB_POOL_MAX_OVERFLOW",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "donut_cord",
+        "name": "ocr_tesseract",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -18471,22 +16583,7 @@
       },
       {
         "type": "README reference",
-        "name": "DB_POOL_SIZE",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "ocr_tesseract",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "ocr_paddle",
-        "issue": "Referenced in README but not found in code"
-      },
-      {
-        "type": "README reference",
-        "name": "ocr_easyocr",
+        "name": "JWT_SECRET",
         "issue": "Referenced in README but not found in code"
       },
       {
@@ -18496,7 +16593,42 @@
       },
       {
         "type": "README reference",
+        "name": "DB_POOL_MAX_OVERFLOW",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "DB_POOL_SIZE",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "ocr_easyocr",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
         "name": "spatial_multi",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "ocr_paddle",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "craft_detector",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "ocr_paddleocr",
+        "issue": "Referenced in README but not found in code"
+      },
+      {
+        "type": "README reference",
+        "name": "donut_cord",
         "issue": "Referenced in README but not found in code"
       }
     ]
@@ -20627,7 +18759,7 @@
       ],
       "exports": [],
       "docstring": "Repository Screening Tool - Analyzes codebase for missing functions, files, and inconsistencies\n\nThis tool screens the entire repository to identify:\n1. Missing function implementations (declared but not defined)\n2. Orphaned imports (imported but never used)\n3. Missing test coverage\n4. Inconsistencies between documentation and code\n5. Missing files referenced in imports\n6. Unused functions and classes",
-      "line_count": 754,
+      "line_count": 791,
       "has_tests": false,
       "errors": []
     },
