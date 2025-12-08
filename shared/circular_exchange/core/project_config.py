@@ -97,7 +97,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # FEATURE FLAG - ENABLE CEFR
 # =============================================================================
-def _is_cefr_enabled() -> bool:
+def is_cefr_enabled() -> bool:
     """
     Check if CEFR framework is enabled via environment variable.
     
@@ -106,6 +106,10 @@ def _is_cefr_enabled() -> bool:
         Defaults to False for MVP mode.
     """
     return os.getenv('ENABLE_CEFR', 'false').lower() in ('true', '1', 'yes')
+
+
+# Internal alias for backward compatibility
+_is_cefr_enabled = is_cefr_enabled
 
 
 # =============================================================================
@@ -234,7 +238,7 @@ class ProjectConfiguration:
             return
         
         # Check if CEFR is enabled via environment variable
-        self.cefr_enabled = _is_cefr_enabled()
+        self.cefr_enabled = is_cefr_enabled()
         
         if not self.cefr_enabled:
             logger.info("CEFR Framework is disabled (ENABLE_CEFR=false). Skipping initialization.")

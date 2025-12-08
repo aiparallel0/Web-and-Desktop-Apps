@@ -22,8 +22,8 @@ def check_cefr():
     print("\n📊 CEFR Framework Status:")
     print("-" * 70)
     
-    from shared.circular_exchange.core.project_config import _is_cefr_enabled
-    enabled = _is_cefr_enabled()
+    from shared.circular_exchange.core.project_config import is_cefr_enabled
+    enabled = is_cefr_enabled()
     
     status = "✅ ENABLED" if enabled else "❌ DISABLED"
     print(f"  ENABLE_CEFR = {os.getenv('ENABLE_CEFR', 'not set')} → {status}")

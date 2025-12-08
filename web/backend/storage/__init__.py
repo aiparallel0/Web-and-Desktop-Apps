@@ -123,7 +123,7 @@ class StorageFactory:
     @classmethod
     def list_providers(cls) -> list:
         """Get list of supported storage providers."""
-        return list(set(cls._handlers.values()))
+        return ['s3', 'aws', 'gdrive', 'google_drive', 'dropbox']
     
     @classmethod
     def is_provider_available(cls, provider: str) -> bool:
@@ -131,18 +131,23 @@ class StorageFactory:
         try:
             # Check if provider exists
             if provider not in cls._handlers:
+                logger.debug(f"Provider {provider} not supported")
                 return False
                 
             # Check if feature is enabled
             feature_flag = cls._feature_flags.get(provider)
             if not _is_feature_enabled(feature_flag):
+                logger.debug(f"Provider {provider} disabled via {feature_flag}")
                 return False
                 
             # Check if handler is configured
             handler = cls.get_handler(provider)
             return handler.is_configured()
-        except (ValueError, ImportError) as e:
-            logger.debug(f"Provider {provider} not available: {e}")
+        except ValueError as e:
+            logger.debug(f"Provider {provider} configuration error: {e}")
+            return False
+        except ImportError as e:
+            logger.debug(f"Provider {provider} missing dependencies: {e}")
             return False
 
 

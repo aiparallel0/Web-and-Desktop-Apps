@@ -18,28 +18,28 @@ class TestCEFRFeatureFlag:
             # Remove ENABLE_CEFR if present
             os.environ.pop('ENABLE_CEFR', None)
             
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
-            assert _is_cefr_enabled() is False
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
+            assert is_cefr_enabled() is False
     
     def test_cefr_disabled_explicitly(self):
         """Test that CEFR is disabled when ENABLE_CEFR=false."""
         with patch.dict(os.environ, {'ENABLE_CEFR': 'false'}):
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
-            assert _is_cefr_enabled() is False
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
+            assert is_cefr_enabled() is False
     
     def test_cefr_enabled(self):
         """Test that CEFR is enabled when ENABLE_CEFR=true."""
         with patch.dict(os.environ, {'ENABLE_CEFR': 'true'}):
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
-            assert _is_cefr_enabled() is True
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
+            assert is_cefr_enabled() is True
     
     def test_cefr_enabled_case_insensitive(self):
         """Test that ENABLE_CEFR is case-insensitive."""
         test_values = ['True', 'TRUE', 'TrUe', '1', 'yes', 'YES']
         for value in test_values:
             with patch.dict(os.environ, {'ENABLE_CEFR': value}):
-                from shared.circular_exchange.core.project_config import _is_cefr_enabled
-                assert _is_cefr_enabled() is True, f"Failed for value: {value}"
+                from shared.circular_exchange.core.project_config import is_cefr_enabled
+                assert is_cefr_enabled() is True, f"Failed for value: {value}"
     
     def test_cefr_project_config_disabled(self):
         """Test that ProjectConfiguration skips initialization when CEFR is disabled."""
@@ -207,12 +207,12 @@ class TestFeatureFlagIntegration:
         }
         
         with patch.dict(os.environ, mvp_env):
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
             from web.backend.storage import StorageFactory
             from web.backend.training import TrainingFactory
             
             # CEFR should be disabled
-            assert _is_cefr_enabled() is False
+            assert is_cefr_enabled() is False
             
             # All storage providers should be disabled
             assert StorageFactory.is_provider_available('s3') is False
@@ -237,10 +237,10 @@ class TestFeatureFlagIntegration:
         }
         
         with patch.dict(os.environ, full_env):
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
             
             # CEFR should be enabled
-            assert _is_cefr_enabled() is True
+            assert is_cefr_enabled() is True
             
             # Note: Storage and training providers will still fail without credentials,
             # but they should not fail due to feature flags
@@ -259,12 +259,12 @@ class TestFeatureFlagIntegration:
         }
         
         with patch.dict(os.environ, hybrid_env):
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
             from web.backend.storage import StorageFactory
             from web.backend.training import TrainingFactory
             
             # CEFR should be enabled
-            assert _is_cefr_enabled() is True
+            assert is_cefr_enabled() is True
             
             # S3 enabled (but may fail on credentials)
             # GDrive and Dropbox should be disabled
@@ -295,11 +295,11 @@ class TestBackwardCompatibility:
                        'ENABLE_REPLICATE_TRAINING', 'ENABLE_RUNPOD_TRAINING']:
                 os.environ.pop(key, None)
             
-            from shared.circular_exchange.core.project_config import _is_cefr_enabled
+            from shared.circular_exchange.core.project_config import is_cefr_enabled
             from web.backend.storage import StorageFactory
             from web.backend.training import TrainingFactory
             
             # All should default to disabled
-            assert _is_cefr_enabled() is False
+            assert is_cefr_enabled() is False
             assert StorageFactory.is_provider_available('s3') is False
             assert TrainingFactory.is_provider_available('huggingface') is False
