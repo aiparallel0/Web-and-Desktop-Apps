@@ -81,6 +81,7 @@ Example:
 
 import logging
 import threading
+import os
 from typing import Dict, Any, Optional, Callable, List, Set, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -91,6 +92,24 @@ import math
 from .variable_package import VariablePackage, PackageChange
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# FEATURE FLAG - ENABLE CEFR
+# =============================================================================
+def is_cefr_enabled() -> bool:
+    """
+    Check if CEFR framework is enabled via environment variable.
+    
+    Returns:
+        True if ENABLE_CEFR is set to 'true' (case-insensitive), False otherwise.
+        Defaults to False for MVP mode.
+    """
+    return os.getenv('ENABLE_CEFR', 'false').lower() in ('true', '1', 'yes')
+
+
+# Internal alias for backward compatibility
+_is_cefr_enabled = is_cefr_enabled
 
 
 # =============================================================================
@@ -217,7 +236,20 @@ class ProjectConfiguration:
         """Initialize the project configuration."""
         if self._initialized:
             return
+        
+        # Check if CEFR is enabled via environment variable
+        self.cefr_enabled = is_cefr_enabled()
+        
+        if not self.cefr_enabled:
+            logger.info("CEFR Framework is disabled (ENABLE_CEFR=false). Skipping initialization.")
+            self._initialized = True
+            # Set minimal attributes for compatibility
+            self.module_registry = None
+            self._graph_nodes = {}
+            self._graph_edges = []
+            return
             
+        logger.info("CEFR Framework is enabled. Initializing...")
         self._lock = threading.RLock()
         
         # =================================================================
@@ -461,6 +493,11 @@ AI AGENT INSTRUCTIONS:
         Args:
             registration: Module registration information
         """
+        # Skip registration if CEFR is disabled
+        if not self.cefr_enabled:
+            logger.debug(f"Skipping module registration (CEFR disabled): {registration.module_id}")
+            return
+            
         with self._lock:
             current = self.module_registry.value.copy()
             current[registration.module_id] = registration
@@ -469,10 +506,14 @@ AI AGENT INSTRUCTIONS:
     
     def get_module(self, module_id: str) -> Optional[ModuleRegistration]:
         """Get a registered module by ID."""
+        if not self.cefr_enabled or self.module_registry is None:
+            return None
         return self.module_registry.value.get(module_id)
     
     def get_all_modules(self) -> Dict[str, ModuleRegistration]:
         """Get all registered modules."""
+        if not self.cefr_enabled or self.module_registry is None:
+            return {}
         return self.module_registry.value.copy()
     
     def validate_module_imports(self) -> Dict[str, List[str]]:

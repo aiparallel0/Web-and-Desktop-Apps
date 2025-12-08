@@ -14,6 +14,9 @@ Components:
 - celery_worker.py: Background job processing
 
 Environment Variables Required:
+- ENABLE_HF_TRAINING: Enable/disable HuggingFace training (default: false)
+- ENABLE_REPLICATE_TRAINING: Enable/disable Replicate training (default: false)
+- ENABLE_RUNPOD_TRAINING: Enable/disable RunPod training (default: false)
 - HUGGINGFACE_API_KEY: HuggingFace token (for HF trainer)
 - REPLICATE_API_TOKEN: Replicate token (for Replicate trainer)
 - RUNPOD_API_KEY: RunPod API key (for RunPod trainer)
@@ -22,10 +25,15 @@ Environment Variables Required:
 =============================================================================
 """
 
+import os
+import logging
+
 from .base import BaseTrainer, TrainingJob, TrainingConfig, TrainingStatus
 from .hf_trainer import HuggingFaceTrainer
 from .replicate_trainer import ReplicateTrainer
 from .runpod_trainer import RunPodTrainer
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     # Base
@@ -41,6 +49,19 @@ __all__ = [
     'TrainingFactory',
     'get_trainer',
 ]
+
+
+def _is_feature_enabled(feature_name: str) -> bool:
+    """
+    Check if a training feature is enabled via environment variable.
+    
+    Args:
+        feature_name: Name of the feature flag (e.g., 'ENABLE_HF_TRAINING')
+        
+    Returns:
+        True if enabled, False otherwise (defaults to False for MVP)
+    """
+    return os.getenv(feature_name, 'false').lower() in ('true', '1', 'yes')
 
 
 class TrainingFactory:
@@ -59,6 +80,13 @@ class TrainingFactory:
         'runpod': RunPodTrainer,
     }
     
+    _feature_flags = {
+        'huggingface': 'ENABLE_HF_TRAINING',
+        'hf': 'ENABLE_HF_TRAINING',
+        'replicate': 'ENABLE_REPLICATE_TRAINING',
+        'runpod': 'ENABLE_RUNPOD_TRAINING',
+    }
+    
     @classmethod
     def get_trainer(cls, provider: str, **kwargs) -> BaseTrainer:
         """
@@ -72,7 +100,7 @@ class TrainingFactory:
             Configured trainer instance
             
         Raises:
-            ValueError: If provider is not supported
+            ValueError: If provider is not supported or disabled
         """
         provider = provider.lower().strip()
         
@@ -81,6 +109,14 @@ class TrainingFactory:
             raise ValueError(
                 f"Unsupported training provider: {provider}. "
                 f"Supported providers: {supported}"
+            )
+        
+        # Check if the feature is enabled
+        feature_flag = cls._feature_flags.get(provider)
+        if not _is_feature_enabled(feature_flag):
+            raise ValueError(
+                f"{provider.upper()} training is disabled. "
+                f"Set {feature_flag}=true in .env to enable this feature."
             )
         
         trainer_class = cls._trainers[provider]
@@ -95,9 +131,20 @@ class TrainingFactory:
     def is_provider_available(cls, provider: str) -> bool:
         """Check if a provider is available and configured."""
         try:
+            # Check if provider exists
+            if provider not in cls._trainers:
+                return False
+                
+            # Check if feature is enabled
+            feature_flag = cls._feature_flags.get(provider)
+            if not _is_feature_enabled(feature_flag):
+                return False
+                
+            # Check if trainer is configured
             trainer = cls.get_trainer(provider)
             return trainer.is_configured()
-        except (ValueError, ImportError):
+        except (ValueError, ImportError) as e:
+            logger.debug(f"Provider {provider} not available: {e}")
             return False
     
     @classmethod
