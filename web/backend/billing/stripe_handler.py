@@ -21,6 +21,9 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from shared.utils.optional_imports import OptionalImport
 
+# Import telemetry utilities
+from shared.utils.telemetry import get_tracer, set_span_attributes
+
 logger = logging.getLogger(__name__)
 
 # Import stripe
@@ -80,17 +83,41 @@ class StripeHandler:
         Returns:
             Stripe Customer object or None on error
         """
-        try:
-            customer = stripe.Customer.create(
-                email=email,
-                name=name,
-                metadata=metadata or {}
-            )
-            logger.info(f"Created Stripe customer: {customer.id}")
-            return customer
-        except stripe.error.StripeError as e:
-            logger.error(f"Failed to create customer: {e}")
-            return None
+        tracer = get_tracer()
+        with tracer.start_as_current_span("stripe.create_customer") as span:
+            try:
+                # Sanitize email for logging (show domain only)
+                email_domain = email.split('@')[1] if '@' in email else 'unknown'
+                
+                set_span_attributes(span, {
+                    "stripe.operation": "create_customer",
+                    "stripe.email_domain": email_domain,
+                    "stripe.has_name": name is not None
+                })
+                
+                customer = stripe.Customer.create(
+                    email=email,
+                    name=name,
+                    metadata=metadata or {}
+                )
+                
+                set_span_attributes(span, {
+                    "stripe.customer_id": customer.id[:8] + "...",  # Truncate for privacy
+                    "stripe.success": True
+                })
+                
+                logger.info(f"Created Stripe customer: {customer.id}")
+                return customer
+            except stripe.error.StripeError as e:
+                logger.error(f"Failed to create customer: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error_type": type(e).__name__
+                })
+                
+                return None
     
     def get_customer(self, customer_id: str) -> Optional[Any]:
         """
@@ -211,20 +238,40 @@ class StripeHandler:
         Returns:
             Updated subscription or None
         """
-        try:
-            if at_period_end:
-                subscription = stripe.Subscription.modify(
-                    subscription_id,
-                    cancel_at_period_end=True
-                )
-            else:
-                subscription = stripe.Subscription.delete(subscription_id)
-            
-            logger.info(f"Cancelled subscription: {subscription_id}")
-            return subscription
-        except stripe.error.StripeError as e:
-            logger.error(f"Failed to cancel subscription: {e}")
-            return None
+        tracer = get_tracer()
+        with tracer.start_as_current_span("stripe.cancel_subscription") as span:
+            try:
+                set_span_attributes(span, {
+                    "stripe.operation": "cancel_subscription",
+                    "stripe.subscription_id": subscription_id[:8] + "...",
+                    "stripe.at_period_end": at_period_end
+                })
+                
+                if at_period_end:
+                    subscription = stripe.Subscription.modify(
+                        subscription_id,
+                        cancel_at_period_end=True
+                    )
+                else:
+                    subscription = stripe.Subscription.delete(subscription_id)
+                
+                set_span_attributes(span, {
+                    "stripe.success": True,
+                    "stripe.cancel_type": "at_period_end" if at_period_end else "immediate"
+                })
+                
+                logger.info(f"Cancelled subscription: {subscription_id}")
+                return subscription
+            except stripe.error.StripeError as e:
+                logger.error(f"Failed to cancel subscription: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error_type": type(e).__name__
+                })
+                
+                return None
     
     def update_subscription(
         self,
@@ -281,27 +328,49 @@ class StripeHandler:
         Returns:
             Stripe Checkout Session or None
         """
-        try:
-            session_data = {
-                'customer': customer_id,
-                'payment_method_types': ['card'],
-                'line_items': [{'price': price_id, 'quantity': 1}],
-                'mode': 'subscription',
-                'success_url': success_url,
-                'cancel_url': cancel_url
-            }
-            
-            if trial_days > 0:
-                session_data['subscription_data'] = {
-                    'trial_period_days': trial_days
+        tracer = get_tracer()
+        with tracer.start_as_current_span("stripe.create_checkout_session") as span:
+            try:
+                set_span_attributes(span, {
+                    "stripe.operation": "create_checkout_session",
+                    "stripe.customer_id": customer_id[:8] + "...",
+                    "stripe.price_id": price_id[:10] + "...",
+                    "stripe.trial_days": trial_days
+                })
+                
+                session_data = {
+                    'customer': customer_id,
+                    'payment_method_types': ['card'],
+                    'line_items': [{'price': price_id, 'quantity': 1}],
+                    'mode': 'subscription',
+                    'success_url': success_url,
+                    'cancel_url': cancel_url
                 }
-            
-            session = stripe.checkout.Session.create(**session_data)
-            logger.info(f"Created checkout session: {session.id}")
-            return session
-        except stripe.error.StripeError as e:
-            logger.error(f"Failed to create checkout session: {e}")
-            return None
+                
+                if trial_days > 0:
+                    session_data['subscription_data'] = {
+                        'trial_period_days': trial_days
+                    }
+                
+                session = stripe.checkout.Session.create(**session_data)
+                
+                set_span_attributes(span, {
+                    "stripe.session_id": session.id[:8] + "...",
+                    "stripe.success": True
+                })
+                
+                logger.info(f"Created checkout session: {session.id}")
+                return session
+            except stripe.error.StripeError as e:
+                logger.error(f"Failed to create checkout session: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error_type": type(e).__name__
+                })
+                
+                return None
     
     def create_portal_session(
         self,
@@ -348,23 +417,55 @@ class StripeHandler:
         Returns:
             Stripe Event object or None if verification fails
         """
-        if not self.webhook_secret:
-            logger.error("STRIPE_WEBHOOK_SECRET not configured")
-            return None
-        
-        try:
-            event = stripe.Webhook.construct_event(
-                payload,
-                sig_header,
-                self.webhook_secret
-            )
-            return event
-        except stripe.error.SignatureVerificationError as e:
-            logger.error(f"Webhook signature verification failed: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Webhook error: {e}")
-            return None
+        tracer = get_tracer()
+        with tracer.start_as_current_span("stripe.construct_webhook_event") as span:
+            set_span_attributes(span, {
+                "stripe.operation": "webhook_verification",
+                "stripe.payload_size": len(payload),
+                "stripe.has_secret": self.webhook_secret is not None
+            })
+            
+            if not self.webhook_secret:
+                logger.error("STRIPE_WEBHOOK_SECRET not configured")
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error": "missing_webhook_secret"
+                })
+                return None
+            
+            try:
+                event = stripe.Webhook.construct_event(
+                    payload,
+                    sig_header,
+                    self.webhook_secret
+                )
+                
+                set_span_attributes(span, {
+                    "stripe.success": True,
+                    "stripe.event_type": event.get('type', 'unknown')
+                })
+                
+                return event
+            except stripe.error.SignatureVerificationError as e:
+                logger.error(f"Webhook signature verification failed: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error": "signature_verification_failed"
+                })
+                
+                return None
+            except Exception as e:
+                logger.error(f"Webhook error: {e}")
+                span.record_exception(e)
+                
+                set_span_attributes(span, {
+                    "stripe.success": False,
+                    "stripe.error_type": type(e).__name__
+                })
+                
+                return None
     
     # =========================================================================
     # INVOICE & PAYMENT
