@@ -29,6 +29,24 @@ except ImportError:
     except ImportError:
         CIRCULAR_EXCHANGE_AVAILABLE = False
 
+# Telemetry Integration
+try:
+    from shared.utils.telemetry import get_tracer, set_span_attributes
+    TELEMETRY_AVAILABLE = True
+except ImportError:
+    TELEMETRY_AVAILABLE = False
+    def get_tracer(*args, **kwargs):
+        class NoOpTracer:
+            def start_as_current_span(self, *args, **kwargs):
+                from contextlib import contextmanager
+                @contextmanager
+                def noop():
+                    yield None
+                return noop()
+        return NoOpTracer()
+    def set_span_attributes(*args, **kwargs):
+        pass
+
 # Import shared utilities
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from shared.utils.image import load_and_validate_image, enhance_image
@@ -164,123 +182,163 @@ class CRAFTProcessor:
         Returns:
             DetectionResult with detected text bounding boxes
         """
-        start_time = time.time()
-        
-        # Check if model is loaded
-        if self.model is None:
-            return DetectionResult.create_error(
-                error_code=ErrorCode.MISSING_DEPENDENCIES,
-                error_message=(
-                    "CRAFT model not available. Install dependencies with: "
-                    "pip install craft-text-detector torch"
-                ),
-                model_id=self.model_id,
-                processing_time=time.time() - start_time
-            )
-        
-        try:
-            # Load and validate image
-            image = load_and_validate_image(image_path)
+        tracer = get_tracer()
+        with tracer.start_as_current_span("craft_detector.detect") as span:
+            start_time = time.time()
             
-            # Optional: enhance image for better detection
-            if kwargs.get('enhance', False):
-                image = enhance_image(image)
-            
-            # Convert PIL Image to numpy array (required by CRAFT)
-            image_array = np.array(image)
-            
-            # Override thresholds if provided
-            text_threshold = kwargs.get('text_threshold', self.text_threshold)
-            link_threshold = kwargs.get('link_threshold', self.link_threshold)
-            
-            # Run CRAFT detection
-            logger.info(f"Running CRAFT detection on {image_path}")
-            prediction_result = self.model.detect_text(image_array)
-            
-            # Extract bounding boxes from prediction result
-            detected_texts = []
-            
-            if 'boxes' in prediction_result:
-                boxes = prediction_result['boxes']
+            try:
+                set_span_attributes(span, {
+                    "operation.type": "craft_text_detection",
+                    "detection.model": "CRAFT",
+                    "detection.use_cuda": self.use_cuda
+                })
                 
-                for i, box in enumerate(boxes):
-                    # CRAFT returns boxes as polygon points
-                    # Convert to bounding box format (x, y, width, height)
-                    if isinstance(box, (list, np.ndarray)) and len(box) >= 4:
-                        points = np.array(box).reshape(-1, 2)
-                        x_coords = points[:, 0]
-                        y_coords = points[:, 1]
-                        
-                        x_min = int(np.min(x_coords))
-                        y_min = int(np.min(y_coords))
-                        x_max = int(np.max(x_coords))
-                        y_max = int(np.max(y_coords))
-                        
-                        bbox = BoundingBox.from_coords(x_min, y_min, x_max, y_max)
-                        
-                        # Get confidence score if available
-                        confidence = 1.0  # Default confidence
-                        if 'scores' in prediction_result and i < len(prediction_result['scores']):
-                            confidence = float(prediction_result['scores'][i])
-                        
-                        detected_text = DetectedText(
-                            text="[REGION]",  # CRAFT detects regions, not text content
-                            confidence=confidence,
-                            bbox=bbox,
-                            attributes={
-                                'detector': 'CRAFT',
-                                'polygon': box.tolist() if isinstance(box, np.ndarray) else box,
-                                'note': 'CRAFT detects text regions only; use OCR for text extraction'
-                            }
-                        )
-                        detected_texts.append(detected_text)
-            
-            # Apply NMS if requested
-            nms_threshold = kwargs.get('nms_threshold', 0.3)
-            if nms_threshold > 0 and len(detected_texts) > 1:
-                from shared.utils.image import non_maximum_suppression
+                # Check if model is loaded
+                if self.model is None:
+                    set_span_attributes(span, {
+                        "detection.success": False,
+                        "detection.error": "model_not_loaded"
+                    })
+                    return DetectionResult.create_error(
+                        error_code=ErrorCode.MISSING_DEPENDENCIES,
+                        error_message=(
+                            "CRAFT model not available. Install dependencies with: "
+                            "pip install craft-text-detector torch"
+                        ),
+                        model_id=self.model_id,
+                        processing_time=time.time() - start_time
+                    )
                 
-                boxes = [dt.bbox for dt in detected_texts]
-                confidences = [dt.confidence for dt in detected_texts]
-                keep_indices = non_maximum_suppression(boxes, confidences, nms_threshold)
-                detected_texts = [detected_texts[i] for i in keep_indices]
-                logger.info(f"NMS reduced {len(boxes)} boxes to {len(detected_texts)}")
-            
-            processing_time = time.time() - start_time
-            
-            logger.info(
-                f"CRAFT detected {len(detected_texts)} text regions in {processing_time:.2f}s"
-            )
-            
-            return DetectionResult(
-                texts=detected_texts,
-                metadata={
-                    'algorithm': 'CRAFT',
-                    'text_threshold': text_threshold,
-                    'link_threshold': link_threshold,
-                    'image_size': image.size,
-                    'use_cuda': self.use_cuda
-                },
-                processing_time=processing_time,
-                model_id=self.model_id,
-                success=True
-            )
-            
-        except FileNotFoundError:
-            return DetectionResult.create_error(
-                error_code=ErrorCode.INVALID_IMAGE,
-                error_message=f"Image file not found: {image_path}",
-                model_id=self.model_id,
-                processing_time=time.time() - start_time
-            )
-        except Exception as e:
-            logger.error(f"CRAFT detection failed: {e}", exc_info=True)
-            return DetectionResult.create_error(
-                error_code=ErrorCode.PROCESSING_FAILED,
-                error_message=f"CRAFT detection error: {str(e)}",
-                model_id=self.model_id,
-                processing_time=time.time() - start_time
-            )
+                # Load and validate image
+                image = load_and_validate_image(image_path)
+                
+                # Optional: enhance image for better detection
+                if kwargs.get('enhance', False):
+                    image = enhance_image(image)
+                    set_span_attributes(span, {"detection.enhanced": True})
+                
+                # Convert PIL Image to numpy array (required by CRAFT)
+                image_array = np.array(image)
+                
+                # Override thresholds if provided
+                text_threshold = kwargs.get('text_threshold', self.text_threshold)
+                link_threshold = kwargs.get('link_threshold', self.link_threshold)
+                
+                set_span_attributes(span, {
+                    "detection.text_threshold": text_threshold,
+                    "detection.link_threshold": link_threshold,
+                    "image.size": f"{image.size[0]}x{image.size[1]}"
+                })
+                
+                # Run CRAFT detection
+                logger.info(f"Running CRAFT detection on {image_path}")
+                prediction_result = self.model.detect_text(image_array)
+                
+                # Extract bounding boxes from prediction result
+                detected_texts = []
+                
+                if 'boxes' in prediction_result:
+                    boxes = prediction_result['boxes']
+                    
+                    for i, box in enumerate(boxes):
+                        # CRAFT returns boxes as polygon points
+                        # Convert to bounding box format (x, y, width, height)
+                        if isinstance(box, (list, np.ndarray)) and len(box) >= 4:
+                            points = np.array(box).reshape(-1, 2)
+                            x_coords = points[:, 0]
+                            y_coords = points[:, 1]
+                            
+                            x_min = int(np.min(x_coords))
+                            y_min = int(np.min(y_coords))
+                            x_max = int(np.max(x_coords))
+                            y_max = int(np.max(y_coords))
+                            
+                            bbox = BoundingBox.from_coords(x_min, y_min, x_max, y_max)
+                            
+                            # Get confidence score if available
+                            confidence = 1.0  # Default confidence
+                            if 'scores' in prediction_result and i < len(prediction_result['scores']):
+                                confidence = float(prediction_result['scores'][i])
+                            
+                            detected_text = DetectedText(
+                                text="[REGION]",  # CRAFT detects regions, not text content
+                                confidence=confidence,
+                                bbox=bbox,
+                                attributes={
+                                    'detector': 'CRAFT',
+                                    'polygon': box.tolist() if isinstance(box, np.ndarray) else box,
+                                    'note': 'CRAFT detects text regions only; use OCR for text extraction'
+                                }
+                            )
+                            detected_texts.append(detected_text)
+                
+                # Apply NMS if requested
+                nms_threshold = kwargs.get('nms_threshold', 0.3)
+                if nms_threshold > 0 and len(detected_texts) > 1:
+                    from shared.utils.image import non_maximum_suppression
+                    
+                    boxes = [dt.bbox for dt in detected_texts]
+                    confidences = [dt.confidence for dt in detected_texts]
+                    keep_indices = non_maximum_suppression(boxes, confidences, nms_threshold)
+                    detected_texts = [detected_texts[i] for i in keep_indices]
+                    logger.info(f"NMS reduced {len(boxes)} boxes to {len(detected_texts)}")
+                    set_span_attributes(span, {
+                        "detection.nms.before": len(boxes),
+                        "detection.nms.after": len(detected_texts)
+                    })
+                
+                processing_time = time.time() - start_time
+                
+                logger.info(
+                    f"CRAFT detected {len(detected_texts)} text regions in {processing_time:.2f}s"
+                )
+                
+                set_span_attributes(span, {
+                    "detection.success": True,
+                    "detection.regions_count": len(detected_texts),
+                    "detection.processing_time": round(processing_time, 3)
+                })
+                
+                return DetectionResult(
+                    texts=detected_texts,
+                    metadata={
+                        'algorithm': 'CRAFT',
+                        'text_threshold': text_threshold,
+                        'link_threshold': link_threshold,
+                        'image_size': image.size,
+                        'use_cuda': self.use_cuda
+                    },
+                    processing_time=processing_time,
+                    model_id=self.model_id,
+                    success=True
+                )
+                
+            except FileNotFoundError:
+                if span:
+                    set_span_attributes(span, {
+                        "detection.success": False,
+                        "detection.error": "file_not_found"
+                    })
+                return DetectionResult.create_error(
+                    error_code=ErrorCode.INVALID_IMAGE,
+                    error_message=f"Image file not found: {image_path}",
+                    model_id=self.model_id,
+                    processing_time=time.time() - start_time
+                )
+            except Exception as e:
+                logger.error(f"CRAFT detection failed: {e}", exc_info=True)
+                if span:
+                    span.record_exception(e)
+                    set_span_attributes(span, {
+                        "detection.success": False,
+                        "detection.error_type": type(e).__name__
+                    })
+                return DetectionResult.create_error(
+                    error_code=ErrorCode.PROCESSING_FAILED,
+                    error_message=f"CRAFT detection error: {str(e)}",
+                    model_id=self.model_id,
+                    processing_time=time.time() - start_time
+                )
     
     def extract(self, image_path: str) -> Any:
         """
