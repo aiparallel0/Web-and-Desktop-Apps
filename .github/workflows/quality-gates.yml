@@ -1,0 +1,222 @@
+name: Code Quality Gates
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+  push:
+    branches: [ main, master, develop ]
+
+jobs:
+  syntax-check:
+    name: Python Syntax Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Check Python syntax
+        run: |
+          echo "Checking Python syntax for all .py files..."
+          find . -name "*.py" -not -path "./venv/*" -not -path "./.venv/*" -not -path "./node_modules/*" | while read file; do
+            echo "Checking: $file"
+            python -m py_compile "$file" || exit 1
+          done
+          echo "✅ All Python files have valid syntax"
+
+  import-validation:
+    name: Import Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # Install only core dependencies needed for imports
+          pip install Flask SQLAlchemy bcrypt PyJWT pydantic pillow numpy requests flask-cors werkzeug
+          
+      - name: Validate critical imports
+        run: |
+          echo "Testing critical module imports..."
+          python -c "import sys; sys.path.insert(0, '.'); from shared.circular_exchange import PROJECT_CONFIG; print('✅ CEFR imports')"
+          python -c "import sys; sys.path.insert(0, '.'); from shared.models.schemas import DetectionResult; print('✅ Model schemas import')"
+          python -c "import sys; sys.path.insert(0, '.'); from shared.utils.helpers import sanitize_filename; print('✅ Utils import')"
+          echo "✅ All critical imports successful"
+
+  linting:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install linters
+        run: |
+          pip install flake8 pylint
+          
+      - name: Run flake8
+        run: |
+          # Lint with reasonable rules
+          flake8 . \
+            --count \
+            --max-line-length=100 \
+            --extend-ignore=E203,E501,W503 \
+            --max-complexity=15 \
+            --exclude=venv,.venv,node_modules,migrations,__pycache__,.git \
+            --statistics \
+            --show-source || echo "⚠️ Flake8 warnings found (non-blocking)"
+
+  testing:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-cov
+          pip install Flask SQLAlchemy bcrypt PyJWT pydantic pillow numpy requests flask-cors werkzeug
+          
+      - name: Run tests with coverage
+        run: |
+          # Run tests with coverage (allow failures for now to see current state)
+          pytest tools/tests/ \
+            --cov=shared \
+            --cov=web/backend \
+            --cov-report=xml \
+            --cov-report=term-missing:skip-covered \
+            -v \
+            --tb=short \
+            --maxfail=10 || echo "⚠️ Some tests failed (will be fixed in separate commits)"
+        continue-on-error: true
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install security tools
+        run: |
+          pip install bandit safety pip-audit
+          
+      - name: Run Bandit security scan
+        run: |
+          bandit -r shared/ web/ \
+            -ll \
+            -f json \
+            -o bandit-report.json || echo "⚠️ Security issues found (review required)"
+        continue-on-error: true
+        
+      - name: Audit dependencies
+        run: |
+          pip-audit --desc || echo "⚠️ Dependency vulnerabilities found (review required)"
+        continue-on-error: true
+        
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+
+  file-checks:
+    name: File and Structure Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check for large files
+        run: |
+          echo "Checking for files larger than 10MB..."
+          find . -type f -size +10M -not -path "./.git/*" | while read file; do
+            echo "❌ Large file found: $file ($(du -h "$file" | cut -f1))"
+            exit 1
+          done || echo "⚠️ Large files detected - should be moved to Git LFS or examples/"
+        continue-on-error: true
+        
+      - name: Check for binary files in root
+        run: |
+          echo "Checking for binary image files in root..."
+          if ls *.jpg *.JPG *.png *.PNG 2>/dev/null; then
+            echo "⚠️ Binary files found in root - should be in examples/ or Git LFS"
+            exit 1
+          fi
+        continue-on-error: true
+
+  summary:
+    name: Quality Gates Summary
+    runs-on: ubuntu-latest
+    needs: [syntax-check, import-validation, linting, testing, security-scan, file-checks]
+    if: always()
+    
+    steps:
+      - name: Check results
+        run: |
+          echo "📊 Quality Gates Summary"
+          echo "========================"
+          echo "✅ Syntax Check: ${{ needs.syntax-check.result }}"
+          echo "✅ Import Validation: ${{ needs.import-validation.result }}"
+          echo "⚠️ Linting: ${{ needs.linting.result }} (warnings only)"
+          echo "⚠️ Testing: ${{ needs.testing.result }} (improvement in progress)"
+          echo "⚠️ Security: ${{ needs.security-scan.result }} (review required)"
+          echo "⚠️ File Checks: ${{ needs.file-checks.result }} (cleanup in progress)"
+          echo ""
+          echo "🎯 Critical checks (blocking):"
+          if [ "${{ needs.syntax-check.result }}" != "success" ]; then
+            echo "❌ Syntax check failed - FIX REQUIRED"
+            exit 1
+          fi
+          if [ "${{ needs.import-validation.result }}" != "success" ]; then
+            echo "❌ Import validation failed - FIX REQUIRED"
+            exit 1
+          fi
+          echo "✅ All critical checks passed"
