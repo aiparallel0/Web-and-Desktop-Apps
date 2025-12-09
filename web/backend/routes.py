@@ -104,6 +104,22 @@ def register():
                 if existing_user:
                     return jsonify({'success': False, 'error': 'Email already registered'}), 409
                 
+                # Generate email verification token
+                import secrets
+                verification_token = secrets.token_urlsafe(32)
+                
+                # Generate referral code
+                from web.backend.referral_service import generate_referral_code
+                referral_code = generate_referral_code()
+                
+                # Check for referral code in request
+                referred_by_code = data.get('referral_code') or data.get('ref')
+                referred_by_user_id = None
+                if referred_by_code:
+                    referrer = db.query(User).filter(User.referral_code == referred_by_code).first()
+                    if referrer:
+                        referred_by_user_id = referrer.id
+                
                 # Create new user
                 import uuid
                 user = User(
@@ -114,6 +130,9 @@ def register():
                     company=company or None,
                     is_active=True,
                     email_verified=False,
+                    email_verification_token=verification_token,
+                    referral_code=referral_code,
+                    referred_by=referred_by_user_id,
                     created_at=datetime.now(timezone.utc),
                     updated_at=datetime.now(timezone.utc)
                 )
@@ -123,7 +142,8 @@ def register():
                 # Set user attributes in span (no PII)
                 set_span_attributes(span, {
                     "user.id": str(user.id),
-                    "registration.success": True
+                    "registration.success": True,
+                    "has_referrer": referred_by_user_id is not None
                 })
                 
                 # Create tokens
@@ -142,16 +162,30 @@ def register():
                 db.add(refresh_token_record)
                 db.commit()
                 
-                logger.info(f"New user registered: {email}")
+                logger.info(f"New user registered: {email}, referral_code: {referral_code}")
+                
+                # Send verification email (async to not block response)
+                try:
+                    from web.backend.email_service import get_email_service
+                    email_service = get_email_service()
+                    email_service.send_verification_email(
+                        user.email,
+                        user.full_name or 'there',
+                        verification_token
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send verification email: {e}")
                 
                 return jsonify({
                     'success': True,
-                    'message': 'Registration successful',
+                    'message': 'Registration successful. Please check your email to verify your account.',
                     'user': {
                         'id': str(user.id),
                         'email': user.email,
                         'full_name': user.full_name,
-                        'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan)
+                        'plan': user.plan.value if hasattr(user.plan, 'value') else str(user.plan),
+                        'email_verified': user.email_verified,
+                        'referral_code': user.referral_code
                     },
                     'access_token': access_token,
                     'refresh_token': refresh_token,
