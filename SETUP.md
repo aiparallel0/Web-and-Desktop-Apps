@@ -384,12 +384,12 @@ Web-and-Desktop-Apps/
 
 ## Next Steps
 
-1. ✅ Clone the repository
-2. ✅ Install dependencies
-3. ✅ Configure your `.env` file
-4. ✅ Run tests to verify installation
-5. 📖 Read the [API Documentation](docs/API.md)
-6. 🚀 Start building!
+1.  Clone the repository
+2.  Install dependencies
+3.  Configure your `.env` file
+4.  Run tests to verify installation
+5.  Read the [API Documentation](docs/API.md)
+6.  Start building!
 
 For more information:
 - **API Docs**: See `docs/API.md`
