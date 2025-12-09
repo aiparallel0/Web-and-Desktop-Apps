@@ -58,9 +58,9 @@ The Receipt Extractor project is **fully implemented** with all features require
 
 ### Step 1: Create Accounts (1 hour)
 ```
-✓ Railway.app - Free tier available
-✓ Stripe.com - 2-day verification
-✓ SendGrid.com - Free tier: 100 emails/day
+-  Railway.app - Free tier available
+-  Stripe.com - 2-day verification
+-  SendGrid.com - Free tier: 100 emails/day
 ```
 
 ### Step 2: Deploy (2-3 hours)
@@ -77,10 +77,10 @@ The Receipt Extractor project is **fully implemented** with all features require
 
 ### Step 3: Go Live (1 hour)
 ```
-✓ Test payment flow
-✓ Verify emails deliver
-✓ Test user registration
-✓ Launch announcement
+-  Test payment flow
+-  Verify emails deliver
+-  Test user registration
+-  Launch announcement
 ```
 
 **Total Time:** 4-6 hours  

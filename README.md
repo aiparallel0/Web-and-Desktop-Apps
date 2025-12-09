@@ -834,17 +834,15 @@ git pull
 
 ###  Project Documentation
 
-**Architecture & Design**:
-- [CEFR Framework Status](docs/architecture/CEFR_STATUS.md) - **Honest assessment**: CEFR is optional/experimental
-- [Production Hardening Summary](PRODUCTION_HARDENING_SUMMARY.md) - **NEW**: Quality gates and infrastructure improvements
+For complete documentation, see the [Documentation Index](docs/README.md).
 
-**Development Guides**:
-- [Testing Strategy](docs/development/TESTING_STRATEGY.md) - **Comprehensive**: Testing principles and standards
-- [Code Quality Standards](docs/development/CODE_QUALITY.md) - **Standards**: CI/CD, linting, security
-
-**Project History**:
-- [Changelog](docs/history/CHANGELOG.md) - **Consolidated**: All project summaries and milestones
-- [Repository Analysis](REPOSITORY_ANALYSIS.md) - Comprehensive codebase analysis
+**Key Guides**:
+- [Monetization Guide](docs/MONETIZATION_GUIDE.md) - Step-by-step plan to reach $1,000/month
+- [Testing Strategy](docs/development/TESTING_STRATEGY.md) - Testing principles and standards
+- [Code Quality Standards](docs/development/CODE_QUALITY.md) - CI/CD, linting, security
+- [CEFR Framework Status](docs/architecture/CEFR_STATUS.md) - CEFR is optional/experimental
+- [Changelog](docs/history/CHANGELOG.md) - All project summaries and milestones
+- [Repository Analysis](docs/analysis/REPOSITORY_ANALYSIS.md) - Codebase analysis
 
 **API & Operations**:
 - [API Documentation](docs/API.md) - REST API endpoints
