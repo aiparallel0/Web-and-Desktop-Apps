@@ -13,7 +13,7 @@
 ### 1. Railway Account
 1. Go to https://railway.app
 2. Sign up with GitHub
-3. ✅ Done - No credit card required for trial
+3.  Done - No credit card required for trial
 
 ### 2. Stripe Account  
 1. Go to https://stripe.com
@@ -240,9 +240,9 @@ Should see: {"status": "healthy", ...}
 ### 5. Check Emails
 ```
 Check your inbox for:
-- Email verification ✅
-- Welcome email ✅
-- Payment confirmation ✅
+- Email verification 
+- Welcome email 
+- Payment confirmation 
 ```
 
 ---
@@ -279,13 +279,13 @@ Check your inbox for:
 ### Social Media Announcement
 ```
 Twitter/X:
-"🚀 Just launched Receipt Extractor!
+" Just launched Receipt Extractor!
 
 AI-powered receipt text extraction with 7 OCR models.
 
-✅ 14-day free trial
-✅ $19/month Pro plan
-✅ No credit card required
+ 14-day free trial
+ $19/month Pro plan
+ No credit card required
 
 Try it: https://your-app.railway.app
 
@@ -384,7 +384,7 @@ Month 2: 50 signups → 20 paid → $380 MRR
 Month 3: 50 signups → 30 paid → $570 MRR
 Month 4: 50 signups → 40 paid → $760 MRR
 Month 5: 50 signups → 50 paid → $950 MRR
-Month 6: +3 more → $1,000 MRR ✅
+Month 6: +3 more → $1,000 MRR 
 ```
 
 ### Optimistic (3 months)
@@ -392,7 +392,7 @@ Month 6: +3 more → $1,000 MRR ✅
 With marketing spend ($100/month):
 Month 1: 100 signups → 20 paid → $380 MRR
 Month 2: 100 signups → 40 paid → $760 MRR
-Month 3: 100 signups → 60 paid → $1,140 MRR ✅
+Month 3: 100 signups → 60 paid → $1,140 MRR 
 ```
 
 ### With Referrals
@@ -501,11 +501,11 @@ If you're stuck and need urgent help, create a GitHub issue with:
 2. Test (Day 4)
 3. Market (Day 5-7)
 4. Acquire customers (Month 1-6)
-5. Reach $1,000 MRR ✅
+5. Reach $1,000 MRR 
 
 **The app is ready.** All you need to do is deploy it and tell people about it.
 
-Good luck! 🚀
+Good luck! 
 
 ---
 
