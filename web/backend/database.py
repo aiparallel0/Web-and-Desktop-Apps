@@ -36,7 +36,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             description="Database models and connection management for SQLAlchemy",
             dependencies=["shared.circular_exchange"],
             exports=["Base", "User", "Receipt", "Subscription", "APIKey", 
-                    "RefreshToken", "AuditLog", "Referral", "get_db", "init_db", "CloudStorageProvider"]
+                    "RefreshToken", "AuditLog", "Referral", "EmailSequence", "EmailLog",
+                    "AnalyticsEvent", "ConversionFunnel", "get_db", "init_db", "CloudStorageProvider"]
         ))
     except Exception:
         pass  # Ignore registration errors during import
@@ -787,6 +788,181 @@ class Referral(Base):
         return f"<Referral(id={self.id}, referrer_id={self.referrer_id}, status='{self.status}')>"
 
 
+class EmailSequenceType(str, enum.Enum):
+    """Email sequence types"""
+    WELCOME = "welcome"
+    TRIAL_CONVERSION = "trial_conversion"
+    ONBOARDING = "onboarding"
+    RE_ENGAGEMENT = "re_engagement"
+
+
+class EmailSequence(Base):
+    """Track email sequence memberships for marketing automation"""
+    __tablename__ = "email_sequences"
+    
+    # Primary Key
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
+    
+    # Foreign Key
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    
+    # Sequence Details
+    sequence_name = Column(SQLEnum(EmailSequenceType), nullable=False, index=True)
+    current_step = Column(Integer, default=0, nullable=False)  # Current step in sequence (0-indexed)
+    
+    # Status
+    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    paused = Column(Boolean, default=False)
+    unsubscribed = Column(Boolean, default=False)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_email_sequence_user_id', 'user_id'),
+        Index('idx_email_sequence_name', 'sequence_name'),
+        Index('idx_email_sequence_started', 'started_at'),
+    )
+    
+    def __repr__(self):
+        seq_name = self.sequence_name.value if hasattr(self.sequence_name, 'value') else self.sequence_name
+        return f"<EmailSequence(id={self.id}, user_id={self.user_id}, sequence='{seq_name}', step={self.current_step})>"
+
+
+class EmailLog(Base):
+    """Log all sent emails for tracking and compliance"""
+    __tablename__ = "email_logs"
+    
+    # Primary Key
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
+    
+    # Foreign Key (nullable for emails to non-users)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    
+    # Email Details
+    email_address = Column(String(255), nullable=False, index=True)
+    email_type = Column(String(100), nullable=False, index=True)  # welcome, trial_reminder, etc.
+    subject = Column(String(500), nullable=False)
+    template_version = Column(String(50), nullable=True)
+    
+    # Tracking
+    sent_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    opened_at = Column(DateTime, nullable=True)
+    clicked_at = Column(DateTime, nullable=True)
+    bounced_at = Column(DateTime, nullable=True)
+    
+    # External Service
+    external_id = Column(String(255), nullable=True)  # SendGrid/Mailgun message ID
+    external_status = Column(String(50), nullable=True)  # delivered, bounced, etc.
+    
+    # Metadata
+    metadata = Column(JSONBCompatible, nullable=True)  # Additional tracking data
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_email_log_user_id', 'user_id'),
+        Index('idx_email_log_email_address', 'email_address'),
+        Index('idx_email_log_type', 'email_type'),
+        Index('idx_email_log_sent_at', 'sent_at'),
+    )
+    
+    def __repr__(self):
+        return f"<EmailLog(id={self.id}, email='{self.email_address}', type='{self.email_type}')>"
+
+
+class AnalyticsEvent(Base):
+    """Track user events for analytics and funnel analysis"""
+    __tablename__ = "analytics_events"
+    
+    # Primary Key
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
+    
+    # User (nullable for anonymous events)
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    session_id = Column(String(255), nullable=True, index=True)
+    
+    # Event Details
+    event_name = Column(String(255), nullable=False, index=True)
+    event_properties = Column(JSONBCompatible, nullable=True)  # Flexible event data
+    
+    # UTM Tracking
+    utm_source = Column(String(255), nullable=True, index=True)
+    utm_medium = Column(String(255), nullable=True)
+    utm_campaign = Column(String(255), nullable=True)
+    utm_term = Column(String(255), nullable=True)
+    utm_content = Column(String(255), nullable=True)
+    
+    # Request Metadata
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(512), nullable=True)
+    referrer = Column(String(512), nullable=True)
+    
+    # Timestamp
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_analytics_event_user_id', 'user_id'),
+        Index('idx_analytics_event_session_id', 'session_id'),
+        Index('idx_analytics_event_name', 'event_name'),
+        Index('idx_analytics_event_created_at', 'created_at'),
+        Index('idx_analytics_event_utm_source', 'utm_source'),
+    )
+    
+    def __repr__(self):
+        return f"<AnalyticsEvent(id={self.id}, event='{self.event_name}', user_id={self.user_id})>"
+
+
+class FunnelType(str, enum.Enum):
+    """Conversion funnel types"""
+    SIGNUP = "signup"
+    ACTIVATION = "activation"
+    CONVERSION = "conversion"
+    RETENTION = "retention"
+
+
+class ConversionFunnel(Base):
+    """Track user progression through conversion funnels"""
+    __tablename__ = "conversion_funnels"
+    
+    # Primary Key
+    id = Column(GUID(), primary_key=True, default=uuid_module.uuid4)
+    
+    # Foreign Key
+    user_id = Column(GUID(), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    
+    # Funnel Details
+    funnel_type = Column(SQLEnum(FunnelType), nullable=False, index=True)
+    step_name = Column(String(255), nullable=False, index=True)
+    
+    # Completion
+    completed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # Metadata
+    metadata = Column(JSONBCompatible, nullable=True)  # Additional step data
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_conversion_funnel_user_id', 'user_id'),
+        Index('idx_conversion_funnel_type', 'funnel_type'),
+        Index('idx_conversion_funnel_step', 'step_name'),
+        Index('idx_conversion_funnel_completed', 'completed_at'),
+    )
+    
+    def __repr__(self):
+        funnel_value = self.funnel_type.value if hasattr(self.funnel_type, 'value') else self.funnel_type
+        return f"<ConversionFunnel(id={self.id}, user_id={self.user_id}, funnel='{funnel_value}', step='{self.step_name}')>"
+
+
 # Module exports
 __all__ = [
     'Base',
@@ -797,9 +973,15 @@ __all__ = [
     'RefreshToken',
     'AuditLog',
     'Referral',
+    'EmailSequence',
+    'EmailLog',
+    'AnalyticsEvent',
+    'ConversionFunnel',
     'SubscriptionPlan',
     'SubscriptionStatus',
     'CloudStorageProvider',
+    'EmailSequenceType',
+    'FunnelType',
     'get_db',
     'init_db',
     'engine',

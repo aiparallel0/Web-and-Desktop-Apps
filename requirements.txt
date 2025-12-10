@@ -120,6 +120,9 @@ huggingface-hub>=0.20.0
 celery>=5.3.4
 redis>=5.0.1
 
+# APScheduler for background task scheduling (simpler alternative to Celery)
+apscheduler>=3.10.0
+
 # ============================================================================
 # TESTING (Development)
 # ============================================================================
