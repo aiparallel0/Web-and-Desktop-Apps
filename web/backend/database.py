@@ -6,8 +6,9 @@ Telemetry: Tracks database operations for query performance monitoring.
 """
 
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from typing import Optional, Generator, Any, Dict, Iterator, Callable, Tuple
+from sqlalchemy import create_engine, Engine
+from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
 import logging
@@ -72,12 +73,15 @@ POOL_TIMEOUT = int(os.getenv('DB_POOL_TIMEOUT', '30'))  # Seconds to wait for co
 POOL_RECYCLE = int(os.getenv('DB_POOL_RECYCLE', '1800'))  # Recycle connections every 30 minutes
 
 
-def get_engine():
+def get_engine() -> Engine:
     """
     Get or create the database engine.
     
     Configured with connection pool management to prevent pool exhaustion.
     Added based on CEF analysis detecting recurring "connection pool exhausted" errors.
+    
+    Returns:
+        Engine: SQLAlchemy database engine instance
     """
     global _engine
     if _engine is None:
@@ -123,8 +127,13 @@ engine = EngineProxy()
 _SessionLocal = None
 
 
-def get_session_factory():
-    """Get or create the session factory."""
+def get_session_factory() -> sessionmaker:
+    """
+    Get or create the session factory.
+    
+    Returns:
+        sessionmaker: SQLAlchemy session factory
+    """
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
@@ -148,7 +157,7 @@ SessionLocal = SessionLocalProxy()
 db_session = scoped_session(lambda: get_session_factory()())
 
 
-def init_db():
+def init_db() -> None:
     """
     Initialize database schema
 
@@ -160,7 +169,7 @@ def init_db():
     logger.info("Database schema initialized successfully")
 
 
-def drop_all():
+def drop_all() -> None:
     """
     Drop all tables
 
@@ -171,7 +180,7 @@ def drop_all():
     logger.warning("All tables dropped")
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """
     Dependency for getting database session with telemetry tracking.
 
@@ -187,6 +196,9 @@ def get_db():
         def endpoint(db: Session = Depends(get_db)):
             users = db.query(User).all()
             return users
+            
+    Yields:
+        Session: SQLAlchemy database session
     """
     if TELEMETRY_AVAILABLE:
         tracer = get_tracer()
@@ -214,7 +226,7 @@ def get_db():
 
 
 @contextmanager
-def get_db_context():
+def get_db_context() -> Generator[Session, None, None]:
     """
     Context manager for database session with telemetry tracking.
 
@@ -222,6 +234,9 @@ def get_db_context():
         with get_db_context() as db:
             user = db.query(User).filter(User.email == email).first()
             # ... do work ...
+            
+    Yields:
+        Session: SQLAlchemy database session
     """
     if TELEMETRY_AVAILABLE:
         tracer = get_tracer()
@@ -265,11 +280,14 @@ def get_db_context():
             db.close()
 
 
-def cleanup_expired_tokens():
+def cleanup_expired_tokens() -> int:
     """
     Clean up expired refresh tokens with telemetry tracking.
 
     Should be run periodically (e.g., daily cron job)
+    
+    Returns:
+        int: Number of expired tokens deleted
     """
     from datetime import datetime, timezone
     from .models import RefreshToken
@@ -315,11 +333,14 @@ def cleanup_expired_tokens():
             return expired_count
 
 
-def reset_monthly_usage():
+def reset_monthly_usage() -> int:
     """
     Reset monthly usage counters with telemetry tracking.
 
     Should be run on the 1st of each month
+    
+    Returns:
+        int: Number of users whose usage was reset
     """
     from .models import User
 
@@ -1009,8 +1030,13 @@ _Receipt = None
 _User = None
 
 
-def _get_db_context():
-    """Lazy import of database context."""
+def _get_db_context() -> Callable:
+    """
+    Lazy import of database context.
+    
+    Returns:
+        Callable: Database context function
+    """
     global _db_context
     if _db_context is None:
         from database.connection import get_db_context
@@ -1018,8 +1044,13 @@ def _get_db_context():
     return _db_context
 
 
-def _get_models():
-    """Lazy import of database models."""
+def _get_models() -> Tuple[Any, Any]:
+    """
+    Lazy import of database models.
+    
+    Returns:
+        Tuple[Any, Any]: Receipt and User model classes
+    """
     global _Receipt, _User
     if _Receipt is None:
         from database.models import Receipt, User
@@ -1028,8 +1059,16 @@ def _get_models():
     return _Receipt, _User
 
 
-def require_auth_simple(f):
-    """Simple auth check decorator for receipts routes."""
+def require_auth_simple(f: Callable) -> Callable:
+    """
+    Simple auth check decorator for receipts routes.
+    
+    Args:
+        f: Function to decorate
+        
+    Returns:
+        Callable: Decorated function with authentication check
+    """
     from functools import wraps
     
     @wraps(f)
@@ -1059,7 +1098,7 @@ def require_auth_simple(f):
 
 @receipts_bp.route('', methods=['GET'])
 @require_auth_simple
-def list_receipts():
+def list_receipts() -> Tuple[Any, int]:
     """
     List receipts for the current user.
     
@@ -1074,7 +1113,7 @@ def list_receipts():
         sort_order: Sort order (asc, desc)
     
     Returns:
-        200: List of receipts with pagination info
+        Tuple[Any, int]: JSON response with list of receipts and HTTP status code
     """
     try:
         Receipt, User = _get_models()
@@ -1160,13 +1199,15 @@ def list_receipts():
 
 @receipts_bp.route('/<receipt_id>', methods=['GET'])
 @require_auth_simple
-def get_receipt(receipt_id):
+def get_receipt(receipt_id: str) -> Tuple[Any, int]:
     """
     Get a specific receipt by ID.
     
+    Args:
+        receipt_id: Receipt ID to retrieve
+    
     Returns:
-        200: Receipt details with extracted data
-        404: Receipt not found
+        Tuple[Any, int]: JSON response with receipt details and HTTP status code
     """
     try:
         Receipt, _ = _get_models()
@@ -1209,13 +1250,15 @@ def get_receipt(receipt_id):
 
 @receipts_bp.route('/<receipt_id>', methods=['DELETE'])
 @require_auth_simple
-def delete_receipt(receipt_id):
+def delete_receipt(receipt_id: str) -> Tuple[Any, int]:
     """
     Delete a receipt.
     
+    Args:
+        receipt_id: Receipt ID to delete
+    
     Returns:
-        200: Receipt deleted successfully
-        404: Receipt not found
+        Tuple[Any, int]: JSON response with deletion result and HTTP status code
     """
     try:
         Receipt, _ = _get_models()
@@ -1246,9 +1289,12 @@ def delete_receipt(receipt_id):
 
 @receipts_bp.route('/<receipt_id>', methods=['PATCH'])
 @require_auth_simple
-def update_receipt(receipt_id):
+def update_receipt(receipt_id: str) -> Tuple[Any, int]:
     """
     Update receipt data (e.g., correct extracted information).
+    
+    Args:
+        receipt_id: Receipt ID to update
     
     Request body:
         {
@@ -1259,8 +1305,7 @@ def update_receipt(receipt_id):
         }
     
     Returns:
-        200: Receipt updated successfully
-        404: Receipt not found
+        Tuple[Any, int]: JSON response with update result and HTTP status code
     """
     try:
         Receipt, _ = _get_models()
@@ -1322,7 +1367,7 @@ def update_receipt(receipt_id):
 
 @receipts_bp.route('/stats', methods=['GET'])
 @require_auth_simple
-def get_receipt_stats():
+def get_receipt_stats() -> Tuple[Any, int]:
     """
     Get receipt statistics for the current user.
     
@@ -1330,7 +1375,7 @@ def get_receipt_stats():
         period: Time period (month, year, all)
     
     Returns:
-        200: Receipt statistics
+        Tuple[Any, int]: JSON response with statistics and HTTP status code
     """
     try:
         from sqlalchemy import func
@@ -1398,7 +1443,12 @@ def get_receipt_stats():
         return jsonify({'success': False, 'error': 'Failed to get statistics'}), 500
 
 
-def register_receipts_routes(app):
-    """Register receipts blueprint with the Flask app."""
+def register_receipts_routes(app: Any) -> None:
+    """
+    Register receipts blueprint with the Flask app.
+    
+    Args:
+        app: Flask application instance
+    """
     app.register_blueprint(receipts_bp)
     logger.info("Receipts routes registered")
