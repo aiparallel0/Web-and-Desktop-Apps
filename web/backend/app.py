@@ -28,7 +28,8 @@ import gc
 import json
 import threading
 import platform
-from flask import Flask, request, jsonify, send_file
+from typing import Dict, List, Any, Tuple, Optional
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import tempfile
@@ -185,7 +186,7 @@ except ImportError as e:
 # =============================================================================
 
 @app.after_request
-def add_cache_headers(response):
+def add_cache_headers(response: Response) -> Response:
     """
     Add appropriate cache-control headers to responses.
     
@@ -244,7 +245,7 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def safe_delete_temp_file(file_path: str, max_retries: int = 3):
+def safe_delete_temp_file(file_path: str, max_retries: int = 3) -> None:
     """
     Safely delete a temporary file with retry logic.
     
@@ -281,7 +282,7 @@ def create_error_response(
     error_type: str = 'UnknownError',
     status_code: int = 500,
     details: dict = None
-):
+) -> Tuple[Response, int]:
     """
     Create a standardized error response.
     
@@ -312,7 +313,7 @@ def create_error_response(
 # =============================================================================
 
 @app.errorhandler(413)
-def request_entity_too_large(error):
+def request_entity_too_large(error: Any) -> Tuple[Response, int]:
     """Handle file too large errors."""
     max_size_mb = app.config['MAX_CONTENT_LENGTH'] / (1024 * 1024)
     return create_error_response(
@@ -323,7 +324,7 @@ def request_entity_too_large(error):
 
 
 @app.errorhandler(500)
-def internal_error(error):
+def internal_error(error: Any) -> Tuple[Response, int]:
     """Handle internal server errors."""
     logger.error(f"Internal server error: {error}")
     return create_error_response(
@@ -338,7 +339,7 @@ def internal_error(error):
 # =============================================================================
 
 @app.route('/', methods=['GET'])
-def index():
+def index() -> Response:
     """API root endpoint with documentation."""
     return jsonify({
         'service': 'Receipt Extraction API',
@@ -358,7 +359,7 @@ def index():
     })
 
 @app.route('/api/version', methods=['GET'])
-def get_version():
+def get_version() -> Response:
     """Get current application version for cache validation."""
     try:
         version_file = Path(__file__).parent.parent / 'frontend' / 'version.json'
@@ -387,7 +388,7 @@ def get_version():
         }), 500
 
 @app.route('/api/health',methods=['GET'])
-def health_check():
+def health_check() -> Response:
  try:
   if not PSUTIL_AVAILABLE:
    return jsonify({'status':'healthy','service':'receipt-extraction-api','version':'2.0','note':'Install psutil for detailed system metrics'})
@@ -401,7 +402,7 @@ def health_check():
  except Exception as e:logger.error(f"Health check error: {e}");return jsonify({'status':'unhealthy','service':'receipt-extraction-api','error':str(e)}),500
 
 @app.route('/api/cefr/dashboard', methods=['GET'])
-def cefr_dashboard():
+def cefr_dashboard() -> Response:
     """Get CEFR dashboard data with model performance insights."""
     try:
         if cefr_bridge and cefr_bridge.is_enabled():
@@ -418,7 +419,7 @@ def cefr_dashboard():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cefr/model/<model_id>/health', methods=['GET'])
-def cefr_model_health(model_id):
+def cefr_model_health(model_id: str) -> Response:
     """Get CEFR health status for a specific model."""
     try:
         if cefr_bridge and cefr_bridge.is_enabled():
@@ -434,7 +435,7 @@ def cefr_model_health(model_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cefr/suggestions', methods=['GET'])
-def cefr_suggestions():
+def cefr_suggestions() -> Response:
     """Get improvement suggestions from CEFR."""
     try:
         if cefr_bridge and cefr_bridge.is_enabled():
@@ -459,7 +460,7 @@ def cefr_suggestions():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cefr/feedback', methods=['POST'])
-def cefr_feedback():
+def cefr_feedback() -> Response:
     """Submit user feedback to CEFR for model improvement."""
     try:
         data = request.get_json()
@@ -486,11 +487,11 @@ def cefr_feedback():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/models',methods=['GET'])
-def get_models():
+def get_models() -> Response:
  try:models=model_manager.get_available_models();current_model=model_manager.get_current_model();default_model=model_manager.get_default_model();return jsonify({'success':True,'models':models,'current_model':current_model,'default_model':default_model})
  except Exception as e:logger.error(f"Error getting models: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/models/select',methods=['POST'])
-def select_model():
+def select_model() -> Response:
  try:
   data=request.get_json()
   model_id=data.get('model_id')
@@ -505,7 +506,7 @@ def select_model():
 @app.route('/api/extract', methods=['POST'])
 @rate_limit(requests=100, window=3600, error_message="Extraction rate limit exceeded. Please try again later.")
 @validate_file_upload(param_name='image', max_size=100*1024*1024)
-def extract_receipt():
+def extract_receipt() -> Response:
     """
     Extract text from a receipt image using OCR.
     
@@ -590,7 +591,7 @@ def extract_receipt():
 @app.route('/api/extract/batch', methods=['POST'])
 @rate_limit(requests=10, window=3600, error_message="Batch extraction rate limit exceeded. Please try again later.")
 @validate_file_upload(param_name='image', max_size=100*1024*1024)
-def extract_batch():
+def extract_batch() -> Response:
     """
     Extract text from a receipt image using all available models.
     
@@ -705,19 +706,19 @@ def extract_batch():
             if temp_path:
                 safe_delete_temp_file(temp_path)
 @app.route('/api/models/<model_id>/info',methods=['GET'])
-def get_model_info(model_id):
+def get_model_info(model_id: str) -> Response:
  try:
   model_info=model_manager.get_model_info(model_id)
   if model_info:return jsonify({'success':True,'model':model_info})
   else:return jsonify({'success':False,'error':f'Model {model_id} not found'}),404
  except Exception as e:logger.error(f"Error getting model info: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/models/unload',methods=['POST'])
-def unload_models():
+def unload_models() -> Response:
  try:model_manager.unload_all_models();return jsonify({'success':True,'message':'All models unloaded successfully'})
  except Exception as e:logger.error(f"Error unloading models: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/extract/batch-multi', methods=['POST'])
 @rate_limit(requests=5, window=3600, error_message="Batch multi-model extraction rate limit exceeded. Please try again later.")
-def extract_batch_multi():
+def extract_batch_multi() -> Response:
     """
     Extract text from multiple images using one or all models.
     
@@ -858,7 +859,7 @@ def extract_batch_multi():
                 safe_delete_temp_file(temp_path)
 
 @app.route('/api/extract-stream',methods=['POST'])
-def extract_receipt_stream():
+def extract_receipt_stream() -> Response:
  """
  Server-Sent Events (SSE) endpoint for real-time progress tracking.
  
@@ -879,7 +880,7 @@ def extract_receipt_stream():
   ProgressTracker,ProcessingStage,register_tracker,unregister_tracker
  )
  
- def generate():
+ def generate() -> Generator[str, None, None]:
   """Generator function for SSE stream."""
   temp_path=None
   tracker=None
@@ -979,7 +980,7 @@ def extract_receipt_stream():
     'mode': {'type': str, 'choices': ['local', 'cloud']},
     'config': {'type': dict}
 })
-def prepare_finetune():
+def prepare_finetune() -> Response:
     """
     Prepare a finetuning job for a model.
     
@@ -1033,7 +1034,7 @@ def prepare_finetune():
             
             return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/add-data', methods=['POST'])
-def add_finetune_data(job_id):
+def add_finetune_data(job_id: str) -> Response:
     """
     Add training data to a finetuning job.
     """
@@ -1104,7 +1105,7 @@ def add_finetune_data(job_id):
             
             return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/start',methods=['POST'])
-def start_finetune(job_id):
+def start_finetune(job_id: str) -> Response:
  try:
   if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
   job=finetune_jobs[job_id]
@@ -1120,10 +1121,10 @@ def start_finetune(job_id):
   epochs=data.get('epochs',3)
   batch_size=data.get('batch_size',4)
   learning_rate=data.get('learning_rate',5e-5)
-  def get_model_type(model_id):
+  def get_model_type(model_id: str) -> str:
    model_types={'donut_cord':'donut','donut_base':'donut','florence_v2':'florence','easyocr':'ocr','paddle':'ocr'}
    return model_types.get(model_id,model_id.split('_')[0]if'_'in model_id else'unknown')
-  def run_finetuning():
+  def run_finetuning() -> None:
    try:
     logger.info(f"Starting finetuning job {job_id} for model {job['model_id']}")
     trainer=ModelTrainer(job['model_id'],job['config'])
@@ -1209,7 +1210,7 @@ def start_finetune(job_id):
   return jsonify({'success':True,'message':'Finetuning started','job_id':job_id})
  except Exception as e:logger.error(f"Error starting finetune: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/finetune/<job_id>/status', methods=['GET'])
-def get_finetune_status(job_id):
+def get_finetune_status(job_id: str) -> Response:
     """
     Get the status of a finetuning job.
     """
@@ -1254,7 +1255,7 @@ def get_finetune_status(job_id):
             
             return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/finetune/<job_id>/export',methods=['GET'])
-def export_finetuned_model(job_id):
+def export_finetuned_model(job_id: str) -> Response:
  try:
   if job_id not in finetune_jobs:return jsonify({'success':False,'error':'Job not found'}),404
   job=finetune_jobs[job_id]
@@ -1268,7 +1269,7 @@ def export_finetuned_model(job_id):
   return send_file(str(zip_path),as_attachment=True,download_name=f"finetuned_{job['model_id']}.zip")
  except Exception as e:logger.error(f"Error exporting model: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/finetune/jobs',methods=['GET'])
-def list_finetune_jobs():
+def list_finetune_jobs() -> Response:
  try:
   jobs_list=[{'id':job_id,'model_id':job['model_id'],'status':job['status'],'progress':job.get('progress',0),'created':job['created'],'samples':len(job.get('training_data',[]))}for job_id,job in finetune_jobs.items()]
   return jsonify({'success':True,'jobs':jobs_list})
@@ -1280,7 +1281,7 @@ def list_finetune_jobs():
     'credentials': {'type': dict, 'required': True},
     'path': {'type': str}
 })
-def list_cloud_files():
+def list_cloud_files() -> Response:
     """
     List files from cloud storage provider.
     
@@ -1390,7 +1391,7 @@ def list_cloud_files():
     'file_id': {'type': str, 'required': True},
     'credentials': {'type': dict, 'required': True}
 })
-def download_cloud_file():
+def download_cloud_file() -> Response:
     """
     Download a file from cloud storage.
     
@@ -1472,7 +1473,7 @@ def download_cloud_file():
     'auth_code': {'type': str},
     'credentials': {'type': dict}
 })
-def cloud_auth():
+def cloud_auth() -> Response:
     """
     Authenticate with cloud storage provider.
     """

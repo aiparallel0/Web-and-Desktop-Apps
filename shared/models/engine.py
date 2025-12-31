@@ -8,7 +8,7 @@ import os
 os.environ.update({'TF_ENABLE_ONEDNN_OPTS':'0','TF_CPP_MIN_LOG_LEVEL':'3','TRANSFORMERS_VERBOSITY':'error'})
 import sys,json,re,logging,time
 from decimal import Decimal
-from typing import Dict,List,Optional
+from typing import Dict, List, Optional, Any, Tuple, Callable
 from PIL import Image
 sys.path.insert(0,os.path.join(os.path.dirname(__file__),'..'))
 from shared.utils.data import LineItem,ReceiptData,ExtractionResult
@@ -51,14 +51,14 @@ VisionEncoderDecoderModel = None
 AutoProcessor = None
 AutoModelForCausalLM = None
 
-def _get_torch():
+def _get_torch() -> Any:
     global torch
     if torch is None:
         import torch as _torch
         torch = _torch
     return torch
 
-def _get_transformers():
+def _get_transformers() -> Tuple[Any, Any, Any, Any]:
     global TransformersDonutProcessor, VisionEncoderDecoderModel, AutoProcessor, AutoModelForCausalLM
     if TransformersDonutProcessor is None:
         from transformers import DonutProcessor as _TransformersDonutProcessor
@@ -73,19 +73,19 @@ def _get_transformers():
 
 # Note: PRICE_MIN, PRICE_MAX now imported from shared.utils.pricing
 class BaseDonutProcessor:
-    def __init__(self,model_config:Dict):
+    def __init__(self, model_config: Dict) -> None:
         self.model_config,self.model_id,self.task_prompt,self.model_name=model_config,model_config['huggingface_id'],model_config['task_prompt'],model_config['name']
         _torch = _get_torch()
         self.device="cuda"if _torch.cuda.is_available()else"cpu"
         self.processor,self.model=None,None
         self._load_model()
-    def _load_model(self):
+    def _load_model(self) -> None:
         raise NotImplementedError("Subclasses must implement _load_model")
     def extract(self,image_path:str)->ExtractionResult:
         raise NotImplementedError("Subclasses must implement extract")
     # Note: normalize_price() now imported from shared.utils.pricing
     @staticmethod
-    def normalize_price(value):
+    def normalize_price(value: Any) -> Optional[Decimal]:
         """Normalize price value using shared utility function."""
         from shared.utils.pricing import normalize_price as _normalize_price
         return _normalize_price(value)
@@ -112,7 +112,7 @@ class BaseDonutProcessor:
             except(json.JSONDecodeError,ValueError)as e:logger.warning(f"Failed to extract JSON from text: {e}")
         return{}
 class DonutProcessor(BaseDonutProcessor):
-    def _load_model(self):
+    def _load_model(self) -> None:
         logger.info(f"Loading Donut model: {self.model_id}")
         _TransformersDonutProcessor, _VisionEncoderDecoderModel, _, _ = _get_transformers()
         max_retries=3
@@ -191,7 +191,7 @@ class DonutProcessor(BaseDonutProcessor):
         except Exception as e:
             logger.error(f"Extraction failed: {e}")
             return ExtractionResult(success=False,error=str(e))
-    def _safe_extract_string(self,value,max_depth=2,current_depth=0):
+    def _safe_extract_string(self, value: Any, max_depth: int = 2, current_depth: int = 0) -> Optional[str]:
         if value is None:return None
         if isinstance(value,str):return value.strip()if value.strip()else None
         if isinstance(value,(int,float)):return str(value)
@@ -367,7 +367,7 @@ class FlorenceProcessor(BaseDonutProcessor):
         re.compile(r'^(.+?)\s+(\d+[.,]\d{2})(?:\s*[A-Z])?$'),
     ]
     
-    def _load_model(self):
+    def _load_model(self) -> None:
         logger.info(f"Loading Florence-2 model: {self.model_id}")
         _, _, _AutoProcessor, _AutoModelForCausalLM = _get_transformers()
         max_retries=3
@@ -754,7 +754,7 @@ _finetuning_Seq2SeqTrainingArguments = None
 _finetuning_Seq2SeqTrainer = None
 _finetuning_Dataset = None
 
-def _get_finetuning_torch():
+def _get_finetuning_torch() -> Any:
     global _finetuning_torch, _finetuning_Dataset
     if _finetuning_torch is None:
         import torch as _torch
@@ -763,7 +763,7 @@ def _get_finetuning_torch():
         _finetuning_Dataset = _Dataset
     return _finetuning_torch
 
-def _get_finetuning_transformers():
+def _get_finetuning_transformers() -> Tuple[Any, Any, Any, Any]:
     global _finetuning_VisionEncoderDecoderModel, _finetuning_DonutProcessor, _finetuning_Seq2SeqTrainingArguments, _finetuning_Seq2SeqTrainer
     if _finetuning_VisionEncoderDecoderModel is None:
         from transformers import VisionEncoderDecoderModel as _VisionEncoderDecoderModel
@@ -776,22 +776,22 @@ def _get_finetuning_transformers():
         _finetuning_Seq2SeqTrainer = _Seq2SeqTrainer
     return _finetuning_VisionEncoderDecoderModel, _finetuning_DonutProcessor, _finetuning_Seq2SeqTrainingArguments, _finetuning_Seq2SeqTrainer
 
-def _make_receipt_dataset_class():
+def _make_receipt_dataset_class() -> type:
     """Factory function that creates ReceiptDataset class inheriting from torch.utils.data.Dataset"""
     _torch = _get_finetuning_torch()
     from torch.utils.data import Dataset as TorchDataset
     
     class ReceiptDataset(TorchDataset):
         """Dataset class for receipt training data. Requires torch to be installed."""
-        def __init__(self, data: List[Dict], processor):
+        def __init__(self, data: List[Dict], processor: Any) -> None:
             super().__init__()
             self.data = data
             self.processor = processor
 
-        def __len__(self):
+        def __len__(self) -> int:
             return len(self.data)
 
-        def __getitem__(self, idx):
+        def __getitem__(self, idx: int) -> Dict[str, Any]:
             item = self.data[idx]
             image = Image.open(item['image']).convert('RGB')
             pixel_values = self.processor(image, return_tensors='pt').pixel_values.squeeze()
@@ -808,7 +808,7 @@ def _make_receipt_dataset_class():
 # Placeholder for backwards compatibility - actual class created at runtime
 ReceiptDataset = None
 
-def get_receipt_dataset_class():
+def get_receipt_dataset_class() -> type:
     """Get the ReceiptDataset class, creating it if necessary."""
     global ReceiptDataset
     if ReceiptDataset is None:
@@ -816,7 +816,7 @@ def get_receipt_dataset_class():
     return ReceiptDataset
 
 class DonutFinetuner:
-    def __init__(self, model_id: str = 'donut_cord', image_size: tuple = (960, 720)):
+    def __init__(self, model_id: str = 'donut_cord', image_size: tuple = (960, 720)) -> None:
         _torch = _get_finetuning_torch()
         _VisionEncoderDecoderModel, _DonutProcessor, _, _ = _get_finetuning_transformers()
         
@@ -880,11 +880,11 @@ class DonutFinetuner:
             logger.info(f"Using gradient accumulation: {gradient_accumulation_steps} steps (effective batch size: {batch_size*gradient_accumulation_steps})")
 
             class ProgressCallback:
-                def __init__(self,callback_fn):
+                def __init__(self, callback_fn: Callable) -> None:
                     self.callback_fn=callback_fn
                     self.total_steps=0
 
-                def on_step_end(self,args,state,control,**kwargs):
+                def on_step_end(self, args: Any, state: Any, control: Any, **kwargs: Any) -> Any:
                     if self.callback_fn and state.max_steps>0:
                         progress=state.global_step/state.max_steps
                         self.callback_fn(progress)
@@ -911,7 +911,7 @@ class DonutFinetuner:
             logger.error(f"Training failed: {e}")
             raise
 
-    def save_model(self,output_path:str):
+    def save_model(self, output_path: str) -> None:
         try:
             Path(output_path).mkdir(parents=True,exist_ok=True)
             self.model.save_pretrained(output_path)
@@ -950,20 +950,20 @@ import numpy as np
 logger=logging.getLogger(__name__)
 
 class ModelTrainer:
-    def __init__(self,model_type:str,config:Dict):
+    def __init__(self, model_type: str, config: Dict) -> None:
         self.model_type=model_type
         self.config=config
         self.training_data=[]
         self.validation_data=[]
 
-    def add_training_sample(self,image_path:str,ground_truth:Dict):
+    def add_training_sample(self, image_path: str, ground_truth: Dict) -> None:
         self.training_data.append({'image':image_path,'truth':ground_truth})
         logger.info(f"Added training sample: {image_path}")
 
-    def add_validation_sample(self,image_path:str,ground_truth:Dict):
+    def add_validation_sample(self, image_path: str, ground_truth: Dict) -> None:
         self.validation_data.append({'image':image_path,'truth':ground_truth})
 
-    def fine_tune_paddle(self,epochs:int=5,batch_size:int=8):
+    def fine_tune_paddle(self, epochs: int = 5, batch_size: int = 8) -> None:
         logger.info(f"Fine-tuning PaddleOCR with {len(self.training_data)} samples")
         if not self.training_data:
             raise ValueError("No training data provided")
@@ -976,13 +976,13 @@ class ModelTrainer:
         logger.info(f"Evaluation: {results}")
         return results
 
-    def save_model(self,output_path:str):
+    def save_model(self, output_path: str) -> None:
         Path(output_path).parent.mkdir(parents=True,exist_ok=True)
         with open(output_path,'w') as f:
             json.dump({'type':self.model_type,'config':self.config,'samples':len(self.training_data)},f)
         logger.info(f"Model saved to {output_path}")
 
-    def incremental_learn(self,feedback:Dict):
+    def incremental_learn(self, feedback: Dict) -> None:
         logger.info(f"Incremental learning from feedback: {feedback.get('correction_type')}")
         if 'corrections' in feedback:
             for correction in feedback['corrections']:
@@ -1013,18 +1013,18 @@ class DataAugmenter:
         return augmented_paths
 
 class IncrementalModelDevelopment:
-    def __init__(self,base_model_id:str):
+    def __init__(self, base_model_id: str) -> None:
         self.base_model_id=base_model_id
         self.iterations=[]
         self.performance_history=[]
 
-    def create_iteration(self,name:str,changes:Dict)->str:
+    def create_iteration(self, name: str, changes: Dict) -> str:
         iteration_id=f"{self.base_model_id}_v{len(self.iterations)+1}"
         self.iterations.append({'id':iteration_id,'name':name,'changes':changes,'created':time.time()})
         logger.info(f"Created iteration {iteration_id}: {name}")
         return iteration_id
 
-    def log_performance(self,iteration_id:str,metrics:Dict):
+    def log_performance(self, iteration_id: str, metrics: Dict) -> None:
         self.performance_history.append({'iteration':iteration_id,'metrics':metrics,'timestamp':time.time()})
 
     def get_best_iteration(self)->Optional[str]:
@@ -1032,7 +1032,7 @@ class IncrementalModelDevelopment:
         best=max(self.performance_history,key=lambda x:x['metrics'].get('accuracy',0))
         return best['iteration']
 
-    def export_iteration(self,iteration_id:str,output_path:str):
+    def export_iteration(self, iteration_id: str, output_path: str) -> None:
         iteration=next((i for i in self.iterations if i['id']==iteration_id),None)
         if not iteration:raise ValueError(f"Iteration {iteration_id} not found")
         with open(output_path,'w') as f:
@@ -1143,7 +1143,7 @@ class ProcessorTimeoutError(Exception):
 # =============================================================================
 
 def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0, 
-                       max_delay: float = 30.0, exceptions: tuple = (Exception,)):
+                       max_delay: float = 30.0, exceptions: tuple = (Exception,)) -> Callable:
     """
     Retry decorator with exponential backoff.
     
@@ -1159,8 +1159,8 @@ def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0,
     Returns:
         Decorated function with retry logic
     """
-    def decorator(func):
-        def wrapper(*args, **kwargs):
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             last_exception = None
             for attempt in range(max_retries + 1):
                 try:
@@ -1204,7 +1204,7 @@ class BaseProcessor(ABC):
         last_health_check: Timestamp of last successful health check
     """
 
-    def __init__(self, model_config: Dict):
+    def __init__(self, model_config: Dict) -> None:
         """
         Initialize the base processor.
         
@@ -1219,7 +1219,7 @@ class BaseProcessor(ABC):
         self.last_health_check = None
 
     @abstractmethod
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Load the underlying model. Must be implemented by subclasses."""
         pass
 
@@ -1246,7 +1246,7 @@ class BaseProcessor(ABC):
         """
         pass
 
-    def initialize(self, retry_count: int = 2):
+    def initialize(self, retry_count: int = 2) -> None:
         """
         Initialize the processor with retry logic.
         
@@ -1286,7 +1286,7 @@ class BaseProcessor(ABC):
                     )
                     raise ProcessorInitializationError(error_msg) from e
 
-    def ensure_healthy(self):
+    def ensure_healthy(self) -> None:
         """
         Ensure the processor is healthy before use.
         
@@ -1340,7 +1340,7 @@ class EasyOCRProcessor:
         reader: EasyOCR Reader instance
     """
 
-    def __init__(self, model_config: Dict):
+    def __init__(self, model_config: Dict) -> None:
         """
         Initialize the EasyOCR processor.
         
@@ -1519,7 +1519,7 @@ from shared.utils.image import load_and_validate_image, preprocess_for_ocr
 PaddleOCR = None
 
 
-def _get_paddleocr():
+def _get_paddleocr() -> type:
     """
     Lazy load PaddleOCR to allow mocking in tests.
     
@@ -1553,7 +1553,7 @@ class PaddleProcessor:
         ocr: PaddleOCR instance
     """
 
-    def __init__(self, model_config: Dict):
+    def __init__(self, model_config: Dict) -> None:
         """
         Initialize the PaddleOCR processor with circular exchange integration.
         
@@ -1690,7 +1690,7 @@ class PaddleProcessor:
             )
             
             # Sort by Y coordinate
-            def safe_get_y(d):
+            def safe_get_y(d: Dict) -> float:
                 try:
                     bbox = d['bbox']
                     if isinstance(bbox, (list, tuple)) and len(bbox) > 0:

@@ -117,7 +117,7 @@ def get_engine() -> Engine:
 # Lazy property for backwards compatibility
 class EngineProxy:
     """Proxy object for lazy engine initialization."""
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(get_engine(), name)
 
 
@@ -143,10 +143,10 @@ def get_session_factory() -> sessionmaker:
 # Module-level SessionLocal that creates session factory on first access
 class SessionLocalProxy:
     """Proxy class that lazily creates the session factory."""
-    def __call__(self):
+    def __call__(self) -> Any:
         return get_session_factory()()
     
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(get_session_factory(), name)
 
 
@@ -410,14 +410,14 @@ class GUID(TypeDecorator):
     impl = CHAR
     cache_ok = True
 
-    def load_dialect_impl(self, dialect):
+    def load_dialect_impl(self, dialect: Any) -> Any:
         if dialect.name == 'postgresql':
             from sqlalchemy.dialects.postgresql import UUID
             return dialect.type_descriptor(UUID(as_uuid=True))
         else:
             return dialect.type_descriptor(CHAR(36))
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: Any, dialect: Any) -> Any:
         if value is not None:
             if dialect.name == 'postgresql':
                 return value
@@ -427,7 +427,7 @@ class GUID(TypeDecorator):
                 return value
         return value
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: Any, dialect: Any) -> Any:
         if value is not None:
             if not isinstance(value, uuid_module.UUID):
                 return uuid_module.UUID(value)
@@ -439,19 +439,19 @@ class JSONBCompatible(TypeDecorator):
     impl = JSON
     cache_ok = True
     
-    def load_dialect_impl(self, dialect):
+    def load_dialect_impl(self, dialect: Any) -> Any:
         if dialect.name == 'postgresql':
             from sqlalchemy.dialects.postgresql import JSONB
             return dialect.type_descriptor(JSONB())
         return dialect.type_descriptor(JSON())
     
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: Any, dialect: Any) -> Any:
         if value is not None:
             if dialect.name == 'sqlite':
                 return json.dumps(value) if not isinstance(value, str) else value
         return value
     
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: Any, dialect: Any) -> Any:
         if value is not None:
             if dialect.name == 'sqlite' and isinstance(value, str):
                 return json.loads(value)
@@ -557,7 +557,7 @@ class User(Base):
         Index('idx_user_trial_end', 'trial_end_date'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         plan_value = self.plan.value if hasattr(self.plan, 'value') else self.plan
         return f"<User(id={self.id}, email='{self.email}', plan='{plan_value}')>"
 
@@ -614,7 +614,7 @@ class Receipt(Base):
         Index('idx_receipt_cloud_key', 'cloud_storage_key'),  # For cloud storage queries
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Receipt(id={self.id}, user_id={self.user_id}, store='{self.store_name}')>"
 
 
@@ -649,7 +649,7 @@ class Subscription(Base):
     # Relationships
     user = relationship("User", back_populates="subscriptions")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         plan_value = self.plan.value if hasattr(self.plan, 'value') else self.plan
         status_value = self.status.value if hasattr(self.status, 'value') else self.status
         return f"<Subscription(id={self.id}, user_id={self.user_id}, plan='{plan_value}', status='{status_value}')>"
@@ -684,7 +684,7 @@ class APIKey(Base):
     # Relationships
     user = relationship("User", back_populates="api_keys")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<APIKey(id={self.id}, prefix='{self.key_prefix}', user_id={self.user_id})>"
 
 
@@ -725,7 +725,7 @@ class RefreshToken(Base):
         Index('idx_refresh_token_revoked', 'revoked'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id}, revoked={self.revoked})>"
 
 
@@ -765,7 +765,7 @@ class AuditLog(Base):
         Index('idx_audit_log_created_at', 'created_at'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id})>"
 
 
@@ -805,7 +805,7 @@ class Referral(Base):
         Index('idx_referral_status', 'status'),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Referral(id={self.id}, referrer_id={self.referrer_id}, status='{self.status}')>"
 
 
@@ -848,7 +848,7 @@ class EmailSequence(Base):
         Index('idx_email_sequence_started', 'started_at'),
     )
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         seq_name = self.sequence_name.value if hasattr(self.sequence_name, 'value') else self.sequence_name
         return f"<EmailSequence(id={self.id}, user_id={self.user_id}, sequence='{seq_name}', step={self.current_step})>"
 
@@ -893,7 +893,7 @@ class EmailLog(Base):
         Index('idx_email_log_sent_at', 'sent_at'),
     )
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EmailLog(id={self.id}, email='{self.email_address}', type='{self.email_type}')>"
 
 
@@ -936,7 +936,7 @@ class AnalyticsEvent(Base):
         Index('idx_analytics_event_utm_source', 'utm_source'),
     )
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AnalyticsEvent(id={self.id}, event='{self.event_name}', user_id={self.user_id})>"
 
 
@@ -979,7 +979,7 @@ class ConversionFunnel(Base):
         Index('idx_conversion_funnel_completed', 'completed_at'),
     )
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         funnel_value = self.funnel_type.value if hasattr(self.funnel_type, 'value') else self.funnel_type
         return f"<ConversionFunnel(id={self.id}, user_id={self.user_id}, funnel='{funnel_value}', step='{self.step_name}')>"
 
@@ -1072,7 +1072,7 @@ def require_auth_simple(f: Callable) -> Callable:
     from functools import wraps
     
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args: Any, **kwargs: Any) -> Tuple[Any, int]:
         from auth.jwt_handler import verify_access_token
         
         auth_header = request.headers.get('Authorization')

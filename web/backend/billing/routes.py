@@ -15,7 +15,8 @@ Provides API endpoints for subscription management:
 import os
 import logging
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify, g
+from typing import Tuple, Dict, Any, Callable, Optional
+from flask import Blueprint, request, jsonify, g, Response
 
 from .plans import SUBSCRIPTION_PLANS, get_plan_features
 from .stripe_handler import StripeHandler, STRIPE_AVAILABLE
@@ -35,7 +36,7 @@ _User = None
 _Subscription = None
 
 
-def _get_db_context():
+def _get_db_context() -> Callable:
     """Lazy import of database context."""
     global _db_context
     if _db_context is None:
@@ -44,7 +45,7 @@ def _get_db_context():
     return _db_context
 
 
-def _get_models():
+def _get_models() -> Tuple[Any, Any]:
     """Lazy import of database models."""
     global _User, _Subscription
     if _User is None:
@@ -54,12 +55,12 @@ def _get_models():
     return _User, _Subscription
 
 
-def require_auth_billing(f):
+def require_auth_billing(f: Callable) -> Callable:
     """Simple auth check decorator for billing routes."""
     from functools import wraps
     
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args: Any, **kwargs: Any) -> Tuple[Response, int]:
         from web.backend.auth import verify_access_token
         
         auth_header = request.headers.get('Authorization')
@@ -88,7 +89,7 @@ def require_auth_billing(f):
 # =============================================================================
 
 @billing_bp.route('/plans', methods=['GET'])
-def get_plans():
+def get_plans() -> Tuple[Response, int]:
     """
     Get all available subscription plans.
     
@@ -128,7 +129,7 @@ def get_plans():
 
 @billing_bp.route('/subscription', methods=['GET'])
 @require_auth_billing
-def get_subscription():
+def get_subscription() -> Tuple[Response, int]:
     """
     Get current user's subscription details.
     
@@ -196,7 +197,7 @@ def get_subscription():
 
 @billing_bp.route('/usage', methods=['GET'])
 @require_auth_billing
-def get_usage():
+def get_usage() -> Tuple[Response, int]:
     """
     Get current user's usage statistics.
     
@@ -275,7 +276,7 @@ def get_usage():
 @billing_bp.route('/create-checkout', methods=['POST'])
 @require_auth_billing
 @rate_limit(requests=5, window=3600, error_message="Checkout rate limit exceeded. Please try again later.")
-def create_checkout():
+def create_checkout() -> Tuple[Response, int]:
     """
     Create a Stripe Checkout session for subscription.
     
@@ -399,7 +400,7 @@ def create_checkout():
 
 @billing_bp.route('/create-portal', methods=['POST'])
 @require_auth_billing
-def create_portal():
+def create_portal() -> Tuple[Response, int]:
     """
     Create a customer portal session for self-service management.
     
@@ -452,7 +453,7 @@ def create_portal():
 
 @billing_bp.route('/cancel', methods=['POST'])
 @require_auth_billing
-def cancel_subscription():
+def cancel_subscription() -> Tuple[Response, int]:
     """
     Cancel subscription at end of billing period.
     
@@ -541,7 +542,7 @@ def cancel_subscription():
 # =============================================================================
 
 @billing_bp.route('/webhook', methods=['POST'])
-def webhook():
+def webhook() -> Tuple[Response, int]:
     """
     Handle Stripe webhook events.
     
@@ -626,7 +627,7 @@ def webhook():
             return jsonify({'error': str(e)}), 500
 
 
-def _handle_subscription_created(db, subscription_data, User, Subscription):
+def _handle_subscription_created(db: Any, subscription_data: Dict[str, Any], User: Any, Subscription: Any) -> None:
     """Handle new subscription creation."""
     customer_id = subscription_data['customer']
     
@@ -660,7 +661,7 @@ def _handle_subscription_created(db, subscription_data, User, Subscription):
     logger.info(f"Subscription created for user {user.id}: {plan_name}")
 
 
-def _handle_subscription_updated(db, subscription_data, User, Subscription):
+def _handle_subscription_updated(db: Any, subscription_data: Dict[str, Any], User: Any, Subscription: Any) -> None:
     """Handle subscription update."""
     subscription = db.query(Subscription).filter(
         Subscription.stripe_subscription_id == subscription_data['id']
@@ -680,7 +681,7 @@ def _handle_subscription_updated(db, subscription_data, User, Subscription):
     logger.info(f"Subscription updated: {subscription_data['id']}")
 
 
-def _handle_subscription_deleted(db, subscription_data, User, Subscription):
+def _handle_subscription_deleted(db: Any, subscription_data: Dict[str, Any], User: Any, Subscription: Any) -> None:
     """Handle subscription deletion."""
     subscription = db.query(Subscription).filter(
         Subscription.stripe_subscription_id == subscription_data['id']
@@ -702,7 +703,7 @@ def _handle_subscription_deleted(db, subscription_data, User, Subscription):
     logger.info(f"Subscription deleted: {subscription_data['id']}")
 
 
-def _handle_payment_succeeded(db, invoice_data, User):
+def _handle_payment_succeeded(db: Any, invoice_data: Dict[str, Any], User: Any) -> None:
     """Handle successful payment."""
     customer_id = invoice_data['customer']
     user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
@@ -710,7 +711,7 @@ def _handle_payment_succeeded(db, invoice_data, User):
         logger.info(f"Payment succeeded for user {user.id}")
 
 
-def _handle_payment_failed(db, invoice_data, User, Subscription):
+def _handle_payment_failed(db: Any, invoice_data: Dict[str, Any], User: Any, Subscription: Any) -> None:
     """Handle failed payment."""
     customer_id = invoice_data['customer']
     user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
@@ -736,7 +737,7 @@ def _get_plan_from_price_id(price_id: str) -> str:
     return 'free'
 
 
-def register_billing_routes(app):
+def register_billing_routes(app: Any) -> None:
     """Register billing blueprint with the Flask app."""
     app.register_blueprint(billing_bp)
     logger.info("Billing routes registered")
