@@ -880,7 +880,7 @@ def extract_receipt_stream() -> Response:
   ProgressTracker,ProcessingStage,register_tracker,unregister_tracker
  )
  
- def generate():
+ def generate() -> Generator[str, None, None]:
   """Generator function for SSE stream."""
   temp_path=None
   tracker=None
@@ -1121,10 +1121,10 @@ def start_finetune(job_id: str) -> Response:
   epochs=data.get('epochs',3)
   batch_size=data.get('batch_size',4)
   learning_rate=data.get('learning_rate',5e-5)
-  def get_model_type(model_id):
+  def get_model_type(model_id: str) -> str:
    model_types={'donut_cord':'donut','donut_base':'donut','florence_v2':'florence','easyocr':'ocr','paddle':'ocr'}
    return model_types.get(model_id,model_id.split('_')[0]if'_'in model_id else'unknown')
-  def run_finetuning():
+  def run_finetuning() -> None:
    try:
     logger.info(f"Starting finetuning job {job_id} for model {job['model_id']}")
     trainer=ModelTrainer(job['model_id'],job['config'])
