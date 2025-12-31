@@ -48,7 +48,7 @@ This project is fully implemented and ready to launch as a SaaS business. All fe
 - [Repository Analysis](#repository-analysis)
 - [Available Models](#available-models)
 - [API Reference](#api-reference)
-- [Circular Exchange Framework](#circular-exchange-framework)
+- [Code Quality Tools](#code-quality-tools)
 - [Feature Flags](#feature-flags)
 - [Installation](#installation)
 - [Desktop Application](#desktop-application)
@@ -118,7 +118,7 @@ pip install -r requirements.txt
 ### What's Disabled in MVP Mode
 
 The following features are disabled by default but can be enabled via feature flags:
-- Circular Exchange Framework (CEFR) auto-tuning  
+- Code quality tools (dependency analysis, import validation)  
 - AWS S3 cloud storage  
 - Google Drive integration  
 - Dropbox integration  
@@ -150,7 +150,7 @@ Receipt Extractor is an enterprise-grade SaaS platform that uses multiple OCR en
 - **Database**: PostgreSQL (production), SQLite (development)
 - **AI/ML**: PyTorch, HuggingFace Transformers, EasyOCR
 - **Authentication**: JWT tokens with refresh tokens
-- **Framework**: Circular Exchange Framework (CEFR) for auto-tuning (optional)
+- **Code Quality**: Developer tools for dependency analysis and import validation
 
 ---
 
@@ -163,7 +163,6 @@ Receipt Extractor supports **MVP Mode** and **Full Mode** through feature flags.
 All cloud integrations are **disabled by default** for easy local development:
 
 ```bash
-ENABLE_CEFR=false              # Circular Exchange Framework
 ENABLE_S3_STORAGE=false        # AWS S3 storage
 ENABLE_GDRIVE_STORAGE=false    # Google Drive
 ENABLE_DROPBOX_STORAGE=false   # Dropbox
@@ -178,7 +177,6 @@ To enable cloud integrations, edit `.env` and `web/backend/.env`:
 
 ```bash
 # Enable specific features
-ENABLE_CEFR=true              # Enable auto-tuning framework
 ENABLE_S3_STORAGE=true        # Enable AWS S3 storage
 ENABLE_HF_TRAINING=true       # Enable HuggingFace training
 
@@ -219,7 +217,7 @@ For the comprehensive roadmap detailing planned integrations with external servi
 - Database models (PostgreSQL/SQLite)
 - Batch processing capabilities
 - Export to JSON, CSV, TXT formats
-- Circular Exchange Framework integration
+- Code quality tools
 
 ** **Planned Features (see ROADMAP.md):**
 - Stripe payment processing
@@ -294,7 +292,7 @@ This generates detailed reports with:
 
 ```
 ├── shared/              # Shared processing modules (4 folders + 4 files)
-│   ├── circular_exchange/  # Configuration framework
+│   ├── circular_exchange/  # Minimal core registry for developer tools
 │   ├── config/             # Configuration files
 │   ├── models/             # Model processors
 │   └── utils/              # Utilities
@@ -387,7 +385,7 @@ Based on latest analysis:
 
 - **Backend Files**: 44 (Flask API, authentication, billing, storage)
 - **Frontend/Desktop Files**: 44 (Web UI and Electron app)
-- **Shared Module Files**: 67 (AI models, utilities, CEFR framework)
+- **Shared Module Files**: 67 (AI models, utilities, code quality tools)
 - **Test Files**: 37 (~1055 tests total)
 
 ### Documentation
@@ -489,51 +487,57 @@ The analysis should be re-run after:
 
 ---
 
-##  Circular Exchange Framework
+## Code Quality Tools
 
-**ALL code MUST integrate with the Circular Exchange Framework.**
+### Dependency Analysis
 
-The Circular Exchange Framework (CEFR) is a custom auto-tuning system that enables runtime parameter optimization based on production metrics and user feedback.
+Analyze Python imports and detect circular dependencies:
 
-### Required Pattern
-
-```python
-# Step 1: Import
-from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-CIRCULAR_EXCHANGE_AVAILABLE = True
-
-# Step 2: Register module
-PROJECT_CONFIG.register_module(ModuleRegistration(
-    module_id="your.module.name",
-    file_path=__file__,
-    dependencies=["list", "of", "deps"],
-    exports=["ExportedClass"]
-))
-
-# Step 3: Use VariablePackage for configuration
-registry = PackageRegistry()
-registry.create_package(name='module.param', initial_value=0.5, source_module='module')
+```bash
+python tools/cefr/dependency_analyzer.py
 ```
 
-### Framework Components
+**Features:**
+- Circular dependency detection
+- Import depth analysis
+- Bottleneck identification
+- Report saved to `docs/DEPENDENCY_ANALYSIS.md`
 
-| Component | Purpose |
-|-----------|---------|
-| `PROJECT_CONFIG` | Global configuration singleton |
-| `VariablePackage` | Observable value containers |
-| `PackageRegistry` | Registry for packages |
-| `ModuleRegistration` | Module metadata tracking |
-| `DataCollector` | Collect test results and metrics |
-| `MetricsAnalyzer` | Analyze patterns and performance |
-| `RefactoringEngine` | Generate improvement suggestions |
-| `FeedbackLoop` | Auto-tune parameters based on metrics |
+**Exit codes:**
+- `0` - No circular dependencies found
+- `1` - Circular dependencies detected
 
-### Benefits
-- Runtime parameter tuning without code changes
-- Auto-tuning based on production metrics
-- Reactive configuration updates across modules
-- Dependency tracking and impact analysis
-- Integration with user analytics (Phase 4)
+### Import Validation
+
+Validate critical imports before deployment:
+
+```bash
+python tools/cefr/import_validator.py
+```
+
+**Features:**
+- Validates critical imports (shared, models, backend)
+- Checks optional imports (OCR engines, ML frameworks)
+- Clear pass/fail reporting
+
+**Exit codes:**
+- `0` - All critical imports validated
+- `1` - One or more critical imports failed
+
+### Pre-Commit Hook
+
+Add to `.git/hooks/pre-commit`:
+
+```bash
+#!/bin/bash
+python tools/cefr/dependency_analyzer.py
+if [ $? -ne 0 ]; then
+    echo "❌ Circular dependencies detected"
+    exit 1
+fi
+```
+
+For more details, see [tools/cefr/README.md](tools/cefr/README.md).
 
 ---
 
@@ -545,7 +549,7 @@ registry.create_package(name='module.param', initial_value=0.5, source_module='m
 |----------|-------|-------------|
 | Shared Utils Tests | ~170 | Core utilities (data, helpers, image, logging) |
 | OCR Tests | ~191 | OCR processing and configuration |
-| CEFR Framework Tests | ~322 | Circular Exchange Framework (core, refactor, analysis, persist) |
+| Code Quality Tests | ~50 | Core registry and module tracking |
 | Backend Tests | ~50 | Backend API routes |
 | Integration Tests | ~28 | Cross-module integration |
 | Billing/Security Tests | ~59 | Billing, routes, security |
@@ -593,7 +597,7 @@ registry.create_package(name='module.param', initial_value=0.5, source_module='m
 | `test_backend_routes.py` | JWT, Password, Billing, Security | ** Active |
 | `test_shared_helpers.py` | Utils (data, helpers, logging, decorators) | ** Active |
 | `test_coverage_boost.py` | Low-coverage modules | ** Active |
-| `test_analysis.py` | CEFR analysis modules | ** Active |
+| `test_core.py` | Core registry modules | ✅ Active |
 | `test_integration.py` | Integration tests | ** Requires external deps |
 | `test_billing.py` | Stripe billing | ** Requires stripe package |
 
@@ -622,7 +626,7 @@ pytest tools/tests/ --cov=shared --cov=web/backend --cov-report=html
 ```bash
 ./launcher.sh test           # Run full test suite
 ./launcher.sh test-quick     # Quick tests (faster)
-./launcher.sh report         # Generate comprehensive test report with CEFR analysis
+./launcher.sh report         # Generate comprehensive test report
 ```
 
 **Direct pytest commands:**
@@ -635,7 +639,7 @@ pytest tools/tests/ --cov=shared --cov=web.backend --cov-report=html
 
 # By category
 pytest tools/tests/shared/          # Shared module tests
-pytest tools/tests/circular_exchange/  # CEFR framework tests
+pytest tools/tests/circular_exchange/  # Core registry tests
 pytest tools/tests/backend/         # Backend tests
 
 # Specific test suites
@@ -643,9 +647,9 @@ pytest tools/tests/test_billing.py  # Stripe integration tests (requires stripe 
 pytest tools/tests/test_integration.py # Integration tests
 ```
 
-**Test Coverage:** ~1055 tests covering shared modules, backend routes, CEFR framework, and AI agents
+**Test Coverage:** ~700 tests covering shared modules, backend routes, core registry, and AI agents
 
-**CI/CD:** GitHub Actions runs tests automatically on push and creates CEF analysis artifacts.
+**CI/CD:** GitHub Actions runs tests automatically on push.
 
 ---
 
