@@ -22,9 +22,13 @@ This project is fully implemented and ready to launch as a SaaS business. All fe
 **Revenue Target:** $1,000/month achievable in 6 months with 50 signups/month
 
 **Quick Start Guides:**
-- [QUICK_DEPLOY_GUIDE.md](QUICK_DEPLOY_GUIDE.md) - Deploy in 4-6 hours
-- [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) - Complete launch plan
-- [docs/MONETIZATION_GUIDE.md](docs/MONETIZATION_GUIDE.md) - Step-by-step revenue guide
+- [Quick Deploy Guide](docs/deployment/QUICK_DEPLOY_GUIDE.md) - Deploy in 4-6 hours
+- [Getting Started Setup](docs/getting-started/SETUP.md) - Installation and configuration
+- [Monetization Guide](docs/MONETIZATION_GUIDE.md) - Step-by-step revenue guide
+
+**Additional Resources:**
+- [Project Weaknesses & PR Briefs](docs/PROJECT_WEAKNESSES_AND_PR_BRIEFS.md) - Code quality improvements
+- [Archived Documentation](docs/archive/) - Historical documentation
 
 **Deployment Tools:**
 ```bash
