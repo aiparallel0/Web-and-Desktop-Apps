@@ -13,42 +13,61 @@ This document describes the test organization, guidelines, and best practices fo
 
 ## Test Structure
 
-### Directory Organization
+### Directory Organization (Updated 2025-12-31)
 
 ```
 tools/tests/
 ├── conftest.py                 # Shared fixtures and configuration
-├── backend/                    # Backend API and route tests
+├── unit/                       # ✨ NEW: Unit tests (fast, isolated)
+│   ├── models/
+│   │   └── test_schemas.py     # Schema validation tests
+│   ├── utils/
+│   │   ├── test_helpers.py     # Helper function tests (was test_shared_helpers.py)
+│   │   ├── test_validation.py  # Validation tests
+│   │   ├── test_nms.py         # NMS algorithm tests
+│   │   ├── test_optional_imports.py  # Optional dependency tests
+│   │   └── test_coverage_boost.py   # Additional coverage tests
+│   └── services/
+│       ├── test_telemetry.py   # Telemetry tests
+│       └── test_system_health.py  # System health tests
+├── api/                        # ✨ NEW: API endpoint tests
+│   ├── test_backend_routes.py  # Backend route tests
+│   ├── test_billing.py         # Billing and Stripe tests
+│   ├── test_analytics.py       # 🔀 MERGED: Analytics tests (was test_analytics.py + test_analytics_routes.py)
+│   ├── test_marketing.py       # Marketing API tests
+│   ├── test_plan_enhancements.py  # Plan and pricing tests
+│   └── test_revenue_features.py   # Revenue feature tests
+├── integration/                # Integration tests (enhanced)
+│   ├── test_integration.py     # Main integration tests
+│   ├── test_auth_workflow.py
+│   ├── test_rate_limiting.py
+│   ├── test_receipt_workflow.py
+│   ├── test_security.py        # Security integration tests (was test_security_integration.py)
+│   ├── test_feature_flags.py   # Feature flag tests
+│   └── test_spatial_ocr_integration.py
+├── backend/                    # Backend-specific tests (keep as-is)
 │   └── test_backend.py
-├── circular_exchange/          # Circular Exchange Framework tests
+├── circular_exchange/          # Circular Exchange Framework tests (keep as-is)
 │   ├── test_core.py           # Core variable package tests
 │   ├── test_analysis.py       # Analysis and metrics tests
 │   ├── test_refactor.py       # Refactoring utilities tests
 │   └── test_persist.py        # Persistence tests
-├── integration/                # Integration tests
-│   ├── test_auth_workflow.py
-│   ├── test_rate_limiting.py
-│   ├── test_receipt_workflow.py
-│   └── test_spatial_ocr_integration.py
-├── shared/                     # Shared utilities tests
+├── shared/                     # Shared utilities tests (keep as-is)
 │   ├── test_infra.py          # Infrastructure tests
 │   ├── test_models.py         # Model tests (largest: 2,415 lines)
 │   ├── test_ocr.py            # OCR functionality tests
 │   ├── test_spatial_ocr.py    # Spatial OCR tests
 │   └── test_utils.py          # Utility tests
-├── web/                        # Web-specific tests
-│   └── test_api.py
-├── test_backend_routes.py      # Backend route tests
-├── test_billing.py             # Billing and Stripe tests
-├── test_coverage_boost.py      # Additional coverage tests
-├── test_integration.py         # Main integration tests
-├── test_nms.py                 # NMS algorithm tests
-├── test_optional_imports.py    # Optional dependency tests
-├── test_plan_enhancements.py   # Plan and pricing tests
-├── test_schemas.py             # Schema validation tests
-├── test_shared_helpers.py      # Helper function tests
-└── test_system_health.py       # System health tests
+└── web/                        # Web-specific tests (keep as-is)
+    └── test_api.py
 ```
+
+### Key Improvements
+
+✅ **Better Organization**: Tests now grouped by type (unit, api, integration)  
+✅ **Reduced Duplication**: Merged `test_analytics.py` + `test_analytics_routes.py` → `api/test_analytics.py`  
+✅ **Clearer Structure**: Easier to find tests and run specific categories  
+✅ **Consistent Naming**: All test files follow `test_*.py` convention  
 
 ## Test Categories (Markers)
 
@@ -101,7 +120,23 @@ def test_normalize_price_handles_european_format():
 
 ## Recent Improvements
 
-### 2024-12 Test Restructuring
+### 2025-12-31 Test Reorganization (Issue #4)
+
+1. **Reorganized Test Structure**
+   - Created `unit/`, `api/` subdirectories for better organization
+   - Moved 22 test files from root to appropriate subdirectories
+   - Reduced root directory clutter (22 files → infrastructure files only)
+
+2. **Merged Duplicate Tests**
+   - Merged `test_analytics.py` + `test_analytics_routes.py` → `api/test_analytics.py`
+   - Eliminated redundancy in analytics test coverage
+
+3. **Improved Discoverability**
+   - Tests now organized by type: unit, api, integration
+   - Easier to run specific test categories
+   - Better alignment with project structure
+
+### 2024-12 Test Quality Improvements
 
 1. **Fixed Failing Tests (8 → 0)**
    - Updated spatial OCR model references
@@ -118,6 +153,22 @@ def test_normalize_price_handles_european_format():
    - Tests fail gracefully with informative messages
 
 ## Running Tests
+
+### By Directory Category
+```bash
+# Run all unit tests
+pytest tools/tests/unit/ -v
+
+# Run all API tests
+pytest tools/tests/api/ -v
+
+# Run all integration tests
+pytest tools/tests/integration/ -v
+
+# Run specific module tests
+pytest tools/tests/unit/utils/ -v
+pytest tools/tests/api/test_billing.py -v
+```
 
 ### Quick Tests
 ```bash
