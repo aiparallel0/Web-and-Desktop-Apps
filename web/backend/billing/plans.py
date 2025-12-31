@@ -17,6 +17,9 @@ Usage:
 
 from typing import Dict, Any, Optional
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # SUBSCRIPTION PLANS
@@ -129,11 +132,23 @@ def get_plan_features(plan_name: str) -> Dict[str, Any]:
         
     Returns:
         Dictionary of plan features
+        
+    Raises:
+        ValueError: If plan_name is invalid type
     """
-    plan = SUBSCRIPTION_PLANS.get(plan_name)
-    if not plan:
+    try:
+        if not isinstance(plan_name, str):
+            logger.warning(f"Invalid plan_name type: {type(plan_name)}")
+            return SUBSCRIPTION_PLANS['free']['features']
+        
+        plan = SUBSCRIPTION_PLANS.get(plan_name.lower())
+        if not plan:
+            logger.warning(f"Plan not found: {plan_name}, returning free plan features")
+            return SUBSCRIPTION_PLANS['free']['features']
+        return plan['features']
+    except Exception as e:
+        logger.error(f"Error getting plan features for {plan_name}: {e}")
         return SUBSCRIPTION_PLANS['free']['features']
-    return plan['features']
 
 
 def is_feature_available(plan_name: str, feature: str) -> bool:
@@ -147,8 +162,12 @@ def is_feature_available(plan_name: str, feature: str) -> bool:
     Returns:
         True if feature is available
     """
-    features = get_plan_features(plan_name)
-    return bool(features.get(feature, False))
+    try:
+        features = get_plan_features(plan_name)
+        return bool(features.get(feature, False))
+    except Exception as e:
+        logger.error(f"Error checking feature {feature} for plan {plan_name}: {e}")
+        return False
 
 
 def get_plan_limit(plan_name: str, limit_name: str) -> Any:
@@ -162,8 +181,12 @@ def get_plan_limit(plan_name: str, limit_name: str) -> Any:
     Returns:
         Limit value or None
     """
-    features = get_plan_features(plan_name)
-    return features.get(limit_name)
+    try:
+        features = get_plan_features(plan_name)
+        return features.get(limit_name)
+    except Exception as e:
+        logger.error(f"Error getting limit {limit_name} for plan {plan_name}: {e}")
+        return None
 
 
 def compare_plans(plan1: str, plan2: str) -> int:
@@ -175,14 +198,18 @@ def compare_plans(plan1: str, plan2: str) -> int:
         0 if plan1 == plan2
         1 if plan1 > plan2
     """
-    h1 = PLAN_HIERARCHY.get(plan1, 0)
-    h2 = PLAN_HIERARCHY.get(plan2, 0)
-    
-    if h1 < h2:
-        return -1
-    elif h1 > h2:
-        return 1
-    return 0
+    try:
+        h1 = PLAN_HIERARCHY.get(plan1, 0)
+        h2 = PLAN_HIERARCHY.get(plan2, 0)
+        
+        if h1 < h2:
+            return -1
+        elif h1 > h2:
+            return 1
+        return 0
+    except Exception as e:
+        logger.error(f"Error comparing plans {plan1} and {plan2}: {e}")
+        return 0
 
 
 def is_plan_sufficient(user_plan: str, required_plan: str) -> bool:
@@ -196,7 +223,11 @@ def is_plan_sufficient(user_plan: str, required_plan: str) -> bool:
     Returns:
         True if user's plan is sufficient
     """
-    return compare_plans(user_plan, required_plan) >= 0
+    try:
+        return compare_plans(user_plan, required_plan) >= 0
+    except Exception as e:
+        logger.error(f"Error checking plan sufficiency: {e}")
+        return False
 
 
 def get_upgrade_recommendation(current_plan: str) -> Optional[str]:
@@ -209,18 +240,26 @@ def get_upgrade_recommendation(current_plan: str) -> Optional[str]:
     Returns:
         Next plan name or None if already on highest plan
     """
-    current_level = PLAN_HIERARCHY.get(current_plan, 0)
-    
-    for plan, level in PLAN_HIERARCHY.items():
-        if level == current_level + 1:
-            return plan
-    
-    return None
+    try:
+        current_level = PLAN_HIERARCHY.get(current_plan, 0)
+        
+        for plan, level in PLAN_HIERARCHY.items():
+            if level == current_level + 1:
+                return plan
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error getting upgrade recommendation for {current_plan}: {e}")
+        return None
 
 
 def get_all_plans() -> Dict[str, Dict[str, Any]]:
     """Get all available subscription plans."""
-    return SUBSCRIPTION_PLANS.copy()
+    try:
+        return SUBSCRIPTION_PLANS.copy()
+    except Exception as e:
+        logger.error(f"Error getting all plans: {e}")
+        return {}
 
 
 def get_plan_price(plan_name: str) -> Any:
@@ -233,7 +272,12 @@ def get_plan_price(plan_name: str) -> Any:
     Returns:
         Price (int for fixed, 'custom' for enterprise)
     """
-    plan = SUBSCRIPTION_PLANS.get(plan_name)
-    if not plan:
+    try:
+        plan = SUBSCRIPTION_PLANS.get(plan_name)
+        if not plan:
+            logger.warning(f"Plan not found: {plan_name}, returning 0")
+            return 0
+        return plan.get('price', 0)
+    except Exception as e:
+        logger.error(f"Error getting price for plan {plan_name}: {e}")
         return 0
-    return plan.get('price', 0)
