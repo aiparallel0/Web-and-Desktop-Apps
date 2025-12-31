@@ -23,33 +23,12 @@ from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.telemetry",
-            file_path=__file__,
-            description="OpenTelemetry helper functions and decorators for tracing",
-            dependencies=["shared.circular_exchange"],
-            exports=["trace_function", "get_tracer", "record_exception", "set_span_attributes"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
-
 # Try to import OpenTelemetry
 try:
     from web.backend.telemetry.otel_config import get_tracer as _get_tracer, OTEL_AVAILABLE
 except ImportError:
     OTEL_AVAILABLE = False
     _get_tracer = None
-
 
 def get_tracer(name: str = None):
     """
@@ -82,7 +61,6 @@ def get_tracer(name: str = None):
             return no_op_span()
     
     return NoOpTracer()
-
 
 def trace_function(
     span_name: str = None,
@@ -150,7 +128,6 @@ def trace_function(
         return wrapper
     return decorator
 
-
 def set_span_attributes(span, attributes: Dict[str, Any]) -> None:
     """
     Safely set multiple attributes on a span.
@@ -170,7 +147,6 @@ def set_span_attributes(span, attributes: Dict[str, Any]) -> None:
             span.set_attribute(key, value)
         except Exception as e:
             logger.debug(f"Failed to set attribute {key}: {e}")
-
 
 def sanitize_attributes(attributes: Dict[str, Any], sensitive_keys: list = None) -> Dict[str, Any]:
     """
@@ -198,7 +174,6 @@ def sanitize_attributes(attributes: Dict[str, Any], sensitive_keys: list = None)
             sanitized[key] = value
     
     return sanitized
-
 
 __all__ = [
     'get_tracer',

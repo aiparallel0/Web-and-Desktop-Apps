@@ -10,13 +10,6 @@ import os
 import logging
 from typing import Optional
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -31,7 +24,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 def setup_scheduler():
     """
@@ -79,7 +71,6 @@ def setup_scheduler():
         logger.warning("Install with: pip install apscheduler")
         return None
 
-
 def start_scheduler():
     """
     Start the background task scheduler
@@ -96,7 +87,6 @@ def start_scheduler():
     else:
         logger.warning("Failed to start scheduler")
         return None
-
 
 __all__ = [
     'setup_scheduler',

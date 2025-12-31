@@ -46,7 +46,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
 class EasyOCRFinetuner:
     """
     Finetuner for EasyOCR models.
@@ -271,7 +270,6 @@ class EasyOCRFinetuner:
         
         logger.info(f"EasyOCR model saved to {output_path}")
 
-
 class PaddleOCRFinetuner:
     """
     Finetuner for PaddleOCR models.
@@ -473,6 +471,5 @@ class PaddleOCRFinetuner:
             json.dump(config, f, indent=2)
         
         logger.info(f"PaddleOCR model saved to {output_path}")
-
 
 __all__ = ['EasyOCRFinetuner', 'PaddleOCRFinetuner']

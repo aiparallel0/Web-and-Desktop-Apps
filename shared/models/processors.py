@@ -35,20 +35,6 @@ except ImportError:
     except ImportError:
         CIRCULAR_EXCHANGE_AVAILABLE = False
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.processors",
-            file_path=__file__,
-            description="Re-export module for OCR processors (EasyOCR, PaddleOCR) with telemetry",
-            dependencies=["shared.models.engine"],
-            exports=["BaseProcessor", "EasyOCRProcessor", "PaddleProcessor",
-                    "ProcessorInitializationError", "ProcessorHealthCheckError"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
 # Re-export from engine module with telemetry tracking
 if TELEMETRY_AVAILABLE:
     tracer = get_tracer()

@@ -54,25 +54,11 @@ from shared.models.schemas import BoundingBox, DetectedText, DetectionResult, Er
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.craft_detector",
-            file_path=__file__,
-            description="CRAFT text detection - Character Region Awareness For Text detection",
-            dependencies=["shared.circular_exchange", "shared.models.schemas", "shared.utils.image"],
-            exports=["CRAFTProcessor"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
 # Confidence calculation constants
 NEUTRAL_CONFIDENCE_BASELINE = 0.5  # Base confidence when no detection quality info available
 CONFIDENCE_PER_FIELD = 20.0  # Percentage per successfully extracted field
 CONFIDENCE_BONUS_ITEMS = 20.0  # Bonus percentage for extracting items
 MAX_CONFIDENCE = 100.0  # Maximum confidence score
-
 
 class CRAFTProcessor:
     """
@@ -471,6 +457,5 @@ class CRAFTProcessor:
         except Exception as e:
             logger.error(f"CRAFT extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
-
 
 __all__ = ['CRAFTProcessor']

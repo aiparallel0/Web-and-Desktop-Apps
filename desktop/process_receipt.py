@@ -58,7 +58,6 @@ try:
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
-
 def extract_receipt(image_path: str, model_id: str = None) -> dict:
     """
     Extract receipt data from an image file.
@@ -155,7 +154,6 @@ def extract_receipt(image_path: str, model_id: str = None) -> dict:
             'error': str(e)
         }
 
-
 def main():
     """Main entry point for the script."""
     # Check arguments
@@ -198,7 +196,6 @@ def main():
     
     # Exit with appropriate code
     sys.exit(0 if result.get('success') else 1)
-
 
 if __name__ == '__main__':
     main()

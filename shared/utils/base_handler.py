@@ -29,34 +29,11 @@ from typing import Dict, Any, Optional, Callable, TypeVar, List
 from functools import wraps
 from dataclasses import dataclass
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.base_handler",
-            file_path=__file__,
-            description="Common utilities for storage and training handlers",
-            dependencies=[],
-            exports=["load_env_config", "RetryMixin", "validate_required_fields",
-                     "ExponentialBackoff", "ConfigurationError"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
-
 
 class ConfigurationError(Exception):
     """Raised when configuration is invalid or missing."""
     pass
-
 
 def load_env_config(
     env_map: Dict[str, str],
@@ -97,7 +74,6 @@ def load_env_config(
     
     return config
 
-
 def validate_required_fields(
     obj: Any,
     required_fields: List[str],
@@ -129,7 +105,6 @@ def validate_required_fields(
             f"{obj_name} missing required fields: {', '.join(missing)}"
         )
 
-
 @dataclass
 class ExponentialBackoff:
     """Configuration for exponential backoff retry logic."""
@@ -153,9 +128,7 @@ class ExponentialBackoff:
         
         return delay
 
-
 T = TypeVar('T')
-
 
 class RetryMixin:
     """
@@ -220,7 +193,6 @@ class RetryMixin:
         
         raise last_exception
 
-
 def retry_on_exception(
     max_retries: int = 3,
     base_delay: float = 1.0,
@@ -260,7 +232,6 @@ def retry_on_exception(
         return wrapper
     
     return decorator
-
 
 class OAuthFlowHelper:
     """
@@ -331,7 +302,6 @@ class OAuthFlowHelper:
             return True
         
         return received_state == expected_state
-
 
 def log_handler_event(
     handler_name: str,

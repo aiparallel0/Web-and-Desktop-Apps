@@ -43,7 +43,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
 def _get_torch():
     """Lazy import torch to allow graceful handling when not installed."""
     try:
@@ -54,7 +53,6 @@ def _get_torch():
             "PyTorch is required for Florence-2 finetuning. "
             "Install with: pip install torch torchvision"
         )
-
 
 def _get_transformers():
     """Lazy import transformers components."""
@@ -71,7 +69,6 @@ def _get_transformers():
             "Transformers library is required for Florence-2 finetuning. "
             "Install with: pip install transformers accelerate"
         )
-
 
 class FlorenceReceiptDataset:
     """Dataset class for Florence-2 receipt finetuning."""
@@ -119,7 +116,6 @@ class FlorenceReceiptDataset:
             'pixel_values': inputs['pixel_values'].squeeze(0),
             'labels': labels['input_ids'].squeeze(0)
         }
-
 
 class FlorenceFinetuner:
     """
@@ -361,6 +357,5 @@ class FlorenceFinetuner:
             'samples': total_samples,
             'correct': total_correct
         }
-
 
 __all__ = ['FlorenceFinetuner']

@@ -41,26 +41,12 @@ try:
 except ImportError:
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="scripts.process_images_cefr",
-            file_path=__file__,
-            description="CEFR image processing and analysis script for OCR testing",
-            dependencies=["shared.models.ocr", "shared.models.config"],
-            exports=["process_images", "analyze_results", "generate_report"]
-        ))
-    except Exception:
-        pass
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 
 def get_image_files(project_root: Path) -> List[Path]:
     """Get list of JPG image files (0.jpg through 4.jpg) in the project root."""
@@ -72,7 +58,6 @@ def get_image_files(project_root: Path) -> List[Path]:
         else:
             logger.warning(f"Image not found: {img_path}")
     return image_files
-
 
 def process_single_image(image_path: Path, processor) -> Dict[str, Any]:
     """
@@ -142,7 +127,6 @@ def process_single_image(image_path: Path, processor) -> Dict[str, Any]:
     
     return result
 
-
 def process_images(project_root: Path, verbose: bool = False) -> List[Dict[str, Any]]:
     """
     Process all JPG images and return results.
@@ -198,7 +182,6 @@ def process_images(project_root: Path, verbose: bool = False) -> List[Dict[str, 
             logger.info(f"  ✗ Failed - Error: {result['error']}")
     
     return results
-
 
 def analyze_results(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -312,7 +295,6 @@ def analyze_results(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     
     return analysis
 
-
 def generate_report(results: List[Dict[str, Any]], analysis: Dict[str, Any], output_dir: Path) -> str:
     """
     Generate a CEFR-style analysis report.
@@ -422,7 +404,6 @@ def generate_report(results: List[Dict[str, Any]], analysis: Dict[str, Any], out
     
     return str(report_path)
 
-
 def main():
     """Main entry point for CEFR image processing."""
     parser = argparse.ArgumentParser(
@@ -476,7 +457,6 @@ def main():
             print(f"  • [{suggestion['category']}] {suggestion['suggestion']}")
     
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

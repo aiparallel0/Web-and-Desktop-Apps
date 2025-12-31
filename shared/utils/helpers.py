@@ -36,31 +36,7 @@ from shared.utils.errors import (
     ERROR_METADATA
 )
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.helpers",
-            file_path=__file__,
-            description="Utility helpers including Circuit Breaker, caching, and error handling (re-exported)",
-            dependencies=["shared.circular_exchange", "shared.utils.errors"],
-            exports=["ErrorCategory", "ErrorCode", "ReceiptExtractorError", "ValidationError",
-                     "ProcessingError", "ExternalServiceError", "RateLimitError", 
-                     "CircuitBreaker", "CircuitBreakerConfig", "get_circuit_breaker",
-                     "LRUCache", "get_cache", "ResponseCache", "get_response_cache"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
-
 
 # Re-export error handling for backward compatibility
 __all__ = [
@@ -79,7 +55,6 @@ __all__ = [
     'clear_all_caches', 'cache_result', 'cached_property',
 ]
 
-
 # Error response utilities (wrapping consolidated errors module)
 def create_error_response(
     error: ReceiptExtractorError
@@ -87,7 +62,6 @@ def create_error_response(
     """Create a Flask-compatible error response tuple."""
     error.log_error()
     return error.to_dict(), error.http_status
-
 
 def create_simple_error_response(
     message: str,
@@ -105,7 +79,6 @@ def create_simple_error_response(
     }
     return response, status_code
 
-
 def handle_exception(e: Exception) -> tuple:
     """Handle any exception and return appropriate response."""
     if isinstance(e, ReceiptExtractorError):
@@ -120,7 +93,6 @@ def handle_exception(e: Exception) -> tuple:
         status_code=500,
         error_type="internal_error"
     )
-
 
 # Flask error handlers
 def register_error_handlers(app):
@@ -171,7 +143,6 @@ def register_error_handlers(app):
     
     logger.info("Error handlers registered")
 
-
 # =============================================================================
 # CIRCUIT BREAKER PATTERN - Added based on CEF Round 5 analysis
 # =============================================================================
@@ -182,7 +153,6 @@ class CircuitBreakerState(str, Enum):
     OPEN = "open"           # Failing, reject requests
     HALF_OPEN = "half_open" # Testing if service recovered
 
-
 @dataclass
 class CircuitBreakerConfig:
     """Configuration for circuit breaker."""
@@ -190,7 +160,6 @@ class CircuitBreakerConfig:
     success_threshold: int = 3          # Successes to close from half-open
     timeout_seconds: float = 30.0       # Time before attempting half-open
     half_open_max_calls: int = 3        # Max calls in half-open state
-
 
 class CircuitBreaker:
     """
@@ -303,10 +272,8 @@ class CircuitBreaker:
             'last_failure': self.last_failure_time
         }
 
-
 # Global circuit breaker registry for service monitoring
 _circuit_breakers: Dict[str, CircuitBreaker] = {}
-
 
 def get_circuit_breaker(service_name: str, config: Optional[CircuitBreakerConfig] = None) -> CircuitBreaker:
     """Get or create a circuit breaker for a service."""
@@ -314,11 +281,9 @@ def get_circuit_breaker(service_name: str, config: Optional[CircuitBreakerConfig
         _circuit_breakers[service_name] = CircuitBreaker(service_name, config)
     return _circuit_breakers[service_name]
 
-
 def get_all_circuit_breaker_states() -> Dict[str, Dict[str, Any]]:
     """Get states of all circuit breakers (for health monitoring)."""
     return {name: breaker.get_state() for name, breaker in _circuit_breakers.items()}
-
 
 # =============================================================================
 # CACHING MODULE - Response and Result Caching
@@ -346,32 +311,10 @@ from dataclasses import dataclass, field
 from functools import wraps
 from collections import OrderedDict
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.cache",
-            file_path=__file__,
-            description="Caching infrastructure for improved performance (LRU, ETag, query caching)",
-            dependencies=["shared.circular_exchange"],
-            exports=["LRUCache", "cache_result", "cached_property", "ResponseCache", 
-                    "get_cache_stats", "clear_all_caches"]
-        ))
-    except Exception:
-        pass
 
 # Type variable for generic caching
 T = TypeVar('T')
-
 
 # =============================================================================
 # LRU CACHE IMPLEMENTATION
@@ -385,7 +328,6 @@ class CacheEntry:
     accessed_at: float
     hit_count: int = 0
     size_bytes: int = 0
-
 
 class LRUCache:
     """
@@ -499,10 +441,8 @@ class LRUCache:
         """Check if key exists in cache (without updating access time)."""
         return key in self._cache
 
-
 # Global cache registry
 _caches: Dict[str, LRUCache] = {}
-
 
 def get_cache(name: str, max_size: int = 100, ttl_seconds: Optional[float] = None) -> LRUCache:
     """Get or create a named cache."""
@@ -510,18 +450,15 @@ def get_cache(name: str, max_size: int = 100, ttl_seconds: Optional[float] = Non
         _caches[name] = LRUCache(max_size=max_size, ttl_seconds=ttl_seconds, name=name)
     return _caches[name]
 
-
 def get_cache_stats() -> Dict[str, Dict[str, Any]]:
     """Get statistics for all caches."""
     return {name: cache.get_stats() for name, cache in _caches.items()}
-
 
 def clear_all_caches() -> None:
     """Clear all caches."""
     for cache in _caches.values():
         cache.clear()
     logger.info("All caches cleared")
-
 
 # =============================================================================
 # CACHING DECORATORS
@@ -577,7 +514,6 @@ def cache_result(
     
     return decorator
 
-
 class cached_property:
     """
     Decorator for cached class properties.
@@ -625,7 +561,6 @@ class cached_property:
         self.func = func
         return self
 
-
 # =============================================================================
 # RESPONSE CACHING FOR API
 # =============================================================================
@@ -637,7 +572,6 @@ class ResponseCacheEntry:
     etag: str
     created_at: float
     content_type: str = "application/json"
-
 
 class ResponseCache:
     """
@@ -749,10 +683,8 @@ class ResponseCache:
                 'ttl_seconds': self.ttl_seconds
             }
 
-
 # Global response cache instance
 _response_cache: Optional[ResponseCache] = None
-
 
 def get_response_cache(ttl_seconds: float = 300.0) -> ResponseCache:
     """Get the global response cache instance."""

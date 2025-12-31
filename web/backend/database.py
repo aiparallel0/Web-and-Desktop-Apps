@@ -21,28 +21,6 @@ try:
 except ImportError:
     TELEMETRY_AVAILABLE = False
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web.backend.database",
-            file_path=__file__,
-            description="Database models and connection management for SQLAlchemy",
-            dependencies=["shared.circular_exchange"],
-            exports=["Base", "User", "Receipt", "Subscription", "APIKey", 
-                    "RefreshToken", "AuditLog", "Referral", "EmailSequence", "EmailLog",
-                    "AnalyticsEvent", "ConversionFunnel", "get_db", "init_db", "CloudStorageProvider"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors during import
-
 """
 Database connection and session management
 """
@@ -71,7 +49,6 @@ POOL_SIZE = int(os.getenv('DB_POOL_SIZE', '5'))  # Maximum connections in pool
 POOL_MAX_OVERFLOW = int(os.getenv('DB_POOL_MAX_OVERFLOW', '10'))  # Extra connections when pool is full
 POOL_TIMEOUT = int(os.getenv('DB_POOL_TIMEOUT', '30'))  # Seconds to wait for connection
 POOL_RECYCLE = int(os.getenv('DB_POOL_RECYCLE', '1800'))  # Recycle connections every 30 minutes
-
 
 def get_engine() -> Engine:
     """
@@ -113,19 +90,16 @@ def get_engine() -> Engine:
         _engine = create_engine(DATABASE_URL, **engine_kwargs)
     return _engine
 
-
 # Lazy property for backwards compatibility
 class EngineProxy:
     """Proxy object for lazy engine initialization."""
     def __getattr__(self, name: str) -> Any:
         return getattr(get_engine(), name)
 
-
 engine = EngineProxy()
 
 # Create session factory lazily
 _SessionLocal = None
-
 
 def get_session_factory() -> sessionmaker:
     """
@@ -139,7 +113,6 @@ def get_session_factory() -> sessionmaker:
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
     return _SessionLocal
 
-
 # Module-level SessionLocal that creates session factory on first access
 class SessionLocalProxy:
     """Proxy class that lazily creates the session factory."""
@@ -149,13 +122,10 @@ class SessionLocalProxy:
     def __getattr__(self, name: str) -> Any:
         return getattr(get_session_factory(), name)
 
-
 SessionLocal = SessionLocalProxy()
-
 
 # Create scoped session for thread safety
 db_session = scoped_session(lambda: get_session_factory()())
-
 
 def init_db() -> None:
     """
@@ -168,7 +138,6 @@ def init_db() -> None:
     Base.metadata.create_all(bind=get_engine())
     logger.info("Database schema initialized successfully")
 
-
 def drop_all() -> None:
     """
     Drop all tables
@@ -178,7 +147,6 @@ def drop_all() -> None:
     logger.warning("Dropping all database tables...")
     Base.metadata.drop_all(bind=get_engine())
     logger.warning("All tables dropped")
-
 
 def get_db() -> Generator[Session, None, None]:
     """
@@ -223,7 +191,6 @@ def get_db() -> Generator[Session, None, None]:
             yield db
         finally:
             db.close()
-
 
 @contextmanager
 def get_db_context() -> Generator[Session, None, None]:
@@ -279,7 +246,6 @@ def get_db_context() -> Generator[Session, None, None]:
         finally:
             db.close()
 
-
 def cleanup_expired_tokens() -> int:
     """
     Clean up expired refresh tokens with telemetry tracking.
@@ -331,7 +297,6 @@ def cleanup_expired_tokens() -> int:
 
             logger.info(f"Cleaned up {expired_count} expired refresh tokens")
             return expired_count
-
 
 def reset_monthly_usage() -> int:
     """
@@ -401,7 +366,6 @@ import json
 
 Base = declarative_base()
 
-
 class GUID(TypeDecorator):
     """Platform-independent GUID type.
     
@@ -433,7 +397,6 @@ class GUID(TypeDecorator):
                 return uuid_module.UUID(value)
         return value
 
-
 class JSONBCompatible(TypeDecorator):
     """A JSON type that works with both PostgreSQL (JSONB) and SQLite (JSON)."""
     impl = JSON
@@ -457,14 +420,12 @@ class JSONBCompatible(TypeDecorator):
                 return json.loads(value)
         return value
 
-
 class SubscriptionPlan(str, enum.Enum):
     """Subscription plan tiers"""
     FREE = "free"
     PRO = "pro"
     BUSINESS = "business"
     ENTERPRISE = "enterprise"
-
 
 class SubscriptionStatus(str, enum.Enum):
     """Subscription status"""
@@ -473,14 +434,12 @@ class SubscriptionStatus(str, enum.Enum):
     PAST_DUE = "past_due"
     TRIALING = "trialing"
 
-
 class CloudStorageProvider(str, enum.Enum):
     """Cloud storage provider options for user data storage"""
     NONE = "none"
     S3 = "s3"
     GDRIVE = "gdrive"
     DROPBOX = "dropbox"
-
 
 class User(Base):
     """User model with authentication and subscription info"""
@@ -561,7 +520,6 @@ class User(Base):
         plan_value = self.plan.value if hasattr(self.plan, 'value') else self.plan
         return f"<User(id={self.id}, email='{self.email}', plan='{plan_value}')>"
 
-
 class Receipt(Base):
     """Receipt extraction records"""
     __tablename__ = "receipts"
@@ -617,7 +575,6 @@ class Receipt(Base):
     def __repr__(self) -> str:
         return f"<Receipt(id={self.id}, user_id={self.user_id}, store='{self.store_name}')>"
 
-
 class Subscription(Base):
     """Stripe subscription records"""
     __tablename__ = "subscriptions"
@@ -654,7 +611,6 @@ class Subscription(Base):
         status_value = self.status.value if hasattr(self.status, 'value') else self.status
         return f"<Subscription(id={self.id}, user_id={self.user_id}, plan='{plan_value}', status='{status_value}')>"
 
-
 class APIKey(Base):
     """API keys for programmatic access"""
     __tablename__ = "api_keys"
@@ -686,7 +642,6 @@ class APIKey(Base):
 
     def __repr__(self) -> str:
         return f"<APIKey(id={self.id}, prefix='{self.key_prefix}', user_id={self.user_id})>"
-
 
 class RefreshToken(Base):
     """JWT refresh tokens for authentication"""
@@ -728,7 +683,6 @@ class RefreshToken(Base):
     def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id}, revoked={self.revoked})>"
 
-
 class AuditLog(Base):
     """Audit log for security and compliance"""
     __tablename__ = "audit_logs"
@@ -767,7 +721,6 @@ class AuditLog(Base):
 
     def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action='{self.action}', user_id={self.user_id})>"
-
 
 class Referral(Base):
     """Referral tracking for referral program"""
@@ -808,14 +761,12 @@ class Referral(Base):
     def __repr__(self) -> str:
         return f"<Referral(id={self.id}, referrer_id={self.referrer_id}, status='{self.status}')>"
 
-
 class EmailSequenceType(str, enum.Enum):
     """Email sequence types"""
     WELCOME = "welcome"
     TRIAL_CONVERSION = "trial_conversion"
     ONBOARDING = "onboarding"
     RE_ENGAGEMENT = "re_engagement"
-
 
 class EmailSequence(Base):
     """Track email sequence memberships for marketing automation"""
@@ -851,7 +802,6 @@ class EmailSequence(Base):
     def __repr__(self) -> str:
         seq_name = self.sequence_name.value if hasattr(self.sequence_name, 'value') else self.sequence_name
         return f"<EmailSequence(id={self.id}, user_id={self.user_id}, sequence='{seq_name}', step={self.current_step})>"
-
 
 class EmailLog(Base):
     """Log all sent emails for tracking and compliance"""
@@ -896,7 +846,6 @@ class EmailLog(Base):
     def __repr__(self) -> str:
         return f"<EmailLog(id={self.id}, email='{self.email_address}', type='{self.email_type}')>"
 
-
 class AnalyticsEvent(Base):
     """Track user events for analytics and funnel analysis"""
     __tablename__ = "analytics_events"
@@ -939,14 +888,12 @@ class AnalyticsEvent(Base):
     def __repr__(self) -> str:
         return f"<AnalyticsEvent(id={self.id}, event='{self.event_name}', user_id={self.user_id})>"
 
-
 class FunnelType(str, enum.Enum):
     """Conversion funnel types"""
     SIGNUP = "signup"
     ACTIVATION = "activation"
     CONVERSION = "conversion"
     RETENTION = "retention"
-
 
 class ConversionFunnel(Base):
     """Track user progression through conversion funnels"""
@@ -983,7 +930,6 @@ class ConversionFunnel(Base):
         funnel_value = self.funnel_type.value if hasattr(self.funnel_type, 'value') else self.funnel_type
         return f"<ConversionFunnel(id={self.id}, user_id={self.user_id}, funnel='{funnel_value}', step='{self.step_name}')>"
 
-
 # Module exports
 __all__ = [
     'Base',
@@ -1008,7 +954,6 @@ __all__ = [
     'engine',
 ]
 
-
 """
 Receipts API routes for managing user receipts.
 
@@ -1029,7 +974,6 @@ _db_context = None
 _Receipt = None
 _User = None
 
-
 def _get_db_context() -> Callable:
     """
     Lazy import of database context.
@@ -1042,7 +986,6 @@ def _get_db_context() -> Callable:
         from database.connection import get_db_context
         _db_context = get_db_context
     return _db_context
-
 
 def _get_models() -> Tuple[Any, Any]:
     """
@@ -1057,7 +1000,6 @@ def _get_models() -> Tuple[Any, Any]:
         _Receipt = Receipt
         _User = User
     return _Receipt, _User
-
 
 def require_auth_simple(f: Callable) -> Callable:
     """
@@ -1094,7 +1036,6 @@ def require_auth_simple(f: Callable) -> Callable:
         return f(*args, **kwargs)
     
     return decorated_function
-
 
 @receipts_bp.route('', methods=['GET'])
 @require_auth_simple
@@ -1196,7 +1137,6 @@ def list_receipts() -> Tuple[Any, int]:
         logger.error(f"List receipts error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to list receipts'}), 500
 
-
 @receipts_bp.route('/<receipt_id>', methods=['GET'])
 @require_auth_simple
 def get_receipt(receipt_id: str) -> Tuple[Any, int]:
@@ -1247,7 +1187,6 @@ def get_receipt(receipt_id: str) -> Tuple[Any, int]:
         logger.error(f"Get receipt error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to get receipt'}), 500
 
-
 @receipts_bp.route('/<receipt_id>', methods=['DELETE'])
 @require_auth_simple
 def delete_receipt(receipt_id: str) -> Tuple[Any, int]:
@@ -1285,7 +1224,6 @@ def delete_receipt(receipt_id: str) -> Tuple[Any, int]:
     except Exception as e:
         logger.error(f"Delete receipt error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to delete receipt'}), 500
-
 
 @receipts_bp.route('/<receipt_id>', methods=['PATCH'])
 @require_auth_simple
@@ -1364,7 +1302,6 @@ def update_receipt(receipt_id: str) -> Tuple[Any, int]:
         logger.error(f"Update receipt error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to update receipt'}), 500
 
-
 @receipts_bp.route('/stats', methods=['GET'])
 @require_auth_simple
 def get_receipt_stats() -> Tuple[Any, int]:
@@ -1441,7 +1378,6 @@ def get_receipt_stats() -> Tuple[Any, int]:
     except Exception as e:
         logger.error(f"Get stats error: {e}", exc_info=True)
         return jsonify({'success': False, 'error': 'Failed to get statistics'}), 500
-
 
 def register_receipts_routes(app: Any) -> None:
     """

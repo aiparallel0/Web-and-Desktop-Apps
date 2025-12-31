@@ -26,20 +26,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.schemas",
-            file_path=__file__,
-            description="Unified output schema for text detection algorithms",
-            dependencies=["shared.circular_exchange"],
-            exports=["BoundingBox", "DetectedText", "DetectionResult", "ErrorCode"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
-
 class ErrorCode(Enum):
     """Structured error codes for text detection operations."""
     MODEL_NOT_READY = "model_not_ready"
@@ -49,7 +35,6 @@ class ErrorCode(Enum):
     MISSING_DEPENDENCIES = "missing_dependencies"
     INSUFFICIENT_MEMORY = "insufficient_memory"
     UNKNOWN_ERROR = "unknown_error"
-
 
 @dataclass
 class BoundingBox:
@@ -124,7 +109,6 @@ class BoundingBox:
         
         return intersection / union
 
-
 @dataclass
 class DetectedText:
     """Represents a single detected text region with metadata."""
@@ -157,7 +141,6 @@ class DetectedText:
             language=data.get('language'),
             attributes=data.get('attributes', {})
         )
-
 
 @dataclass
 class DetectionResult:
@@ -227,7 +210,6 @@ class DetectionResult:
             error_code=error_code,
             error_message=error_message
         )
-
 
 __all__ = [
     'BoundingBox',

@@ -56,19 +56,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ocr_processor",
-            file_path=__file__,
-            description="Tesseract OCR-based receipt data extraction with early-exit optimization",
-            dependencies=["shared.utils.image_processing", "shared.models.ocr_common", "shared.models.ocr_config"],
-            exports=["OCRProcessor"]
-        ))
-    except Exception:
-        pass
-
 # Score thresholds for early-exit optimization in OCR extraction
 # Good quality threshold: has total + some other data (avoid aggressive preprocessing)
 # Lowered from 40 to 25 to ensure more aggressive multi-pass extraction
@@ -76,7 +63,6 @@ GOOD_QUALITY_SCORE_THRESHOLD = 25
 # Excellent quality threshold: high confidence result (stop searching immediately)
 # Lowered from 80 to 60 to capture more text from challenging images
 EXCELLENT_QUALITY_SCORE_THRESHOLD = 60
-
 
 class OCRProcessor:
     """
@@ -478,6 +464,5 @@ class OCRProcessor:
             LineItem(name=name, total_price=price, quantity=qty)
             for name, price, qty in items_data
         ]
-
 
 __all__ = ['OCRProcessor', 'GOOD_QUALITY_SCORE_THRESHOLD', 'EXCELLENT_QUALITY_SCORE_THRESHOLD']

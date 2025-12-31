@@ -23,13 +23,6 @@ from dataclasses import dataclass
 from collections import defaultdict
 import numpy as np
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Telemetry Integration
 try:
     from shared.utils.telemetry import get_tracer, set_span_attributes
@@ -114,20 +107,6 @@ PRIORITY_WEIGHT = 0.3    # Weight for source priority (0-1)
 # Minimum confidence threshold for text extraction (95%)
 MIN_CONFIDENCE_THRESHOLD = 0.95
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.spatial_ocr",
-            file_path=__file__,
-            description="Multi-method OCR with spatial bounding box analysis for improved accuracy",
-            dependencies=["shared.models.ocr_processor", "shared.utils.data"],
-            exports=["SpatialOCRProcessor", "BoundingBox", "TextRegion", "SpatialAnalyzer"]
-        ))
-    except Exception:
-        pass
-
-
 @dataclass
 class BoundingBox:
     """Represents a bounding box for a text region."""
@@ -205,7 +184,6 @@ class BoundingBox:
         """Check if boxes are vertically aligned (same column)."""
         return self.horizontal_distance(other) < tolerance
 
-
 @dataclass
 class TextRegion:
     """Represents a text region with spatial information."""
@@ -216,7 +194,6 @@ class TextRegion:
     
     def __repr__(self) -> str:
         return f"TextRegion('{self.text[:20]}...', conf={self.confidence:.2f}, src={self.source})"
-
 
 class SpatialAnalyzer:
     """Analyzes spatial relationships between text regions."""
@@ -508,7 +485,6 @@ class SpatialAnalyzer:
             lines.append(line_text.strip())
         
         return lines
-
 
 class SpatialOCRProcessor:
     """
@@ -1011,7 +987,6 @@ class SpatialOCRProcessor:
         
         return round(avg_confidence * 100, 1)
 
-
 class EasyOCRSpatialProcessor(SpatialOCRProcessor):
     """
     EasyOCR processor with spatial bounding box analysis.
@@ -1098,7 +1073,6 @@ class EasyOCRSpatialProcessor(SpatialOCRProcessor):
             logger.error(f"EasyOCR Spatial extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
 
-
 class PaddleOCRSpatialProcessor(SpatialOCRProcessor):
     """
     PaddleOCR processor with spatial bounding box analysis.
@@ -1184,7 +1158,6 @@ class PaddleOCRSpatialProcessor(SpatialOCRProcessor):
         except Exception as e:
             logger.error(f"PaddleOCR Spatial extraction failed: {e}", exc_info=True)
             return ExtractionResult(success=False, error=str(e))
-
 
 __all__ = [
     'SpatialOCRProcessor',

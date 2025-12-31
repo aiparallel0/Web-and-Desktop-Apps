@@ -11,13 +11,6 @@ import logging
 from enum import Enum
 from typing import Dict, Any, Optional
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -32,7 +25,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class EventType(str, Enum):
     """Standard analytics event types"""
@@ -105,7 +97,6 @@ class EventType(str, Enum):
     USER_INACTIVE_60_DAYS = "user_inactive_60_days"
     USER_INACTIVE_90_DAYS = "user_inactive_90_days"
     ACCOUNT_DEACTIVATED = "account_deactivated"
-
 
 class EventProperties:
     """Helper class for event property schemas"""
@@ -183,7 +174,6 @@ class EventProperties:
             'duration': duration
         }
 
-
 def create_event(
     event_type: EventType,
     user_id: Optional[str] = None,
@@ -224,7 +214,6 @@ def create_event(
         event['utm_content'] = utm_params.get('utm_content')
     
     return event
-
 
 __all__ = [
     'EventType',

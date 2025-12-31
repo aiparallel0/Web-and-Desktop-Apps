@@ -37,14 +37,6 @@ except ImportError:
     DOTENV_AVAILABLE = False
     logger.info("python-dotenv not available - using environment variables only")
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-
 def _get_bool(value: str, default: bool = False) -> bool:
     """Convert string to boolean."""
     if isinstance(value, bool):
@@ -52,7 +44,6 @@ def _get_bool(value: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.lower() in ('true', '1', 'yes', 'on')
-
 
 def _get_int(value: str, default: int = 0) -> int:
     """Convert string to integer."""
@@ -62,7 +53,6 @@ def _get_int(value: str, default: int = 0) -> int:
         return int(value)
     except (ValueError, TypeError):
         return default
-
 
 @dataclass
 class Config:
@@ -265,7 +255,6 @@ class Config:
             'rate_limiting_enabled': self.RATE_LIMIT_ENABLED,
         }
 
-
 def load_config() -> Config:
     """
     Load configuration from environment variables.
@@ -372,7 +361,6 @@ def load_config() -> Config:
     
     return config
 
-
 @lru_cache(maxsize=1)
 def get_config() -> Config:
     """
@@ -383,26 +371,9 @@ def get_config() -> Config:
     """
     return load_config()
 
-
 def reset_config():
     """Reset the configuration cache. Useful for testing."""
     get_config.cache_clear()
-
-
-# Register with Circular Exchange Framework
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web.backend.config",
-            file_path=__file__,
-            description="Centralized configuration management for Flask backend",
-            dependencies=["shared.circular_exchange"],
-            exports=["Config", "get_config", "load_config", "reset_config"]
-        ))
-        logger.info("Config module registered with Circular Exchange Framework")
-    except Exception as e:
-        logger.warning(f"Could not register config with Circular Exchange: {e}")
-
 
 # Configuration validation
 def validate_config(config: Config) -> list:
@@ -434,7 +405,6 @@ def validate_config(config: Config) -> list:
             warnings.append("SENTRY_DSN not configured - error tracking is disabled")
     
     return warnings
-
 
 def validate_on_startup():
     """
