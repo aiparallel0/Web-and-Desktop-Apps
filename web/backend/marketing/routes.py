@@ -10,6 +10,7 @@ import logging
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 from typing import Dict, Any, Optional
+from web.backend.decorators import require_auth, require_admin
 
 # Circular Exchange Framework Integration
 try:
@@ -248,6 +249,8 @@ def update_email_preferences():
 
 # Admin routes (require admin authentication)
 @marketing_bp.route('/admin/analytics/dashboard', methods=['GET'])
+@require_auth
+@require_admin
 def get_analytics_dashboard():
     """
     Get analytics dashboard data (admin only)
@@ -256,9 +259,6 @@ def get_analytics_dashboard():
     - days: Number of days to analyze (default: 30)
     """
     try:
-        # TODO: Add admin authentication check
-        # if not g.user.is_admin:
-        #     return jsonify({'success': False, 'error': 'Admin access required'}), 403
         
         days = int(request.args.get('days', 30))
         
@@ -279,12 +279,13 @@ def get_analytics_dashboard():
 
 
 @marketing_bp.route('/admin/campaigns', methods=['GET'])
+@require_auth
+@require_admin
 def list_campaigns():
     """
     List all email campaigns (admin only)
     """
     try:
-        # TODO: Add admin authentication check
         
         from web.backend.marketing.email_sequences import get_all_sequences
         
@@ -319,6 +320,8 @@ def list_campaigns():
 
 
 @marketing_bp.route('/admin/send-campaign', methods=['POST'])
+@require_auth
+@require_admin
 def send_campaign():
     """
     Send email campaign manually (admin only)
@@ -332,7 +335,6 @@ def send_campaign():
     }
     """
     try:
-        # TODO: Add admin authentication check
         
         data = request.get_json()
         

@@ -112,8 +112,12 @@ class EmailService:
         reply_to = reply_to or os.getenv('EMAIL_REPLY_TO', 'support@receiptextractor.com')
         
         try:
-            # TODO: Integrate with actual email service (SendGrid, SES, etc.)
-            # For now, just log the email
+            # NOTE: Email service integration pending
+            # Currently logs emails for development. For production deployment:
+            # 1. Set EMAIL_PROVIDER env var to 'sendgrid' or 'ses'
+            # 2. Configure provider credentials in .env
+            # 3. Uncomment provider-specific methods below
+            # See: https://github.com/aiparallel0/Web-and-Desktop-Apps/issues/TBD
             logger.info(f"[EMAIL] To: {to_email}, Subject: {subject}")
             logger.debug(f"[EMAIL] Content length: {len(html_content)} chars")
             

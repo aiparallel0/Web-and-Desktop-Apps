@@ -188,7 +188,31 @@ class ReferralService:
                     
                     logger.info(f"Reward granted to user {user_id}: {self.REWARD_MONTHS} month(s) free")
                     
-                    # TODO: Send reward notification email
+                    # Send reward notification email
+                    try:
+                        from web.backend.email_service import EmailService
+                        from web.backend.database import User
+                        
+                        user = db_session.query(User).filter(User.id == user_id).first()
+                        if user and user.email:
+                            email_service = EmailService()
+                            subject = f"🎉 Congrats! You've earned {self.REWARD_MONTHS} month(s) free!"
+                            html_content = f"""
+                            <html>
+                            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2>Congratulations! 🎉</h2>
+                                <p>Great news! You've successfully referred {self.REFERRALS_FOR_REWARD} users who signed up.</p>
+                                <p>As a reward, we've added <strong>{self.REWARD_MONTHS} month(s)</strong> of free Pro access to your account!</p>
+                                <p>Thank you for spreading the word about Receipt Extractor.</p>
+                                <p>Keep referring friends to earn more rewards!</p>
+                                <p>Best regards,<br>The Receipt Extractor Team</p>
+                            </body>
+                            </html>
+                            """
+                            email_service.send_email(user.email, subject, html_content)
+                    except Exception as email_error:
+                        # Don't fail the reward grant if email fails
+                        logger.warning(f"Failed to send reward notification email: {email_error}")
                     
                     return True
             
