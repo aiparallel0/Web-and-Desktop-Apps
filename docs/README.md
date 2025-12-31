@@ -6,17 +6,16 @@ Complete documentation for the Receipt Extractor SaaS platform.
 
 New to the project? Start here:
 
-1. [Installation Guide](../SETUP.md) - Set up your development environment
-2. [Quick Deploy Guide](../QUICK_DEPLOY_GUIDE.md) - Deploy to production in 4-6 hours
-3. [Launch Checklist](../LAUNCH_CHECKLIST.md) - Complete launch plan
+1. [Installation Guide](getting-started/SETUP.md) - Set up your development environment
+2. [Quick Deploy Guide](deployment/QUICK_DEPLOY_GUIDE.md) - Deploy to production in 4-6 hours
+3. [Project Weaknesses & PR Briefs](PROJECT_WEAKNESSES_AND_PR_BRIEFS.md) - Code quality improvements
 
 ## Business Documentation
 
 Planning to launch or monetize the platform:
 
 - [Monetization Guide](MONETIZATION_GUIDE.md) - Step-by-step guide to reach $1,000/month
-- [Launch Ready Summary](../LAUNCH_READY.md) - Everything you need to launch
-- [Honest Assessment](../HONEST_ASSESSMENT.md) - Realistic evaluation of readiness
+- [Historical Assessments](archive/) - Archived launch readiness documents
 
 ## Technical Documentation
 
@@ -88,32 +87,39 @@ python tools/scripts/validate_env.py
 
 ```
 docs/
-├── README.md                          # This file
-├── API.md                             # REST API reference
-├── USER_GUIDE.md                      # End-user documentation
-├── DEPLOYMENT.md                      # Deployment guide
-├── MONETIZATION_GUIDE.md              # Revenue strategy
+├── README.md                              # This file
+├── API.md                                 # REST API reference
+├── USER_GUIDE.md                          # End-user documentation
+├── DEPLOYMENT.md                          # Deployment guide
+├── MONETIZATION_GUIDE.md                  # Revenue strategy
+├── PROJECT_WEAKNESSES_AND_PR_BRIEFS.md    # Code quality improvement roadmap
+├── getting-started/
+│   └── SETUP.md                           # Installation and setup
+├── deployment/
+│   └── QUICK_DEPLOY_GUIDE.md              # Quick deployment guide
 ├── architecture/
-│   └── CEFR_STATUS.md                 # Framework assessment
+│   └── CEFR_STATUS.md                     # Framework assessment
 ├── development/
-│   ├── TESTING_STRATEGY.md            # Testing guide
-│   ├── CODE_QUALITY.md                # Quality standards
-│   └── FEATURE_FLAGS_IMPLEMENTATION.md # Feature flags
+│   ├── TESTING_STRATEGY.md                # Testing guide
+│   ├── CODE_QUALITY.md                    # Quality standards
+│   └── FEATURE_FLAGS_IMPLEMENTATION.md    # Feature flags
 ├── analysis/
-│   ├── REPOSITORY_ANALYSIS.md         # Codebase analysis
-│   └── REPOSITORY_SCREENER_QUICK_REF.md # Screening tool
-└── history/
-    └── CHANGELOG.md                   # Project history
+│   ├── REPOSITORY_ANALYSIS.md             # Codebase analysis
+│   └── REPOSITORY_SCREENER_QUICK_REF.md   # Screening tool
+├── history/
+│   └── CHANGELOG.md                       # Project history
+└── archive/
+    └── README.md                          # Archived documentation
 ```
 
 ## Getting Help
 
 ### Common Issues
 
-1. **Installation Problems**: See [SETUP.md](../SETUP.md) troubleshooting section
+1. **Installation Problems**: See [SETUP.md](getting-started/SETUP.md) troubleshooting section
 2. **Deployment Issues**: Check [DEPLOYMENT.md](DEPLOYMENT.md) for platform-specific guides
 3. **Test Failures**: Review [TESTING_STRATEGY.md](development/TESTING_STRATEGY.md)
-4. **Code Quality**: See [CODE_QUALITY.md](development/CODE_QUALITY.md)
+4. **Code Quality**: See [CODE_QUALITY.md](development/CODE_QUALITY.md) and [PR Briefs](PROJECT_WEAKNESSES_AND_PR_BRIEFS.md)
 
 ### Support Channels
 
@@ -142,5 +148,5 @@ When contributing to documentation:
 
 ---
 
-Last Updated: December 2024
-Version: 2.0.0
+Last Updated: December 31, 2025
+Version: 2.1.0
