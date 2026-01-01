@@ -12,6 +12,13 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# CEFR integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+
 # Register module
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
