@@ -71,7 +71,7 @@ class Config:
     FLASK_ENV: str = "development"
     FLASK_DEBUG: bool = False
     DEBUG: bool = False
-    SECRET_KEY: str = "dev-secret-key-change-in-production"
+    SECRET_KEY: str = "INSECURE-dev-only-DO-NOT-USE-IN-PRODUCTION"
     
     # Server Configuration
     FLASK_HOST: str = "0.0.0.0"
@@ -99,7 +99,7 @@ class Config:
     # AUTHENTICATION & SECURITY
     # =========================================================================
     
-    JWT_SECRET: str = "change-this-secret-in-production-use-env-var-min-32-chars"
+    JWT_SECRET: str = "INSECURE-dev-only-CHANGE-IN-PRODUCTION-min-32-chars"
     JWT_ACCESS_TOKEN_EXPIRES: int = 900  # 15 minutes
     JWT_REFRESH_TOKEN_EXPIRES: int = 2592000  # 30 days
     
@@ -274,7 +274,7 @@ def load_config() -> Config:
         FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
         FLASK_DEBUG=_get_bool(os.getenv('FLASK_DEBUG'), False),
         DEBUG=_get_bool(os.getenv('DEBUG'), False),
-        SECRET_KEY=os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production'),
+        SECRET_KEY=os.getenv('SECRET_KEY', 'INSECURE-dev-only-DO-NOT-USE-IN-PRODUCTION'),
         FLASK_HOST=os.getenv('FLASK_HOST', '0.0.0.0'),
         FLASK_PORT=_get_int(os.getenv('FLASK_PORT'), 5000),
         SERVERLESS=_get_bool(os.getenv('SERVERLESS'), False),
@@ -290,7 +290,7 @@ def load_config() -> Config:
         SQL_ECHO=_get_bool(os.getenv('SQL_ECHO'), False),
         
         # Authentication
-        JWT_SECRET=os.getenv('JWT_SECRET', 'change-this-secret-in-production-use-env-var-min-32-chars'),
+        JWT_SECRET=os.getenv('JWT_SECRET', 'INSECURE-dev-only-CHANGE-IN-PRODUCTION-min-32-chars'),
         JWT_ACCESS_TOKEN_EXPIRES=_get_int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES'), 900),
         JWT_REFRESH_TOKEN_EXPIRES=_get_int(os.getenv('JWT_REFRESH_TOKEN_EXPIRES'), 2592000),
         
@@ -389,6 +389,20 @@ def validate_config(config: Config) -> list:
     warnings = []
     
     if config.is_production:
+        # Check for insecure defaults - these should FAIL in production
+        if config.SECRET_KEY.startswith('INSECURE'):
+            raise ValueError(
+                "INSECURE default SECRET_KEY detected in production! "
+                "Set SECRET_KEY environment variable."
+            )
+        
+        if config.JWT_SECRET.startswith('INSECURE'):
+            raise ValueError(
+                "INSECURE default JWT_SECRET detected in production! "
+                "Set JWT_SECRET environment variable."
+            )
+        
+        # Legacy check for old default (backwards compatibility warning)
         if config.JWT_SECRET == "change-this-secret-in-production-use-env-var-min-32-chars":
             warnings.append("JWT_SECRET is using default value - change this in production!")
         
