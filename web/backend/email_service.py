@@ -20,7 +20,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             dependencies=[],
             exports=["send_trial_expiration_reminder", "EmailService"]
         ))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Module registration failed: {e}")
         pass
 
 class EmailService:

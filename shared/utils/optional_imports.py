@@ -235,5 +235,6 @@ try:
         dependencies=[],
         exports=["OptionalImport"]
     ))
-except Exception:
+except Exception as e:
+    logger.debug(f"Module registration failed: {e}")
     pass  # Ignore registration errors

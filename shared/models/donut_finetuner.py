@@ -30,7 +30,9 @@ try:
         dependencies=["shared.models.engine", "shared.circular_exchange"],
         exports=["DonutFinetuner"]
     ))
-except ImportError:
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).debug(f"Module registration failed: {e}")
     CIRCULAR_EXCHANGE_AVAILABLE = False
 
 # Re-export DonutFinetuner from engine module
