@@ -38,6 +38,20 @@ from pathlib import Path
 from typing import Optional, Any, Callable, Dict, TypeVar, Union
 from contextlib import contextmanager
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    try:
+        from ..circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
+        CIRCULAR_EXCHANGE_AVAILABLE = True
+    except ImportError:
+        CIRCULAR_EXCHANGE_AVAILABLE = False
+        PackageRegistry = None
+        PROJECT_CONFIG = None
+        ModuleRegistration = None
+
 def _register_logging_module():
     if CIRCULAR_EXCHANGE_AVAILABLE:
         try:

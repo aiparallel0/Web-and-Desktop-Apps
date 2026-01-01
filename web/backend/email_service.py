@@ -8,6 +8,15 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from pathlib import Path
 
+# Circular Exchange Framework Integration
+try:
+    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
+    CIRCULAR_EXCHANGE_AVAILABLE = True
+except ImportError:
+    CIRCULAR_EXCHANGE_AVAILABLE = False
+    PROJECT_CONFIG = None
+    ModuleRegistration = None
+
 logger = logging.getLogger(__name__)
 
 # Register module
