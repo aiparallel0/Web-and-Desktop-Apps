@@ -60,6 +60,21 @@ class BaseDonutProcessor:
     def _load_model(self) -> None:
         raise NotImplementedError("Subclasses must implement _load_model")
     def extract(self,image_path:str)->ExtractionResult:
+        """
+        Extract receipt data from an image.
+        
+        This is the main extraction method that must be implemented by all subclasses.
+        It processes the image and returns structured receipt data.
+        
+        Args:
+            image_path: Path to the receipt image file (jpg, png, etc.)
+            
+        Returns:
+            ExtractionResult containing extracted receipt data and metadata
+            
+        Raises:
+            NotImplementedError: If subclass doesn't implement this method
+        """
         raise NotImplementedError("Subclasses must implement extract")
     # Note: normalize_price() now imported from shared.utils.pricing
     @staticmethod
@@ -69,6 +84,18 @@ class BaseDonutProcessor:
         return _normalize_price(value)
     @staticmethod
     def parse_json_output(json_str:str)->Dict:
+        """
+        Parse JSON output from model, with robust error handling.
+        
+        Handles various JSON formats including code-fenced blocks and embedded JSON.
+        Attempts multiple parsing strategies to extract valid JSON from model output.
+        
+        Args:
+            json_str: Raw string output from the model, potentially containing JSON
+            
+        Returns:
+            Parsed dictionary, or empty dict if parsing fails
+        """
         if not json_str or not json_str.strip():
             logger.warning("Empty output from model")
             return{}
@@ -116,6 +143,24 @@ class DonutProcessor(BaseDonutProcessor):
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)from e
     def extract(self,image_path:str)->ExtractionResult:
+        """
+        Extract receipt data using Donut transformer model.
+        
+        Processes the receipt image through the Donut vision-language model to extract
+        structured data including store name, items, prices, and totals. Includes
+        fallback text extraction for plain text outputs and validation-based confidence scoring.
+        
+        Args:
+            image_path: Path to receipt image file
+            
+        Returns:
+            ExtractionResult with receipt data and confidence score
+            
+        Note:
+            - Applies image enhancement before processing
+            - Supports SROIE and CORD model variants with specific fallback strategies
+            - Uses realistic validation-based confidence calculation when available
+        """
         start_time=time.time()
         try:
             image=load_and_validate_image(image_path)
@@ -170,6 +215,20 @@ class DonutProcessor(BaseDonutProcessor):
             logger.error(f"Extraction failed: {e}")
             return ExtractionResult(success=False,error=str(e))
     def _safe_extract_string(self, value: Any, max_depth: int = 2, current_depth: int = 0) -> Optional[str]:
+        """
+        Safely extract string value from nested data structures.
+        
+        Handles various data types including strings, numbers, lists, and dictionaries.
+        Recursively searches nested structures up to a maximum depth to prevent infinite loops.
+        
+        Args:
+            value: Value to extract string from (can be str, int, float, list, dict, etc.)
+            max_depth: Maximum recursion depth (default: 2)
+            current_depth: Current recursion level (internal use)
+            
+        Returns:
+            Extracted string value, or None if extraction fails or value is empty
+        """
         if value is None:return None
         if isinstance(value,str):return value.strip()if value.strip()else None
         if isinstance(value,(int,float)):return str(value)
