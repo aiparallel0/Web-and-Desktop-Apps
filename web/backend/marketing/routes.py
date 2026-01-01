@@ -12,13 +12,6 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from web.backend.decorators import require_auth, require_admin
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -36,7 +29,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
 
 # Create Blueprint
 marketing_bp = Blueprint('marketing', __name__, url_prefix='/api/marketing')
-
 
 @marketing_bp.route('/track-event', methods=['POST'])
 def track_event():
@@ -81,7 +73,6 @@ def track_event():
         logger.error(f"Error tracking event: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @marketing_bp.route('/email/subscribe', methods=['POST'])
 def subscribe_to_emails():
     """
@@ -118,7 +109,6 @@ def subscribe_to_emails():
         logger.error(f"Error subscribing to emails: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @marketing_bp.route('/email/unsubscribe', methods=['POST'])
 def unsubscribe_from_emails():
     """
@@ -154,7 +144,6 @@ def unsubscribe_from_emails():
     except Exception as e:
         logger.error(f"Error unsubscribing from emails: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @marketing_bp.route('/email/preferences', methods=['GET'])
 def get_email_preferences():
@@ -198,7 +187,6 @@ def get_email_preferences():
     except Exception as e:
         logger.error(f"Error getting email preferences: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @marketing_bp.route('/email/preferences', methods=['PUT'])
 def update_email_preferences():
@@ -246,7 +234,6 @@ def update_email_preferences():
         logger.error(f"Error updating email preferences: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 # Admin routes (require admin authentication)
 @marketing_bp.route('/admin/analytics/dashboard', methods=['GET'])
 @require_auth
@@ -276,7 +263,6 @@ def get_analytics_dashboard():
     except Exception as e:
         logger.error(f"Error getting analytics dashboard: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @marketing_bp.route('/admin/campaigns', methods=['GET'])
 @require_auth
@@ -317,7 +303,6 @@ def list_campaigns():
     except Exception as e:
         logger.error(f"Error listing campaigns: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @marketing_bp.route('/admin/send-campaign', methods=['POST'])
 @require_auth
@@ -398,6 +383,5 @@ def send_campaign():
     except Exception as e:
         logger.error(f"Error sending campaign: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 __all__ = ['marketing_bp']

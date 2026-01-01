@@ -9,13 +9,6 @@ Scheduled tasks for:
 import logging
 from datetime import datetime, timedelta
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -30,7 +23,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 def process_analytics_batch():
     """
@@ -59,7 +51,6 @@ def process_analytics_batch():
         logger.error(f"Error processing analytics batch: {e}")
         return 0
 
-
 def cleanup_old_analytics(days: int = 365):
     """
     Clean up analytics events older than N days
@@ -86,7 +77,6 @@ def cleanup_old_analytics(days: int = 365):
     except Exception as e:
         logger.error(f"Error cleaning up analytics: {e}")
         return 0
-
 
 def generate_daily_report():
     """
@@ -145,7 +135,6 @@ def generate_daily_report():
         logger.error(f"Error generating daily report: {e}")
         return {}
 
-
 def calculate_user_engagement_score(user_id: str, days: int = 30):
     """
     Calculate engagement score for a user
@@ -188,7 +177,6 @@ def calculate_user_engagement_score(user_id: str, days: int = 30):
     except Exception as e:
         logger.error(f"Error calculating engagement score: {e}")
         return 0
-
 
 __all__ = [
     'process_analytics_batch',

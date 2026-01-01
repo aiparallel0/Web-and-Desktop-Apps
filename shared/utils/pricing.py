@@ -15,27 +15,7 @@ from typing import Optional
 import logging
 import re
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.pricing",
-            file_path=__file__,
-            description="Centralized pricing utilities with price normalization and validation",
-            dependencies=[],
-            exports=["normalize_price", "PRICE_MIN", "PRICE_MAX"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
 
 # Price validation constants
 PRICE_MIN = Decimal('0')
@@ -45,7 +25,6 @@ PRICE_MAX = Decimal('9999')
 
 # Pre-compiled regex pattern for ZIP code detection (performance optimization)
 _ZIP_CODE_PATTERN = re.compile(r'^\d{5}(-?\d{4})?$')
-
 
 def normalize_price(value) -> Optional[Decimal]:
     """
@@ -143,6 +122,5 @@ def normalize_price(value) -> Optional[Decimal]:
     except (ValueError, ArithmeticError):
         # Invalid numeric format
         return None
-
 
 __all__ = ['normalize_price', 'PRICE_MIN', 'PRICE_MAX']

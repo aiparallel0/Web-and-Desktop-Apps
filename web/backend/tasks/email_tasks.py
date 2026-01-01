@@ -9,13 +9,6 @@ Scheduled tasks for:
 import logging
 from datetime import datetime, timedelta
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -30,7 +23,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 def send_due_emails():
     """
@@ -53,7 +45,6 @@ def send_due_emails():
     except Exception as e:
         logger.error(f"Error in send_due_emails task: {e}")
         return 0
-
 
 def cleanup_old_email_logs(days: int = 90):
     """
@@ -81,7 +72,6 @@ def cleanup_old_email_logs(days: int = 90):
     except Exception as e:
         logger.error(f"Error cleaning up email logs: {e}")
         return 0
-
 
 def generate_email_report(days: int = 7):
     """
@@ -141,7 +131,6 @@ def generate_email_report(days: int = 7):
     except Exception as e:
         logger.error(f"Error generating email report: {e}")
         return {}
-
 
 __all__ = [
     'send_due_emails',

@@ -18,31 +18,7 @@ from typing import Optional, List, Tuple
 # Import centralized pricing utilities
 from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ocr_common",
-            file_path=__file__,
-            description="Common OCR processing utilities with regex patterns and text extraction",
-            dependencies=["shared.circular_exchange", "shared.utils.pricing"],
-            exports=["normalize_price", "extract_date", "extract_total", "extract_phone",
-                    "extract_line_items", "extract_line_items_with_codes", "merge_multiline_items",
-                    "parse_receipt_text", "get_detection_config",
-                    "record_detection_result", "fix_concatenated_text", "clean_item_name",
-                    "is_garbage_text", "MAX_REALISTIC_ITEM_PRICE", "PRICE_MIN", "PRICE_MAX"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors during import
 
 # Lazy import of OCRConfig to avoid circular imports
 _ocr_config = None
@@ -58,7 +34,6 @@ def get_config():
             logger.warning("OCRConfig not available, using defaults")
             _ocr_config = None
     return _ocr_config
-
 
 def get_detection_config():
     """
@@ -86,7 +61,6 @@ def get_detection_config():
         'enhance_contrast': True,
         'denoise_strength': 10
     }
-
 
 def record_detection_result(text_regions_count: int, avg_confidence: float, 
                             success: bool, processing_time: float = 0.0) -> None:
@@ -306,7 +280,6 @@ STORE_NAME_CORRECTIONS = {
 }
 # Note: normalize_price() function removed - now imported from shared.utils.pricing at top of file
 
-
 def extract_date(lines: list) -> Optional[str]:
     """
     Extract date from a list of text lines.
@@ -323,7 +296,6 @@ def extract_date(lines: list) -> Optional[str]:
             if match:
                 return match.group(1)
     return None
-
 
 def extract_total(lines: list) -> Optional[Decimal]:
     """
@@ -350,7 +322,6 @@ def extract_total(lines: list) -> Optional[Decimal]:
                     return total_val
     return None
 
-
 def extract_phone(lines: list) -> Optional[str]:
     """
     Extract phone number from a list of text lines.
@@ -367,7 +338,6 @@ def extract_phone(lines: list) -> Optional[str]:
             if match:
                 return match.group(1)
     return None
-
 
 def extract_address(lines: list, start_index: int = 1, end_index: int = 8) -> Optional[str]:
     """
@@ -394,7 +364,6 @@ def extract_address(lines: list, start_index: int = 1, end_index: int = 8) -> Op
                 continue
             return line
     return None
-
 
 def should_skip_line(line: str) -> bool:
     """
@@ -424,7 +393,6 @@ def should_skip_line(line: str) -> bool:
         return True
     return False
 
-
 def should_skip_item_name(name: str) -> bool:
     """
     Check if an item name contains patterns that indicate it's not a product.
@@ -450,7 +418,6 @@ def should_skip_item_name(name: str) -> bool:
             return True
     
     return False
-
 
 def fix_concatenated_text(text: str) -> str:
     """
@@ -490,7 +457,6 @@ def fix_concatenated_text(text: str) -> str:
     # We'll be conservative and only handle specific known patterns
     
     return result
-
 
 def is_garbage_text(text: str) -> bool:
     """
@@ -592,7 +558,6 @@ def is_garbage_text(text: str) -> bool:
     
     return False
 
-
 def clean_item_name(name: str) -> str:
     """
     Clean and correct common OCR errors in item names.
@@ -671,7 +636,6 @@ def clean_item_name(name: str) -> str:
     
     return cleaned.strip()
 
-
 def correct_store_name(name: str) -> str:
     """
     Apply known store name corrections for common OCR errors.
@@ -697,7 +661,6 @@ def correct_store_name(name: str) -> str:
             return correct
     
     return name
-
 
 def extract_store_name(lines: list, max_lines: int = 10) -> Optional[str]:
     """
@@ -755,7 +718,6 @@ def extract_store_name(lines: list, max_lines: int = 10) -> Optional[str]:
             return correct_store_name(line)
     return correct_store_name(lines[0]) if lines else None
 
-
 def clean_ocr_text(text: str) -> str:
     """
     Clean and correct common OCR errors in text.
@@ -782,7 +744,6 @@ def clean_ocr_text(text: str) -> str:
     cleaned = re.sub(r'([.,;:!?])(?=[^\s\d])', r'\1 ', cleaned)  # Add space after punctuation
     
     return cleaned.strip()
-
 
 def merge_text_lines(lines: List[str], threshold: float = 0.8) -> List[str]:
     """
@@ -826,7 +787,6 @@ def merge_text_lines(lines: List[str], threshold: float = 0.8) -> List[str]:
     merged.append(current_line)
     return merged
 
-
 def calculate_text_confidence(text: str, raw_confidence: float = 1.0) -> float:
     """
     Calculate adjusted confidence score for extracted text.
@@ -865,7 +825,6 @@ def calculate_text_confidence(text: str, raw_confidence: float = 1.0) -> float:
     # Cap at 1.0
     return min(confidence, 1.0)
 
-
 def extract_email(lines: list) -> Optional[str]:
     """
     Extract email address from a list of text lines.
@@ -883,7 +842,6 @@ def extract_email(lines: list) -> Optional[str]:
             return match.group(0)
     return None
 
-
 def extract_url(lines: list) -> Optional[str]:
     """
     Extract URL from a list of text lines.
@@ -900,7 +858,6 @@ def extract_url(lines: list) -> Optional[str]:
         if match:
             return match.group(0)
     return None
-
 
 def detect_language_hint(text: str) -> str:
     """
@@ -938,7 +895,6 @@ def detect_language_hint(text: str) -> str:
     
     return 'en'  # Default to English
 
-
 def extract_sku(line: str) -> Optional[str]:
     """
     Extract SKU (12-14 digit code) from a line.
@@ -951,7 +907,6 @@ def extract_sku(line: str) -> Optional[str]:
     """
     match = SKU_PATTERN.search(line)
     return match.group(0) if match else None
-
 
 def extract_subtotal(lines: list) -> Optional[Decimal]:
     """
@@ -976,7 +931,6 @@ def extract_subtotal(lines: list) -> Optional[Decimal]:
                 if subtotal_val:
                     return subtotal_val
     return None
-
 
 def extract_tax(lines: list) -> Optional[Decimal]:
     """
@@ -1026,7 +980,6 @@ def extract_tax(lines: list) -> Optional[Decimal]:
                 return tax_val
     
     return None
-
 
 def validate_receipt_totals(subtotal: Optional[Decimal], tax: Optional[Decimal], 
                             total: Optional[Decimal], tolerance: Decimal = Decimal('0.05')) -> dict:
@@ -1080,7 +1033,6 @@ def validate_receipt_totals(subtotal: Optional[Decimal], tax: Optional[Decimal],
     
     return result
 
-
 def validate_item_count(items: list, expected_count: Optional[int] = None) -> dict:
     """
     Validate extracted items for quality and consistency.
@@ -1121,7 +1073,6 @@ def validate_item_count(items: list, expected_count: Optional[int] = None) -> di
             result['confidence_adjustment'] *= 0.85
     
     return result
-
 
 def calculate_overall_confidence(base_confidence: float, 
                                   receipt_data: dict,
@@ -1169,7 +1120,6 @@ def calculate_overall_confidence(base_confidence: float,
     
     # Cap at 1.0
     return min(1.0, max(0.0, confidence))
-
 
 def merge_multiline_items(lines: List[str]) -> List[str]:
     """
@@ -1237,7 +1187,6 @@ def merge_multiline_items(lines: List[str]) -> List[str]:
         i += 1
     
     return merged
-
 
 def extract_line_items_with_codes(lines: List[str], text_metadata: Optional[List[dict]] = None,
                                    min_confidence: float = None, relaxed_mode: bool = None
@@ -1359,7 +1308,6 @@ def extract_line_items_with_codes(lines: List[str], text_metadata: Optional[List
                                 break
     
     return items
-
 
 def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = None, 
                        min_confidence: float = None, relaxed_mode: bool = None) -> List[Tuple[str, Decimal, int]]:
@@ -1511,7 +1459,6 @@ def extract_line_items(lines: List[str], text_metadata: Optional[List[dict]] = N
                                 break  # Found a match, stop trying fallback patterns
     
     return items
-
 
 def parse_receipt_text(lines: List[str], text_metadata: Optional[List[dict]] = None,
                        min_confidence: float = None, relaxed_mode: bool = None) -> dict:

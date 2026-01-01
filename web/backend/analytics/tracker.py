@@ -14,13 +14,6 @@ from datetime import datetime
 import requests
 import json
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -35,7 +28,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class EventTracker:
     """Base class for event tracking"""
@@ -77,7 +69,6 @@ class EventTracker:
             True if identified successfully
         """
         raise NotImplementedError("Subclass must implement identify")
-
 
 class MixpanelTracker(EventTracker):
     """Mixpanel analytics tracker"""
@@ -176,7 +167,6 @@ class MixpanelTracker(EventTracker):
             logger.error(f"Failed to identify to Mixpanel: {e}")
             return False
 
-
 class SegmentTracker(EventTracker):
     """Segment analytics tracker"""
     
@@ -268,7 +258,6 @@ class SegmentTracker(EventTracker):
             logger.error(f"Failed to identify to Segment: {e}")
             return False
 
-
 class DatabaseTracker(EventTracker):
     """Internal database tracker"""
     
@@ -306,7 +295,6 @@ class DatabaseTracker(EventTracker):
     ) -> bool:
         """Identify user (no-op for database tracker)"""
         return True
-
 
 class CompositeTracker(EventTracker):
     """Composite tracker that sends to multiple services"""
@@ -357,7 +345,6 @@ class CompositeTracker(EventTracker):
         
         return any(results)
 
-
 def get_tracker() -> EventTracker:
     """
     Get configured event tracker
@@ -382,7 +369,6 @@ def get_tracker() -> EventTracker:
         return trackers[0]
     else:
         return CompositeTracker(trackers)
-
 
 __all__ = [
     'EventTracker',

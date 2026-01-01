@@ -7,13 +7,6 @@ from flask import Blueprint, request, jsonify
 from typing import Dict, Any, Optional
 import json
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -35,7 +28,6 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 # In-memory event storage (in production, use a database or analytics service)
 events_store = []
 MAX_EVENTS_IN_MEMORY = 10000
-
 
 @analytics_bp.route('/track', methods=['POST'])
 def track_event():
@@ -86,7 +78,6 @@ def track_event():
         logger.error(f"Error tracking event: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @analytics_bp.route('/batch', methods=['POST'])
 def track_batch():
     """
@@ -131,7 +122,6 @@ def track_batch():
     except Exception as e:
         logger.error(f"Error tracking batch: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @analytics_bp.route('/conversion', methods=['POST'])
 def track_conversion():
@@ -195,7 +185,6 @@ def track_conversion():
         logger.error(f"Error tracking conversion: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @analytics_bp.route('/metrics/funnel', methods=['GET'])
 def get_funnel_metrics():
     """
@@ -248,7 +237,6 @@ def get_funnel_metrics():
         logger.error(f"Error getting funnel metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @analytics_bp.route('/metrics/events', methods=['GET'])
 def get_event_metrics():
     """
@@ -292,7 +280,6 @@ def get_event_metrics():
     except Exception as e:
         logger.error(f"Error getting event metrics: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @analytics_bp.route('/health', methods=['GET'])
 def health_check():

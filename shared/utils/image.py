@@ -17,13 +17,6 @@ from PIL import Image,ImageEnhance,ImageFilter
 import logging
 import cv2  # Import cv2 once at module level for better performance
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger=logging.getLogger(__name__)
 
 # =============================================================================
@@ -86,17 +79,6 @@ def _resize_if_too_large(image: Image.Image) -> Image.Image:
         gc.collect()
     
     return image
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    PROJECT_CONFIG.register_module(ModuleRegistration(
-        module_id="shared.utils.image_processing",
-        file_path=__file__,
-        description="Image loading, validation, and preprocessing for OCR processing",
-        dependencies=["shared.circular_exchange"],
-        exports=["load_and_validate_image", "enhance_image", "preprocess_for_ocr", 
-                 "assess_image_quality", "get_image_config", "non_maximum_suppression"]
-    ))
 
 # Create package registry for image processing configuration
 _image_config_registry = PackageRegistry() if CIRCULAR_EXCHANGE_AVAILABLE else None
@@ -481,7 +463,6 @@ def preprocess_multi_pass(image: Image.Image) -> list:
         results.append(('fallback', enhance_image(image)))
     
     return results
-
 
 def non_maximum_suppression(
     boxes: list,

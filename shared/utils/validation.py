@@ -28,28 +28,6 @@ from flask import request, jsonify
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.validation",
-            file_path=__file__,
-            description="Input validation utilities and decorators",
-            dependencies=["shared.circular_exchange"],
-            exports=["validate_params", "validate_file_upload", "validate_email", 
-                    "validate_uuid", "sanitize_filename", "check_file_size"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
-
-
 # =============================================================================
 # VALIDATION PATTERNS
 # =============================================================================
@@ -84,7 +62,6 @@ MAX_FILE_SIZES = {
     'default': 10 * 1024 * 1024   # 10 MB
 }
 
-
 # =============================================================================
 # VALIDATION FUNCTIONS
 # =============================================================================
@@ -104,7 +81,6 @@ def validate_email(email: str) -> bool:
     
     return EMAIL_PATTERN.match(email.strip()) is not None
 
-
 def validate_uuid(uuid_str: str) -> bool:
     """
     Validate UUID format.
@@ -119,7 +95,6 @@ def validate_uuid(uuid_str: str) -> bool:
         return False
     
     return UUID_PATTERN.match(uuid_str.strip()) is not None
-
 
 def sanitize_filename(filename: str, max_length: int = 255) -> str:
     """
@@ -149,7 +124,6 @@ def sanitize_filename(filename: str, max_length: int = 255) -> str:
     
     return filename or "unnamed"
 
-
 def check_file_size(file_size: int, file_type: str = 'default') -> tuple:
     """
     Check if file size is within allowed limits.
@@ -167,7 +141,6 @@ def check_file_size(file_size: int, file_type: str = 'default') -> tuple:
         return False, f"File size ({file_size} bytes) exceeds maximum allowed ({max_size} bytes)"
     
     return True, None
-
 
 def check_file_extension(filename: str, allowed_extensions: set = None) -> tuple:
     """
@@ -193,7 +166,6 @@ def check_file_extension(filename: str, allowed_extensions: set = None) -> tuple
     
     return True, None
 
-
 def check_mime_type(mime_type: str, allowed_mimes: set = None) -> tuple:
     """
     Check if MIME type is allowed.
@@ -215,7 +187,6 @@ def check_mime_type(mime_type: str, allowed_mimes: set = None) -> tuple:
         return False, f"MIME type '{mime_type}' not allowed. Allowed: {', '.join(allowed_mimes)}"
     
     return True, None
-
 
 # =============================================================================
 # VALIDATION DECORATORS
@@ -324,7 +295,6 @@ def validate_params(schema: Dict[str, Dict[str, Any]]):
         return wrapper
     return decorator
 
-
 def validate_file_upload(
     param_name: str = 'file',
     allowed_extensions: set = None,
@@ -412,7 +382,6 @@ def validate_file_upload(
         
         return wrapper
     return decorator
-
 
 def validate_json_body(schema: Dict[str, Dict[str, Any]]):
     """
@@ -514,7 +483,6 @@ def validate_json_body(schema: Dict[str, Dict[str, Any]]):
         
         return wrapper
     return decorator
-
 
 __all__ = [
     'validate_params',

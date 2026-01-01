@@ -37,34 +37,7 @@ from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.errors",
-            file_path=__file__,
-            description="Unified error handling with custom exception classes and error formatting",
-            dependencies=["shared.circular_exchange"],
-            exports=[
-                "ErrorCategory", "ErrorCode", "ReceiptExtractorError",
-                "ValidationError", "ProcessingError", "AuthenticationError",
-                "AuthorizationError", "NotFoundError", "RateLimitError",
-                "ExternalServiceError", "create_error_response", 
-                "ErrorResponse", "ERROR_METADATA"
-            ]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
-
 
 class ErrorCategory(str, Enum):
     """Categories of errors for better classification."""
@@ -77,7 +50,6 @@ class ErrorCategory(str, Enum):
     RATE_LIMIT = "rate_limit"
     INTERNAL = "internal"
     CONFIGURATION = "configuration"
-
 
 class ErrorCode(str, Enum):
     """
@@ -149,7 +121,6 @@ class ErrorCode(str, Enum):
     DATABASE_ERROR = "E9002"
     CONFIGURATION_ERROR = "E9003"
     RESOURCE_EXHAUSTED = "E9004"
-
 
 # Error metadata - message, HTTP status, suggested action
 ERROR_METADATA = {
@@ -393,7 +364,6 @@ ERROR_METADATA = {
     },
 }
 
-
 @dataclass
 class ErrorResponse:
     """
@@ -432,7 +402,6 @@ class ErrorResponse:
         if self.details:
             result['error']['details'] = self.details
         return result
-
 
 class ReceiptExtractorError(Exception):
     """Base exception class for all application errors."""
@@ -492,7 +461,6 @@ class ReceiptExtractorError(Exception):
         else:
             logger.info(log_message)
 
-
 # Specific exception classes
 class ValidationError(ReceiptExtractorError):
     """Raised when input validation fails."""
@@ -513,7 +481,6 @@ class ValidationError(ReceiptExtractorError):
             http_status=400
         )
 
-
 class AuthenticationError(ReceiptExtractorError):
     """Raised when authentication fails."""
     
@@ -531,7 +498,6 @@ class AuthenticationError(ReceiptExtractorError):
             http_status=401
         )
 
-
 class AuthorizationError(ReceiptExtractorError):
     """Raised when authorization fails."""
     
@@ -548,7 +514,6 @@ class AuthorizationError(ReceiptExtractorError):
             details=details,
             http_status=403
         )
-
 
 class NotFoundError(ReceiptExtractorError):
     """Raised when a resource is not found."""
@@ -574,7 +539,6 @@ class NotFoundError(ReceiptExtractorError):
             http_status=404
         )
 
-
 class ProcessingError(ReceiptExtractorError):
     """Raised when processing fails."""
     
@@ -593,7 +557,6 @@ class ProcessingError(ReceiptExtractorError):
             suggestion=suggestion,
             http_status=500
         )
-
 
 class RateLimitError(ReceiptExtractorError):
     """Raised when rate limit is exceeded."""
@@ -621,7 +584,6 @@ class RateLimitError(ReceiptExtractorError):
             http_status=429
         )
 
-
 class ExternalServiceError(ReceiptExtractorError):
     """Raised when an external service fails."""
     
@@ -644,7 +606,6 @@ class ExternalServiceError(ReceiptExtractorError):
             details=details,
             http_status=503
         )
-
 
 def create_error_response(
     error_code: ErrorCode,

@@ -12,13 +12,6 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -34,7 +27,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
     except Exception:
         pass
 
-
 @dataclass
 class EmailStep:
     """Single step in an email sequence"""
@@ -43,7 +35,6 @@ class EmailStep:
     subject: str
     template_name: str
     description: str
-
 
 @dataclass
 class EmailSequenceDefinition:
@@ -68,7 +59,6 @@ class EmailSequenceDefinition:
     def total_steps(self) -> int:
         """Get total number of steps"""
         return len(self.steps)
-
 
 # =============================================================================
 # WELCOME SERIES (3 emails over 7 days)
@@ -101,7 +91,6 @@ WELCOME_SEQUENCE = EmailSequenceDefinition(
         ),
     ]
 )
-
 
 # =============================================================================
 # TRIAL CONVERSION SERIES (5 emails over 14 days)
@@ -149,7 +138,6 @@ TRIAL_CONVERSION_SEQUENCE = EmailSequenceDefinition(
     ]
 )
 
-
 # =============================================================================
 # ONBOARDING SERIES (for paid users - 4 emails over 30 days)
 # =============================================================================
@@ -189,7 +177,6 @@ ONBOARDING_SEQUENCE = EmailSequenceDefinition(
     ]
 )
 
-
 # =============================================================================
 # RE-ENGAGEMENT SERIES (for inactive users - 3 emails over 90 days)
 # =============================================================================
@@ -222,7 +209,6 @@ RE_ENGAGEMENT_SEQUENCE = EmailSequenceDefinition(
     ]
 )
 
-
 # =============================================================================
 # SEQUENCE REGISTRY
 # =============================================================================
@@ -232,7 +218,6 @@ SEQUENCES: Dict[str, EmailSequenceDefinition] = {
     "onboarding": ONBOARDING_SEQUENCE,
     "re_engagement": RE_ENGAGEMENT_SEQUENCE,
 }
-
 
 def get_sequence_definition(sequence_type: str) -> Optional[EmailSequenceDefinition]:
     """
@@ -246,7 +231,6 @@ def get_sequence_definition(sequence_type: str) -> Optional[EmailSequenceDefinit
     """
     return SEQUENCES.get(sequence_type)
 
-
 def get_all_sequences() -> List[EmailSequenceDefinition]:
     """
     Get all sequence definitions
@@ -255,7 +239,6 @@ def get_all_sequences() -> List[EmailSequenceDefinition]:
         List of all EmailSequenceDefinitions
     """
     return list(SEQUENCES.values())
-
 
 def calculate_next_send_date(sequence_type: str, current_step: int, started_at: datetime) -> Optional[datetime]:
     """
@@ -278,7 +261,6 @@ def calculate_next_send_date(sequence_type: str, current_step: int, started_at: 
         return None  # Sequence complete
     
     return started_at + timedelta(days=next_step.delay_days)
-
 
 __all__ = [
     'EmailStep',

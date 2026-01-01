@@ -38,14 +38,6 @@ from pathlib import Path
 from typing import Optional, Any, Callable, Dict, TypeVar, Union
 from contextlib import contextmanager
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Register module with Circular Exchange (deferred to avoid circular import)
 def _register_logging_module():
     if CIRCULAR_EXCHANGE_AVAILABLE:
         try:
@@ -101,7 +93,6 @@ _register_logging_module()
 # Type variable for generic decorator
 F = TypeVar('F', bound=Callable[..., Any])
 
-
 class StructuredJSONFormatter(logging.Formatter):
     """
     Formatter that produces structured JSON logs.
@@ -141,7 +132,6 @@ class StructuredJSONFormatter(logging.Formatter):
             log_data['context'] = context
         
         return json.dumps(log_data, default=str)
-
 
 class ColoredTextFormatter(logging.Formatter):
     """
@@ -186,7 +176,6 @@ class ColoredTextFormatter(logging.Formatter):
             formatted = f"{formatted} [{context_str}]"
         
         return formatted
-
 
 class DataCollectorHandler(logging.Handler):
     """
@@ -249,7 +238,6 @@ class DataCollectorHandler(logging.Handler):
         except Exception:
             # Never let data collection errors affect the application
             pass
-
 
 class CentralizedLoggingManager:
     """
@@ -368,10 +356,8 @@ class CentralizedLoggingManager:
         self._loggers[name] = logger
         return logger
 
-
 # Global manager instance
 _manager = CentralizedLoggingManager()
-
 
 def get_module_logger(name: Optional[str] = None) -> logging.Logger:
     """
@@ -402,7 +388,6 @@ def get_module_logger(name: Optional[str] = None) -> logging.Logger:
     
     return _manager.get_logger(name)
 
-
 def set_context(**kwargs) -> None:
     """
     Set thread-local context that will be included in all log messages.
@@ -415,17 +400,14 @@ def set_context(**kwargs) -> None:
         _context.data = {}
     _context.data.update(kwargs)
 
-
 def get_context() -> Dict[str, Any]:
     """Get the current thread-local context."""
     return getattr(_context, 'data', {})
-
 
 def clear_context() -> None:
     """Clear all thread-local context."""
     if hasattr(_context, 'data'):
         _context.data.clear()
-
 
 @contextmanager
 def logging_context(**kwargs):
@@ -443,7 +425,6 @@ def logging_context(**kwargs):
         yield
     finally:
         _context.data = old_context
-
 
 def log_errors(
     logger: Optional[logging.Logger] = None,
@@ -525,7 +506,6 @@ def log_errors(
     
     return decorator
 
-
 def log_with_context(
     logger: logging.Logger,
     level: str,
@@ -542,7 +522,6 @@ def log_with_context(
     extra = {'extra_fields': kwargs}
     log_method = getattr(logger, level.lower())
     log_method(message, extra=extra)
-
 
 class ErrorHandler:
     """
@@ -589,22 +568,18 @@ class ErrorHandler:
                 return True  # Suppress the exception
         return False
 
-
 # Module initialization
 def _init_module():
     """Initialize the centralized logging system when this module is imported."""
     _manager.configure()
 
-
 # Auto-initialize when imported
 _init_module()
-
 
 # Additional utilities from logger.py (consolidated)
 def generate_correlation_id() -> str:
     """Generate a unique correlation ID for request tracing."""
     return str(uuid.uuid4())
-
 
 def log_function_call(logger: Optional[logging.Logger] = None, level: str = 'DEBUG'):
     """
@@ -630,7 +605,6 @@ def log_function_call(logger: Optional[logging.Logger] = None, level: str = 'DEB
                 raise
         return wrapper
     return decorator
-
 
 @contextmanager
 def log_operation(
@@ -669,7 +643,6 @@ def log_operation(
             extra={'extra_fields': {**context, 'duration_seconds': duration, 'error': str(e)}}
         )
         raise
-
 
 class LogContext:
     """
@@ -712,7 +685,6 @@ class LogContext:
     def clear():
         """Clear all context data."""
         clear_context()
-
 
 def setup_logger(
     name: str,
@@ -761,15 +733,12 @@ def setup_logger(
         logger.addHandler(console_handler)
     return logger
 
-
 def get_logger(name: str) -> logging.Logger:
     """Get an existing logger by name. Alias for compatibility."""
     return logging.getLogger(name)
 
-
 # Module-level default logger
 _default_logger = None
-
 
 def get_default_logger() -> logging.Logger:
     """Get or create the default application logger."""
@@ -778,9 +747,7 @@ def get_default_logger() -> logging.Logger:
         _default_logger = setup_logger('receipt_extractor', level='INFO')
     return _default_logger
 
-
 from enum import Enum as _Enum
-
 
 class LogLevel(_Enum):
     """Standardized log levels. Use logging module constants directly when possible."""
@@ -789,7 +756,6 @@ class LogLevel(_Enum):
     WARNING = 'WARNING'
     ERROR = 'ERROR'
     CRITICAL = 'CRITICAL'
-
 
 # Export public API
 __all__ = [

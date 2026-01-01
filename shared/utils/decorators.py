@@ -20,13 +20,6 @@ from typing import Callable, Optional, List, Any
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Register this module itself with Circular Exchange
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
@@ -39,7 +32,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass  # Ignore registration errors
-
 
 def circular_exchange_module(
     module_id: str,
@@ -124,7 +116,6 @@ def circular_exchange_module(
 
     return decorator
 
-
 def retry_on_failure(
     max_attempts: int = 3,
     delay: float = 1.0,
@@ -177,7 +168,6 @@ def retry_on_failure(
         return wrapper
     return decorator
 
-
 def log_execution_time(func: Callable) -> Callable:
     """
     Decorator to log the execution time of a function.
@@ -210,7 +200,6 @@ def log_execution_time(func: Callable) -> Callable:
             raise
 
     return wrapper
-
 
 def deprecated(reason: str = "", alternative: Optional[str] = None):
     """
@@ -247,7 +236,6 @@ def deprecated(reason: str = "", alternative: Optional[str] = None):
         return wrapper
     return decorator
 
-
 def handle_errors(default_return: Any = None, log_traceback: bool = True):
     """
     Decorator to handle errors gracefully with optional default return value.
@@ -282,7 +270,6 @@ def handle_errors(default_return: Any = None, log_traceback: bool = True):
 
         return wrapper
     return decorator
-
 
 __all__ = [
     'circular_exchange_module',

@@ -10,7 +10,7 @@
 
 1. [Project Overview](#-project-overview)
 2. [Project Structure](#-project-structure)
-3. [Circular Exchange Framework (CEFR) - OPTIONAL](#-circular-exchange-framework-cefr---optional)
+3. [Code Quality Tools](#-code-quality-tools)
 4. [Testing Requirements](#-testing-requirements)
 5. [AI Model Guidelines](#-ai-model-guidelines)
 6. [Security & Authentication](#-security--authentication)
@@ -41,12 +41,12 @@
 | **Authentication** | JWT with Refresh Tokens | - |
 | **Payments** | Stripe | Latest |
 | **Telemetry** | OpenTelemetry | 1.22+ |
-| **Framework** | Circular Exchange Framework (CEFR) | Custom |
+| **Code Quality** | Developer Tools | Static Analysis |
 
 ### Language Composition
 
 ```
-Python:     148 files (Core backend, AI models, CEFR framework)
+Python:     148 files (Core backend, AI models, code quality tools)
 JavaScript: 43 files  (Frontend, Electron, utilities)
 HTML:       17 files  (Web UI, documentation)
 CSS:        5 files   (Styling)
@@ -55,15 +55,14 @@ CSS:        5 files   (Styling)
 ### Core Objectives
 
 1. **Text Detection Excellence**: Support 7 OCR/AI algorithms with unified output schema
-2. **Framework Integration**: Modules MAY optionally integrate with CEFR for auto-tuning (disabled by default)
-3. **Production Quality**: ~1055 tests with strict synchronization requirements
+2. **Clean Codebase**: No boilerplate, clear patterns, practical developer tools
+3. **Production Quality**: ~700 tests with strict synchronization requirements
 4. **Scalable SaaS**: Multi-tier subscriptions, usage tracking, cloud integrations
 5. **Developer Experience**: Clear patterns, comprehensive docs, easy onboarding
 
 ### Success Metrics
 
 - ✅ Test Coverage: 70%+ on new code, 80%+ on critical modules
-- 🟡 CEFR Integration: Optional (ENABLE_CEFR=false by default)
 - ✅ Test Synchronization: 0 skipped tests for missing functions
 - ✅ API Response Time: <500ms for extraction endpoints
 - ✅ Model Accuracy: 90%+ on standard receipt datasets
@@ -175,200 +174,94 @@ Web-and-Desktop-Apps/
 ---
 
 ## 🟡 Circular Exchange Framework (CEFR) - OPTIONAL
+## 🛠️ Code Quality Tools
 
-### ℹ️ CEFR is EXPERIMENTAL and OPTIONAL
+### Developer Tooling
 
-The Circular Exchange Framework (CEFR) is an **optional experimental** auto-tuning system that enables:
-- Runtime parameter optimization
-- Production metrics analysis
-- Auto-refactoring suggestions
-- Reactive configuration updates
-- Dependency tracking
+The project includes static analysis tools for maintaining code quality and detecting issues early.
 
-**CEFR is disabled by default** (`ENABLE_CEFR=false`). New modules MAY optionally integrate with CEFR if:
-- The module has tunable parameters that would benefit from auto-optimization
-- You are actively experimenting with runtime configuration
-- Team is familiar with CEFR patterns
+### Dependency Analyzer
 
-**For CEFR status and evaluation**: See `docs/architecture/CEFR_STATUS.md`
+Analyzes Python imports to detect circular dependencies and coupling issues.
 
----
-
-### Optional Integration Pattern (When Enabled)
-
-#### Step 1: Import CEFR Components (Optional)
-
-```python
-"""
-Your Module Description
-"""
-import logging
-
-# 🟡 OPTIONAL: Import CEFR components (only if using CEFR)
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    # CEFR not available or disabled - module works fine without it
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
+**Usage:**
+```bash
+python tools/cefr/dependency_analyzer.py
 ```
 
-#### Step 2: Register Module (Optional)
+**Features:**
+- ✅ Circular dependency detection with path visualization
+- ✅ Import depth analysis
+- ✅ Bottleneck identification (heavily imported modules)
+- ✅ Isolated module detection
+- ✅ Report saved to `docs/DEPENDENCY_ANALYSIS.md`
 
-```python
-# 🟡 OPTIONAL: Register module with PROJECT_CONFIG (only if using CEFR)
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="your.module.name",           # Unique module ID
-            file_path=__file__,                     # Current file path
-            description="Brief module description",  # What does this module do?
-            dependencies=["list", "of", "deps"],    # External dependencies
-            exports=["ExportedClass", "function"]   # Public API
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
+**Exit Codes:**
+- `0` - No circular dependencies found
+- `1` - Circular dependencies detected (requires refactoring)
+
+**Example Output:**
+```
+================================================================================
+DEPENDENCY ANALYSIS REPORT
+================================================================================
+
+Total Python modules: 179
+Total import relationships: 1169
+
+✅ No circular dependencies detected
+
+Import Depth Analysis:
+  Max depth: 5
+  Avg depth: 2.3
+
+Import Bottlenecks (imported by 10+ modules):
+  shared.utils.data: 23 imports
+  shared.utils.helpers: 18 imports
 ```
 
-#### Step 3: Use VariablePackage for Configuration (Optional)
+### Import Validator
 
-```python
-# 🟡 OPTIONAL: Use VariablePackage for tunable parameters (only if using CEFR)
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    registry = PackageRegistry()
-    
-    # Create tunable configuration parameters
-    confidence_threshold = registry.create_package(
-        name='module.param.confidence_threshold',
-        initial_value=0.7,
-        source_module='your.module.name',
-        description='Minimum confidence threshold for detection'
-    ).get_value()
-else:
-    # Standard configuration when CEFR not available
-    confidence_threshold = 0.7
+Validates that critical imports work correctly before deployment.
+
+**Usage:**
+```bash
+python tools/cefr/import_validator.py
 ```
 
----
+**Features:**
+- ✅ Validates critical imports (shared, models, backend)
+- ✅ Checks optional imports (OCR engines, ML frameworks)
+- ✅ Clear pass/fail reporting
 
-### Complete CEFR Integration Example
+**Exit Codes:**
+- `0` - All critical imports validated
+- `1` - One or more critical imports failed
 
-**Example: OCR Configuration Module with CEFR**
+### Integration with Development Workflow
 
-```python
-"""
-OCR Configuration - Manages OCR engine settings
-"""
-import logging
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
-
-# CEFR Integration
-try:
-    from shared.circular_exchange import (
-        PROJECT_CONFIG, ModuleRegistration, 
-        PackageRegistry, VariablePackage
-    )
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
-
-# Register module
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ocr_config",
-            file_path=__file__,
-            description="OCR engine configuration with auto-tuning",
-            dependencies=["easyocr", "pytesseract", "paddleocr"],
-            exports=["OCRConfig", "get_ocr_config"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
-
-@dataclass
-class OCRConfig:
-    """OCR configuration with CEFR integration."""
-    
-    confidence_threshold: float = 0.7
-    max_processing_time: int = 30
-    enable_preprocessing: bool = True
-    
-    def __post_init__(self):
-        """Initialize with CEFR tunable parameters."""
-        if CIRCULAR_EXCHANGE_AVAILABLE:
-            registry = PackageRegistry()
-            
-            # Register tunable parameters
-            self.confidence_threshold = registry.create_package(
-                name='ocr.confidence_threshold',
-                initial_value=self.confidence_threshold,
-                source_module='shared.models.ocr_config'
-            ).get_value()
-            
-            self.max_processing_time = registry.create_package(
-                name='ocr.max_processing_time',
-                initial_value=self.max_processing_time,
-                source_module='shared.models.ocr_config'
-            ).get_value()
-
-
-# Singleton instance
-_ocr_config: Optional[OCRConfig] = None
-
-def get_ocr_config() -> OCRConfig:
-    """Get or create OCR configuration singleton."""
-    global _ocr_config
-    if _ocr_config is None:
-        _ocr_config = OCRConfig()
-    return _ocr_config
+**Before Making Changes:**
+```bash
+python tools/cefr/dependency_analyzer.py  # Understand current structure
 ```
 
----
+**After Making Changes:**
+```bash
+python tools/cefr/import_validator.py     # Validate imports work
+python tools/cefr/dependency_analyzer.py  # Check for new circular deps
+```
 
-### CEFR Components Reference
+**Pre-Commit Hook:**
+```bash
+#!/bin/bash
+python tools/cefr/dependency_analyzer.py
+if [ $? -ne 0 ]; then
+    echo "❌ Circular dependencies detected"
+    exit 1
+fi
+```
 
-| Component | Purpose | When to Use |
-|-----------|---------|-------------|
-| `PROJECT_CONFIG` | Global configuration singleton | Module registration |
-| `ModuleRegistration` | Module metadata | Required for all modules |
-| `VariablePackage` | Observable value containers | Tunable parameters |
-| `PackageRegistry` | Package manager | Configuration management |
-| `DataCollector` | Metrics collection | Production data gathering |
-| `MetricsAnalyzer` | Pattern analysis | Performance optimization |
-| `RefactoringEngine` | Code improvement | Auto-refactoring |
-| `FeedbackLoop` | Auto-tuning | Parameter optimization |
-| `AutoTuner` | Automatic tuning | Production optimization |
-| `ProductionIntegration` | Telemetry bridge | Connect to OpenTelemetry |
-
----
-
-### Benefits of CEFR Integration
-
-✅ **Runtime Tuning**: Adjust parameters without code changes  
-✅ **Auto-Optimization**: System learns from production metrics  
-✅ **Reactive Updates**: Configuration changes propagate automatically  
-✅ **Dependency Tracking**: Impact analysis for changes  
-✅ **Analytics Integration**: Feed data to user analytics  
-✅ **Refactoring Suggestions**: AI-powered code improvements  
-✅ **A/B Testing**: Compare different configurations  
-✅ **Rollback Support**: Automatic rollback on errors  
-
----
-
-### Use Cases
-
-1. **OCR Confidence Thresholds**: Auto-tune based on accuracy metrics
-2. **Batch Processing Sizes**: Optimize for memory and speed
-3. **Cache TTL Values**: Adjust based on hit rates
-4. **Rate Limiting**: Dynamic adjustment based on load
-5. **Model Selection**: Choose best model per receipt type
-6. **Preprocessing Steps**: Enable/disable based on image quality
+For detailed documentation, see [tools/cefr/README.md](../tools/cefr/README.md).
 
 ---
 
@@ -376,13 +269,13 @@ def get_ocr_config() -> OCRConfig:
 
 ### Test Coverage Summary
 
-**Total Tests: ~1,055**
+**Total Tests: ~700**
 
 | Category | Count | Description |
 |----------|-------|-------------|
 | Shared Utils Tests | ~170 | Core utilities (data, helpers, image, logging) |
 | OCR Tests | ~191 | OCR processing and configuration |
-| CEFR Framework Tests | ~322 | Circular Exchange Framework (core, refactor, analysis, persist) |
+| Core Registry Tests | ~50 | Module registry and project configuration |
 | Backend Tests | ~50 | Backend API routes |
 | Integration Tests | ~28 | Cross-module integration |
 | Billing/Security Tests | ~59 | Billing, routes, security |
@@ -1065,30 +958,7 @@ model_url = trainer.download_model(job.id)
 
 ## ⚠️ Common Pitfalls to Avoid
 
-### 1. ❌ Forgetting CEFR Integration
-```python
-# WRONG - No CEFR registration
-class NewProcessor:
-    def process(self, data):
-        pass
-
-# RIGHT - With CEFR registration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    PROJECT_CONFIG.register_module(ModuleRegistration(
-        module_id="module.new_processor",
-        file_path=__file__,
-        exports=["NewProcessor"]
-    ))
-except ImportError:
-    pass
-
-class NewProcessor:
-    def process(self, data):
-        pass
-```
-
-### 2. ❌ Not Using Unified Schema
+### 1. ❌ Not Using Unified Schema
 ```python
 # WRONG - Custom return format
 def extract_text(image):
@@ -1111,7 +981,7 @@ def extract_text(image) -> DetectionResult:
     )
 ```
 
-### 3. ❌ Using git pull Instead of git-sync.py
+### 2. ❌ Using git pull Instead of git-sync.py
 ```bash
 # WRONG
 git pull
@@ -1120,7 +990,7 @@ git pull
 python git-sync.py
 ```
 
-### 4. ❌ Skipping Tests for Missing Functions
+### 3. ❌ Skipping Tests for Missing Functions
 ```python
 # WRONG
 def test_removed_function():
@@ -1129,22 +999,7 @@ def test_removed_function():
 # RIGHT - Just delete the test entirely
 ```
 
-### 5. ❌ Hardcoding Configuration Values
-```python
-# WRONG
-CONFIDENCE_THRESHOLD = 0.7  # Hardcoded
-
-# RIGHT - Use CEFR VariablePackage
-from shared.circular_exchange import PackageRegistry
-
-registry = PackageRegistry()
-CONFIDENCE_THRESHOLD = registry.create_package(
-    name='module.confidence_threshold',
-    initial_value=0.7
-).get_value()
-```
-
-### 6. ❌ Missing Type Hints
+### 4. ❌ Missing Type Hints
 ```python
 # WRONG
 def process(data):
@@ -1155,7 +1010,7 @@ def process(data: Dict[str, Any]) -> DetectionResult:
     return result
 ```
 
-### 7. ❌ Poor Error Handling
+### 5. ❌ Poor Error Handling
 ```python
 # WRONG
 try:
@@ -1175,7 +1030,7 @@ except SpecificException as e:
     )
 ```
 
-### 8. ❌ Not Checking Authentication
+### 6. ❌ Not Checking Authentication
 ```python
 # WRONG - No auth check
 @app.route('/api/receipts')
@@ -1190,7 +1045,7 @@ def get_receipts():
     pass
 ```
 
-### 9. ❌ Missing Logging
+### 7. ❌ Missing Logging
 ```python
 # WRONG - Silent failures
 def process():
@@ -1206,7 +1061,7 @@ def process():
     logger.info(f"Loaded {len(data)} records")
 ```
 
-### 10. ❌ Not Using launcher.sh for Testing
+### 8. ❌ Not Using launcher.sh for Testing
 ```bash
 # WRONG - Manual pytest commands
 cd tools/tests && pytest -v

@@ -29,20 +29,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.progress",
-            file_path=__file__,
-            description="Progress tracking for long-running operations with SSE support",
-            dependencies=["shared.circular_exchange"],
-            exports=["ProgressTracker", "ProgressEvent", "ProcessingStage"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
-
 class ProcessingStage(Enum):
     """Enumeration of processing stages for progress tracking."""
     INITIALIZING = "initializing"
@@ -56,7 +42,6 @@ class ProcessingStage(Enum):
     FINALIZING = "finalizing"
     COMPLETED = "completed"
     FAILED = "failed"
-
 
 @dataclass
 class ProgressEvent:
@@ -82,7 +67,6 @@ class ProgressEvent:
         import json
         data = self.to_dict()
         return f"data: {json.dumps(data)}\n\n"
-
 
 class ProgressTracker:
     """
@@ -390,11 +374,9 @@ class ProgressTracker:
         with self._lock:
             return self._failed
 
-
 # Global registry for active trackers (for SSE endpoints to access)
 _active_trackers: Dict[str, ProgressTracker] = {}
 _trackers_lock = threading.Lock()
-
 
 def get_tracker(operation_id: str) -> Optional[ProgressTracker]:
     """
@@ -409,7 +391,6 @@ def get_tracker(operation_id: str) -> Optional[ProgressTracker]:
     with _trackers_lock:
         return _active_trackers.get(operation_id)
 
-
 def register_tracker(tracker: ProgressTracker) -> None:
     """
     Register a tracker in global registry.
@@ -420,7 +401,6 @@ def register_tracker(tracker: ProgressTracker) -> None:
     with _trackers_lock:
         _active_trackers[tracker.operation_id] = tracker
         logger.debug(f"Registered tracker: {tracker.operation_id}")
-
 
 def unregister_tracker(operation_id: str) -> None:
     """
@@ -433,7 +413,6 @@ def unregister_tracker(operation_id: str) -> None:
         if operation_id in _active_trackers:
             del _active_trackers[operation_id]
             logger.debug(f"Unregistered tracker: {operation_id}")
-
 
 def cleanup_old_trackers(max_age_seconds: float = 3600) -> int:
     """
@@ -464,7 +443,6 @@ def cleanup_old_trackers(max_age_seconds: float = 3600) -> int:
             logger.info(f"Cleaned up {len(to_remove)} old trackers")
         
         return len(to_remove)
-
 
 __all__ = [
     'ProgressTracker',

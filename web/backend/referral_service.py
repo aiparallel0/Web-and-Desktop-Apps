@@ -12,13 +12,6 @@ from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Register module
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
@@ -31,7 +24,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class ReferralService:
     """Service for managing referral program."""
@@ -281,10 +273,8 @@ class ReferralService:
             logger.error(f"Failed to get referral stats: {e}")
             return {}
 
-
 # Singleton instance
 _referral_service = None
-
 
 def get_referral_service() -> ReferralService:
     """Get or create ReferralService singleton."""
@@ -292,7 +282,6 @@ def get_referral_service() -> ReferralService:
     if _referral_service is None:
         _referral_service = ReferralService()
     return _referral_service
-
 
 def generate_referral_code(user_id: str = None) -> str:
     """
@@ -306,7 +295,6 @@ def generate_referral_code(user_id: str = None) -> str:
     """
     service = get_referral_service()
     return service.generate_referral_code(user_id)
-
 
 def track_referral(db_session, referral_code: str, referred_user_id: str) -> bool:
     """
@@ -322,7 +310,6 @@ def track_referral(db_session, referral_code: str, referred_user_id: str) -> boo
     """
     service = get_referral_service()
     return service.complete_referral(db_session, referral_code, referred_user_id)
-
 
 def check_rewards(db_session, user_id: str) -> bool:
     """

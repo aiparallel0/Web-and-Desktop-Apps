@@ -55,34 +55,12 @@ from shared.utils.telemetry import get_tracer, set_span_attributes
 from shared.utils.validation import validate_file_upload, validate_json_body, sanitize_filename
 from web.backend.security.rate_limiting import rate_limit
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="web.backend.app",
-            file_path=__file__,
-            description="Flask REST API backend for receipt extraction with multi-model OCR processing",
-            dependencies=["shared.models.model_manager", "shared.models.ocr_config", 
-                         "shared.circular_exchange"],
-            exports=["app", "model_manager", "process_receipt"]
-        ))
-        logger.info("Flask app registered with Circular Exchange Framework")
-    except Exception as e:
-        logger.warning(f"Could not register with Circular Exchange: {e}")
 
 # =============================================================================
 # APPLICATION SETUP
@@ -180,7 +158,6 @@ try:
 except ImportError as e:
     logger.warning(f"Security headers not available: {e}")
 
-
 # =============================================================================
 # CACHE CONTROL HEADERS
 # =============================================================================
@@ -244,7 +221,6 @@ def allowed_file(filename: str) -> bool:
     """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def safe_delete_temp_file(file_path: str, max_retries: int = 3) -> None:
     """
     Safely delete a temporary file with retry logic.
@@ -276,7 +252,6 @@ def safe_delete_temp_file(file_path: str, max_retries: int = 3) -> None:
             logger.error(f"Unexpected error deleting temp file {file_path}: {e}")
             break
 
-
 def create_error_response(
     error_message: str,
     error_type: str = 'UnknownError',
@@ -307,7 +282,6 @@ def create_error_response(
         response['error']['details'] = details
     return jsonify(response), status_code
 
-
 # =============================================================================
 # ERROR HANDLERS
 # =============================================================================
@@ -322,7 +296,6 @@ def request_entity_too_large(error: Any) -> Tuple[Response, int]:
         status_code=413
     )
 
-
 @app.errorhandler(500)
 def internal_error(error: Any) -> Tuple[Response, int]:
     """Handle internal server errors."""
@@ -332,7 +305,6 @@ def internal_error(error: Any) -> Tuple[Response, int]:
         error_type='InternalServerError',
         status_code=500
     )
-
 
 # =============================================================================
 # HEALTH & STATUS ENDPOINTS

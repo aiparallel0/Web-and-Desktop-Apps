@@ -67,33 +67,12 @@ import traceback
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="scripts.batch_receipt_processor",
-            file_path=__file__,
-            description="Batch OCR processor for receipt images with comprehensive JSON export",
-            dependencies=["shared.models.ocr", "shared.models.config", "shared.utils.data"],
-            exports=["process_all_receipts", "export_to_json"]
-        ))
-    except Exception:
-        pass
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 
 @contextmanager
 def suppress_logging(logger_names: List[str], level: int = logging.ERROR):
@@ -124,7 +103,6 @@ def suppress_logging(logger_names: List[str], level: int = logging.ERROR):
         # Restore original levels
         for (name, original_level), (_, logger) in zip(original_levels, loggers):
             logger.setLevel(original_level)
-
 
 def find_receipt_images(project_root: Path) -> List[Path]:
     """
@@ -161,7 +139,6 @@ def find_receipt_images(project_root: Path) -> List[Path]:
     image_files.sort(key=lambda p: p.name.lower())
     
     return image_files
-
 
 def process_single_receipt(image_path: Path, processor, image_index: int, total_images: int) -> Dict[str, Any]:
     """
@@ -264,7 +241,6 @@ def process_single_receipt(image_path: Path, processor, image_index: int, total_
             logger.debug(f"  Traceback:\n{result['traceback']}")
     
     return result
-
 
 def process_all_receipts(project_root: Path, model_name: str = 'tesseract', verbose: bool = False) -> Dict[str, Any]:
     """
@@ -418,7 +394,6 @@ def process_all_receipts(project_root: Path, model_name: str = 'tesseract', verb
     
     return output
 
-
 def export_to_json(data: Dict[str, Any], output_path: Path) -> None:
     """
     Export extraction results to JSON file.
@@ -434,7 +409,6 @@ def export_to_json(data: Dict[str, Any], output_path: Path) -> None:
     
     logger.info(f"\nJSON output saved to: {output_path}")
     logger.info(f"File size: {output_path.stat().st_size:,} bytes")
-
 
 def main():
     """Main entry point for batch receipt processor."""
@@ -501,7 +475,6 @@ Examples:
         if args.verbose:
             logger.error(traceback.format_exc())
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -26,19 +26,6 @@ except ImportError:
     except ImportError:
         CIRCULAR_EXCHANGE_AVAILABLE = False
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ai_models",
-            file_path=__file__,
-            description="Re-export module for AI model processors (DonutProcessor, FlorenceProcessor)",
-            dependencies=["shared.models.engine"],
-            exports=["BaseDonutProcessor", "DonutProcessor", "FlorenceProcessor"]
-        ))
-    except Exception as e:
-        logger.debug(f"Module registration skipped: {e}")
-
 # Re-export from engine module
 from .engine import (
     BaseDonutProcessor,

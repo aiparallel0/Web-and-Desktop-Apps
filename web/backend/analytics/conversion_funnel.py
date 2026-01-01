@@ -12,13 +12,6 @@ from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -33,7 +26,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class FunnelDefinition:
     """Definition of a conversion funnel"""
@@ -68,7 +60,6 @@ class FunnelDefinition:
     def is_complete(self, completed_steps: List[str]) -> bool:
         """Check if funnel is complete"""
         return all(step in completed_steps for step in self.steps)
-
 
 # =============================================================================
 # FUNNEL DEFINITIONS
@@ -126,7 +117,6 @@ FUNNELS = {
     "conversion": CONVERSION_FUNNEL,
     "retention": RETENTION_FUNNEL
 }
-
 
 def track_funnel_step(
     user_id: str,
@@ -188,7 +178,6 @@ def track_funnel_step(
         logger.error(f"Failed to track funnel step: {e}")
         return False
 
-
 def get_user_funnel_progress(
     user_id: str,
     funnel_type: str,
@@ -227,7 +216,6 @@ def get_user_funnel_progress(
     except Exception as e:
         logger.error(f"Failed to get funnel progress: {e}")
         return []
-
 
 def analyze_funnel(
     funnel_type: str,
@@ -342,7 +330,6 @@ def analyze_funnel(
         logger.error(f"Failed to analyze funnel: {e}")
         return {}
 
-
 def get_funnel_metrics(
     days: int = 30,
     db_session = None
@@ -375,7 +362,6 @@ def get_funnel_metrics(
         'end_date': end_date.isoformat(),
         'funnels': metrics
     }
-
 
 __all__ = [
     'FunnelDefinition',

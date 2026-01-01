@@ -10,13 +10,6 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import requests
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -31,7 +24,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class EmailSender:
     """Base class for email sending services"""
@@ -89,7 +81,6 @@ class EmailSender:
             Dict with success status and message ID
         """
         raise NotImplementedError("Subclass must implement send_template_email")
-
 
 class SendGridSender(EmailSender):
     """SendGrid email sender implementation"""
@@ -229,7 +220,6 @@ class SendGridSender(EmailSender):
         except Exception as e:
             logger.error(f"Failed to send template email via SendGrid: {e}")
             return {'success': False, 'error': str(e)}
-
 
 class MailgunSender(EmailSender):
     """Mailgun email sender implementation"""
@@ -375,7 +365,6 @@ class MailgunSender(EmailSender):
             logger.error(f"Failed to send template email via Mailgun: {e}")
             return {'success': False, 'error': str(e)}
 
-
 class MockEmailSender(EmailSender):
     """Mock email sender for testing"""
     
@@ -449,7 +438,6 @@ class MockEmailSender(EmailSender):
         """Clear sent emails"""
         self.sent_emails = []
 
-
 def get_email_sender() -> EmailSender:
     """
     Get configured email sender based on environment
@@ -468,7 +456,6 @@ def get_email_sender() -> EmailSender:
     else:
         logger.warning(f"Unknown email service: {email_service}, using mock")
         return MockEmailSender()
-
 
 __all__ = [
     'EmailSender',

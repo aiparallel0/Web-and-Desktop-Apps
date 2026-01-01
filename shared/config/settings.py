@@ -16,32 +16,11 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration, PackageRegistry
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.config.settings",
-            file_path=__file__,
-            description="Centralized configuration management with environment-based settings",
-            dependencies=["shared.circular_exchange"],
-            exports=["ImageConfig", "OCRConfig", "APIConfig", "Settings", "get_settings"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
 
 # Base paths
 CONFIG_DIR = Path(__file__).parent
 PROJECT_ROOT = CONFIG_DIR.parent.parent
-
 
 @dataclass(frozen=True)
 class ImageConfig:
@@ -168,10 +147,8 @@ class AppConfig:
         """Check if running in test environment."""
         return self.env.lower() in ('testing', 'test') or os.getenv('TESTING', 'false').lower() == 'true'
 
-
 # Singleton instance
 _config: Optional[AppConfig] = None
-
 
 def get_config() -> AppConfig:
     """Get the application configuration singleton."""
@@ -180,13 +157,11 @@ def get_config() -> AppConfig:
         _config = AppConfig.load()
     return _config
 
-
 def reload_config() -> AppConfig:
     """Reload the configuration (useful for testing)."""
     global _config
     _config = AppConfig.load()
     return _config
-
 
 # Validation utilities
 def validate_file_extension(filename: str, config: Optional[AppConfig] = None) -> bool:
@@ -200,7 +175,6 @@ def validate_file_extension(filename: str, config: Optional[AppConfig] = None) -
     ext = filename.rsplit('.', 1)[1].lower()
     return ext in config.image.allowed_extensions
 
-
 def validate_file_size(size_bytes: int, config: Optional[AppConfig] = None) -> bool:
     """Validate file size against maximum limit."""
     if config is None:
@@ -208,14 +182,12 @@ def validate_file_size(size_bytes: int, config: Optional[AppConfig] = None) -> b
     
     return 0 < size_bytes <= config.image.max_size_bytes
 
-
 def validate_mime_type(mime_type: str, config: Optional[AppConfig] = None) -> bool:
     """Validate MIME type against allowed list."""
     if config is None:
         config = get_config()
     
     return mime_type.lower() in config.image.allowed_mime_types
-
 
 def get_rate_limit_for_plan(plan: str, config: Optional[AppConfig] = None) -> int:
     """Get rate limit for a subscription plan."""

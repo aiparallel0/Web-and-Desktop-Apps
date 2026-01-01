@@ -45,28 +45,7 @@ from enum import Enum
 import json
 import logging
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.utils.data_structures",
-            file_path=__file__,
-            description="Core domain models for receipt extraction (LineItem, ReceiptData, ExtractionResult)",
-            dependencies=["shared.circular_exchange"],
-            exports=["LineItem", "ReceiptData", "ExtractionResult", "ExtractionStatus"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors during import
-
 
 class ExtractionStatus(Enum):
     """Enumeration of extraction result statuses."""
@@ -74,7 +53,6 @@ class ExtractionStatus(Enum):
     PARTIAL = "partial"
     FAILED = "failed"
     PENDING = "pending"
-
 
 @dataclass
 class LineItem:
@@ -159,7 +137,6 @@ class LineItem:
             sku=data.get('sku')
         )
 
-
 @dataclass
 class StoreInfo:
     """Value Object representing store/merchant information."""
@@ -178,7 +155,6 @@ class StoreInfo:
             'website': self.website,
             'tax_id': self.tax_id
         }
-
 
 @dataclass
 class TransactionTotals:
@@ -202,7 +178,6 @@ class TransactionTotals:
             'discount': str(self.discount) if self.discount else None,
             'tip': str(self.tip) if self.tip else None
         }
-
 
 @dataclass
 class ReceiptData:
@@ -379,7 +354,6 @@ class ReceiptData:
             confidence_score=data.get('confidence', 0.0),
             processing_time=data.get('processing_time', 0.0)
         )
-
 
 @dataclass
 class ExtractionResult:

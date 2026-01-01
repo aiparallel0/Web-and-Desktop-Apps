@@ -10,13 +10,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Register module
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
@@ -29,7 +22,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class EmailService:
     """
@@ -320,10 +312,8 @@ class EmailService:
             logger.error(f"Failed to send usage alert: {e}")
             return False
 
-
 # Singleton instance
 _email_service = None
-
 
 def get_email_service() -> EmailService:
     """Get or create EmailService singleton."""
@@ -331,7 +321,6 @@ def get_email_service() -> EmailService:
     if _email_service is None:
         _email_service = EmailService()
     return _email_service
-
 
 def send_trial_expiration_reminder(
     user_email: str,

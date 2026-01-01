@@ -20,29 +20,7 @@ from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
 # Import telemetry utilities
 from shared.utils.telemetry import get_tracer, set_span_attributes
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger=logging.getLogger(__name__)
-
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ai_models",
-            file_path=__file__,
-            description="AI-powered receipt extraction using Donut and Florence transformer models",
-            dependencies=["shared.utils.data_structures", "shared.utils.image_processing",
-                         "shared.circular_exchange"],
-            exports=["BaseDonutProcessor", "DonutProcessor", "FlorenceProcessor", 
-                    "DonutFinetuner", "ModelTrainer", "DataAugmenter"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors
 
 # Lazy imports to allow mocking in tests
 torch = None
@@ -1073,13 +1051,6 @@ from abc import ABC, abstractmethod
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 from shared.utils.data import LineItem, ReceiptData, ExtractionResult
 from .ocr_common import (
     SKIP_KEYWORDS, PRICE_MIN, PRICE_MAX, normalize_price,
@@ -1098,22 +1069,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.processors",
-            file_path=__file__,
-            description="OCR processor implementations using EasyOCR and PaddleOCR",
-            dependencies=["shared.circular_exchange", "shared.models.ocr_common",
-                         "shared.utils.data_structures", "shared.utils.image_processing"],
-            exports=["BaseProcessor", "EasyOCRProcessor", "PaddleProcessor",
-                    "ProcessorInitializationError", "ProcessorHealthCheckError"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors during import
-
-
 # =============================================================================
 # EXCEPTION CLASSES
 # =============================================================================
@@ -1122,21 +1077,17 @@ class ProcessorInitializationError(Exception):
     """Raised when a processor fails to initialize."""
     pass
 
-
 class ProcessorHealthCheckError(Exception):
     """Raised when a processor health check fails."""
     pass
-
 
 class ProcessorConnectionError(Exception):
     """Raised when a processor fails to connect to external service (CEF-suggested)."""
     pass
 
-
 class ProcessorTimeoutError(Exception):
     """Raised when a processor operation times out (CEF-suggested)."""
     pass
-
 
 # =============================================================================
 # RETRY UTILITY - Added based on CEF refactoring suggestion
@@ -1182,7 +1133,6 @@ def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0,
             raise last_exception
         return wrapper
     return decorator
-
 
 # =============================================================================
 # BASE PROCESSOR - Abstract Base Class
@@ -1321,7 +1271,6 @@ class BaseProcessor(ABC):
             'last_health_check': self.last_health_check,
             'healthy': self._health_check() if self.initialized else False
         }
-
 
 # =============================================================================
 # EASYOCR PROCESSOR
@@ -1506,7 +1455,6 @@ class EasyOCRProcessor:
         items_data = _extract_line_items_shared(lines)
         return [LineItem(name=name, total_price=price, quantity=qty) for name, price, qty in items_data]
 
-
 # =============================================================================
 # PADDLE OCR PROCESSOR
 # =============================================================================
@@ -1517,7 +1465,6 @@ from shared.utils.image import load_and_validate_image, preprocess_for_ocr
 
 # Lazy import to allow mocking in tests
 PaddleOCR = None
-
 
 def _get_paddleocr() -> type:
     """
@@ -1537,7 +1484,6 @@ def _get_paddleocr() -> type:
         except ImportError:
             raise ImportError("paddleocr required: pip install paddleocr")
     return PaddleOCR
-
 
 class PaddleProcessor:
     """

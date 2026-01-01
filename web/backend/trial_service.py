@@ -11,13 +11,6 @@ from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 # Register module
 if CIRCULAR_EXCHANGE_AVAILABLE:
     try:
@@ -30,7 +23,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 class TrialService:
     """Service for managing Pro trials."""
@@ -159,10 +151,8 @@ class TrialService:
             logger.error(f"Failed to expire trial for user {user.id}: {e}")
             return False
 
-
 # Singleton instance
 _trial_service = None
-
 
 def get_trial_service() -> TrialService:
     """Get or create TrialService singleton."""
@@ -170,7 +160,6 @@ def get_trial_service() -> TrialService:
     if _trial_service is None:
         _trial_service = TrialService()
     return _trial_service
-
 
 def activate_trial(user) -> bool:
     """
@@ -185,7 +174,6 @@ def activate_trial(user) -> bool:
     service = get_trial_service()
     return service.activate_trial(user)
 
-
 def check_trial_status(user) -> Dict[str, Any]:
     """
     Convenience function to check trial status.
@@ -198,7 +186,6 @@ def check_trial_status(user) -> Dict[str, Any]:
     """
     service = get_trial_service()
     return service.check_trial_status(user)
-
 
 def get_trial_days_remaining(user) -> int:
     """

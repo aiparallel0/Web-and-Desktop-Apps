@@ -12,13 +12,6 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Circular Exchange Framework Integration
-try:
-    from shared.circular_exchange import PROJECT_CONFIG, ModuleRegistration
-    CIRCULAR_EXCHANGE_AVAILABLE = True
-except ImportError:
-    CIRCULAR_EXCHANGE_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
 
 # Register module
@@ -35,7 +28,6 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
         ))
     except Exception:
         pass
-
 
 def enroll_user_in_sequence(user_id: str, sequence_type: str, db_session) -> bool:
     """
@@ -90,7 +82,6 @@ def enroll_user_in_sequence(user_id: str, sequence_type: str, db_session) -> boo
         db_session.rollback()
         return False
 
-
 def unenroll_user_from_sequence(user_id: str, sequence_type: str, db_session) -> bool:
     """
     Unenroll a user from an email sequence
@@ -130,7 +121,6 @@ def unenroll_user_from_sequence(user_id: str, sequence_type: str, db_session) ->
         db_session.rollback()
         return False
 
-
 def load_email_template(template_name: str) -> str:
     """
     Load email template from file
@@ -160,7 +150,6 @@ def load_email_template(template_name: str) -> str:
         logger.error(f"Failed to load template {template_name}: {e}")
         return f"<html><body><h1>Template Error</h1><p>Failed to load template.</p></body></html>"
 
-
 def render_email_template(template_html: str, context: Dict[str, Any]) -> str:
     """
     Render email template with context variables
@@ -180,7 +169,6 @@ def render_email_template(template_html: str, context: Dict[str, Any]) -> str:
         placeholder = f"{{{{{key}}}}}"
         rendered = rendered.replace(placeholder, str(value))
     return rendered
-
 
 def process_due_emails(db_session) -> int:
     """
@@ -296,7 +284,6 @@ def process_due_emails(db_session) -> int:
         db_session.rollback()
         return sent_count
 
-
 def trigger_signup_automation(user_id: str, db_session) -> bool:
     """
     Trigger automation when user signs up
@@ -311,7 +298,6 @@ def trigger_signup_automation(user_id: str, db_session) -> bool:
     logger.info(f"Triggering signup automation for user {user_id}")
     return enroll_user_in_sequence(user_id, 'welcome', db_session)
 
-
 def trigger_trial_automation(user_id: str, db_session) -> bool:
     """
     Trigger automation when user starts trial
@@ -325,7 +311,6 @@ def trigger_trial_automation(user_id: str, db_session) -> bool:
     """
     logger.info(f"Triggering trial automation for user {user_id}")
     return enroll_user_in_sequence(user_id, 'trial_conversion', db_session)
-
 
 def trigger_subscription_automation(user_id: str, db_session) -> bool:
     """
@@ -344,7 +329,6 @@ def trigger_subscription_automation(user_id: str, db_session) -> bool:
     # Enroll in onboarding
     return enroll_user_in_sequence(user_id, 'onboarding', db_session)
 
-
 def trigger_reengagement_automation(user_id: str, db_session) -> bool:
     """
     Trigger automation for inactive users
@@ -358,7 +342,6 @@ def trigger_reengagement_automation(user_id: str, db_session) -> bool:
     """
     logger.info(f"Triggering re-engagement automation for user {user_id}")
     return enroll_user_in_sequence(user_id, 're_engagement', db_session)
-
 
 __all__ = [
     'enroll_user_in_sequence',

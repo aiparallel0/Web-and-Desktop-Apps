@@ -43,20 +43,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Register module with Circular Exchange
-if CIRCULAR_EXCHANGE_AVAILABLE:
-    try:
-        PROJECT_CONFIG.register_module(ModuleRegistration(
-            module_id="shared.models.ocr_config",
-            file_path=__file__,
-            description="Variable-based OCR configuration with auto-tuning and pipeline stages",
-            dependencies=["shared.circular_exchange"],
-            exports=["OCRConfig", "OCRPipelineStage", "get_ocr_config", "reset_ocr_config"]
-        ))
-    except Exception:
-        pass  # Ignore registration errors during import
-
-
 # Auto-tuning configuration constants
 AUTO_TUNE_MIN_SAMPLES = 10  # Minimum extractions before auto-tuning activates
 AUTO_TUNE_WINDOW_SIZE = 20  # Number of recent extractions to consider
@@ -65,7 +51,6 @@ AUTO_TUNE_CONFIDENCE_MIN = 0.1  # Minimum confidence threshold
 AUTO_TUNE_CONFIDENCE_MAX = 0.5  # Maximum confidence threshold
 AUTO_TUNE_RELAX_STEP = 0.05  # Step to decrease confidence when relaxing
 AUTO_TUNE_TIGHTEN_STEP = 0.02  # Step to increase confidence when tightening
-
 
 @dataclass
 class OCRPipelineStage:
@@ -83,7 +68,6 @@ class OCRPipelineStage:
         if success:
             self.successful_runs += 1
         self.success_rate = self.successful_runs / max(self.total_runs, 1)
-
 
 class OCRConfig:
     """
@@ -890,10 +874,8 @@ class OCRConfig:
             cls._instance = None
         logger.debug("OCRConfig singleton instance reset")
 
-
 # Global configuration instance
 _ocr_config: Optional[OCRConfig] = None
-
 
 def get_ocr_config() -> OCRConfig:
     """Get the global OCR configuration instance."""
@@ -901,7 +883,6 @@ def get_ocr_config() -> OCRConfig:
     if _ocr_config is None:
         _ocr_config = OCRConfig()
     return _ocr_config
-
 
 def reset_ocr_config() -> None:
     """
@@ -913,7 +894,6 @@ def reset_ocr_config() -> None:
     global _ocr_config
     _ocr_config = None
     OCRConfig.reset_instance()
-
 
 # NOTE: OCRProcessor has been moved to ocr_processor.py
 # This module should only contain OCRConfig and related configuration classes.
