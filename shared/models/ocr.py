@@ -13,7 +13,7 @@ Note: Price normalization (normalize_price) now imported from shared.utils.prici
 import re
 import logging
 from decimal import Decimal
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 
 # Import centralized pricing utilities
 from shared.utils.pricing import normalize_price, PRICE_MIN, PRICE_MAX
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Lazy import of OCRConfig to avoid circular imports
 _ocr_config = None
 
-def get_config():
+def get_config() -> Optional[Any]:
     """Get the global OCR configuration (lazy loading)."""
     global _ocr_config
     if _ocr_config is None:
@@ -35,7 +35,7 @@ def get_config():
             _ocr_config = None
     return _ocr_config
 
-def get_detection_config():
+def get_detection_config() -> Dict[str, Any]:
     """
     Get detection configuration from circular exchange framework.
     
