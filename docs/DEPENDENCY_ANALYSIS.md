@@ -2,8 +2,8 @@
 DEPENDENCY ANALYSIS REPORT
 ================================================================================
 
-Total Python modules: 177
-Total import relationships: 1154
+Total Python modules: 178
+Total import relationships: 1156
 
 ⚠️  CIRCULAR DEPENDENCIES DETECTED: 1
 
