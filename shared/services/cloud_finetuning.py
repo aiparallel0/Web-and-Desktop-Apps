@@ -422,7 +422,8 @@ class RunPodTrainer:
     Uses RunPod's serverless GPU infrastructure for training.
     
     Usage:
-        trainer = RunPodTrainer(api_key="xxxxx")
+        import os
+        trainer = RunPodTrainer(api_key=os.getenv('RUNPOD_API_KEY'))
         job = trainer.start_training(model_id, training_data, config)
         status = trainer.get_status(job.job_id)
     """
