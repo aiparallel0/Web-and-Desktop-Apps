@@ -86,7 +86,7 @@ class OCRConfig:
         
         # Subscribe to confidence changes
         def on_confidence_change(change):
-            print(f"Confidence changed: {change.old_value} -> {change.new_value}")
+            logger.info(f"Confidence changed: {change.old_value} -> {change.new_value}")
         
         config.get_package('min_confidence').subscribe(on_confidence_change)
         
@@ -384,9 +384,36 @@ class OCRConfig:
         return pkg.get() if pkg else 0.3
     
     def set_min_confidence(self, value: float) -> bool:
-        """Set the minimum confidence threshold."""
+        """
+        Set the minimum confidence threshold.
+        
+        Args:
+            value: Confidence threshold (0.0 to 1.0)
+            
+        Returns:
+            True if value was set successfully, False otherwise
+            
+        Raises:
+            TypeError: If value is not a float or int
+            ValueError: If value is outside valid range [0.0, 1.0]
+        """
+        if not isinstance(value, (float, int)):
+            raise TypeError(
+                f"Confidence must be float or int, got {type(value).__name__}"
+            )
+        
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                f"Confidence must be between 0.0 and 1.0, got {value}"
+            )
+        
         pkg = self._registry.get_package('ocr.min_confidence')
-        return pkg.set(value) if pkg else False
+        if pkg:
+            success = pkg.set(float(value))
+            if success:
+                logger.info(f"Min confidence updated to {value}")
+            return success
+        return False
     
     @property
     def relaxed_confidence(self) -> float:
@@ -395,9 +422,36 @@ class OCRConfig:
         return pkg.get() if pkg else 0.2
     
     def set_relaxed_confidence(self, value: float) -> bool:
-        """Set the relaxed mode confidence threshold."""
+        """
+        Set the relaxed mode confidence threshold.
+        
+        Args:
+            value: Confidence threshold for relaxed mode (0.0 to 1.0)
+            
+        Returns:
+            True if value was set successfully, False otherwise
+            
+        Raises:
+            TypeError: If value is not a float or int
+            ValueError: If value is outside valid range [0.0, 1.0]
+        """
+        if not isinstance(value, (float, int)):
+            raise TypeError(
+                f"Confidence must be float or int, got {type(value).__name__}"
+            )
+        
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                f"Confidence must be between 0.0 and 1.0, got {value}"
+            )
+        
         pkg = self._registry.get_package('ocr.relaxed_confidence')
-        return pkg.set(value) if pkg else False
+        if pkg:
+            success = pkg.set(float(value))
+            if success:
+                logger.info(f"Relaxed confidence updated to {value}")
+            return success
+        return False
     
     @property
     def relaxed_mode(self) -> bool:

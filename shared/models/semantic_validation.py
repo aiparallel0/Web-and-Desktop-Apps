@@ -17,10 +17,10 @@ Usage:
     validation_result = validator.validate(receipt_data)
     
     if validation_result.is_valid:
-        print("Receipt validated successfully")
+        logger.info("Receipt validated successfully")
     else:
         for error in validation_result.errors:
-            print(f"Error: {error}")
+            logger.error(f"Validation error: {error}")
 
 =============================================================================
 """
@@ -219,23 +219,63 @@ class SemanticValidator:
         Perform comprehensive validation of receipt data.
         
         Args:
-            receipt_data: Dictionary containing receipt fields
+            receipt_data: Dictionary containing receipt fields (required keys: 
+                         'total', 'subtotal', 'tax', 'date', 'items', 'store_name')
             
         Returns:
             ValidationResult with all issues found
+            
+        Raises:
+            TypeError: If receipt_data is not a dictionary
+            ValueError: If receipt_data is None or empty
         """
+        # Input validation
+        if receipt_data is None:
+            raise ValueError("receipt_data cannot be None")
+        
+        if not isinstance(receipt_data, dict):
+            raise TypeError(
+                f"receipt_data must be a dictionary, got {type(receipt_data).__name__}"
+            )
+        
+        if not receipt_data:
+            logger.warning("Empty receipt_data provided for validation")
+            result = ValidationResult()
+            result.is_valid = False
+            result.issues.append(ValidationIssue(
+                field='receipt_data',
+                message='Receipt data is empty',
+                severity=ValidationSeverity.ERROR,
+                validation_type=ValidationType.COMPLETENESS
+            ))
+            return result
+        
         result = ValidationResult()
         
         # Run all validation checks
-        self._validate_math(receipt_data, result)
-        self._validate_date(receipt_data, result)
-        self._validate_prices(receipt_data, result)
-        self._validate_store(receipt_data, result)
-        self._validate_completeness(receipt_data, result)
+        try:
+            self._validate_math(receipt_data, result)
+            self._validate_date(receipt_data, result)
+            self._validate_prices(receipt_data, result)
+            self._validate_store(receipt_data, result)
+            self._validate_completeness(receipt_data, result)
+        except Exception as e:
+            logger.error(f"Validation error: {e}", exc_info=True)
+            result.issues.append(ValidationIssue(
+                field='validation',
+                message=f'Validation process failed: {str(e)}',
+                severity=ValidationSeverity.ERROR,
+                validation_type=ValidationType.FORMAT
+            ))
+            result.is_valid = False
+            return result
         
         # Apply auto-corrections if enabled
         if self.auto_correct:
-            self._apply_corrections(receipt_data, result)
+            try:
+                self._apply_corrections(receipt_data, result)
+            except Exception as e:
+                logger.warning(f"Auto-correction failed: {e}")
         
         # Determine overall validity
         result.is_valid = all(
@@ -274,9 +314,13 @@ class SemanticValidator:
                     result.math_validated = True
                     logger.info(f"Math validation passed: {subtotal} + {tax} = {total}")
                 else:
+                    difference_pct = (difference / total) * 100 if total else 0
                     result.issues.append(ValidationIssue(
                         field='total',
-                        message=f'Math validation failed: subtotal ({subtotal}) + tax ({tax}) = {expected}, but total is {total}',
+                        message=(
+                            f'Math validation failed: subtotal ({subtotal}) + tax ({tax}) = {expected}, '
+                            f'but total is {total} (difference: {difference:.2f}, {difference_pct:.1f}%)'
+                        ),
                         severity=ValidationSeverity.WARNING,
                         validation_type=ValidationType.MATH,
                         original_value={'subtotal': str(subtotal), 'tax': str(tax), 'total': str(total)},
@@ -294,10 +338,15 @@ class SemanticValidator:
                 
                 if items_total > 0:
                     diff = abs(items_total - subtotal)
+                    diff_pct = (diff / subtotal) * 100 if subtotal else 0
                     if diff > self.math_tolerance:
                         result.issues.append(ValidationIssue(
                             field='items',
-                            message=f'Items sum ({items_total}) differs from subtotal ({subtotal})',
+                            message=(
+                                f'Items sum ({items_total}) differs from subtotal ({subtotal}). '
+                                f'Difference: {diff:.2f} ({diff_pct:.1f}%). '
+                                f'This may indicate missing items or OCR errors.'
+                            ),
                             severity=ValidationSeverity.INFO,
                             validation_type=ValidationType.MATH
                         ))
