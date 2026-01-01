@@ -3,7 +3,7 @@ DEPENDENCY ANALYSIS REPORT
 ================================================================================
 
 Total Python modules: 177
-Total import relationships: 1146
+Total import relationships: 1154
 
 ⚠️  CIRCULAR DEPENDENCIES DETECTED: 1
 
@@ -13,19 +13,19 @@ Action Required: Refactor to break circular dependencies
 
 Import Depth Analysis:
   Max depth: 2
-  Avg depth: 1.4
+  Avg depth: 1.5
   Deepest modules:
     examples.spatial_ocr_usage: depth 2
     tools.verify_mvp_mode: depth 2
     desktop.process_receipt: depth 2
-    web.backend.database: depth 2
-    web.backend.usage_routes: depth 2
+    web.backend.email_service: depth 2
+    web.backend.referral_service: depth 2
 
 Import Bottlenecks (imported by 10+ modules):
   logging: 100 imports
   typing: 88 imports
+  shared: 81 imports
   os: 79 imports
-  shared: 76 imports
   datetime: 63 imports
   pathlib: 44 imports
   sys: 43 imports
