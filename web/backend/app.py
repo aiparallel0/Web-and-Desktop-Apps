@@ -1085,7 +1085,8 @@ def start_finetune(job_id: str) -> Response:
   try:
    import torch
    import transformers
-  except ImportError:
+  except ImportError as e:
+   logger.warning(f"Finetuning dependencies missing: {e}")
    return jsonify({'success':False,'error':'Finetuning requires PyTorch and Transformers. Install with: pip install torch transformers accelerate sentencepiece'}),400
   job['status']='running'
   job['started']=time.time()

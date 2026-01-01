@@ -12,14 +12,14 @@ import secrets
 logger = logging.getLogger(__name__)
 
 # JWT Configuration
-JWT_SECRET = os.getenv('JWT_SECRET', 'change-this-secret-in-production-use-env-var')
+JWT_SECRET = os.getenv('JWT_SECRET', 'INSECURE-dev-only-CHANGE-IN-PRODUCTION-min-32-chars')
 JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access tokens
 REFRESH_TOKEN_EXPIRE_DAYS = 30  # Long-lived refresh tokens
 
-if JWT_SECRET == 'change-this-secret-in-production-use-env-var':
+if JWT_SECRET.startswith('INSECURE'):
     logger.warning(
-        "Using default JWT_SECRET! "
+        "Using INSECURE default JWT_SECRET! "
         "Set JWT_SECRET environment variable in production!"
     )
 

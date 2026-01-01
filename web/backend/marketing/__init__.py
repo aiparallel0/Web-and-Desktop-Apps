@@ -17,7 +17,8 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             dependencies=[],
             exports=["email_sequences", "email_sender", "automation"]
         ))
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Module registration failed: {e}")
         pass
 
 __all__ = [
