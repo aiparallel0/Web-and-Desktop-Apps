@@ -116,6 +116,7 @@ data/*.db
 
 # AI analysis reports (generated)
 ai-analysis-report_*.md
+repository_analysis.json
 
 # Coverage reports
 coverage.xml
