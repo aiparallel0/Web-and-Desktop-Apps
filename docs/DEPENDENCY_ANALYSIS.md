@@ -3,7 +3,7 @@ DEPENDENCY ANALYSIS REPORT
 ================================================================================
 
 Total Python modules: 177
-Total import relationships: 1145
+Total import relationships: 1146
 
 ⚠️  CIRCULAR DEPENDENCIES DETECTED: 1
 
@@ -22,7 +22,7 @@ Import Depth Analysis:
     web.backend.usage_routes: depth 2
 
 Import Bottlenecks (imported by 10+ modules):
-  logging: 99 imports
+  logging: 100 imports
   typing: 88 imports
   os: 79 imports
   shared: 76 imports
