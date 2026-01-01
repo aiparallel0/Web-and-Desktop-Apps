@@ -829,8 +829,8 @@ class EmailLog(Base):
     external_id = Column(String(255), nullable=True)  # SendGrid/Mailgun message ID
     external_status = Column(String(50), nullable=True)  # delivered, bounced, etc.
     
-    # Metadata
-    metadata = Column(JSONBCompatible, nullable=True)  # Additional tracking data
+    # Additional Data (renamed from metadata to avoid SQLAlchemy reserved name)
+    additional_data = Column(JSONBCompatible, nullable=True)  # Additional tracking data
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -912,8 +912,8 @@ class ConversionFunnel(Base):
     # Completion
     completed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
-    # Metadata
-    metadata = Column(JSONBCompatible, nullable=True)  # Additional step data
+    # Additional Data (renamed from metadata to avoid SQLAlchemy reserved name)
+    additional_data = Column(JSONBCompatible, nullable=True)  # Additional step data
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
