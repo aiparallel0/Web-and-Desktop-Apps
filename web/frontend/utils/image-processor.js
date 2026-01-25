@@ -151,15 +151,75 @@ class ImageProcessor {
     }
 
     /**
-     * Detect rotation angle (simplified placeholder)
-     * Note: This is a placeholder implementation that returns 0.
-     * Real implementation would analyze image content using edge detection,
-     * Hough transforms, or machine learning to detect text orientation.
+     * Detect rotation angle using edge detection and variance analysis
+     * Analyzes horizontal and vertical edge strength to determine text orientation
+     * Returns rotation angle in degrees (0, 90, 180, 270)
      */
     static detectRotation(canvas) {
-        // Placeholder: Always returns 0 (no rotation)
-        // TODO: Implement actual rotation detection algorithm
-        return 0;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Convert to grayscale and calculate edge strength
+        const grayscale = new Float32Array(width * height);
+        for (let i = 0; i < data.length; i += 4) {
+            const idx = i / 4;
+            grayscale[idx] = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+        }
+        
+        // Calculate horizontal and vertical edge variances at different rotations
+        const rotations = [0, 90, 180, 270];
+        const scores = rotations.map(angle => {
+            return this.calculateEdgeVariance(grayscale, width, height, angle);
+        });
+        
+        // Find rotation with maximum horizontal edge variance (text lines)
+        let maxScore = scores[0];
+        let bestRotation = 0;
+        
+        for (let i = 1; i < scores.length; i++) {
+            if (scores[i] > maxScore) {
+                maxScore = scores[i];
+                bestRotation = rotations[i];
+            }
+        }
+        
+        return bestRotation;
+    }
+    
+    /**
+     * Calculate edge variance for a given rotation
+     * Higher variance indicates stronger horizontal lines (text orientation)
+     */
+    static calculateEdgeVariance(grayscale, width, height, rotation) {
+        const sampleSize = Math.min(50, Math.floor(height / 10)); // Sample rows
+        let horizontalVariance = 0;
+        
+        // Sample horizontal lines and calculate variance
+        for (let row = 0; row < height; row += Math.floor(height / sampleSize)) {
+            const rowValues = [];
+            for (let col = 0; col < width - 1; col++) {
+                const idx = row * width + col;
+                const nextIdx = row * width + col + 1;
+                
+                if (idx < grayscale.length && nextIdx < grayscale.length) {
+                    // Calculate horizontal gradient
+                    const gradient = Math.abs(grayscale[nextIdx] - grayscale[idx]);
+                    rowValues.push(gradient);
+                }
+            }
+            
+            // Calculate variance of this row
+            if (rowValues.length > 0) {
+                const mean = rowValues.reduce((a, b) => a + b, 0) / rowValues.length;
+                const variance = rowValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / rowValues.length;
+                horizontalVariance += variance;
+            }
+        }
+        
+        return horizontalVariance / sampleSize;
     }
 
     /**
