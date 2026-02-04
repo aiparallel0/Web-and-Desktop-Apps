@@ -42,6 +42,7 @@ COPY --chown=receipt:receipt web/frontend/ ./web/frontend/
 
 # Aggressive cleanup to reduce image size
 # Remove test files, cache, and heavy unused model processors
+# Note: web/backend/training is preserved for Celery worker support
 RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
     find . -type f -name "*.pyc" -delete && \
     find . -type f -name "*.pyo" -delete && \
@@ -51,8 +52,7 @@ RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && 
     rm -rf shared/models/donut_model.py 2>/dev/null || true && \
     rm -rf shared/models/donut_finetuner.py 2>/dev/null || true && \
     rm -rf shared/models/florence_finetuner.py 2>/dev/null || true && \
-    rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true && \
-    rm -rf web/backend/training 2>/dev/null || true
+    rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true
 
 # Create logs directory with proper permissions for non-root user
 RUN mkdir -p logs && chown -R receipt:receipt logs
@@ -74,4 +74,5 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/api/health')" || exit 1
 
 # Run gunicorn with optimized settings for Railway
-CMD exec gunicorn --bind :$PORT --workers 4 --threads 8 --timeout 120 web.backend.app:app
+# Use shell form to allow environment variable substitution
+CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --threads 8 --timeout 120 web.backend.app:app
