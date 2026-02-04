@@ -1,7 +1,7 @@
 """
 Email sending service for marketing automation
 
-Supports SendGrid and Mailgun for transactional email delivery.
+Supports SendGrid, Mailgun, and MailerSend for transactional email delivery.
 Includes email tracking, template rendering, and error handling.
 """
 import os
