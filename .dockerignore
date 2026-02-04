@@ -1,14 +1,23 @@
+# =============================================================================
+# Docker Ignore - Optimized for Production Deployment
+# =============================================================================
+# This file prevents unnecessary files from being copied to Docker image
+
 # Git
 .git
 .gitignore
 .github
 
-# Python
+# Python cache and bytecode
 __pycache__
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 *.so
 .Python
+
+# Build artifacts
 build/
 develop-eggs/
 dist/
@@ -24,6 +33,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Virtual environments
 .env
@@ -34,39 +45,49 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDE
+# IDE and editor files
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+.DS_Store
+Thumbs.db
 
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 .tox/
 .nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.mypy_cache
 tests/
 tools/tests/
 *.test.py
 test_*.py
 
-# Documentation
-docs/_build/
+# Documentation (exclude all except README.md)
 docs/
 *.md
-README.md
+!README.md
 ROADMAP.md
 LICENSE
 LICENSE.txt
 CONTRIBUTING.md
 
-# Misc
+# Logs
+logs/
 *.log
+
+# Temporary files
 *.tmp
-.DS_Store
-Thumbs.db
+temp/
+tmp/
 
 # Local development
 *.local
@@ -83,33 +104,22 @@ models/
 *.pkl
 *.safetensors
 
-# Uploads (user data)
+# Uploads and user data
 uploads/
-temp/
-tmp/
-
-# Desktop app (not needed for web deployment)
-desktop/
-
-# Tools (development only)
-tools/
-
-# Data files
 data/
 datasets/
 *.csv
+
+# Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# Logs
-logs/
-*.log
+# Desktop app (not needed for web deployment)
+desktop/
 
-# Build artifacts
-*.egg-info/
-dist/
-build/
+# Tools (development only - not needed in production)
+tools/
 
 # Training modules (heavy, not needed for deployment)
 web/backend/training/
@@ -119,3 +129,15 @@ tools/benchmarks/
 
 # Examples
 examples/
+
+# Node modules (if any)
+node_modules/
+
+# Pre-commit hooks
+.pre-commit-config.yaml
+
+# Development scripts
+launcher.sh
+start.bat
+git-sync.py
+generate-secrets.py
