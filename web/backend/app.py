@@ -97,7 +97,7 @@ finetune_jobs = {}
 # Register additional routes (auth)
 # Note: Receipt routes are defined inline in this file (extract_receipt, extract_batch)
 try:
-    from auth import register_auth_routes
+    from web.backend.auth import register_auth_routes
     register_auth_routes(app)
     logger.info("Auth API routes registered")
 except ImportError as e:
@@ -105,7 +105,7 @@ except ImportError as e:
 
 # Register enhanced auth routes (email verification, trial, referrals)
 try:
-    from enhanced_auth_routes import register_enhanced_auth_routes
+    from web.backend.enhanced_auth_routes import register_enhanced_auth_routes
     register_enhanced_auth_routes(app)
     logger.info("Enhanced auth routes registered")
 except ImportError as e:
@@ -113,7 +113,7 @@ except ImportError as e:
 
 # Register billing routes
 try:
-    from billing import register_billing_routes
+    from web.backend.billing import register_billing_routes
     register_billing_routes(app)
     logger.info("Billing API routes registered")
 except ImportError as e:
@@ -121,7 +121,7 @@ except ImportError as e:
 
 # Register usage tracking routes
 try:
-    from usage_routes import register_usage_routes
+    from web.backend.usage_routes import register_usage_routes
     register_usage_routes(app)
     logger.info("Usage tracking routes registered")
 except ImportError as e:
@@ -129,7 +129,7 @@ except ImportError as e:
 
 # Register quick extract routes (no auth required)
 try:
-    from api import quick_extract_bp
+    from web.backend.api import quick_extract_bp
     app.register_blueprint(quick_extract_bp)
     logger.info("Quick extract API routes registered")
 except ImportError as e:
@@ -137,7 +137,7 @@ except ImportError as e:
 
 # Register analytics tracking routes
 try:
-    from analytics_routes import analytics_bp
+    from web.backend.analytics_routes import analytics_bp
     app.register_blueprint(analytics_bp)
     logger.info("Analytics tracking routes registered")
 except ImportError as e:
@@ -145,7 +145,7 @@ except ImportError as e:
 
 # Initialize telemetry (OpenTelemetry tracing and metrics)
 try:
-    from telemetry import setup_telemetry
+    from web.backend.telemetry import setup_telemetry
     telemetry_enabled = setup_telemetry(app)
     if telemetry_enabled:
         logger.info("OpenTelemetry initialized")
@@ -155,7 +155,7 @@ except ImportError as e:
 # Initialize CEFR bridge for production integration
 cefr_bridge = None
 try:
-    from telemetry.cefr_bridge import get_cefr_bridge
+    from web.backend.telemetry.cefr_bridge import get_cefr_bridge
     cefr_bridge = get_cefr_bridge()
     if cefr_bridge.is_enabled():
         logger.info("CEFR bridge initialized")
@@ -164,7 +164,7 @@ except ImportError as e:
 
 # Initialize security headers
 try:
-    from security.headers import init_security_headers
+    from web.backend.security.headers import init_security_headers
     init_security_headers(app)
     logger.info("Security headers enabled")
 except ImportError as e:

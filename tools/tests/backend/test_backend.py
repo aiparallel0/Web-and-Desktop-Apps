@@ -680,10 +680,8 @@ import sys
 import os
 
 
-# Mark all tests as skipped since the auth.password module doesn't exist
-pytestmark = pytest.mark.skip(
-    reason="auth.password module not found - functionality is in auth.py"
-)
+# NOTE: Module structure has been updated to use web.backend.* imports
+# Tests should now work with the fixed import paths in conftest.py
 
 
 class TestHashPassword:
