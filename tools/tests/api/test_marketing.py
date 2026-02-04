@@ -101,6 +101,15 @@ def test_mailgun_sender_configuration():
     assert sender.domain == "test.com"
 
 
+def test_mailersend_sender_configuration():
+    """Test MailerSend sender configuration"""
+    from web.backend.marketing.email_sender import MailerSendSender
+    
+    sender = MailerSendSender(api_key="test_key")
+    assert sender.api_key == "test_key"
+    assert sender.api_url == 'https://api.mailersend.com/v1/email'
+
+
 def test_get_email_sender():
     """Test email sender factory"""
     from web.backend.marketing.email_sender import get_email_sender
