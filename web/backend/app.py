@@ -76,8 +76,20 @@ app.config['REQUEST_TIMEOUT'] = 3600  # 1 hour timeout
 # Allowed file extensions for image uploads
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'tif'}
 
-# Initialize model manager with resource limits
-model_manager = ModelManager(max_loaded_models=3)
+# Initialize model manager with resource limits (lazy initialization)
+model_manager = None
+
+def get_model_manager() -> ModelManager:
+    """
+    Get or initialize the model manager (lazy loading).
+    This ensures the app starts quickly without loading heavy ML models.
+    """
+    global model_manager
+    if model_manager is None:
+        logger.info("Initializing ModelManager (lazy load)...")
+        model_manager = ModelManager(max_loaded_models=3)
+        logger.info("ModelManager initialized successfully")
+    return model_manager
 
 # Storage for finetuning jobs
 finetune_jobs = {}
@@ -157,6 +169,13 @@ try:
     logger.info("Security headers enabled")
 except ImportError as e:
     logger.warning(f"Security headers not available: {e}")
+
+# Log successful app initialization
+logger.info("="*60)
+logger.info("Receipt Extraction API - Ready to accept requests")
+logger.info("Health endpoint: /api/health")
+logger.info("Port: {}".format(os.environ.get('PORT', '5000')))
+logger.info("="*60)
 
 # =============================================================================
 # CACHE CONTROL HEADERS
@@ -398,7 +417,7 @@ def health_check() -> Response:
         # Collect detailed system metrics
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
-        resource_stats = model_manager.get_resource_stats()
+        resource_stats = get_model_manager().get_resource_stats()
         
         health_data = {
             'status': 'healthy',
@@ -540,7 +559,7 @@ def cefr_feedback() -> Response:
 
 @app.route('/api/models',methods=['GET'])
 def get_models() -> Response:
- try:models=model_manager.get_available_models();current_model=model_manager.get_current_model();default_model=model_manager.get_default_model();return jsonify({'success':True,'models':models,'current_model':current_model,'default_model':default_model})
+ try:mgr=get_model_manager();models=mgr.get_available_models();current_model=mgr.get_current_model();default_model=mgr.get_default_model();return jsonify({'success':True,'models':models,'current_model':current_model,'default_model':default_model})
  except Exception as e:logger.error(f"Error getting models: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/models/select',methods=['POST'])
 def select_model() -> Response:
@@ -551,7 +570,7 @@ def select_model() -> Response:
   if not isinstance(model_id,str):return jsonify({'success':False,'error':'model_id must be a string'}),400
   if len(model_id)>100:return jsonify({'success':False,'error':'model_id too long'}),400
   if not re.match(r'^[a-zA-Z0-9_-]+$',model_id):return jsonify({'success':False,'error':'model_id contains invalid characters'}),400
-  success=model_manager.select_model(model_id)
+  success=get_model_manager().select_model(model_id)
   if success:return jsonify({'success':True,'model_id':model_id,'message':f'Model {model_id} selected successfully'})
   else:return jsonify({'success':False,'error':f'Model {model_id} not found'}),404
  except Exception as e:logger.error(f"Error selecting model: {e}");return jsonify({'success':False,'error':str(e)}),500
@@ -611,7 +630,7 @@ def extract_receipt() -> Response:
             # Process image
             logger.info(f"Processing image with model: {model_id or 'default'}, detection_mode: {detection_mode}, deskew: {enable_deskew}, enhance: {enable_enhancement}")
             
-            processor = model_manager.get_processor(model_id)
+            processor = get_model_manager().get_processor(model_id)
             result = processor.extract(temp_path)
             
             # Set extraction result attributes
@@ -680,7 +699,7 @@ def extract_batch() -> Response:
                 file.save(temp_path)
             
             # Get available models
-            available_models = model_manager.get_available_models()
+            available_models = get_model_manager().get_available_models()
             models_count = len(available_models)
             
             set_span_attributes(span, {
@@ -707,7 +726,7 @@ def extract_batch() -> Response:
                 logger.info(f"Processing with model: {model_name} ({model_id})")
                 
                 try:
-                    processor = model_manager.get_processor(model_id)
+                    processor = get_model_manager().get_processor(model_id)
                     result = processor.extract(temp_path)
                     
                     batch_results['results'][model_id] = {
@@ -760,13 +779,13 @@ def extract_batch() -> Response:
 @app.route('/api/models/<model_id>/info',methods=['GET'])
 def get_model_info(model_id: str) -> Response:
  try:
-  model_info=model_manager.get_model_info(model_id)
+  model_info=get_model_manager().get_model_info(model_id)
   if model_info:return jsonify({'success':True,'model':model_info})
   else:return jsonify({'success':False,'error':f'Model {model_id} not found'}),404
  except Exception as e:logger.error(f"Error getting model info: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/models/unload',methods=['POST'])
 def unload_models() -> Response:
- try:model_manager.unload_all_models();return jsonify({'success':True,'message':'All models unloaded successfully'})
+ try:get_model_manager().unload_all_models();return jsonify({'success':True,'message':'All models unloaded successfully'})
  except Exception as e:logger.error(f"Error unloading models: {e}");return jsonify({'success':False,'error':str(e)}),500
 @app.route('/api/extract/batch-multi', methods=['POST'])
 @rate_limit(requests=5, window=3600, error_message="Batch multi-model extraction rate limit exceeded. Please try again later.")
@@ -804,7 +823,7 @@ def extract_batch_multi() -> Response:
             failed_count = 0
             
             if use_all_models:
-                available_models = model_manager.get_available_models()
+                available_models = get_model_manager().get_available_models()
                 models_count = len(available_models)
                 
                 set_span_attributes(span, {
@@ -829,7 +848,7 @@ def extract_batch_multi() -> Response:
                     for model_info in available_models:
                         mid = model_info['id']
                         try:
-                            processor = model_manager.get_processor(mid)
+                            processor = get_model_manager().get_processor(mid)
                             result = processor.extract(temp_path)
                             file_results['models'][mid] = {
                                 'model_name': model_info['name'],
@@ -863,7 +882,7 @@ def extract_batch_multi() -> Response:
                         temp_paths.append(temp_path)
                     
                     try:
-                        processor = model_manager.get_processor(model_id)
+                        processor = get_model_manager().get_processor(model_id)
                         result = processor.extract(temp_path)
                         batch_results['results'].append({
                             'filename': filename,
@@ -981,7 +1000,7 @@ def extract_receipt_stream() -> Response:
    )
    yield tracker.get_events()[-1].to_sse()
    
-   processor=model_manager.get_processor(model_id)
+   processor=get_model_manager().get_processor(model_id)
    
    # Run detection/extraction
    tracker.update(40,ProcessingStage.DETECTING,'Running text detection...')
@@ -1588,4 +1607,4 @@ def cloud_auth() -> Response:
                 pass
             
             return jsonify({'success': False, 'error': str(e)}), 500
-if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(model_manager.get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)
+if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(get_model_manager().get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)
