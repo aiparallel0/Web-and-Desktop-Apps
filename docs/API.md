@@ -372,8 +372,37 @@ Authorization: Bearer <access_token>
 
 ### Health Check
 
+The health check endpoint supports two modes:
+- **Basic mode (default)**: Fast response for container health probes (~2ms)
+- **Full mode**: Detailed system metrics for monitoring dashboards
+
+#### Basic Health Check (Fast Mode)
+
 ```http
 GET /api/health
+```
+
+**Response:**
+```json
+{
+    "status": "healthy",
+    "service": "receipt-extraction-api",
+    "version": "2.0",
+    "timestamp": 1699123456.789
+}
+```
+
+**Response Time:** <100ms (typically ~2ms)
+
+**Use Cases:**
+- Container orchestration health probes (Docker, Kubernetes, Railway)
+- Load balancer health checks
+- Quick service availability checks
+
+#### Full Health Check (Detailed Metrics)
+
+```http
+GET /api/health?full=true
 ```
 
 **Response:**
@@ -389,14 +418,54 @@ GET /api/health
         "cpu_count": 4,
         "memory_total_gb": 16.0,
         "memory_available_gb": 8.5,
-        "memory_percent_used": 47.0
+        "memory_percent_used": 47.0,
+        "disk_total_gb": 100.0,
+        "disk_free_gb": 50.0,
+        "disk_percent_used": 50.0
     },
     "models": {
         "loaded_models": 2,
-        "max_loaded_models": 3
+        "max_loaded_models": 3,
+        "available_models": ["ocr_tesseract", "ocr_easyocr"]
     }
 }
 ```
+
+**Response Time:** Variable (depends on system metrics collection)
+
+**Use Cases:**
+- Monitoring dashboards
+- System health analysis
+- Performance debugging
+
+**Status Values:**
+- `healthy`: System operating normally
+- `warning`: Memory usage >80%
+- `degraded`: Memory usage >90%
+- `unhealthy`: Error occurred during health check
+
+### Readiness Check
+
+Lightweight endpoint for fast container readiness probes.
+
+```http
+GET /api/ready
+```
+
+**Response:**
+```json
+{
+    "ready": true,
+    "service": "receipt-extraction-api"
+}
+```
+
+**Response Time:** <10ms (typically <1ms)
+
+**Use Cases:**
+- Container readiness probes
+- Fastest possible health check
+- Testing if Flask app is running
 
 ---
 
