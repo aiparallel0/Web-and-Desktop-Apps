@@ -15,7 +15,18 @@ import gc
 import numpy as np
 from PIL import Image,ImageEnhance,ImageFilter
 import logging
-import cv2  # Import cv2 once at module level for better performance
+
+# Import cv2 lazily to avoid ModuleNotFoundError if not installed
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    cv2 = None
+    logging.getLogger(__name__).warning(
+        "OpenCV (cv2) not available. Some image processing features will be limited. "
+        "Install with: pip install opencv-python-headless"
+    )
 
 # Circular Exchange Framework Integration
 try:
@@ -238,11 +249,17 @@ def assess_image_quality(image:Image.Image)->dict:
 
 def _estimate_blur(gray_image: np.ndarray) -> float:
     """Estimate image blur using Laplacian variance."""
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available, returning default blur score")
+        return 100.0  # Default value indicating unknown
     laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
     return float(laplacian.var())
 
 def _estimate_noise(gray_image: np.ndarray) -> float:
     """Estimate noise level in the image."""
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available, returning default noise level")
+        return 10.0  # Default value indicating unknown
     # Use median absolute deviation of Laplacian
     laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
     noise = np.median(np.abs(laplacian - np.median(laplacian)))
@@ -260,6 +277,13 @@ def preprocess_for_ocr(image:Image.Image,aggressive:bool=True)->Image.Image:
     - Edge-preserving smoothing
     - Intelligent binarization
     """
+    if not CV2_AVAILABLE:
+        logger.warning(
+            "OpenCV (cv2) not available for advanced preprocessing. "
+            "Using basic enhancement instead. Install opencv-python-headless for full functionality."
+        )
+        return enhance_image(image)
+    
     try:
         img_array=np.array(image)
         if img_array is None or img_array.size==0:raise ValueError("Image array is empty or None")
@@ -321,6 +345,10 @@ def _advanced_denoise(gray: np.ndarray) -> np.ndarray:
     2. Median filter for salt-and-pepper noise
     3. Morphological operations for cleaning
     """
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available for denoising")
+        return gray
+    
     # First pass: non-local means denoising
     denoised = cv2.fastNlMeansDenoising(gray, h=10)
     
@@ -338,6 +366,10 @@ def _adaptive_binarize(gray: np.ndarray) -> np.ndarray:
     2. Adaptive thresholding for local variations
     3. Result selection based on text density
     """
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available for binarization")
+        return gray
+    
     # Method 1: Otsu's binarization
     _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
@@ -371,6 +403,10 @@ def _calculate_text_density(binary: np.ndarray) -> float:
 
 def _deskew_image(image:np.ndarray)->np.ndarray:
     """Correct image skew for better text alignment."""
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available for deskewing")
+        return image
+    
     try:
         coords=np.column_stack(np.where(image>0))
         if len(coords)<10:
@@ -410,6 +446,10 @@ def detect_text_regions(image: Image.Image) -> list:
     Returns a list of bounding boxes (x, y, w, h) for detected text regions.
     Similar to region detection used by advanced OCR services.
     """
+    if not CV2_AVAILABLE:
+        logger.warning("OpenCV not available for text region detection, returning empty list")
+        return []
+    
     try:
         img_array = np.array(image.convert('L'))
         
@@ -457,17 +497,21 @@ def preprocess_multi_pass(image: Image.Image) -> list:
         # Original enhanced
         results.append(('enhanced', enhance_image(image)))
         
-        # Aggressive preprocessing
-        results.append(('aggressive', preprocess_for_ocr(image, aggressive=True)))
-        
-        # Standard preprocessing
-        results.append(('standard', preprocess_for_ocr(image, aggressive=False)))
-        
-        # High contrast version
-        img_array = np.array(image.convert('L'))
-        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(4, 4))
-        high_contrast = clahe.apply(img_array)
-        results.append(('high_contrast', Image.fromarray(high_contrast)))
+        # Only add cv2-based preprocessing if available
+        if CV2_AVAILABLE:
+            # Aggressive preprocessing
+            results.append(('aggressive', preprocess_for_ocr(image, aggressive=True)))
+            
+            # Standard preprocessing
+            results.append(('standard', preprocess_for_ocr(image, aggressive=False)))
+            
+            # High contrast version
+            img_array = np.array(image.convert('L'))
+            clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(4, 4))
+            high_contrast = clahe.apply(img_array)
+            results.append(('high_contrast', Image.fromarray(high_contrast)))
+        else:
+            logger.info("OpenCV not available, using enhanced version only for multi-pass")
         
         logger.info(f"Generated {len(results)} preprocessed versions")
     except Exception as e:

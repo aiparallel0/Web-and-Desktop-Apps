@@ -1,6 +1,7 @@
 # Git
 .git
 .gitignore
+.github
 
 # Python
 __pycache__
@@ -46,9 +47,20 @@ venv.bak/
 htmlcov/
 .tox/
 .nox/
+tests/
+tools/tests/
+*.test.py
+test_*.py
 
 # Documentation
 docs/_build/
+docs/
+*.md
+README.md
+ROADMAP.md
+LICENSE
+LICENSE.txt
+CONTRIBUTING.md
 
 # Misc
 *.log
@@ -68,6 +80,8 @@ models/
 *.pth
 *.bin
 *.onnx
+*.pkl
+*.safetensors
 
 # Uploads (user data)
 uploads/
@@ -79,3 +93,29 @@ desktop/
 
 # Tools (development only)
 tools/
+
+# Data files
+data/
+datasets/
+*.csv
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Training modules (heavy, not needed for deployment)
+web/backend/training/
+
+# Benchmarks
+tools/benchmarks/
+
+# Examples
+examples/
