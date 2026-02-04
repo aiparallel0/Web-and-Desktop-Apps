@@ -1,0 +1,77 @@
+# Production-only lightweight dependencies
+# NO EasyOCR (saves 2-3 GB), NO OpenCV (saves 500 MB)
+# For local development with all features, use requirements.txt
+
+# ============================================================================
+# CORE DEPENDENCIES
+# ============================================================================
+
+# Image Processing - Lightweight
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# Web Framework
+Flask>=3.0.0
+flask-cors>=4.0.0
+Werkzeug>=3.0.0
+
+# HTTP Client
+requests>=2.31.0
+
+# System Monitoring
+psutil>=5.9.0
+
+# ============================================================================
+# OCR - Tesseract only (lightweight, no GPU dependencies)
+# ============================================================================
+# Requires tesseract-ocr binary installed via apt-get
+pytesseract>=0.3.10
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+SQLAlchemy>=2.0.0
+alembic>=1.13.0
+
+# ============================================================================
+# AUTHENTICATION & SECURITY
+# ============================================================================
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+pydantic>=2.5.0
+cryptography>=41.0.0
+
+# ============================================================================
+# PRODUCTION SERVER
+# ============================================================================
+gunicorn>=21.0.0
+gevent>=23.0.0
+
+# ============================================================================
+# PAYMENT PROCESSING
+# ============================================================================
+stripe>=7.0.0
+
+# ============================================================================
+# HUGGINGFACE INTEGRATION (for cloud models)
+# ============================================================================
+huggingface-hub>=0.20.0
+
+# ============================================================================
+# BACKGROUND JOBS & CACHING
+# ============================================================================
+celery>=5.3.4
+redis>=5.0.1
+apscheduler>=3.10.0
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# This production requirements file excludes:
+# - EasyOCR (~2-3 GB with PyTorch/CUDA)
+# - OpenCV (~500 MB)
+# - Development/testing tools
+# - Heavy AI models (Donut, Florence-2, CRAFT)
+#
+# For full development environment with all models, use requirements.txt
+# Tesseract binary is installed via apt-get in Dockerfile
