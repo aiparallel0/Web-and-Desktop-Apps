@@ -170,6 +170,13 @@ try:
 except ImportError as e:
     logger.warning(f"Security headers not available: {e}")
 
+# Log successful app initialization
+logger.info("="*60)
+logger.info("Receipt Extraction API - Ready to accept requests")
+logger.info("Health endpoint: /api/health")
+logger.info("Port: {}".format(os.environ.get('PORT', '5000')))
+logger.info("="*60)
+
 # =============================================================================
 # CACHE CONTROL HEADERS
 # =============================================================================
