@@ -178,6 +178,47 @@ logger.info("Port: {}".format(os.environ.get('PORT', '5000')))
 logger.info("="*60)
 
 # =============================================================================
+# STARTUP STATE TRACKING
+# =============================================================================
+
+# Track startup state for health checks
+startup_state = {
+    'completed': True,
+    'errors': [],
+    'warnings': [],
+    'timestamp': time.time()
+}
+
+# Validate critical environment variables at startup
+required_vars = ['SECRET_KEY', 'JWT_SECRET']
+for var in required_vars:
+    if not os.environ.get(var):
+        error_msg = f'Missing required environment variable: {var}'
+        startup_state['errors'].append(error_msg)
+        startup_state['completed'] = False
+        logger.error(f"❌ STARTUP ERROR: {error_msg}")
+
+# Validate PORT configuration
+port = os.environ.get('PORT', '5000')
+try:
+    port_int = int(port)
+    if port_int < 1 or port_int > 65535:
+        warning_msg = f'PORT {port} is outside valid range (1-65535)'
+        startup_state['warnings'].append(warning_msg)
+        logger.warning(f"⚠️  STARTUP WARNING: {warning_msg}")
+except ValueError:
+    error_msg = f'PORT must be a number, got: {port}'
+    startup_state['errors'].append(error_msg)
+    startup_state['completed'] = False
+    logger.error(f"❌ STARTUP ERROR: {error_msg}")
+
+# Log startup state
+if startup_state['completed']:
+    logger.info("✅ Startup validation passed")
+else:
+    logger.error(f"❌ Startup validation failed with {len(startup_state['errors'])} errors")
+
+# =============================================================================
 # CACHE CONTROL HEADERS
 # =============================================================================
 
@@ -381,7 +422,9 @@ def get_version() -> Response:
 @app.route('/api/health', methods=['GET'])
 def health_check() -> Response:
     """
-    Health check endpoint with lightweight and full modes.
+    Health check endpoint with startup validation and lightweight/full modes.
+    
+    Returns startup errors if initialization failed, otherwise returns health status.
     
     - Default (fast): Returns basic health status in <100ms for container probes
     - Full mode (?full=true): Returns detailed system metrics and model stats
@@ -393,17 +436,35 @@ def health_check() -> Response:
         Response: JSON with health status and optional detailed metrics
     """
     try:
+        # Check if startup had critical errors
+        if not startup_state['completed']:
+            return jsonify({
+                'status': 'unhealthy',
+                'service': 'receipt-extraction-api',
+                'version': '2.0',
+                'startup_errors': startup_state['errors'],
+                'startup_warnings': startup_state['warnings'],
+                'timestamp': time.time()
+            }), 503
+        
         # Check if full health check is requested
         full_check = request.args.get('full', 'false').lower() == 'true'
         
         # Basic health response (fast, for container health probes)
         if not full_check:
-            return jsonify({
+            response_data = {
                 'status': 'healthy',
                 'service': 'receipt-extraction-api',
                 'version': '2.0',
-                'timestamp': time.time()
-            })
+                'timestamp': time.time(),
+                'port': os.environ.get('PORT', '5000')
+            }
+            
+            # Add warnings if any
+            if startup_state['warnings']:
+                response_data['warnings'] = startup_state['warnings']
+            
+            return jsonify(response_data)
         
         # Full health check with detailed metrics (for monitoring dashboards)
         if not PSUTIL_AVAILABLE:
@@ -411,7 +472,8 @@ def health_check() -> Response:
                 'status': 'healthy',
                 'service': 'receipt-extraction-api',
                 'version': '2.0',
-                'note': 'Install psutil for detailed system metrics'
+                'note': 'Install psutil for detailed system metrics',
+                'port': os.environ.get('PORT', '5000')
             })
         
         # Collect detailed system metrics

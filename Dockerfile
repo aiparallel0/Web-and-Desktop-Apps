@@ -74,5 +74,6 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/api/health')" || exit 1
 
 # Run gunicorn with optimized settings for Railway
-# Use shell form to allow environment variable substitution
-CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --threads 8 --timeout 120 web.backend.app:app
+# Reduced workers (2) and threads (4) for Railway's resource constraints
+# Use exec form with explicit shell for proper signal handling and variable substitution
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 120 --log-level info --access-logfile - --error-logfile - web.backend.app:app"]
