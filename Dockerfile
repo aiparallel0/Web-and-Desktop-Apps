@@ -54,6 +54,9 @@ RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && 
     rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true && \
     rm -rf web/backend/training 2>/dev/null || true
 
+# Create logs directory with proper permissions for non-root user
+RUN mkdir -p logs && chown -R receipt:receipt logs
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
