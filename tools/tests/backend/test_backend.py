@@ -154,7 +154,7 @@ class TestHealthEndpoint:
     """Test health check endpoint"""
 
     def test_health_check_basic(self, client):
-        """Test basic health check"""
+        """Test basic health check returns fast lightweight response"""
         if not client:
             pytest.skip("Flask app not available")
 
@@ -163,7 +163,14 @@ class TestHealthEndpoint:
 
         data = response.get_json()
         assert 'status' in data
-        assert data['status'] in ['healthy', 'warning', 'degraded', 'unhealthy']
+        assert data['status'] == 'healthy'
+        assert 'service' in data
+        assert 'version' in data
+        assert 'timestamp' in data
+        
+        # Basic mode should NOT include system or models
+        assert 'system' not in data
+        assert 'models' not in data
 
     def test_health_check_includes_service_info(self, client):
         """Test that health check includes service information"""
@@ -175,10 +182,35 @@ class TestHealthEndpoint:
 
         assert 'service' in data
         assert 'version' in data
+        assert data['service'] == 'receipt-extraction-api'
+        assert data['version'] == '2.0'
+
+    def test_health_check_full_mode(self, client):
+        """Test full health check with ?full=true parameter"""
+        if not client:
+            pytest.skip("Flask app not available")
+
+        response = client.get('/api/health?full=true')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert 'status' in data
+        assert data['status'] in ['healthy', 'warning', 'degraded', 'unhealthy']
+        
+        # Full mode should include detailed metrics (if psutil available)
+        # System metrics may not be present if psutil not available
+        if 'system' in data:
+            assert 'memory_percent_used' in data['system']
+            assert 'platform' in data['system']
+            assert 'python_version' in data['system']
+        
+        # Models stats should be present in full mode
+        if 'models' in data:
+            assert isinstance(data['models'], (dict, list))
 
     @patch('psutil.virtual_memory')
     def test_health_check_with_system_metrics(self, mock_memory, client):
-        """Test health check with system metrics"""
+        """Test full health check with system metrics"""
         if not client:
             pytest.skip("Flask app not available")
 
@@ -189,11 +221,49 @@ class TestHealthEndpoint:
             percent=50.0
         )
 
-        response = client.get('/api/health')
+        response = client.get('/api/health?full=true')
         data = response.get_json()
 
         if 'system' in data:
             assert 'memory_percent_used' in data['system']
+    
+    def test_health_check_backward_compatibility(self, client):
+        """Test backward compatibility - basic health check still works"""
+        if not client:
+            pytest.skip("Flask app not available")
+
+        response = client.get('/api/health')
+        assert response.status_code == 200
+        
+        data = response.get_json()
+        assert data['status'] == 'healthy'
+        assert 'service' in data
+
+
+class TestReadinessEndpoint:
+    """Test readiness check endpoint"""
+    
+    def test_readiness_check(self, client):
+        """Test readiness endpoint returns fast response"""
+        if not client:
+            pytest.skip("Flask app not available")
+        
+        response = client.get('/api/ready')
+        assert response.status_code == 200
+        
+        data = response.get_json()
+        assert 'ready' in data
+        assert data['ready'] is True
+        assert 'service' in data
+        assert data['service'] == 'receipt-extraction-api'
+    
+    def test_readiness_check_always_returns_200(self, client):
+        """Test that readiness check always returns 200 if app is running"""
+        if not client:
+            pytest.skip("Flask app not available")
+        
+        response = client.get('/api/ready')
+        assert response.status_code == 200
 
 
 class TestModelsEndpoints:

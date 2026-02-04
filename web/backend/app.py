@@ -359,19 +359,99 @@ def get_version() -> Response:
             'error': str(e)
         }), 500
 
-@app.route('/api/health',methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 def health_check() -> Response:
- try:
-  if not PSUTIL_AVAILABLE:
-   return jsonify({'status':'healthy','service':'receipt-extraction-api','version':'2.0','note':'Install psutil for detailed system metrics'})
-  memory=psutil.virtual_memory()
-  disk=psutil.disk_usage('/')
-  resource_stats=model_manager.get_resource_stats()
-  health_data={'status':'healthy','service':'receipt-extraction-api','version':'2.0','timestamp':time.time(),'system':{'platform':platform.system(),'python_version':platform.python_version(),'cpu_count':psutil.cpu_count(),'memory_total_gb':round(memory.total/(1024**3),2),'memory_available_gb':round(memory.available/(1024**3),2),'memory_percent_used':memory.percent,'disk_total_gb':round(disk.total/(1024**3),2),'disk_free_gb':round(disk.free/(1024**3),2),'disk_percent_used':disk.percent},'models':resource_stats}
-  if memory.percent>90:health_data['status']='degraded';health_data['warnings']=['Memory usage critical (>90%)']
-  elif memory.percent>80:health_data['status']='warning';health_data['warnings']=['Memory usage high (>80%)']
-  return jsonify(health_data)
- except Exception as e:logger.error(f"Health check error: {e}");return jsonify({'status':'unhealthy','service':'receipt-extraction-api','error':str(e)}),500
+    """
+    Health check endpoint with lightweight and full modes.
+    
+    - Default (fast): Returns basic health status in <100ms for container probes
+    - Full mode (?full=true): Returns detailed system metrics and model stats
+    
+    Query Parameters:
+        full (str): Set to 'true' for detailed health metrics
+    
+    Returns:
+        Response: JSON with health status and optional detailed metrics
+    """
+    try:
+        # Check if full health check is requested
+        full_check = request.args.get('full', 'false').lower() == 'true'
+        
+        # Basic health response (fast, for container health probes)
+        if not full_check:
+            return jsonify({
+                'status': 'healthy',
+                'service': 'receipt-extraction-api',
+                'version': '2.0',
+                'timestamp': time.time()
+            })
+        
+        # Full health check with detailed metrics (for monitoring dashboards)
+        if not PSUTIL_AVAILABLE:
+            return jsonify({
+                'status': 'healthy',
+                'service': 'receipt-extraction-api',
+                'version': '2.0',
+                'note': 'Install psutil for detailed system metrics'
+            })
+        
+        # Collect detailed system metrics
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        resource_stats = model_manager.get_resource_stats()
+        
+        health_data = {
+            'status': 'healthy',
+            'service': 'receipt-extraction-api',
+            'version': '2.0',
+            'timestamp': time.time(),
+            'system': {
+                'platform': platform.system(),
+                'python_version': platform.python_version(),
+                'cpu_count': psutil.cpu_count(),
+                'memory_total_gb': round(memory.total / (1024**3), 2),
+                'memory_available_gb': round(memory.available / (1024**3), 2),
+                'memory_percent_used': memory.percent,
+                'disk_total_gb': round(disk.total / (1024**3), 2),
+                'disk_free_gb': round(disk.free / (1024**3), 2),
+                'disk_percent_used': disk.percent
+            },
+            'models': resource_stats
+        }
+        
+        # Add warnings based on system metrics
+        if memory.percent > 90:
+            health_data['status'] = 'degraded'
+            health_data['warnings'] = ['Memory usage critical (>90%)']
+        elif memory.percent > 80:
+            health_data['status'] = 'warning'
+            health_data['warnings'] = ['Memory usage high (>80%)']
+        
+        return jsonify(health_data)
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'receipt-extraction-api',
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ready', methods=['GET'])
+def readiness_check() -> Response:
+    """
+    Lightweight readiness probe for container orchestration.
+    
+    This endpoint provides the fastest possible response for container
+    health checks and orchestration systems like Kubernetes or Railway.
+    It simply confirms the Flask app is running and ready to accept requests.
+    
+    Returns:
+        Response: JSON with ready status (always 200 OK if app is running)
+    """
+    return jsonify({
+        'ready': True,
+        'service': 'receipt-extraction-api'
+    }), 200
 
 @app.route('/api/cefr/dashboard', methods=['GET'])
 def cefr_dashboard() -> Response:

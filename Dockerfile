@@ -69,8 +69,8 @@ EXPOSE 5000
 # Switch to non-root user
 USER receipt
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+# Health check - increased start-period to allow app initialization
+HEALTHCHECK --interval=30s --timeout=30s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/api/health')" || exit 1
 
 # Run gunicorn with optimized settings for Railway
