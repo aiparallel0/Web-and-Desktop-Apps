@@ -121,7 +121,7 @@ def db_engine():
 @pytest.fixture(scope="function")
 def db_session(db_engine):
     """Create a database session for testing"""
-    from database.models import Base
+    from web.backend.database import Base
 
     # Create all tables
     Base.metadata.create_all(db_engine)
@@ -140,11 +140,11 @@ def db_session(db_engine):
 @pytest.fixture
 def test_user(db_session):
     """Create a test user"""
-    from database.models import User, SubscriptionPlan
+    from web.backend.database import User, SubscriptionPlan
 
     # Import password hashing - handle both locations
     try:
-        from auth.password import hash_password
+        from web.backend.password import hash_password
     except ImportError:
         # Mock hash if module not available
         def hash_password(pwd):
@@ -174,10 +174,10 @@ def test_user(db_session):
 @pytest.fixture
 def test_admin_user(db_session):
     """Create a test admin user"""
-    from database.models import User, SubscriptionPlan
+    from web.backend.database import User, SubscriptionPlan
 
     try:
-        from auth.password import hash_password
+        from web.backend.password import hash_password
     except ImportError:
         def hash_password(pwd):
             import bcrypt
@@ -204,7 +204,7 @@ def test_admin_user(db_session):
 @pytest.fixture
 def test_receipt(db_session, test_user):
     """Create a test receipt"""
-    from database.models import Receipt
+    from web.backend.database import Receipt
 
     receipt = Receipt(
         id=uuid.uuid4(),
@@ -242,7 +242,7 @@ def flask_app():
 
     # Import app - will be used in app tests
     try:
-        from app import app
+        from web.backend.app import app
         app.config['TESTING'] = True
         return app
     except ImportError:
@@ -260,7 +260,7 @@ def client(flask_app):
 def auth_token(test_user):
     """Create authentication token for test user"""
     try:
-        from auth.jwt_handler import create_access_token
+        from web.backend.jwt_handler import create_access_token
         return create_access_token(str(test_user.id), test_user.email, test_user.is_admin)
     except ImportError:
         return None
