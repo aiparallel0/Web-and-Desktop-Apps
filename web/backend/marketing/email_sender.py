@@ -1,7 +1,7 @@
 """
 Email sending service for marketing automation
 
-Supports SendGrid and Mailgun for transactional email delivery.
+Supports SendGrid, Mailgun, and MailerSend for transactional email delivery.
 Includes email tracking, template rendering, and error handling.
 """
 import os
@@ -27,7 +27,7 @@ if CIRCULAR_EXCHANGE_AVAILABLE:
             file_path=__file__,
             description="Email sending service for marketing automation",
             dependencies=[],
-            exports=["EmailSender", "SendGridSender", "MailgunSender", "get_email_sender"]
+            exports=["EmailSender", "SendGridSender", "MailgunSender", "MailerSendSender", "get_email_sender"]
         ))
     except Exception:
         pass
@@ -372,6 +372,159 @@ class MailgunSender(EmailSender):
             logger.error(f"Failed to send template email via Mailgun: {e}")
             return {'success': False, 'error': str(e)}
 
+class MailerSendSender(EmailSender):
+    """MailerSend email sender implementation"""
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize MailerSend sender
+        
+        Args:
+            api_key: MailerSend API key (defaults to env var)
+        """
+        self.api_key = api_key or os.getenv('MAILERSEND_API_KEY')
+        self.from_email = os.getenv('SENDGRID_FROM_EMAIL', 'noreply@yourdomain.com')
+        self.from_name = os.getenv('SENDGRID_FROM_NAME', 'Receipt Extractor')
+        self.api_url = 'https://api.mailersend.com/v1/email'
+        
+        if not self.api_key:
+            logger.warning("MailerSend API key not configured")
+    
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+        tracking_enabled: bool = True,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Send email via MailerSend API"""
+        if not self.api_key:
+            return {'success': False, 'error': 'MailerSend API key not configured'}
+        
+        sender_email = from_email or self.from_email
+        sender_name = from_name or self.from_name
+        
+        payload = {
+            'from': {
+                'email': sender_email,
+                'name': sender_name
+            },
+            'to': [
+                {
+                    'email': to_email
+                }
+            ],
+            'subject': subject,
+            'html': html_content
+        }
+        
+        # Add plain text version if provided
+        if text_content:
+            payload['text'] = text_content
+        
+        # Add tags (metadata) if provided
+        if metadata:
+            payload['tags'] = [f"{k}:{v}" for k, v in metadata.items()]
+        
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+        
+        try:
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code == 202:
+                logger.info(f"Email sent successfully to {to_email}")
+                return {
+                    'success': True,
+                    'message_id': response.headers.get('X-Message-Id', 'unknown'),
+                    'provider': 'mailersend'
+                }
+            else:
+                logger.error(f"MailerSend error: {response.status_code} - {response.text}")
+                return {
+                    'success': False,
+                    'error': f'MailerSend error: {response.status_code}',
+                    'details': response.text
+                }
+        except Exception as e:
+            logger.error(f"Failed to send email via MailerSend: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def send_template_email(
+        self,
+        to_email: str,
+        template_id: str,
+        template_data: Dict[str, Any],
+        subject: Optional[str] = None,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Send email using MailerSend template"""
+        if not self.api_key:
+            return {'success': False, 'error': 'MailerSend API key not configured'}
+        
+        sender_email = from_email or self.from_email
+        sender_name = from_name or self.from_name
+        
+        payload = {
+            'from': {
+                'email': sender_email,
+                'name': sender_name
+            },
+            'to': [
+                {
+                    'email': to_email
+                }
+            ],
+            'template_id': template_id,
+            'variables': [
+                {
+                    'email': to_email,
+                    'substitutions': [
+                        {'var': k, 'value': v}
+                        for k, v in template_data.items()
+                    ]
+                }
+            ]
+        }
+        
+        if subject:
+            payload['subject'] = subject
+        
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+        
+        try:
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=10)
+            
+            if response.status_code == 202:
+                logger.info(f"Template email sent successfully to {to_email}")
+                return {
+                    'success': True,
+                    'message_id': response.headers.get('X-Message-Id', 'unknown'),
+                    'provider': 'mailersend'
+                }
+            else:
+                logger.error(f"MailerSend error: {response.status_code} - {response.text}")
+                return {
+                    'success': False,
+                    'error': f'MailerSend error: {response.status_code}',
+                    'details': response.text
+                }
+        except Exception as e:
+            logger.error(f"Failed to send template email via MailerSend: {e}")
+            return {'success': False, 'error': str(e)}
+
 class MockEmailSender(EmailSender):
     """Mock email sender for testing"""
     
@@ -450,7 +603,7 @@ def get_email_sender() -> EmailSender:
     Get configured email sender based on environment
     
     Returns:
-        EmailSender instance (SendGrid, Mailgun, or Mock)
+        EmailSender instance (SendGrid, Mailgun, MailerSend, or Mock)
     """
     email_service = os.getenv('EMAIL_SERVICE', 'sendgrid').lower()
     
@@ -458,6 +611,8 @@ def get_email_sender() -> EmailSender:
         return SendGridSender()
     elif email_service == 'mailgun':
         return MailgunSender()
+    elif email_service == 'mailersend':
+        return MailerSendSender()
     elif email_service == 'mock':
         return MockEmailSender()
     else:
@@ -468,6 +623,7 @@ __all__ = [
     'EmailSender',
     'SendGridSender',
     'MailgunSender',
+    'MailerSendSender',
     'MockEmailSender',
     'get_email_sender'
 ]
