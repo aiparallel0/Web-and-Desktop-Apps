@@ -54,7 +54,7 @@ jobs:
           echo "Testing critical module imports..."
           python -c "import sys; sys.path.insert(0, '.'); from shared.circular_exchange import PROJECT_CONFIG; print('✅ CEFR imports')"
           python -c "import sys; sys.path.insert(0, '.'); from shared.models.schemas import DetectionResult; print('✅ Model schemas import')"
-          python -c "import sys; sys.path.insert(0, '.'); from shared.utils.helpers import sanitize_filename; print('✅ Utils import')"
+          python -c "import sys; sys.path.insert(0, '.'); from shared.utils.helpers import ErrorCategory; print('✅ Utils helpers import')"
           echo "✅ All critical imports successful"
 
   linting:
