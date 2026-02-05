@@ -121,8 +121,9 @@ desktop/
 # Tools (development only - not needed in production)
 tools/
 
-# Training modules (heavy, not needed for deployment)
-web/backend/training/
+# Training modules - REQUIRED for Celery worker (Procfile)
+# web/backend/training/ must be included for background job processing
+# Note: This directory is needed even though it's not used in basic web deployments
 
 # Benchmarks
 tools/benchmarks/

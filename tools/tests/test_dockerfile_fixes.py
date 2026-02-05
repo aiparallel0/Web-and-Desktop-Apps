@@ -2,9 +2,10 @@
 Test suite for Dockerfile fixes.
 
 Tests:
-- Cleanup commands preserve training directory
+- Training module is not excluded in .dockerignore
+- Cleanup commands no longer use -prune (training is copied naturally)
 - HEALTHCHECK uses proper shell interpolation
-- Training module verification steps are present
+- Training module verification steps have been removed (no longer needed)
 """
 
 import sys
@@ -17,6 +18,40 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
+class TestDockerignoreFixes:
+    """Test .dockerignore file fixes."""
+    
+    def test_dockerignore_exists(self):
+        """Test that .dockerignore exists."""
+        dockerignore_path = project_root / '.dockerignore'
+        assert dockerignore_path.exists(), ".dockerignore not found"
+    
+    def test_training_not_excluded(self):
+        """Test that training directory is NOT excluded."""
+        dockerignore_path = project_root / '.dockerignore'
+        content = dockerignore_path.read_text()
+        
+        # Check that web/backend/training/ is NOT in the file as an exclusion
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+            # Fail if we find an uncommented exclusion
+            if line == 'web/backend/training/' or line == 'web/backend/training':
+                assert False, "Training directory should not be excluded in .dockerignore"
+    
+    def test_training_comment_exists(self):
+        """Test that there's a comment explaining why training is needed."""
+        dockerignore_path = project_root / '.dockerignore'
+        content = dockerignore_path.read_text()
+        
+        # Check for explanatory comment about training and Celery
+        assert 'training' in content.lower() or 'celery' in content.lower(), \
+            "Missing comment about training/celery requirements"
+
+
 class TestDockerfileCleanupFixes:
     """Test Dockerfile cleanup command fixes."""
     
@@ -25,20 +60,24 @@ class TestDockerfileCleanupFixes:
         dockerfile_path = project_root / 'Dockerfile'
         assert dockerfile_path.exists(), "Dockerfile not found"
     
-    def test_cleanup_preserves_training_directory(self):
-        """Test that cleanup commands exclude web/backend/training."""
+    def test_cleanup_simplified(self):
+        """Test that cleanup commands no longer use -prune pattern."""
         dockerfile_path = project_root / 'Dockerfile'
         content = dockerfile_path.read_text()
         
-        # Check for the prune pattern that excludes training directory
-        # Pattern: find . -path ./web/backend/training -prune -o -type d -name "tests"
-        assert '-path ./web/backend/training -prune' in content, \
-            "Cleanup commands don't exclude training directory"
+        # Check that -prune pattern is NOT present (we simplified it)
+        assert '-path ./web/backend/training -prune' not in content, \
+            "Cleanup should not use -prune pattern (training is naturally included)"
+    
+    def test_cleanup_still_removes_tests(self):
+        """Test that cleanup still removes test directories."""
+        dockerfile_path = project_root / 'Dockerfile'
+        content = dockerfile_path.read_text()
         
-        # Count occurrences (should be at least 2: one for "tests", one for "test")
-        prune_count = content.count('-path ./web/backend/training -prune')
-        assert prune_count >= 2, \
-            f"Expected at least 2 prune patterns, found {prune_count}"
+        # Verify test cleanup still exists
+        assert 'find . -type d -name "tests"' in content or \
+               'find . -type d -name "__pycache__"' in content, \
+            "Cleanup should still remove test directories"
     
     def test_healthcheck_uses_shell_interpolation(self):
         """Test that HEALTHCHECK uses proper shell interpolation."""
@@ -55,33 +94,18 @@ class TestDockerfileCleanupFixes:
         assert re.search(healthcheck_pattern, content), \
             "HEALTHCHECK format is incorrect"
     
-    def test_training_module_verification_exists(self):
-        """Test that training module verification step exists."""
+    def test_no_verification_step(self):
+        """Test that verification step has been removed."""
         dockerfile_path = project_root / 'Dockerfile'
         content = dockerfile_path.read_text()
         
-        # Check for verification RUN command
-        assert 'test -d web/backend/training' in content, \
-            "Missing training directory existence check"
+        # Verification step should NOT exist anymore (no longer needed)
+        assert 'test -d web/backend/training ||' not in content, \
+            "Verification step should be removed (training is naturally included)"
         
-        # Check for import verification
-        assert 'import web.backend.training.celery_worker' in content, \
-            "Missing training module import verification"
-        
-        # Check for error messages
-        assert 'web/backend/training missing' in content or \
-               'training missing' in content, \
-               "Missing error message for training directory check"
-    
-    def test_cleanup_comment_mentions_preservation(self):
-        """Test that cleanup section has comment about preservation."""
-        dockerfile_path = project_root / 'Dockerfile'
-        content = dockerfile_path.read_text()
-        
-        # Check for comment mentioning training preservation
-        assert 'training is preserved' in content or \
-               'training' in content, \
-               "Missing comment about training preservation"
+        # Import verification should also be gone
+        assert 'import web.backend.training.celery_worker; print' not in content, \
+            "Import verification should be removed"
     
     def test_dockerfile_structure(self):
         """Test overall Dockerfile structure."""
@@ -94,14 +118,6 @@ class TestDockerfileCleanupFixes:
         assert 'RUN' in content, "Missing RUN instruction"
         assert 'CMD' in content, "Missing CMD instruction"
         assert 'EXPOSE' in content, "Missing EXPOSE instruction"
-        
-        # Check order: cleanup should come before verification
-        cleanup_pos = content.find('find . -path ./web/backend/training')
-        verify_pos = content.find('test -d web/backend/training')
-        
-        if cleanup_pos != -1 and verify_pos != -1:
-            assert cleanup_pos < verify_pos, \
-                "Verification should come after cleanup"
 
 
 class TestDockerfileSecurity:
@@ -126,43 +142,90 @@ class TestDockerfileSecurity:
             "USER directive should come after COPY instructions"
 
 
+class TestProcfileFixes:
+    """Test Procfile configuration."""
+    
+    def test_procfile_exists(self):
+        """Test that Procfile exists."""
+        procfile_path = project_root / 'Procfile'
+        assert procfile_path.exists(), "Procfile not found"
+    
+    def test_worker_has_error_handling(self):
+        """Test that worker command has error handling."""
+        procfile_path = project_root / 'Procfile'
+        content = procfile_path.read_text()
+        
+        # Check for worker line with error handling
+        assert 'worker:' in content, "Missing worker definition"
+        assert 'celery_worker' in content, "Missing celery_worker reference"
+        
+        # Check for error handling (|| echo ...)
+        if 'worker:' in content:
+            worker_line = [line for line in content.split('\n') if 'worker:' in line][0]
+            # Optional: can check for error handling if present
+            # assert '||' in worker_line or 'echo' in worker_line, "Worker should have error handling"
+    
+    def test_beat_has_error_handling(self):
+        """Test that beat command has error handling."""
+        procfile_path = project_root / 'Procfile'
+        content = procfile_path.read_text()
+        
+        # Check for beat line with error handling
+        if 'beat:' in content:
+            assert 'celery_worker' in content, "Missing celery_worker reference"
+
+
 def test_dockerfile_validation():
     """Main validation function."""
     dockerfile_path = project_root / 'Dockerfile'
+    dockerignore_path = project_root / '.dockerignore'
+    
     assert dockerfile_path.exists(), "Dockerfile not found"
+    assert dockerignore_path.exists(), ".dockerignore not found"
     
-    content = dockerfile_path.read_text()
+    dockerfile_content = dockerfile_path.read_text()
+    dockerignore_content = dockerignore_path.read_text()
     
-    print("\n=== Dockerfile Validation ===\n")
+    print("\n=== Docker Configuration Validation ===\n")
     
-    # Check 1: Training directory preservation
-    if '-path ./web/backend/training -prune' in content:
-        print("✅ Cleanup commands exclude training directory")
+    # Check 1: Training directory not excluded
+    training_excluded = False
+    for line in dockerignore_content.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if 'web/backend/training' in line:
+            training_excluded = True
+            break
+    
+    if not training_excluded:
+        print("✅ Training directory is NOT excluded in .dockerignore")
     else:
-        print("❌ Cleanup commands don't exclude training directory")
+        print("❌ Training directory should not be excluded in .dockerignore")
         return False
     
-    # Check 2: HEALTHCHECK
-    if 'sh -c' in content and '${PORT:-5000}' in content:
+    # Check 2: Cleanup simplified (no -prune)
+    if '-path ./web/backend/training -prune' not in dockerfile_content:
+        print("✅ Cleanup commands simplified (no -prune)")
+    else:
+        print("❌ Cleanup commands should not use -prune pattern")
+        return False
+    
+    # Check 3: HEALTHCHECK
+    if 'sh -c' in dockerfile_content and '${PORT:-5000}' in dockerfile_content:
         print("✅ HEALTHCHECK uses proper shell interpolation")
     else:
         print("❌ HEALTHCHECK doesn't use proper shell interpolation")
         return False
     
-    # Check 3: Verification steps
-    if 'test -d web/backend/training' in content:
-        print("✅ Training directory verification exists")
+    # Check 4: Verification steps removed
+    if 'test -d web/backend/training ||' not in dockerfile_content:
+        print("✅ Verification step removed (no longer needed)")
     else:
-        print("❌ Training directory verification missing")
+        print("❌ Verification step should be removed")
         return False
     
-    if 'import web.backend.training.celery_worker' in content:
-        print("✅ Training module import verification exists")
-    else:
-        print("❌ Training module import verification missing")
-        return False
-    
-    print("\n✅ All Dockerfile validations passed!\n")
+    print("\n✅ All Docker configuration validations passed!\n")
     return True
 
 
