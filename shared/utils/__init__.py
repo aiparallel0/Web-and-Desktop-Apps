@@ -26,11 +26,29 @@ from .data import (
     TransactionTotals, ExtractionStatus
 )
 
-# Image processing
-from .image import (
-    load_and_validate_image, enhance_image, assess_image_quality,
-    preprocess_for_ocr, resize_if_needed, detect_text_regions, preprocess_multi_pass
-)
+# Image processing - lazy import to avoid numpy dependency at package init
+# These functions will be imported only when actually used
+try:
+    from .image import (
+        load_and_validate_image, enhance_image, assess_image_quality,
+        preprocess_for_ocr, resize_if_needed, detect_text_regions, preprocess_multi_pass
+    )
+    _IMAGE_AVAILABLE = True
+except ImportError as e:
+    _IMAGE_AVAILABLE = False
+    # Create stub functions that raise helpful errors
+    def _image_not_available(*args, **kwargs):
+        raise ImportError(
+            "Image processing functions require numpy and Pillow. "
+            "Install with: pip install numpy pillow"
+        )
+    load_and_validate_image = _image_not_available
+    enhance_image = _image_not_available
+    assess_image_quality = _image_not_available
+    preprocess_for_ocr = _image_not_available
+    resize_if_needed = _image_not_available
+    detect_text_regions = _image_not_available
+    preprocess_multi_pass = _image_not_available
 
 # Logging
 from .logging import (
