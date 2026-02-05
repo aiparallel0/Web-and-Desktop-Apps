@@ -636,7 +636,7 @@ class TestEnvironmentConfiguration:
         assert 'alembic' in content
     
     def test_procfile_has_processes(self):
-        """Test Procfile has required processes."""
+        """Test Procfile has required processes for Railway deployment."""
         procfile = 'Procfile'
         if not os.path.exists(procfile):
             procfile = os.path.join(os.path.dirname(__file__), '..', '..', 'Procfile')
@@ -644,6 +644,12 @@ class TestEnvironmentConfiguration:
         with open(procfile, 'r') as f:
             content = f.read()
         
+        # Railway deployment only needs web process
+        # Worker and beat processes are optional and require additional setup (Redis/RabbitMQ)
         assert 'web:' in content
-        assert 'worker:' in content
-        assert 'beat:' in content
+        assert 'gunicorn' in content  # Ensure gunicorn is used for production
+        
+        # Verify Celery processes are NOT in the Procfile
+        # They should be deployed separately if needed
+        assert 'worker:' not in content or '# worker:' in content  # Allow commented out
+        assert 'beat:' not in content or '# beat:' in content  # Allow commented out
