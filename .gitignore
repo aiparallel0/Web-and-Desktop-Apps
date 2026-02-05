@@ -106,6 +106,20 @@ receipt_extractor.db
 logs/*
 !logs/.gitkeep
 
+# Log files in root directory (should be rotated to logs/)
+logs_*.csv
+logs.*.json
+logs_to_look_*.csv
+*.log.csv
+*.log.json
+
+# Celery beat schedule database
+celerybeat-schedule
+celerybeat-schedule.db
+celerybeat-schedule.dat
+celerybeat-schedule.dir
+celerybeat-schedule.bak
+
 # Data collection and training artifacts
 data/training/
 data/collected/

@@ -62,7 +62,8 @@ if CELERY_AVAILABLE:
         task_acks_late=True,  # Acknowledge after completion
         task_reject_on_worker_lost=True,
         # Beat scheduler configuration - use writable directory
-        beat_schedule=os.getenv('CELERY_BEAT_SCHEDULE', '/app/celerybeat/schedule.db'),
+        # NOTE: beat_schedule is a dict of scheduled tasks, beat_schedule_filename is the DB path
+        beat_schedule_filename=os.getenv('CELERY_BEAT_SCHEDULE', '/app/celerybeat/schedule.db'),
     )
 else:
     celery_app = None
