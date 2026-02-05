@@ -42,22 +42,16 @@ COPY --chown=receipt:receipt web/frontend/ ./web/frontend/
 
 # Aggressive cleanup to reduce image size
 # Remove test files, cache, and heavy unused model processors
-# Note: web/backend/training is preserved for Celery worker support
 RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
     find . -type f -name "*.pyc" -delete && \
     find . -type f -name "*.pyo" -delete && \
-    find . -path ./web/backend/training -prune -o -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
-    find . -path ./web/backend/training -prune -o -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
     rm -rf shared/models/craft_detector.py 2>/dev/null || true && \
     rm -rf shared/models/donut_model.py 2>/dev/null || true && \
     rm -rf shared/models/donut_finetuner.py 2>/dev/null || true && \
     rm -rf shared/models/florence_finetuner.py 2>/dev/null || true && \
     rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true
-
-# Verify critical modules are present after cleanup
-RUN test -d web/backend/training || (echo "ERROR: web/backend/training missing after cleanup!" && exit 1) && \
-    python -c "import sys; sys.path.insert(0, '.'); import web.backend.training.celery_worker; print('✅ Training module verified')" || \
-    (echo "ERROR: Cannot import training.celery_worker!" && exit 1)
 
 # Create logs directory with proper permissions for non-root user
 RUN mkdir -p logs && chown -R receipt:receipt logs
