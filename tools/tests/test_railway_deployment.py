@@ -170,18 +170,86 @@ class TestRailwayConfiguration:
         assert deploy['healthcheckPath'] == '/api/health'
         
         assert 'healthcheckTimeout' in deploy
-        assert deploy['healthcheckTimeout'] == 600
+        # Updated to 300 from 600
+        assert deploy['healthcheckTimeout'] == 300
         
         assert 'restartPolicyMaxRetries' in deploy
         assert deploy['restartPolicyMaxRetries'] == 3
         
-        assert 'sleepApplication' in deploy
-        assert deploy['sleepApplication'] is False
+        # numReplicas should be set
+        assert 'numReplicas' in deploy
+        assert deploy['numReplicas'] == 1
+    
+    def test_procfile_railway_exists(self):
+        """Test that Procfile.railway exists for Railway deployment."""
+        procfile_path = project_root / 'Procfile.railway'
+        assert procfile_path.exists()
+    
+    def test_procfile_railway_web_only(self):
+        """Test that Procfile.railway contains only web process."""
+        procfile_path = project_root / 'Procfile.railway'
+        content = procfile_path.read_text()
+        
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+        
+        # Should have exactly 1 line
+        assert len(lines) == 1, f"Procfile.railway should have 1 line, got {len(lines)}"
+        
+        # Should start with 'web:'
+        assert lines[0].startswith('web:'), "Procfile.railway should define web process"
+        
+        # Should contain gunicorn
+        assert 'gunicorn' in lines[0], "Procfile.railway should use gunicorn"
+        
+        # Should NOT contain celery
+        assert 'celery' not in content.lower(), "Procfile.railway should not contain celery"
+    
+    def test_procfile_beat_writable_directory(self):
+        """Test that Procfile beat uses writable directory."""
+        procfile_path = project_root / 'Procfile'
+        content = procfile_path.read_text()
+        
+        # Beat line should use /tmp for schedule
+        assert '--schedule=/tmp/celerybeat-schedule' in content or \
+               '--schedule /tmp/celerybeat-schedule' in content, \
+               "Procfile beat process should use /tmp for schedule"
+    
+    def test_procfile_no_error_handlers(self):
+        """Test that Procfile doesn't have ineffective error handlers."""
+        procfile_path = project_root / 'Procfile'
+        content = procfile_path.read_text()
+        
+        # Should NOT have error handlers like "2>&1 || echo"
+        assert '2>&1 || echo' not in content, \
+               "Procfile should not have error handlers that don't work"
     
     def test_dockerfile_exists(self):
         """Test that Dockerfile exists."""
         dockerfile_path = project_root / 'Dockerfile'
         assert dockerfile_path.exists()
+    
+    def test_dockerfile_celerybeat_directory(self):
+        """Test that Dockerfile creates celerybeat directory."""
+        dockerfile_path = project_root / 'Dockerfile'
+        content = dockerfile_path.read_text()
+        
+        # Should create celerybeat directory
+        assert 'mkdir -p logs celerybeat' in content or \
+               'mkdir -p celerybeat' in content, \
+               "Dockerfile should create celerybeat directory"
+        
+        # Should set permissions
+        assert 'chown -R receipt:receipt' in content and 'celerybeat' in content, \
+               "Dockerfile should set permissions on celerybeat directory"
+    
+    def test_dockerfile_celery_beat_schedule_env(self):
+        """Test that Dockerfile sets CELERY_BEAT_SCHEDULE environment variable."""
+        dockerfile_path = project_root / 'Dockerfile'
+        content = dockerfile_path.read_text()
+        
+        # Should set CELERY_BEAT_SCHEDULE environment variable
+        assert 'CELERY_BEAT_SCHEDULE=/app/celerybeat/schedule.db' in content, \
+               "Dockerfile should set CELERY_BEAT_SCHEDULE environment variable"
     
     def test_dockerfile_optimized(self):
         """Test that Dockerfile has optimized worker configuration."""
@@ -231,6 +299,24 @@ class TestDocumentation:
         doc_path = project_root / 'docs' / 'RAILWAY_DEPLOYMENT.md'
         assert doc_path.exists()
     
+    def test_railway_setup_exists(self):
+        """Test that RAILWAY_SETUP.md exists."""
+        setup_path = project_root / 'RAILWAY_SETUP.md'
+        assert setup_path.exists()
+    
+    def test_railway_setup_content(self):
+        """Test that RAILWAY_SETUP.md has required sections."""
+        setup_path = project_root / 'RAILWAY_SETUP.md'
+        content = setup_path.read_text()
+        
+        # Check for key sections
+        assert 'Quick Deploy' in content
+        assert 'Environment Variables' in content
+        assert 'CELERY_BEAT_ENABLED' in content
+        assert 'CELERY_BEAT_SCHEDULE' in content
+        assert 'Procfile.railway' in content
+        assert 'Troubleshooting' in content
+    
     def test_railway_deployment_guide_content(self):
         """Test that RAILWAY_DEPLOYMENT.md has required sections."""
         doc_path = project_root / 'docs' / 'RAILWAY_DEPLOYMENT.md'
@@ -261,6 +347,59 @@ class TestDocumentation:
         
         # Check for instructions
         assert 'generate-secrets.py' in content
+
+
+class TestCeleryConfiguration:
+    """Test Celery worker configuration fixes."""
+    
+    def test_celery_worker_beat_schedule_path_env(self):
+        """Test that celery_worker uses environment variable for beat schedule path."""
+        celery_worker_path = project_root / 'web' / 'backend' / 'training' / 'celery_worker.py'
+        content = celery_worker_path.read_text()
+        
+        # Should use os.getenv for beat_schedule
+        assert "beat_schedule=os.getenv('CELERY_BEAT_SCHEDULE'" in content, \
+               "celery_worker.py should use environment variable for beat_schedule"
+        
+        # Should have default path
+        assert '/app/celerybeat/schedule.db' in content, \
+               "celery_worker.py should have default beat schedule path"
+    
+    def test_celery_worker_conditional_beat_schedule(self):
+        """Test that beat schedule is conditional on CELERY_BEAT_ENABLED."""
+        celery_worker_path = project_root / 'web' / 'backend' / 'training' / 'celery_worker.py'
+        content = celery_worker_path.read_text()
+        
+        # Should check CELERY_BEAT_ENABLED before setting beat_schedule
+        assert "os.getenv('CELERY_BEAT_ENABLED'" in content, \
+               "celery_worker.py should check CELERY_BEAT_ENABLED"
+        
+        # Should have conditional logic
+        assert "if os.getenv('CELERY_BEAT_ENABLED'" in content, \
+               "celery_worker.py should have conditional beat schedule configuration"
+        
+        # Should have both log messages
+        assert 'logger.info("Celery Beat schedule configured")' in content or \
+               "logger.info('Celery Beat schedule configured')" in content, \
+               "celery_worker.py should log when beat schedule is configured"
+        
+        assert 'logger.debug("Celery Beat schedule not configured' in content or \
+               "logger.debug('Celery Beat schedule not configured" in content, \
+               "celery_worker.py should log when beat schedule is not configured"
+    
+    def test_dockerignore_includes_training(self):
+        """Test that .dockerignore doesn't exclude training modules."""
+        dockerignore_path = project_root / '.dockerignore'
+        content = dockerignore_path.read_text()
+        
+        # Should NOT have "web/backend/training/" as an exclusion
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+        exclusions = [line for line in lines if not line.startswith('#')]
+        
+        assert 'web/backend/training/' not in exclusions, \
+               ".dockerignore should not exclude training modules"
+        assert 'web/backend/training' not in exclusions, \
+               ".dockerignore should not exclude training modules"
 
 
 class TestPackageStructure:
