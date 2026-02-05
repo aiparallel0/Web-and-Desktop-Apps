@@ -53,14 +53,15 @@ RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && 
     rm -rf shared/models/florence_finetuner.py 2>/dev/null || true && \
     rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true
 
-# Create logs directory with proper permissions for non-root user
-RUN mkdir -p logs && chown -R receipt:receipt logs
+# Create logs and celerybeat directories with proper permissions for non-root user
+RUN mkdir -p logs celerybeat && chown -R receipt:receipt logs celerybeat
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_ENV=production \
-    PORT=5000
+    PORT=5000 \
+    CELERY_BEAT_SCHEDULE=/app/celerybeat/schedule.db
 
 # Expose port
 EXPOSE 5000

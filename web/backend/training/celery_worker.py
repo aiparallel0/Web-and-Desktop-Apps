@@ -61,6 +61,8 @@ if CELERY_AVAILABLE:
         worker_prefetch_multiplier=1,  # One task at a time per worker
         task_acks_late=True,  # Acknowledge after completion
         task_reject_on_worker_lost=True,
+        # Beat scheduler configuration - use writable directory
+        beat_schedule=os.getenv('CELERY_BEAT_SCHEDULE', '/app/celerybeat/schedule.db'),
     )
 else:
     celery_app = None
@@ -432,16 +434,22 @@ if CELERY_AVAILABLE:
     
     
     # =========================================================================
-    # CELERY BEAT SCHEDULE
+    # CELERY BEAT SCHEDULE (only set if beat is actually running)
     # =========================================================================
     
-    celery_app.conf.beat_schedule = {
-        'cleanup-old-jobs-daily': {
-            'task': 'training.cleanup_old_jobs',
-            'schedule': 86400.0,  # Run daily (24 hours in seconds)
-            'args': (7,),  # Keep jobs for 7 days
-        },
-    }
+    # Only configure beat schedule if explicitly enabled via environment variable
+    # This prevents permission errors when beat isn't actually running
+    if os.getenv('CELERY_BEAT_ENABLED', 'false').lower() in ('true', '1', 'yes'):
+        celery_app.conf.beat_schedule = {
+            'cleanup-old-jobs-daily': {
+                'task': 'training.cleanup_old_jobs',
+                'schedule': 86400.0,  # Run daily (24 hours in seconds)
+                'args': (7,),  # Keep jobs for 7 days
+            },
+        }
+        logger.info("Celery Beat schedule configured")
+    else:
+        logger.debug("Celery Beat schedule not configured (CELERY_BEAT_ENABLED not set)")
 
 
 # =============================================================================
