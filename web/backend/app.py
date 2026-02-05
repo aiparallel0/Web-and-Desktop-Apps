@@ -1669,4 +1669,10 @@ def cloud_auth() -> Response:
                 pass
             
             return jsonify({'success': False, 'error': str(e)}), 500
-if __name__=='__main__':logger.info("Starting Receipt Extraction API...");logger.info(f"Available models: {len(get_model_manager().get_available_models())}");debug_mode=os.environ.get('FLASK_DEBUG','False').lower()in('true','1','yes');app.run(host='0.0.0.0',port=5000,debug=debug_mode)
+if __name__ == '__main__':
+    logger.info("Starting Receipt Extraction API...")
+    logger.info(f"Available models: {len(get_model_manager().get_available_models())}")
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
+    port = int(os.environ.get('PORT', 5000))  # Use PORT env var with fallback to 5000
+    logger.info(f"Starting server on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

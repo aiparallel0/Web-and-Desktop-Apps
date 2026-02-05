@@ -61,6 +61,8 @@ if CELERY_AVAILABLE:
         worker_prefetch_multiplier=1,  # One task at a time per worker
         task_acks_late=True,  # Acknowledge after completion
         task_reject_on_worker_lost=True,
+        # Beat scheduler configuration - use writable directory
+        # NOTE: beat_schedule is a dict of scheduled tasks, beat_schedule_filename is the DB path
         # Beat scheduler persistence file location (writable directory)
         beat_schedule_filename=os.getenv('CELERY_BEAT_SCHEDULE', '/app/celerybeat/schedule.db'),
     )
