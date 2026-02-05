@@ -70,7 +70,7 @@ EXPOSE 5000
 USER receipt
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD sh -c "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/api/health')\" || exit 1"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')" || exit 1
 
 # Run gunicorn with optimized settings for Railway
 # Reduced workers (2) and threads (4) for Railway's resource constraints
