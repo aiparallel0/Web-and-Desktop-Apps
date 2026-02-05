@@ -63,6 +63,7 @@ if CELERY_AVAILABLE:
         task_reject_on_worker_lost=True,
         # Beat scheduler configuration - use writable directory
         # NOTE: beat_schedule is a dict of scheduled tasks, beat_schedule_filename is the DB path
+        # Beat scheduler persistence file location (writable directory)
         beat_schedule_filename=os.getenv('CELERY_BEAT_SCHEDULE', '/app/celerybeat/schedule.db'),
     )
 else:
@@ -435,12 +436,25 @@ if CELERY_AVAILABLE:
     
     
     # =========================================================================
-    # CELERY BEAT SCHEDULE (only set if beat is actually running)
+    # CELERY BEAT SCHEDULE CONFIGURATION
     # =========================================================================
     
-    # Only configure beat schedule if explicitly enabled via environment variable
-    # This prevents permission errors when beat isn't actually running
-    if os.getenv('CELERY_BEAT_ENABLED', 'false').lower() in ('true', '1', 'yes'):
+    def configure_beat_schedule():
+        """
+        Configure Celery Beat schedule.
+        
+        This function should ONLY be called when beat is actually running,
+        not during module import. This prevents errors when beat isn't needed.
+        
+        Usage:
+            # In beat worker startup (not in module)
+            from web.backend.training.celery_worker import configure_beat_schedule
+            configure_beat_schedule()
+        """
+        if not celery_app:
+            logger.warning("Celery app not available, cannot configure beat schedule")
+            return
+        
         celery_app.conf.beat_schedule = {
             'cleanup-old-jobs-daily': {
                 'task': 'training.cleanup_old_jobs',
@@ -449,8 +463,9 @@ if CELERY_AVAILABLE:
             },
         }
         logger.info("Celery Beat schedule configured")
-    else:
-        logger.debug("Celery Beat schedule not configured (CELERY_BEAT_ENABLED not set)")
+    
+    # DO NOT call configure_beat_schedule() here!
+    # It should only be called when beat worker starts, not on module import
 
 
 # =============================================================================
