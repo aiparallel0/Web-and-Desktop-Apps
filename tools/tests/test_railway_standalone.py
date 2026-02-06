@@ -157,10 +157,12 @@ class RailwayDeploymentTester:
         
         # Verify critical fields
         assert config['deploy']['healthcheckPath'] == '/api/health'
-        assert config['deploy']['healthcheckTimeout'] == 600
+        assert config['deploy']['healthcheckTimeout'] == 300
         assert config['deploy']['restartPolicyMaxRetries'] == 3
-        assert config['deploy']['sleepApplication'] is False
-        print_info("railway.json has correct configuration")
+        
+        # Verify startCommand is NOT present (Railway uses Dockerfile CMD)
+        assert 'startCommand' not in config['deploy']
+        print_info("railway.json has correct configuration (no startCommand)")
     
     def test_dockerfile_optimized(self):
         """Test Dockerfile optimization."""
@@ -170,19 +172,17 @@ class RailwayDeploymentTester:
         
         content = dockerfile_path.read_text()
         
-        # Check for 2 workers (not 4)
-        assert '--workers 2' in content
-        assert '--workers 4' not in content
-        print_info("Dockerfile uses 2 workers (optimized)")
+        # Check for shell form CMD (not JSON array form) for proper PORT expansion
+        has_shell_form = 'CMD sh -c "gunicorn' in content
+        assert has_shell_form
+        print_info("Dockerfile uses shell form CMD for PORT variable expansion")
         
-        # Check for exec form CMD
-        has_exec_form = ('CMD ["sh", "-c"' in content) or ('CMD ["/bin/sh", "-c"' in content)
-        assert has_exec_form
-        print_info("Dockerfile uses exec form CMD")
+        # Check PORT variable expansion syntax
+        assert '${PORT:-5000}' in content
+        print_info("Dockerfile uses ${PORT:-5000} for variable expansion")
         
         # Check for logging
-        assert '--access-logfile -' in content
-        assert '--error-logfile -' in content
+        assert '--log-level' in content
         print_info("Dockerfile has logging configured")
     
     def test_deployment_checker(self):

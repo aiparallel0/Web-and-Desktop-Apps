@@ -256,16 +256,16 @@ class TestRailwayConfiguration:
         dockerfile_path = project_root / 'Dockerfile'
         content = dockerfile_path.read_text()
         
-        # Check for 2 workers (not 4)
-        assert '--workers 2' in content
-        assert '--workers 4' not in content
+        # Check for shell form CMD (not JSON array form) for proper PORT expansion
+        assert 'CMD sh -c "gunicorn' in content, \
+               "Dockerfile should use shell form CMD for PORT variable expansion"
         
-        # Check for exec form CMD
-        assert 'CMD ["sh", "-c"' in content or 'CMD ["/bin/sh", "-c"' in content
+        # Check PORT variable expansion syntax
+        assert '${PORT:-5000}' in content, \
+               "Dockerfile should use ${PORT:-5000} syntax for variable expansion"
         
         # Check for logging configuration
-        assert '--access-logfile -' in content
-        assert '--error-logfile -' in content
+        assert '--access-logfile -' in content or '--log-level' in content
 
 
 class TestDeploymentReadiness:

@@ -10,10 +10,16 @@
 
 ## How It Works
 
-Railway uses `railway.json` which specifies **explicit startCommand**:
+Railway uses `railway.json` configuration without a `startCommand`, allowing it to use the Dockerfile's CMD directly:
+- ✅ Railway uses Dockerfile CMD which properly expands `${PORT}` environment variable
 - ✅ Only starts: `gunicorn ... web.backend.app:app`
-- ❌ Ignores: Procfile's worker and beat entries
+- ❌ Ignores: Procfile's worker and beat entries (only used in other deployments)
 - ✅ No Celery errors: Beat never starts, no schedule configuration
+
+The Dockerfile CMD uses shell form which allows proper variable expansion:
+```dockerfile
+CMD sh -c "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} web.backend.app:app ..."
+```
 
 ## Required Environment Variables
 
@@ -54,7 +60,9 @@ RUNPOD_API_KEY=
 Railway configuration deploys only the web application:
 
 ```
-railway.json (explicit startCommand)
+railway.json (uses Dockerfile CMD)
+  ↓
+Dockerfile CMD (shell form with ${PORT:-5000})
   ↓
 Only runs: gunicorn (web server)
   ↓
@@ -68,7 +76,7 @@ No beat schedule errors ✅
 If you need background job processing:
 
 1. **Create three separate Railway services:**
-   - **Web Service**: Uses `railway.json` (gunicorn only)
+   - **Web Service**: Uses `railway.json` which uses Dockerfile CMD (gunicorn only)
    - **Worker Service**: Override start command to `celery -A web.backend.training.celery_worker worker --loglevel=info`
    - **Beat Service**: Override start command to `python -c "from web.backend.training.celery_worker import configure_beat_schedule; configure_beat_schedule()" && celery -A web.backend.training.celery_worker beat --loglevel=info`
 
