@@ -68,9 +68,21 @@ EXPOSE 5000
 
 # Switch to non-root user
 USER receipt
-# ✅ Fixed
+# ✅ Fixed - Handle unexpanded PORT variable
 HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD sh -c "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/api/health')\" || exit 1"
+    CMD sh -c " \
+        if [ -z \"$PORT\" ] || [ \"$PORT\" = \"\$PORT\" ] || [ \"$PORT\" = \"\${PORT}\" ]; then \
+            HEALTHCHECK_PORT=5000; \
+        else \
+            HEALTHCHECK_PORT=$PORT; \
+        fi && \
+        python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${HEALTHCHECK_PORT}/api/health')\" || exit 1"
 
 # Run gunicorn with optimized settings for Railway
-CMD sh -c "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} web.backend.app:app --timeout 120 --keep-alive 5 --log-level info"
+# Sanitize PORT variable before using it (in case it's set to unexpanded '$PORT' string)
+CMD sh -c " \
+    if [ -z \"$PORT\" ] || [ \"$PORT\" = \"\$PORT\" ] || [ \"$PORT\" = \"\${PORT}\" ]; then \
+        export PORT=5000; \
+        echo 'PORT not set or invalid, using default: 5000'; \
+    fi && \
+    gunicorn -w 4 -b 0.0.0.0:${PORT} web.backend.app:app --timeout 120 --keep-alive 5 --log-level info"

@@ -177,3 +177,4 @@ security-reports/
 # Local development tools
 .python-version
 .tool-versions
+simulate_celery_startup.sh
