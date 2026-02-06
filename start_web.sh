@@ -5,16 +5,18 @@
 # Handles PORT environment variable for deployment platforms that don't
 # properly expand ${PORT:-8000} syntax in Procfile
 #
+# Also handles case where PORT is set to unexpanded shell variable like '$PORT'
+#
 # Usage: ./start_web.sh
 #
 # Environment Variables:
 #   PORT - Port to bind to (default: 8000)
 # =============================================================================
 
-# Set default PORT if not provided
-if [ -z "$PORT" ]; then
+# Set default PORT if not provided or if it's an unexpanded shell variable
+if [ -z "$PORT" ] || [ "$PORT" = "\$PORT" ] || [ "$PORT" = "\${PORT}" ]; then
     export PORT=8000
-    echo "PORT not set, using default: $PORT"
+    echo "PORT not set or invalid (was: '$PORT'), using default: $PORT"
 else
     echo "Starting on PORT: $PORT"
 fi

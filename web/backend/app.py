@@ -198,8 +198,17 @@ for var in required_vars:
         startup_state['completed'] = False
         logger.error(f"❌ STARTUP ERROR: {error_msg}")
 
-# Validate PORT configuration
+# Sanitize and validate PORT configuration
+# Fix issue where PORT might be set to unexpanded shell variable like '$PORT'
 port = os.environ.get('PORT', '5000')
+if port and (port.startswith('$') or port.startswith('${') or not port.strip()):
+    # PORT is an unexpanded shell variable or empty - use default
+    warning_msg = f'PORT contains unexpanded variable "{port}", using default 5000'
+    startup_state['warnings'].append(warning_msg)
+    logger.warning(f"⚠️  STARTUP WARNING: {warning_msg}")
+    port = '5000'
+    os.environ['PORT'] = port
+
 try:
     port_int = int(port)
     if port_int < 1 or port_int > 65535:
