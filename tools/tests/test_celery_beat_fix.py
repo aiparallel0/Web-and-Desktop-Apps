@@ -155,23 +155,19 @@ class TestRailwayConfiguration:
         railway_json = project_root / 'railway.json'
         assert railway_json.exists(), "railway.json should exist"
     
-    def test_railway_json_has_start_command(self):
-        """Test that railway.json has explicit startCommand."""
+    def test_railway_json_no_start_command(self):
+        """Test that railway.json does NOT have startCommand (uses Dockerfile CMD instead)."""
         import json
         railway_json = project_root / 'railway.json'
         
         with open(railway_json, 'r') as f:
             config = json.load(f)
         
-        # Check startCommand is present in deploy section
+        # startCommand should NOT be present - Railway should use Dockerfile CMD
+        # This allows proper PORT variable expansion via shell
         assert 'deploy' in config
-        assert 'startCommand' in config['deploy']
-        
-        # startCommand should be gunicorn (not celery)
-        start_command = config['deploy']['startCommand']
-        assert 'gunicorn' in start_command
-        assert 'web.backend.app:app' in start_command
-        assert 'celery' not in start_command
+        assert 'startCommand' not in config['deploy'], \
+            "startCommand should be removed to allow Dockerfile CMD with shell expansion"
     
     def test_railway_json_valid_format(self):
         """Test that railway.json is valid JSON with required fields."""
