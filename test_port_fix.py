@@ -70,12 +70,25 @@ def test_dockerfile_syntax():
     print("Testing Dockerfile CMD Syntax")
     print("="*80 + "\n")
     
-    # Check if Dockerfile exists and contains our PORT validation
+    # Check if Dockerfile exists and uses startup script
     try:
         with open('Dockerfile', 'r') as f:
             content = f.read()
         
-        if 'if [ -z \\\"$PORT\\\"' in content or 'if [ -z "$PORT"' in content:
+        # Check for startup script approach (recommended)
+        if 'docker-entrypoint.sh' in content:
+            print("✅ Dockerfile uses docker-entrypoint.sh startup script\n")
+            
+            # Also check if the script file exists
+            import os
+            if os.path.exists('scripts/docker-entrypoint.sh'):
+                print("✅ docker-entrypoint.sh script exists\n")
+                return True
+            else:
+                print("⚠️  docker-entrypoint.sh script not found\n")
+                return False
+        # Fall back to checking for inline PORT validation
+        elif 'if [ -z \\\"$PORT\\\"' in content or 'if [ -z "$PORT"' in content:
             print("✅ Dockerfile contains PORT validation logic\n")
             return True
         else:
