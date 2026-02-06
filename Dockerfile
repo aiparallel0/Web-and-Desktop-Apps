@@ -53,6 +53,10 @@ RUN find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && 
     rm -rf shared/models/florence_finetuner.py 2>/dev/null || true && \
     rm -rf shared/models/ocr_finetuner.py 2>/dev/null || true
 
+# Copy startup script
+COPY --chown=receipt:receipt scripts/docker-entrypoint.sh /app/scripts/
+RUN chmod +x /app/scripts/docker-entrypoint.sh
+
 # Create logs and celerybeat directories with proper permissions for non-root user
 RUN mkdir -p logs celerybeat && chown -R receipt:receipt logs celerybeat
 
@@ -68,21 +72,12 @@ EXPOSE 5000
 
 # Switch to non-root user
 USER receipt
-# ✅ Fixed - Handle unexpanded PORT variable
-HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD sh -c " \
-        if [ -z \"$PORT\" ] || [ \"$PORT\" = \"\$PORT\" ] || [ \"$PORT\" = \"\${PORT}\" ]; then \
-            HEALTHCHECK_PORT=5000; \
-        else \
-            HEALTHCHECK_PORT=$PORT; \
-        fi && \
-        python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${HEALTHCHECK_PORT}/api/health')\" || exit 1"
 
-# Run gunicorn with optimized settings for Railway
-# Sanitize PORT variable before using it (in case it's set to unexpanded '$PORT' string)
-CMD sh -c " \
-    if [ -z \"$PORT\" ] || [ \"$PORT\" = \"\$PORT\" ] || [ \"$PORT\" = \"\${PORT}\" ]; then \
-        export PORT=5000; \
-        echo 'PORT not set or invalid, using default: 5000'; \
-    fi && \
-    gunicorn -w 4 -b 0.0.0.0:${PORT} web.backend.app:app --timeout 120 --keep-alive 5 --log-level info"
+# HEALTHCHECK with proper shell interpolation
+# Uses curl with PORT fallback to 5000 for health endpoint
+HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
+    CMD sh -c "curl -f http://localhost:${PORT:-5000}/api/health || exit 1"
+
+# Use startup script as entrypoint
+# The script handles PORT environment variable and starts gunicorn
+CMD ["/app/scripts/docker-entrypoint.sh"]
