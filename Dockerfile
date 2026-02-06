@@ -68,9 +68,9 @@ EXPOSE 5000
 
 # Switch to non-root user
 USER receipt
-
+# ✅ Fixed
 HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')" || exit 1
+    CMD sh -c "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/api/health')\" || exit 1"
 
 # Run gunicorn with optimized settings for Railway
-CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} web.backend.app:app --timeout 120 --keep-alive 5 --log-level info"]
+CMD sh -c "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} web.backend.app:app --timeout 120 --keep-alive 5 --log-level info"
