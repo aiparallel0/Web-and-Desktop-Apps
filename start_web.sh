@@ -14,7 +14,8 @@
 # =============================================================================
 
 # Set default PORT if not provided or if it's an unexpanded shell variable
-if [ -z "$PORT" ] || [ "$PORT" = "\$PORT" ] || [ "$PORT" = "\${PORT}" ]; then
+# Also handle empty/whitespace-only strings
+if [ -z "$PORT" ] || [ "$PORT" = "\$PORT" ] || [ "$PORT" = "\${PORT}" ] || [ -z "$(echo $PORT | tr -d '[:space:]')" ]; then
     export PORT=8000
     echo "PORT not set or invalid (was: '$PORT'), using default: $PORT"
 else

@@ -201,9 +201,9 @@ for var in required_vars:
 # Sanitize and validate PORT configuration
 # Fix issue where PORT might be set to unexpanded shell variable like '$PORT'
 port = os.environ.get('PORT', '5000')
-if port and (port.startswith('$') or port.startswith('${') or not port.strip()):
-    # PORT is an unexpanded shell variable or empty - use default
-    warning_msg = f'PORT contains unexpanded variable "{port}", using default 5000'
+if not port or not port.strip() or port.startswith('$') or port.startswith('${'):
+    # PORT is empty, whitespace, or an unexpanded shell variable - use default
+    warning_msg = f'PORT is invalid or unexpanded variable "{port}", using default 5000'
     startup_state['warnings'].append(warning_msg)
     logger.warning(f"⚠️  STARTUP WARNING: {warning_msg}")
     port = '5000'
