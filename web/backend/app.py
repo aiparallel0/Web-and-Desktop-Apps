@@ -290,7 +290,7 @@ def list_models() -> Response:
         from shared.models.manager import ModelManager
         
         manager = ModelManager()
-        models = manager.list_available_models()
+        models = manager.get_available_models()
         
         return jsonify({
             'success': True,
@@ -321,7 +321,9 @@ def select_model() -> Response:
         manager = ModelManager()
         
         # Validate model exists
-        if model_id not in manager.list_available_models():
+        available_models = manager.get_available_models()
+        available_model_ids = [m['id'] for m in available_models]
+        if model_id not in available_model_ids:
             return jsonify({
                 'success': False,
                 'error': f'Model {model_id} not found'
@@ -484,9 +486,10 @@ def batch_extract() -> Response:
             manager = ModelManager()
             
             results = {}
-            models = manager.list_available_models()
+            models = manager.get_available_models()
+            model_ids = [m['id'] for m in models]
             
-            for model_id in models:
+            for model_id in model_ids:
                 try:
                     from shared.models.engine import process_receipt
                     result = process_receipt(tmp_path, model_id)
