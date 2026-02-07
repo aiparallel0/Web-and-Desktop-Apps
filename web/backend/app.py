@@ -66,8 +66,6 @@ logger = logging.getLogger(__name__)
 # APPLICATION SETUP
 # =============================================================================
 
-app = Flask(__name__)
-CORS(app)
 # Configure Flask to serve frontend static files
 app = Flask(
     __name__,
@@ -81,15 +79,6 @@ CORS(app)
 def serve_frontend():
     return app.send_static_file('index.html')
 
-# Catch-all route for SPA (must be LAST route)
-@app.route('/<path:path>')
-def serve_static_file(path):
-    # Try to serve requested file
-    file_path = os.path.join(app.static_folder, path)
-    if os.path.exists(file_path):
-        return app.send_static_file(path)
-    # Fall back to index.html for SPA routing
-    return app.send_static_file('index.html')
 # Application configuration
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['REQUEST_TIMEOUT'] = 3600  # 1 hour timeout
@@ -400,12 +389,12 @@ def internal_error(error: Any) -> Tuple[Response, int]:
 # HEALTH & STATUS ENDPOINTS
 # =============================================================================
 
-@app.route('/api/', methods=['GET'])
-def index() -> Response:
+@app.route('/api', methods=['GET'])
+def api_root() -> Response:
     """API root endpoint with documentation."""
     return jsonify({
         'service': 'Receipt Extraction API',
-        'version': '1.1',
+        'version': '2.0',
         'status': 'running',
         'endpoints': {
             'health': '/api/health',
@@ -413,11 +402,11 @@ def index() -> Response:
             'models': '/api/models',
             'select_model': '/api/models/select (POST)',
             'extract': '/api/extract (POST)',
-            'batch_extract': '/api/extract/batch (POST) - Extract with ALL models',
+            'batch_extract': '/api/extract/batch (POST)',
             'model_info': '/api/models/<model_id>/info',
             'unload_models': '/api/models/unload (POST)'
         },
-        'documentation': 'Access /api/health for health check or /api/models to see available models'
+        'documentation': 'Visit /api/health for health check or /api/models to see available models'
     })
 
 @app.route('/api/version', methods=['GET'])
@@ -1699,6 +1688,34 @@ def cloud_auth() -> Response:
                 pass
             
             return jsonify({'success': False, 'error': str(e)}), 500
+
+# =============================================================================
+# CATCH-ALL ROUTE FOR SPA (MUST BE LAST)
+# =============================================================================
+
+@app.route('/<path:path>')
+def serve_static_file(path):
+    """
+    Catch-all route for SPA routing.
+    Serves static files if they exist, otherwise returns index.html.
+    This MUST be the last route defined to avoid intercepting API routes.
+    """
+    # Skip API routes (they should already be handled)
+    if path.startswith('api/'):
+        return jsonify({'error': 'API endpoint not found'}), 404
+    
+    # Try to serve requested file
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.exists(file_path):
+        return app.send_static_file(path)
+    
+    # Fall back to index.html for SPA routing
+    return app.send_static_file('index.html')
+
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
+
 if __name__ == '__main__':
     logger.info("Starting Receipt Extraction API...")
     logger.info(f"Available models: {len(get_model_manager().get_available_models())}")
