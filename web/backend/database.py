@@ -348,6 +348,50 @@ def reset_monthly_usage() -> int:
 
             logger.info(f"Reset monthly usage for {user_count} users")
             return user_count
+
+
+def check_database_health() -> Dict[str, Any]:
+    """
+    Check database connection health and return status metrics.
+    
+    Returns:
+        Dict with status, connection pool info, and query latency
+    """
+    import time
+    from typing import Dict, Any
+    
+    try:
+        engine = get_engine()
+        
+        # Test query with timing
+        start_time = time.time()
+        with engine.connect() as conn:
+            conn.execute(sa.text("SELECT 1"))
+        query_latency = time.time() - start_time
+        
+        # Get pool stats
+        pool = engine.pool
+        pool_info = {
+            'size': getattr(pool, 'size', lambda: 'N/A')(),
+            'checked_out': getattr(pool, 'checkedout', lambda: 'N/A')(),
+            'overflow': getattr(pool, 'overflow', lambda: 'N/A')(),
+        }
+        
+        return {
+            'status': 'healthy',
+            'query_latency_seconds': round(query_latency, 3),
+            'pool': pool_info,
+            'database_url': DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else 'sqlite'
+        }
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}", exc_info=True)
+        return {
+            'status': 'unhealthy',
+            'error': str(e),
+            'error_type': type(e).__name__
+        }
+
+
 """
 Database models for Receipt Extractor SaaS Platform
 Implements Priority 1: MVP Backend Infrastructure
