@@ -47,6 +47,8 @@ pytesseract>=0.3.10
 # ============================================================================
 SQLAlchemy>=2.0.0
 alembic>=1.13.0
+# PostgreSQL adapter (binary distribution with pre-compiled binaries)
+psycopg2-binary>=2.9.9
 
 # ============================================================================
 # AUTHENTICATION & SECURITY
