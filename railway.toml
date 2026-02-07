@@ -1,13 +1,2 @@
-[build]
-builder = "NIXPACKS"
-
 [deploy]
-startCommand = "gunicorn -w 4 -b 0.0.0.0:$PORT --timeout 120 web.backend.app:app"
-healthcheckPath = "/api/ready"
-healthcheckTimeout = 100
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
-
-[env]
-# Environment hints for Railway
-PYTHON_VERSION = "3.11"
+  start = "node index.js --port=${PORT}"
