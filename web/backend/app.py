@@ -400,7 +400,7 @@ def internal_error(error: Any) -> Tuple[Response, int]:
 # HEALTH & STATUS ENDPOINTS
 # =============================================================================
 
-@app.route('/', methods=['GET'])
+@app.route('/api/', methods=['GET'])
 def index() -> Response:
     """API root endpoint with documentation."""
     return jsonify({
