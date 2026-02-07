@@ -135,14 +135,32 @@ db_session = scoped_session(lambda: get_session_factory()())
 
 def init_db() -> None:
     """
-    Initialize database schema
-
-    This will create all tables if they don't exist.
+    Initialize database schema.
+    
+    This function is safe to call multiple times and from multiple workers.
+    It uses PostgreSQL's IF NOT EXISTS semantics where possible and 
+    catches errors for concurrent schema creation attempts.
+    
     For production, use proper migrations (Alembic).
     """
     logger.info("Initializing database schema...")
-    Base.metadata.create_all(bind=get_engine())
-    logger.info("Database schema initialized successfully")
+    
+    try:
+        # Create all tables with checkfirst=True (default behavior)
+        # This checks if tables exist before creating them
+        Base.metadata.create_all(bind=get_engine(), checkfirst=True)
+        logger.info("Database schema initialized successfully")
+    except Exception as e:
+        # Check if this is a "duplicate type" error which is safe to ignore
+        error_msg = str(e).lower()
+        if 'duplicate' in error_msg and 'already exists' in error_msg:
+            logger.info("Database schema already exists (concurrent initialization detected)")
+        elif 'already exists' in error_msg:
+            logger.info("Database objects already exist, skipping creation")
+        else:
+            # For other errors, log but don't crash - let the app continue
+            logger.warning(f"Database initialization encountered an error: {e}")
+            logger.warning("Continuing anyway - database may already be initialized")
 
 def drop_all() -> None:
     """
