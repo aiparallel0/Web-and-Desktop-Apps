@@ -1,0 +1,309 @@
+# Deployment Next Steps - Railway Production Readiness
+
+## Current Status: ✅ Core Fixes Complete
+
+The Flask backend now correctly serves the frontend and API endpoints. However, several features are incomplete or not production-ready for Railway deployment.
+
+---
+
+## Priority 1: Essential for Basic OCR Functionality (Immediate)
+
+### 1.1 Model Loading Strategy ⚠️ CRITICAL
+**Status:** Half-implemented  
+**Issue:** Models use lazy loading but Railway has limited cold-start time (30s)
+
+**Tasks:**
+- [ ] Test model loading times on Railway's infrastructure
+- [ ] Implement model pre-warming during startup for 1-2 lightweight models
+- [ ] Add health check that waits for model readiness: `/api/ready` (already exists) vs `/api/health` (full)
+- [ ] Configure Railway health check to use `/api/ready` endpoint
+- [ ] Document which models work best on Railway's resource limits (512MB-1GB RAM)
+
+**Files to modify:**
+- `shared/models/manager.py` - Add `preload_default_models()` method
+- `web/backend/app.py` - Call preload in startup block after line 210
+
+**Railway Config Needed:**
+```toml
+[deploy]
+healthcheckPath = "/api/ready"
+healthcheckTimeout = 100
+```
+
+---
+
+### 1.2 Frontend Asset Versioning ⚠️ NEEDS TESTING
+**Status:** Implemented but untested in production  
+**Issue:** Cache headers configured (lines 247-288) but version.json generation not verified
+
+**Tasks:**
+- [ ] Verify `web/frontend/version.json` exists and has correct format
+- [ ] Test cache invalidation after deployment updates
+- [ ] Add build script to generate version.json automatically
+- [ ] Document cache strategy in README
+
+**Expected version.json format:**
+```json
+{
+  "version": "2.0.0",
+  "build": "20260207",
+  "hash": "abc123def",
+  "timestamp": "2026-02-07T12:00:00Z"
+}
+```
+
+---
+
+### 1.3 Environment Variables Configuration 🔧 INCOMPLETE
+**Status:** Validated at startup (lines 221-254) but not documented  
+**Issue:** Railway deployment needs proper environment variables
+
+**Tasks:**
+- [ ] Create `.env.example` file with all required variables
+- [ ] Document Railway-specific environment variables
+- [ ] Add validation for Railway's `PORT` variable (already partially done)
+- [ ] Test with Railway's auto-assigned PORT
+
+**Required Variables:**
+```bash
+# Security (REQUIRED)
+SECRET_KEY=your-secret-key-here
+
+# Database (REQUIRED for production)
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+
+# Model Configuration (OPTIONAL)
+DEFAULT_MODEL=ocr_tesseract
+MODEL_CACHE_DIR=/tmp/models
+
+# Railway-Specific (AUTO-SET by Railway)
+PORT=auto-assigned
+RAILWAY_ENVIRONMENT=production
+```
+
+---
+
+## Priority 2: Enhanced Functionality (Within 1 Week)
+
+### 2.1 Database Configuration ⚠️ CRITICAL FOR MULTI-USER
+**Status:** Uses SQLite by default  
+**Issue:** SQLite not suitable for Railway (ephemeral filesystem)
+
+**Tasks:**
+- [ ] Switch to PostgreSQL for Railway deployments
+- [ ] Configure database URL from environment variable
+- [ ] Set up database migrations for Railway
+- [ ] Add database health check endpoint
+- [ ] Test connection pooling and timeouts
+
+**Files to modify:**
+- `web/backend/database.py` - Update connection string logic
+- `migrations/` - Ensure migrations work with PostgreSQL
+
+---
+
+### 2.2 File Upload Storage ⚠️ CRITICAL FOR PERSISTENCE
+**Status:** Stores files locally  
+**Issue:** Railway has ephemeral filesystem (files lost on restart)
+
+**Tasks:**
+- [ ] Integrate cloud storage (S3, Cloudinary, or Railway Volumes)
+- [ ] Update file upload handlers to use cloud storage
+- [ ] Configure cleanup of temporary files
+- [ ] Add storage health check
+
+**Recommended Solution:**
+- Use Railway Volumes for persistence
+- Or integrate AWS S3 for better scalability
+
+---
+
+### 2.3 Model Caching Strategy
+**Status:** Models loaded on-demand  
+**Issue:** Slow first request after Railway restart
+
+**Tasks:**
+- [ ] Implement Redis-based model state caching
+- [ ] Cache model metadata and configuration
+- [ ] Pre-warm most-used models based on usage analytics
+- [ ] Add model cache invalidation logic
+
+---
+
+### 2.4 Error Monitoring
+**Status:** Basic logging only  
+**Issue:** No visibility into production errors
+
+**Tasks:**
+- [ ] Integrate Sentry or similar error tracking
+- [ ] Add structured logging for Railway logs
+- [ ] Set up alerts for critical errors
+- [ ] Configure log retention and search
+
+---
+
+## Priority 3: Performance & Scalability (Within 1 Month)
+
+### 3.1 Async Processing
+**Status:** Synchronous request handling  
+**Issue:** Long OCR operations block request threads
+
+**Tasks:**
+- [ ] Implement background job queue (Celery + Redis)
+- [ ] Add job status tracking endpoint
+- [ ] Configure Railway worker dyno for background jobs
+- [ ] Add timeout handling for long-running extractions
+
+---
+
+### 3.2 Rate Limiting
+**Status:** Basic implementation exists  
+**Issue:** Not tested on Railway
+
+**Tasks:**
+- [ ] Test rate limiting with Railway's proxy
+- [ ] Configure Redis for distributed rate limiting
+- [ ] Add per-user and per-IP rate limits
+- [ ] Document rate limit headers in API docs
+
+---
+
+### 3.3 CDN Integration
+**Status:** Static files served by Flask  
+**Issue:** Slow for global users
+
+**Tasks:**
+- [ ] Configure Railway CDN or Cloudflare
+- [ ] Set up asset fingerprinting
+- [ ] Configure cache headers for static assets
+- [ ] Test CDN purging on deployments
+
+---
+
+## Priority 4: Security Hardening (Ongoing)
+
+### 4.1 Authentication & Authorization
+**Status:** Basic auth exists  
+**Issue:** Not production-hardened
+
+**Tasks:**
+- [ ] Implement JWT refresh token rotation
+- [ ] Add API key authentication for programmatic access
+- [ ] Configure CORS for production domain only
+- [ ] Add brute-force protection on auth endpoints
+
+---
+
+### 4.2 Input Validation
+**Status:** Basic validation exists  
+**Issue:** Needs comprehensive security review
+
+**Tasks:**
+- [ ] Audit all endpoints for injection vulnerabilities
+- [ ] Add comprehensive file type validation
+- [ ] Implement request size limits per endpoint
+- [ ] Add content security policy headers
+
+---
+
+### 4.3 Secrets Management
+**Status:** Environment variables only  
+**Issue:** No secret rotation or encryption
+
+**Tasks:**
+- [ ] Migrate to Railway secrets or HashiCorp Vault
+- [ ] Implement secret rotation strategy
+- [ ] Encrypt sensitive data at rest
+- [ ] Audit secret access patterns
+
+---
+
+## Priority 5: Monitoring & Analytics (Ongoing)
+
+### 5.1 Performance Metrics
+**Status:** Basic health check only  
+**Issue:** No performance visibility
+
+**Tasks:**
+- [ ] Integrate Prometheus or Railway metrics
+- [ ] Add custom metrics for OCR operations
+- [ ] Configure dashboards for monitoring
+- [ ] Set up alerting for performance degradation
+
+---
+
+### 5.2 Usage Analytics
+**Status:** Not implemented  
+**Issue:** No insight into user behavior
+
+**Tasks:**
+- [ ] Add analytics for model usage
+- [ ] Track extraction success/failure rates
+- [ ] Monitor API endpoint usage
+- [ ] Generate weekly usage reports
+
+---
+
+## Testing Checklist Before Railway Deployment
+
+- [ ] Test API endpoints return correct responses
+- [ ] Test frontend loads correctly at root URL
+- [ ] Test SPA routing (direct URL access to /pricing, etc.)
+- [ ] Test static file serving (CSS, JS, images)
+- [ ] Test API error handling returns JSON (not HTML)
+- [ ] Test file upload with various image formats
+- [ ] Test model selection and extraction
+- [ ] Test health check endpoint
+- [ ] Test with Railway's PORT environment variable
+- [ ] Load test with realistic traffic patterns
+
+---
+
+## Railway Deployment Commands
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Link to project
+railway link
+
+# Set environment variables
+railway variables set SECRET_KEY=xxx
+railway variables set DATABASE_URL=xxx
+
+# Deploy
+git push railway main
+
+# View logs
+railway logs
+
+# Open deployed app
+railway open
+```
+
+---
+
+## Known Limitations
+
+1. **Model Loading Time:** First request after cold start may take 10-30s
+2. **Memory Constraints:** Limited to 512MB-1GB on Railway free tier
+3. **Ephemeral Filesystem:** Files stored locally are lost on restart
+4. **No Background Jobs:** Long operations must complete within request timeout
+5. **Single Instance:** No horizontal scaling on free tier
+
+---
+
+## Support & Resources
+
+- **Railway Documentation:** https://docs.railway.app
+- **Flask Deployment Guide:** https://flask.palletsprojects.com/en/2.3.x/deploying/
+- **Project Issues:** https://github.com/aiparallel0/Web-and-Desktop-Apps/issues
+
+---
+
+*Last Updated: 2026-02-07*  
+*Status: Core fixes complete, production hardening in progress*
