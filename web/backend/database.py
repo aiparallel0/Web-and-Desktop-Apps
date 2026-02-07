@@ -13,6 +13,7 @@ from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
 import logging
 import time
+import sqlalchemy as sa
 
 # Telemetry integration
 try:
@@ -28,17 +29,22 @@ Database connection and session management
 logger = logging.getLogger(__name__)
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv(
-    'DATABASE_URL',
-    'postgresql://receipt_user:receipt_pass@localhost:5432/receipt_extractor'
-)
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 # For development/testing, you can override with SQLite
 if os.getenv('USE_SQLITE', 'false').lower() == 'true' or os.getenv('TESTING', 'false').lower() == 'true':
-    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./receipt_extractor.db')
-    if not DATABASE_URL.startswith('sqlite'):
-        DATABASE_URL = 'sqlite:///./receipt_extractor.db'
-    logger.warning("Using SQLite database for development/testing. Not recommended for production!")
+    # Use /tmp for SQLite in production/containers (writable)
+    default_sqlite = 'sqlite:////tmp/receipt_extractor.db' if not os.getenv('TESTING') else 'sqlite:///./receipt_extractor.db'
+    DATABASE_URL = os.getenv('DATABASE_URL', default_sqlite)
+    
+    if DATABASE_URL and not DATABASE_URL.startswith('sqlite'):
+        DATABASE_URL = default_sqlite
+    
+    logger.warning("Using SQLite database. Not recommended for production!")
+elif not DATABASE_URL:
+    # No DATABASE_URL set - use default PostgreSQL URL
+    DATABASE_URL = 'postgresql://receipt_user:receipt_pass@localhost:5432/receipt_extractor'
+    logger.warning("No DATABASE_URL set, using default: localhost PostgreSQL")
 
 # Create engine lazily to support testing
 _engine = None
@@ -348,6 +354,67 @@ def reset_monthly_usage() -> int:
 
             logger.info(f"Reset monthly usage for {user_count} users")
             return user_count
+
+
+def validate_database_config():
+    """
+    Validate database configuration on startup and provide helpful error messages.
+    """
+    logger.info("="*70)
+    logger.info("DATABASE CONFIGURATION CHECK")
+    logger.info("="*70)
+    
+    # Check if Railway environment
+    is_railway = os.getenv('RAILWAY_ENVIRONMENT') is not None
+    
+    if DATABASE_URL.startswith('sqlite'):
+        logger.info(f"Using SQLite: {DATABASE_URL}")
+        
+        # Check if path is writable
+        if DATABASE_URL != 'sqlite:///:memory:':
+            # Extract file path from sqlite:///path
+            db_path = DATABASE_URL.replace('sqlite:///', '')
+            db_dir = os.path.dirname(db_path) or '.'
+            
+            if not os.access(db_dir, os.W_OK):
+                logger.error(f"❌ SQLite directory not writable: {db_dir}")
+                logger.error("   Solution: Use DATABASE_URL=sqlite:////tmp/receipt_extractor.db")
+                if is_railway:
+                    logger.error("   Or add PostgreSQL database in Railway dashboard")
+                raise RuntimeError(f"Cannot write to SQLite directory: {db_dir}")
+        
+        logger.warning("⚠️  SQLite is ephemeral in containers - data lost on restart!")
+        if is_railway:
+            logger.warning("   Recommendation: Add PostgreSQL in Railway for persistence")
+    
+    elif DATABASE_URL.startswith('postgresql'):
+        if 'localhost' in DATABASE_URL:
+            logger.error("="*70)
+            logger.error("❌ DATABASE CONFIGURATION ERROR")
+            logger.error("="*70)
+            logger.error("Database URL points to localhost, but no database is available!")
+            logger.error("")
+            logger.error("SOLUTIONS:")
+            if is_railway:
+                logger.error("  1. Add PostgreSQL database in Railway:")
+                logger.error("     - Click '+ New' → Database → PostgreSQL")
+                logger.error("     - Railway will auto-set DATABASE_URL")
+                logger.error("")
+                logger.error("  2. OR use SQLite temporarily:")
+                logger.error("     - Set: USE_SQLITE=true")
+                logger.error("     - Set: DATABASE_URL=sqlite:////tmp/receipt_extractor.db")
+            else:
+                logger.error("  - Set DATABASE_URL to your PostgreSQL connection string")
+                logger.error("  - Or set USE_SQLITE=true for development")
+            logger.error("="*70)
+            raise RuntimeError("Database not configured properly")
+        else:
+            logger.info(f"Using PostgreSQL: {DATABASE_URL.split('@')[-1]}")
+    
+    else:
+        logger.warning(f"Unknown database type: {DATABASE_URL}")
+    
+    logger.info("="*70)
 
 
 def check_database_health() -> Dict[str, Any]:
