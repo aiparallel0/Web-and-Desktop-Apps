@@ -13,6 +13,7 @@ from sqlalchemy.pool import NullPool
 from contextlib import contextmanager
 import logging
 import time
+import sqlalchemy as sa
 
 # Telemetry integration
 try:
