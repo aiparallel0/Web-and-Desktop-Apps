@@ -21,8 +21,10 @@ cmds = [
 ]
 
 [phases.build]
-# No build step needed for Python app
-cmds = []
+# Generate version.json for cache busting
+cmds = [
+    "python web/cache-bust.py"
+]
 
 [start]
 # Start command for production
