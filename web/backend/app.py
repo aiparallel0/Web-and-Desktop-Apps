@@ -238,6 +238,28 @@ else:
     logger.error(f"❌ Startup validation failed with {len(startup_state['errors'])} errors")
 
 # =============================================================================
+# MODEL PRELOADING FOR RAILWAY (Priority 1.1)
+# =============================================================================
+
+# Preload default model if in production (Priority 1.1)
+if os.environ.get('RAILWAY_ENVIRONMENT') == 'production':
+    def preload_model_async():
+        """Preload model in background thread to not block startup."""
+        try:
+            import time
+            time.sleep(2)  # Wait for app to fully initialize
+            logger.info("🔄 Background: Preloading default model...")
+            mgr = get_model_manager()
+            mgr.preload_default_model()
+        except Exception as e:
+            logger.warning(f"Background model preload failed: {e}")
+    
+    import threading
+    preload_thread = threading.Thread(target=preload_model_async, daemon=True)
+    preload_thread.start()
+    logger.info("✅ Scheduled background model preload")
+
+# =============================================================================
 # CACHE CONTROL HEADERS
 # =============================================================================
 

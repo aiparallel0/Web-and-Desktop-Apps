@@ -890,3 +890,29 @@ class ModelManager:
             model_config: Model configuration dictionary
         """
         ConfigValidator._validate_model(model_id, model_config)
+    
+    def preload_default_model(self) -> None:
+        """
+        Preload the default OCR model during startup.
+        
+        This is critical for Railway deployments to avoid cold-start timeouts.
+        Only lightweight models (Tesseract) should be preloaded.
+        
+        Railway startup timeout is 30 seconds, so we only preload one model.
+        """
+        try:
+            default_model = self.get_default_model()
+            logger.info(f"🔄 Preloading default model: {default_model}")
+            
+            # Only preload if it's a lightweight OCR model
+            model_config = self.get_model_info(default_model)
+            if model_config and model_config.get('type') == 'ocr':
+                processor = self.get_processor(default_model)
+                logger.info(f"✅ Preloaded model: {default_model}")
+            else:
+                logger.info(f"⚠️  Skipping preload of heavy model: {default_model}")
+                logger.info("   Heavy models (AI transformers) load on first request")
+        except Exception as e:
+            # Don't fail startup if preload fails
+            logger.warning(f"⚠️  Failed to preload model (non-fatal): {e}")
+            logger.info("   Model will load on first request instead")
