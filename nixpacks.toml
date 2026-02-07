@@ -14,7 +14,8 @@ nixPkgs = [
     "libGL",
     "libGLU",
     "xorg.libX11",
-    "xorg.libXext"
+    "xorg.libXext",
+    "postgresql"
 ]
 
 [phases.install]
