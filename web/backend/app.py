@@ -68,7 +68,28 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+# Configure Flask to serve frontend static files
+app = Flask(
+    __name__,
+    static_folder='../frontend',  # Serve from web/frontend/
+    static_url_path=''  # Serve at root
+)
+CORS(app)
 
+# Serve index.html at root
+@app.route('/')
+def serve_frontend():
+    return app.send_static_file('index.html')
+
+# Catch-all route for SPA (must be LAST route)
+@app.route('/<path:path>')
+def serve_static_file(path):
+    # Try to serve requested file
+    file_path = os.path.join(app.static_folder, path)
+    if os.path.exists(file_path):
+        return app.send_static_file(path)
+    # Fall back to index.html for SPA routing
+    return app.send_static_file('index.html')
 # Application configuration
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['REQUEST_TIMEOUT'] = 3600  # 1 hour timeout
