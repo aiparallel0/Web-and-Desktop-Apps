@@ -130,6 +130,32 @@ The following features are disabled by default but can be enabled via feature fl
 
 ---
 
+## 🚀 Quick Deploy to Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template)
+
+### Setup (2 minutes):
+
+1. **Click the button above** or connect your GitHub repo to Railway
+2. **Add PostgreSQL database:**
+   - In Railway dashboard: Click "+ New" → Database → PostgreSQL
+   - Railway auto-configures everything
+3. **Deploy** - that's it!
+
+**See detailed setup guide:** [docs/RAILWAY_SETUP.md](docs/RAILWAY_SETUP.md)
+
+### Common Issues:
+
+❌ **"Database connection failed"**
+→ You need to add PostgreSQL database (see step 2 above)
+
+❌ **"Health check failing"**  
+→ Check that PostgreSQL is added and `DATABASE_URL` is set
+
+✅ **All working?** Visit your app URL and you'll see the dashboard!
+
+---
+
 ##  Project Overview
 
 Receipt Extractor is an enterprise-grade SaaS platform that uses multiple OCR engines and AI models to extract structured data from receipt images. The application supports:

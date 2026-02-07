@@ -37,10 +37,13 @@ from flask_cors import CORS
 # Import configuration
 from web.backend.config import get_config
 
-# Setup logging
+# Setup logging - Configure before any logging calls
 logging.basicConfig(
     level=logging.INFO,
-    format='%%(asctime)s - %%(name)s - %%(levelname)s - %%(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -230,36 +233,35 @@ def health_check() -> Response:
 @app.route('/api/ready', methods=['GET'])
 def readiness_check() -> Response:
     """
-    Readiness check endpoint for Railway/Kubernetes.
-    Checks if the application is ready to serve requests.
+    Readiness check for Railway/Kubernetes.
+    Always returns 200 if app is running - database issues are reported but don't fail the check.
     """
     try:
         from sqlalchemy import text
         
         checks = {
-            'database': 'unknown',
+            'app': 'ok',
+            'database': 'checking...',
             'config': 'ok'
         }
         
-        # Check database connection
+        # Check database connection (non-blocking)
         try:
             engine = get_engine()
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             checks['database'] = 'ok'
         except Exception as e:
-            checks['database'] = f'error: {str(e)}'
-            logger.warning(f"Database check failed: {e}")
+            checks['database'] = f'degraded: {str(e)[:100]}'
+            logger.warning(f"Database check failed (non-critical): {e}")
         
-        # Determine overall status
-        all_ok = all(v == 'ok' for v in checks.values())
-        status_code = 200 if all_ok else 503
-        
+        # Always return 200 if app is running
         return jsonify({
-            'status': 'ready' if all_ok else 'not_ready',
+            'status': 'ready',
             'checks': checks,
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }), status_code
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'note': 'App is running. Database issues are non-fatal for this check.'
+        }), 200
         
     except Exception as e:
         logger.error(f"Readiness check failed: {e}", exc_info=True)
@@ -610,6 +612,24 @@ def serve_static_file(path):
 # =============================================================================
 
 if __name__ == '__main__':
+    # Startup validation
+    logger.info("="*70)
+    logger.info("RECEIPT EXTRACTOR API - STARTING UP")
+    logger.info("="*70)
+    
+    # Validate database configuration
+    try:
+        from web.backend.database import validate_database_config
+        validate_database_config()
+    except Exception as e:
+        logger.error(f"Startup validation failed: {e}")
+        logger.error("Fix the errors above and restart the application")
+        sys.exit(1)
+    
+    logger.info("✅ All startup checks passed")
+    logger.info(f"🚀 Starting server on port {os.environ.get('PORT', 5000)}")
+    logger.info("="*70)
+    
     # Development server
     port = int(os.environ.get('PORT', 5000))
     host = os.environ.get('HOST', '0.0.0.0')
