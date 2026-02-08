@@ -3,398 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Help Center - Receipt Extractor. Find answers to common questions, learn about OCR models, batch processing, and model finetuning.">
-
-    <!-- Cache Control Meta Tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <title>Help Center | Receipt Extractor</title>
+    <meta name="description" content="Receipt Extractor Help - Documentation and Support">
+    <title>Help - Receipt Extractor</title>
+    
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
-    <style>
-        /* Help Center Tabs */
-        .help-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: var(--space-4);
-            border-bottom: 2px solid var(--color-gray-200);
-            padding-bottom: var(--space-2);
-        }
-        
-        .help-tab {
-            padding: 12px 20px;
-            background: transparent;
-            border: none;
-            border-radius: var(--radius-md) var(--radius-md) 0 0;
-            font-size: 0.9375rem;
-            font-weight: var(--font-medium);
-            color: var(--color-gray-600);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .help-tab:hover {
-            color: var(--color-primary);
-            background: var(--color-primary-50);
-        }
-        
-        .help-tab.active {
-            color: var(--color-primary);
-            background: var(--color-primary-50);
-            border-bottom: 2px solid var(--color-primary);
-            margin-bottom: -2px;
-        }
-        
-        .help-tab-icon {
-            width: 18px;
-            height: 18px;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Model Cards */
-        .model-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: var(--space-3);
-            margin: var(--space-4) 0;
-        }
-        
-        .model-card {
-            background: white;
-            border: 1px solid var(--color-gray-200);
-            border-radius: var(--radius-lg);
-            padding: var(--space-4);
-            transition: all var(--transition-base);
-        }
-        
-        .model-card:hover {
-            border-color: var(--color-primary);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .model-card-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            margin-bottom: var(--space-3);
-        }
-        
-        .model-icon {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-primary-50);
-            border-radius: var(--radius-md);
-            color: var(--color-primary);
-            font-size: 1.5rem;
-        }
-        
-        .model-info h4 {
-            font-size: 1.125rem;
-            margin-bottom: 4px;
-            color: var(--color-gray-900);
-        }
-        
-        .model-tier {
-            display: inline-block;
-            padding: 2px 8px;
-            font-size: 0.75rem;
-            font-weight: var(--font-semibold);
-            border-radius: var(--radius-full);
-            text-transform: uppercase;
-        }
-        
-        .tier-free {
-            background: var(--color-success-light);
-            color: var(--color-success-dark);
-        }
-        
-        .tier-pro {
-            background: var(--color-primary-50);
-            color: var(--color-primary-dark);
-        }
-        
-        .model-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-2);
-            margin: var(--space-3) 0;
-            padding: var(--space-2) 0;
-            border-top: 1px solid var(--color-gray-100);
-            border-bottom: 1px solid var(--color-gray-100);
-        }
-        
-        .stat {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 1.125rem;
-            font-weight: var(--font-bold);
-            color: var(--color-gray-900);
-        }
-        
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--color-gray-500);
-        }
-        
-        .model-description {
-            color: var(--color-gray-600);
-            font-size: 0.9375rem;
-            line-height: 1.6;
-            margin-bottom: var(--space-3);
-        }
-        
-        .model-best-for {
-            background: var(--color-gray-50);
-            padding: var(--space-2);
-            border-radius: var(--radius-md);
-        }
-        
-        .model-best-for h5 {
-            font-size: 0.8125rem;
-            color: var(--color-gray-700);
-            margin-bottom: 8px;
-        }
-        
-        .model-best-for ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .model-best-for li {
-            font-size: 0.875rem;
-            color: var(--color-gray-600);
-            padding: 4px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .model-best-for li::before {
-            content: "✓";
-            color: var(--color-success);
-            font-weight: var(--font-bold);
-        }
-        
-        /* Comparison Table */
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: var(--space-4) 0;
-            background: white;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .comparison-table th,
-        .comparison-table td {
-            padding: var(--space-2) var(--space-3);
-            text-align: left;
-            border-bottom: 1px solid var(--color-gray-100);
-        }
-        
-        .comparison-table th {
-            background: var(--color-gray-50);
-            font-weight: var(--font-semibold);
-            color: var(--color-gray-700);
-            font-size: 0.875rem;
-        }
-        
-        .comparison-table td {
-            font-size: 0.9375rem;
-        }
-        
-        .comparison-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .comparison-table tr:hover {
-            background: var(--color-gray-50);
-        }
-        
-        .check-icon {
-            color: var(--color-success);
-        }
-        
-        .cross-icon {
-            color: var(--color-gray-400);
-        }
-        
-        /* Guide Steps */
-        .guide-steps {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-4);
-            margin: var(--space-4) 0;
-        }
-        
-        .guide-step {
-            display: flex;
-            gap: var(--space-3);
-            padding: var(--space-4);
-            background: white;
-            border: 1px solid var(--color-gray-200);
-            border-radius: var(--radius-lg);
-        }
-        
-        .step-number {
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-primary);
-            color: white;
-            font-weight: var(--font-bold);
-            border-radius: var(--radius-full);
-            font-size: 1.125rem;
-        }
-        
-        .step-content h4 {
-            font-size: 1.0625rem;
-            margin-bottom: 8px;
-            color: var(--color-gray-900);
-        }
-        
-        .step-content p {
-            color: var(--color-gray-600);
-            margin-bottom: 0;
-        }
-        
-        /* Code examples */
-        .code-example {
-            background: var(--color-gray-900);
-            border-radius: var(--radius-md);
-            padding: var(--space-3);
-            margin: var(--space-2) 0;
-            overflow-x: auto;
-        }
-        
-        .code-example code {
-            color: #e5e7eb;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
-        }
-        
-        /* Video placeholder */
-        .video-placeholder {
-            background: var(--color-gray-100);
-            border: 2px dashed var(--color-gray-300);
-            border-radius: var(--radius-lg);
-            padding: var(--space-8);
-            text-align: center;
-            margin: var(--space-4) 0;
-        }
-        
-        .video-placeholder-icon {
-            font-size: 3rem;
-            margin-bottom: var(--space-2);
-        }
-        
-        .video-placeholder h4 {
-            color: var(--color-gray-700);
-            margin-bottom: 8px;
-        }
-        
-        .video-placeholder p {
-            color: var(--color-gray-500);
-            margin-bottom: 0;
-        }
-        
-        /* Search functionality */
-        .search-box {
-            max-width: 600px;
-            margin: var(--space-4) auto 0;
-        }
-        
-        .search-results {
-            margin-top: var(--space-3);
-            display: none;
-        }
-        
-        .search-results.has-results {
-            display: block;
-        }
-        
-        .search-result-item {
-            padding: var(--space-2) var(--space-3);
-            background: white;
-            border: 1px solid var(--color-gray-200);
-            border-radius: var(--radius-md);
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-        
-        .search-result-item:hover {
-            border-color: var(--color-primary);
-            background: var(--color-primary-50);
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .help-tabs {
-                overflow-x: auto;
-                flex-wrap: nowrap;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            .help-tab {
-                white-space: nowrap;
-            }
-            
-            .model-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .comparison-table {
-                font-size: 0.875rem;
-            }
-            
-            .comparison-table th,
-            .comparison-table td {
-                padding: var(--space-1) var(--space-2);
-            }
-        }
-    </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <!-- Navigation -->
-    <nav class="nav" id="nav">
+    <nav class="nav" role="navigation" aria-label="Main navigation">
         <div class="nav-container">
             <div class="nav-brand">
                 <a href="index.html">
-                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 2l7 7-7 7"></path>
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M9 9h6M9 15h6"></path>
                     </svg>
                     <span class="nav-title">Receipt Extractor</span>
                 </a>
@@ -404,873 +30,317 @@
                 <a href="pricing.html" class="nav-link">Pricing</a>
                 <a href="api.html" class="nav-link">API</a>
                 <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
+                <button class="btn btn-secondary btn-sm" type="button">Sign In</button>
             </div>
         </div>
     </nav>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <h1>Help Center</h1>
-            <p class="page-subtitle">Find answers to your questions and learn how to get the most out of Receipt Extractor</p>
-            <div class="search-box">
-                <input type="text" placeholder="Search for help topics..." class="search-input" id="helpSearch">
-                <button class="btn btn-primary" onclick="performSearch()">Search</button>
+    <main id="main-content" role="main">
+        <section class="hero">
+            <div class="container">
+                <h1 class="hero-title">Help & Documentation</h1>
+                <p class="hero-subtitle">
+                    Complete guide to using Receipt Extractor for text extraction from receipts.
+                </p>
             </div>
-            <div class="search-results" id="searchResults"></div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Main Content -->
-    <section class="content-section">
-        <div class="container">
-            <!-- Help Tabs Navigation -->
-            <div class="help-tabs" id="helpTabs">
-                <button class="help-tab active" data-tab="getting-started">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                    </svg>
-                    Quick Start
-                </button>
-                <button class="help-tab" data-tab="ocr-models">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                    </svg>
-                    OCR Models
-                </button>
-                <button class="help-tab" data-tab="batch-processing">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                    </svg>
-                    Batch Processing
-                </button>
-                <button class="help-tab" data-tab="finetuning">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                    </svg>
-                    Model Finetuning
-                </button>
-                <button class="help-tab" data-tab="faq">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    FAQ
-                </button>
-                <button class="help-tab" data-tab="tutorials">
-                    <svg class="help-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                    </svg>
-                    Tutorials
-                </button>
-            </div>
-
-            <!-- Tab: Quick Start -->
-            <div class="tab-content active" id="getting-started">
-                <h2>Getting Started with Receipt Extractor</h2>
-                <p>Welcome to Receipt Extractor! Follow these simple steps to extract data from your receipts in seconds.</p>
-                
-                <div class="guide-steps">
-                    <div class="guide-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h4>Upload Your Receipt</h4>
-                            <p>Drag and drop your receipt image onto the upload area, click to browse files, or use your device camera. We support JPEG, PNG, WebP, PDF, and HEIC formats up to 100MB.</p>
+        <section class="section">
+            <div class="container">
+                <div style="max-width: 900px; margin: 0 auto;">
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Getting Started</h2>
                         </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h4>Choose an OCR Model (Optional)</h4>
-                            <p>For most receipts, our auto-selection works great. For specific needs, choose from Tesseract (fast), EasyOCR (accurate), PaddleOCR (multilingual), or Florence-2 AI (complex layouts).</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h4>Review Extracted Data</h4>
-                            <p>Our AI extracts merchant name, date, items, prices, tax, and total. Review the results side-by-side with your original receipt image.</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h4>Export Your Data</h4>
-                            <p>Download your extracted data in JSON, CSV, or TXT format. Pro users can also export to Excel and PDF reports.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="highlight-box">
-                    <h3>Pro Tips for Best Results</h3>
-                    <ul>
-                        <li>Ensure good lighting and focus when photographing receipts</li>
-                        <li>Include the entire receipt in the image without cropping</li>
-                        <li>For thermal receipts, capture them before they fade</li>
-                        <li>Use Florence-2 AI for complex or unusual receipt layouts</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Tab: OCR Models -->
-            <div class="tab-content" id="ocr-models">
-                <h2>OCR Models Explained</h2>
-                <p>Receipt Extractor offers multiple OCR engines, each optimized for different use cases. Choose the right model based on your receipt type and accuracy needs.</p>
-                
-                <div class="model-cards">
-                    <!-- Tesseract OCR -->
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">T</div>
-                            <div class="model-info">
-                                <h4>Tesseract OCR</h4>
-                                <span class="model-tier tier-free">Free</span>
-                            </div>
-                        </div>
-                        <div class="model-stats">
-                            <div class="stat">
-                                <div class="stat-value">~95%</div>
-                                <div class="stat-label">Accuracy</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">&lt;1s</div>
-                                <div class="stat-label">Speed</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">100+</div>
-                                <div class="stat-label">Languages</div>
-                            </div>
-                        </div>
-                        <p class="model-description">Google's open-source OCR engine. Fast and reliable for standard printed text. Best for clear, well-lit receipt images.</p>
-                        <div class="model-best-for">
-                            <h5>Best For:</h5>
-                            <ul>
-                                <li>Standard printed receipts</li>
-                                <li>High-resolution images</li>
-                                <li>Quick processing needs</li>
+                        <div class="card-body">
+                            <h3>1. Upload Your Receipt</h3>
+                            <p>Click the upload area or drag and drop your receipt image. Supported formats include JPG, PNG, WEBP, and PDF files up to 100MB.</p>
+                            
+                            <h3>2. Select Extraction Method</h3>
+                            <p>Choose from 7 OCR models:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Tesseract OCR:</strong> Fast and reliable for clear receipts</li>
+                                <li><strong>EasyOCR:</strong> Supports 80+ languages</li>
+                                <li><strong>PaddleOCR:</strong> High accuracy multilingual OCR</li>
+                                <li><strong>Donut:</strong> AI-powered structured extraction</li>
+                                <li><strong>Florence-2:</strong> Vision-language model</li>
+                                <li><strong>CRAFT:</strong> Text detection specialist</li>
+                                <li><strong>Spatial Multi-Method:</strong> Ensemble for maximum accuracy</li>
                             </ul>
-                        </div>
-                    </div>
-                    
-                    <!-- EasyOCR -->
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">E</div>
-                            <div class="model-info">
-                                <h4>EasyOCR</h4>
-                                <span class="model-tier tier-free">Free</span>
-                            </div>
-                        </div>
-                        <div class="model-stats">
-                            <div class="stat">
-                                <div class="stat-value">~90%</div>
-                                <div class="stat-label">Accuracy</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">1-2s</div>
-                                <div class="stat-label">Speed</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">80+</div>
-                                <div class="stat-label">Languages</div>
-                            </div>
-                        </div>
-                        <p class="model-description">Deep learning-based OCR with excellent accuracy. Handles curved text and varied fonts well. Great balance of speed and precision.</p>
-                        <div class="model-best-for">
-                            <h5>Best For:</h5>
-                            <ul>
-                                <li>Varied font styles</li>
-                                <li>Slightly tilted images</li>
-                                <li>Multi-language receipts</li>
+
+                            <h3>3. Configure Detection Settings</h3>
+                            <p>Choose detection mode:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Auto Detect:</strong> Automatic text region detection</li>
+                                <li><strong>Manual Select:</strong> Draw custom regions</li>
+                                <li><strong>Line Detection:</strong> Process line-by-line</li>
+                                <li><strong>Column Mode:</strong> Handle multi-column layouts</li>
                             </ul>
-                        </div>
-                    </div>
-                    
-                    <!-- PaddleOCR -->
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">P</div>
-                            <div class="model-info">
-                                <h4>PaddleOCR</h4>
-                                <span class="model-tier tier-pro">Pro</span>
-                            </div>
-                        </div>
-                        <div class="model-stats">
-                            <div class="stat">
-                                <div class="stat-value">~93%</div>
-                                <div class="stat-label">Accuracy</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">1-3s</div>
-                                <div class="stat-label">Speed</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">80+</div>
-                                <div class="stat-label">Languages</div>
-                            </div>
-                        </div>
-                        <p class="model-description">Enterprise-grade OCR from Baidu. Exceptional performance on Asian languages (Chinese, Japanese, Korean) and complex scripts.</p>
-                        <div class="model-best-for">
-                            <h5>Best For:</h5>
-                            <ul>
-                                <li>Asian language receipts</li>
-                                <li>Complex layouts</li>
-                                <li>Enterprise deployments</li>
+
+                            <h3>4. Enable Preprocessing</h3>
+                            <p>Improve extraction accuracy:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Deskew:</strong> Auto-rotation for straightening</li>
+                                <li><strong>Enhancement:</strong> Image quality improvements</li>
                             </ul>
+
+                            <h3>5. Process and Review</h3>
+                            <p>Click Process Receipt to extract text. Results show all detected text regions with confidence scores.</p>
                         </div>
                     </div>
-                    
-                    <!-- Florence-2 AI -->
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">F</div>
-                            <div class="model-info">
-                                <h4>Florence-2 AI</h4>
-                                <span class="model-tier tier-pro">Pro</span>
-                            </div>
+
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Extraction Methods Explained</h2>
                         </div>
-                        <div class="model-stats">
-                            <div class="stat">
-                                <div class="stat-value">~98%</div>
-                                <div class="stat-label">Accuracy</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">2-5s</div>
-                                <div class="stat-label">Speed</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">50+</div>
-                                <div class="stat-label">Languages</div>
-                            </div>
+                        <div class="card-body">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Speed</th>
+                                        <th>Accuracy</th>
+                                        <th>Best Use Case</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Tesseract OCR</td>
+                                        <td>Very Fast</td>
+                                        <td>95%</td>
+                                        <td>Clear, high-quality receipts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>EasyOCR</td>
+                                        <td>Fast</td>
+                                        <td>90%</td>
+                                        <td>Multilingual receipts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>PaddleOCR</td>
+                                        <td>Medium</td>
+                                        <td>93%</td>
+                                        <td>Asian languages, complex layouts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Donut</td>
+                                        <td>Medium</td>
+                                        <td>92%</td>
+                                        <td>Structured data extraction</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Florence-2</td>
+                                        <td>Slow</td>
+                                        <td>94%</td>
+                                        <td>Challenging, low-quality images</td>
+                                    </tr>
+                                    <tr>
+                                        <td>CRAFT</td>
+                                        <td>Fast</td>
+                                        <td>91%</td>
+                                        <td>Text region detection</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Spatial Multi-Method</td>
+                                        <td>Slow</td>
+                                        <td>96%</td>
+                                        <td>Maximum accuracy needed</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <p class="model-description">Microsoft's advanced vision-language AI model. Understands document structure and context, not just text. Best for complex receipts.</p>
-                        <div class="model-best-for">
-                            <h5>Best For:</h5>
-                            <ul>
-                                <li>Complex/unusual layouts</li>
-                                <li>Poor quality images</li>
-                                <li>Highest accuracy needs</li>
+                    </div>
+
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Tips for Best Results</h2>
+                        </div>
+                        <div class="card-body">
+                            <h3>Image Quality</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Use good lighting when photographing receipts</li>
+                                <li>Avoid shadows and glare</li>
+                                <li>Keep the receipt flat and unwrinkled</li>
+                                <li>Ensure text is in focus</li>
                             </ul>
-                        </div>
-                    </div>
-                </div>
 
-                <h3>Model Comparison</h3>
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th>Tesseract</th>
-                            <th>EasyOCR</th>
-                            <th>PaddleOCR</th>
-                            <th>Florence-2</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Accuracy</td>
-                            <td>Good</td>
-                            <td>Very Good</td>
-                            <td>Excellent</td>
-                            <td>Outstanding</td>
-                        </tr>
-                        <tr>
-                            <td>Speed</td>
-                            <td>Fastest</td>
-                            <td>Fast</td>
-                            <td>Medium</td>
-                            <td>Slower</td>
-                        </tr>
-                        <tr>
-                            <td>Handwriting</td>
-                            <td><span class="cross-icon">✗</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                        </tr>
-                        <tr>
-                            <td>Complex Layouts</td>
-                            <td><span class="cross-icon">✗</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                            <td><span class="check-icon">✓</span></td>
-                        </tr>
-                        <tr>
-                            <td>Asian Languages</td>
-                            <td>Limited</td>
-                            <td>Good</td>
-                            <td>Excellent</td>
-                            <td>Very Good</td>
-                        </tr>
-                        <tr>
-                            <td>GPU Required</td>
-                            <td><span class="cross-icon">✗</span></td>
-                            <td>Optional</td>
-                            <td>Optional</td>
-                            <td>Recommended</td>
-                        </tr>
-                        <tr>
-                            <td>Plan Required</td>
-                            <td>Free</td>
-                            <td>Free</td>
-                            <td>Pro</td>
-                            <td>Pro</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tab: Batch Processing -->
-            <div class="tab-content" id="batch-processing">
-                <h2>Batch Processing Guide</h2>
-                <p>Process multiple receipts at once to save time. Batch processing is available on Pro and Business plans.</p>
-                
-                <div class="guide-steps">
-                    <div class="guide-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h4>Select Multiple Files</h4>
-                            <p>Click the batch upload button or drag multiple files at once. You can upload up to 50 receipts per batch (up to 100 on Business plans).</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h4>Configure Processing Options</h4>
-                            <p>Choose your preferred OCR model or use "Auto" for optimal model selection per image. Select output format (JSON, CSV, or Excel).</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h4>Monitor Progress</h4>
-                            <p>Track real-time progress as each receipt is processed. Failed extractions are flagged for review.</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h4>Download Results</h4>
-                            <p>Download all results in a single ZIP file containing individual extraction files plus a summary spreadsheet.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <h3>API Batch Processing</h3>
-                <p>For automated workflows, use our batch API endpoint:</p>
-                
-                <div class="code-example">
-                    <code>POST /api/extract/batch-multi<br><br>
-# Request (multipart/form-data)<br>
-images: [file1.jpg, file2.png, file3.pdf]<br>
-model_id: "auto" # or specific model<br>
-use_all_models: false<br><br>
-# Response<br>
-{<br>
-  "success": true,<br>
-  "images_count": 3,<br>
-  "results": [...]<br>
-}</code>
-                </div>
-
-                <div class="highlight-box">
-                    <h3>Batch Processing Tips</h3>
-                    <ul>
-                        <li>Name files descriptively for easier result matching</li>
-                        <li>Group similar receipt types for consistent model performance</li>
-                        <li>Use "use_all_models: true" to compare OCR engines</li>
-                        <li>Schedule large batches during off-peak hours for faster processing</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Tab: Model Finetuning -->
-            <div class="tab-content" id="finetuning">
-                <h2>Model Finetuning</h2>
-                <p>Improve OCR accuracy for your specific receipt types by finetuning our AI models with your own training data. Available on Business and Enterprise plans.</p>
-                
-                <h3>Why Finetune?</h3>
-                <ul class="content-list">
-                    <li><strong>Custom Receipt Formats:</strong> Train the model to recognize your unique receipt layouts</li>
-                    <li><strong>Specialized Fields:</strong> Improve extraction of industry-specific data points</li>
-                    <li><strong>Higher Accuracy:</strong> Achieve 99%+ accuracy on your specific receipt types</li>
-                    <li><strong>Faster Processing:</strong> Optimized models process your receipts more efficiently</li>
-                </ul>
-
-                <h3>Finetuning Process</h3>
-                <div class="guide-steps">
-                    <div class="guide-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h4>Prepare Training Data</h4>
-                            <p>Collect 50-500 labeled receipt images. Include ground truth JSON with merchant name, date, items, and totals for each receipt.</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h4>Create Finetuning Job</h4>
-                            <p>Use the API or dashboard to upload training data and configure training parameters (epochs, learning rate, batch size).</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h4>Train the Model</h4>
-                            <p>Training runs on our cloud infrastructure (HuggingFace, Replicate, or RunPod). Monitor progress and view training metrics.</p>
-                        </div>
-                    </div>
-                    <div class="guide-step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h4>Deploy & Use</h4>
-                            <p>Once complete, your finetuned model appears in your model list. Use it for extraction or download for on-premise deployment.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <h3>Supported Models for Finetuning</h3>
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Base Model</th>
-                            <th>Training Time</th>
-                            <th>Min. Samples</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Donut CORD</td>
-                            <td>donut-base-finetuned-cord</td>
-                            <td>~30 min</td>
-                            <td>50 images</td>
-                        </tr>
-                        <tr>
-                            <td>Donut Base</td>
-                            <td>donut-base</td>
-                            <td>~1 hour</td>
-                            <td>100 images</td>
-                        </tr>
-                        <tr>
-                            <td>Florence-2</td>
-                            <td>florence-2-base</td>
-                            <td>~2 hours</td>
-                            <td>200 images</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Cloud Training Providers</h3>
-                <div class="model-cards">
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">🤗</div>
-                            <div class="model-info">
-                                <h4>HuggingFace</h4>
-                                <span class="model-tier tier-pro">Pro</span>
-                            </div>
-                        </div>
-                        <p class="model-description">Train on HuggingFace's infrastructure with AutoTrain. Models are hosted on HuggingFace Hub for easy deployment.</p>
-                    </div>
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">🔄</div>
-                            <div class="model-info">
-                                <h4>Replicate</h4>
-                                <span class="model-tier tier-pro">Pro</span>
-                            </div>
-                        </div>
-                        <p class="model-description">Serverless training on Replicate. Pay only for compute time used. Easy API integration for automated workflows.</p>
-                    </div>
-                    <div class="model-card">
-                        <div class="model-card-header">
-                            <div class="model-icon">🚀</div>
-                            <div class="model-info">
-                                <h4>RunPod</h4>
-                                <span class="model-tier tier-pro">Pro</span>
-                            </div>
-                        </div>
-                        <p class="model-description">GPU-powered training on RunPod. Choose from A100, H100, or consumer GPUs. Best for large-scale training.</p>
-                    </div>
-                </div>
-
-                <div class="code-example">
-                    <code># API: Create finetuning job<br>
-POST /api/finetune/prepare<br>
-{<br>
-  "model_id": "donut_cord",<br>
-  "mode": "cloud",<br>
-  "config": {<br>
-    "cloud_provider": "huggingface",<br>
-    "epochs": 3,<br>
-    "batch_size": 4,<br>
-    "learning_rate": 5e-5<br>
-  }<br>
-}</code>
-                </div>
-            </div>
-
-            <!-- Tab: FAQ -->
-            <div class="tab-content" id="faq">
-                <h2>Frequently Asked Questions</h2>
-                
-                <!-- Help Categories -->
-                <div class="help-categories">
-                    <div class="help-category">
-                        <div class="category-icon">🚀</div>
-                        <h3>Getting Started</h3>
-                        <p>New to Receipt Extractor? Start here.</p>
-                        <ul class="help-links">
-                            <li><a href="#faq-upload">How to upload a receipt</a></li>
-                            <li><a href="#faq-formats">Supported file formats</a></li>
-                            <li><a href="#faq-account">Creating an account</a></li>
-                        </ul>
-                    </div>
-                    <div class="help-category">
-                        <div class="category-icon">📊</div>
-                        <h3>Features & Usage</h3>
-                        <p>Learn about our features.</p>
-                        <ul class="help-links">
-                            <li><a href="#faq-export">Exporting extracted data</a></li>
-                            <li><a href="#faq-batch">Batch processing</a></li>
-                            <li><a href="#faq-models">Choosing OCR models</a></li>
-                        </ul>
-                    </div>
-                    <div class="help-category">
-                        <div class="category-icon">💳</div>
-                        <h3>Billing & Plans</h3>
-                        <p>Manage your subscription.</p>
-                        <ul class="help-links">
-                            <li><a href="#faq-upgrade">Upgrading your plan</a></li>
-                            <li><a href="#faq-cancel">Canceling subscription</a></li>
-                            <li><a href="#faq-refunds">Refund policy</a></li>
-                        </ul>
-                    </div>
-                    <div class="help-category">
-                        <div class="category-icon">��</div>
-                        <h3>Troubleshooting</h3>
-                        <p>Having issues? Find solutions.</p>
-                        <ul class="help-links">
-                            <li><a href="#faq-quality">Poor extraction quality</a></li>
-                            <li><a href="#faq-errors">Upload errors</a></li>
-                            <li><a href="#faq-account-issues">Account issues</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="faq-section">
-                    <div class="faq-item" id="faq-upload">
-                        <button class="faq-question">
-                            <span>How do I upload a receipt?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>You can upload a receipt in three ways:</p>
-                            <ol>
-                                <li><strong>Drag & Drop:</strong> Simply drag your receipt image onto the upload area on the homepage.</li>
-                                <li><strong>Browse Files:</strong> Click the "Browse Files" button to select a file from your computer.</li>
-                                <li><strong>Take Photo:</strong> On mobile devices, use the "Take Photo" option to capture a receipt with your camera.</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item" id="faq-formats">
-                        <button class="faq-question">
-                            <span>What file formats are supported?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>We support the following image formats:</p>
-                            <ul>
-                                <li>JPEG/JPG</li>
-                                <li>PNG</li>
-                                <li>WebP</li>
-                                <li>BMP</li>
-                                <li>TIFF</li>
-                                <li>PDF (single page)</li>
-                                <li>HEIC/HEIF (iOS photos)</li>
+                            <h3>Preprocessing</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Enable deskew for rotated or tilted receipts</li>
+                                <li>Use enhancement for low-quality or faded receipts</li>
+                                <li>Try different detection modes if results are poor</li>
                             </ul>
-                            <p>Maximum file size: 100MB</p>
-                        </div>
-                    </div>
 
-                    <div class="faq-item" id="faq-export">
-                        <button class="faq-question">
-                            <span>How can I export my extracted data?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>After extraction, you can export your data in multiple formats:</p>
-                            <ul>
-                                <li><strong>JSON:</strong> For developers and system integration</li>
-                                <li><strong>CSV:</strong> For spreadsheet applications (Excel, Google Sheets)</li>
-                                <li><strong>TXT:</strong> Plain text format</li>
-                                <li><strong>Excel:</strong> Formatted spreadsheet (Pro plans)</li>
-                                <li><strong>PDF:</strong> Formatted report (Business plans)</li>
+                            <h3>Model Selection</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Start with Tesseract for standard English receipts</li>
+                                <li>Use EasyOCR or PaddleOCR for non-English text</li>
+                                <li>Try Spatial Multi-Method for maximum accuracy</li>
+                                <li>Use Donut or Florence-2 for complex layouts</li>
                             </ul>
                         </div>
                     </div>
 
-                    <div class="faq-item" id="faq-quality">
-                        <button class="faq-question">
-                            <span>What if the extraction quality is poor?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>For best results, ensure your receipt images:</p>
-                            <ul>
-                                <li>Are well-lit and in focus</li>
-                                <li>Show the entire receipt without cropping</li>
-                                <li>Are not too small (minimum 640x480 pixels recommended)</li>
-                                <li>Have good contrast between text and background</li>
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Troubleshooting</h2>
+                        </div>
+                        <div class="card-body">
+                            <h3>Poor Extraction Results</h3>
+                            <p><strong>Issue:</strong> Text is missing or inaccurate</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Try a different extraction method</li>
+                                <li>Enable preprocessing options</li>
+                                <li>Improve image quality and re-upload</li>
+                                <li>Try manual region selection</li>
                             </ul>
-                            <p>Try different OCR models if one doesn't work well. Florence-2 AI often works best for complex or poor-quality images.</p>
+
+                            <h3>File Upload Errors</h3>
+                            <p><strong>Issue:</strong> Cannot upload receipt</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Check file size (max 100MB)</li>
+                                <li>Verify file format (JPG, PNG, WEBP, PDF)</li>
+                                <li>Try a different browser</li>
+                                <li>Check internet connection</li>
+                            </ul>
+
+                            <h3>Processing Timeout</h3>
+                            <p><strong>Issue:</strong> Extraction takes too long</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Try a faster method (Tesseract)</li>
+                                <li>Reduce image size before upload</li>
+                                <li>Disable unnecessary preprocessing</li>
+                                <li>Wait and retry - server may be busy</li>
+                            </ul>
                         </div>
                     </div>
 
-                    <div class="faq-item" id="faq-security">
-                        <button class="faq-question">
-                            <span>Is my data secure?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>Yes, we take security seriously:</p>
-                            <ul>
-                                <li>All uploads are encrypted using TLS/SSL</li>
-                                <li>Receipt images are automatically deleted within 24 hours</li>
-                                <li>We never sell or share your data</li>
-                                <li>Our infrastructure is hosted on secure cloud providers</li>
-                                <li>SOC 2 Type II compliant (Enterprise plans)</li>
-                            </ul>
-                            <p>Read our <a href="privacy.html">Privacy Policy</a> for more details.</p>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Contact Support</h2>
                         </div>
-                    </div>
-
-                    <div class="faq-item" id="faq-models">
-                        <button class="faq-question">
-                            <span>Which OCR model should I use?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>Choose based on your needs:</p>
-                            <ul>
-                                <li><strong>Tesseract:</strong> Fast processing, standard receipts</li>
-                                <li><strong>EasyOCR:</strong> Better accuracy, handles varied fonts</li>
-                                <li><strong>PaddleOCR:</strong> Excellent for Asian languages</li>
-                                <li><strong>Florence-2:</strong> Best accuracy, complex layouts</li>
+                        <div class="card-body">
+                            <p>Need additional help? Contact our support team:</p>
+                            <ul style="list-style: none; padding: 0;">
+                                <li><strong>Email:</strong> support@receiptextractor.com</li>
+                                <li><strong>Response Time:</strong> Within 24 hours</li>
+                                <li><strong>Hours:</strong> Monday - Friday, 9 AM - 5 PM EST</li>
                             </ul>
-                            <p>When in doubt, use "Auto" to let our system choose the optimal model.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item" id="faq-refunds">
-                        <button class="faq-question">
-                            <span>What is your refund policy?</span>
-                            <span class="faq-toggle">+</span>
-                        </button>
-                        <div class="faq-answer">
-                            <p>We offer a 14-day money-back guarantee for all paid plans. If you're not satisfied with our service, contact support within 14 days of purchase for a full refund, no questions asked.</p>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Tab: Tutorials -->
-            <div class="tab-content" id="tutorials">
-                <h2>Video Tutorials</h2>
-                <p>Learn how to use Receipt Extractor with our step-by-step video guides.</p>
-                
-                <div class="video-placeholder">
-                    <div class="video-placeholder-icon">🎬</div>
-                    <h4>Getting Started Tutorial</h4>
-                    <p>Learn the basics of uploading and extracting receipt data in this 3-minute guide.</p>
-                </div>
-
-                <div class="video-placeholder">
-                    <div class="video-placeholder-icon">📊</div>
-                    <h4>Batch Processing Walkthrough</h4>
-                    <p>Master batch processing to handle multiple receipts efficiently.</p>
-                </div>
-
-                <div class="video-placeholder">
-                    <div class="video-placeholder-icon">🔧</div>
-                    <h4>Model Finetuning Tutorial</h4>
-                    <p>Train custom OCR models for your specific receipt formats.</p>
-                </div>
-
-                <div class="video-placeholder">
-                    <div class="video-placeholder-icon">🔌</div>
-                    <h4>API Integration Guide</h4>
-                    <p>Integrate Receipt Extractor into your applications using our REST API.</p>
-                </div>
-
-                <div class="highlight-box">
-                    <h3>Request a Tutorial</h3>
-                    <p>Can't find what you're looking for? <a href="contact.html">Contact us</a> to request a specific tutorial topic.</p>
-                </div>
-            </div>
-
-            <!-- Contact Support -->
-            <div class="support-cta">
-                <h2>Still need help?</h2>
-                <p>Our support team is here to assist you.</p>
-                <div class="cta-buttons">
-                    <a href="contact.html" class="btn btn-primary">Contact Support</a>
-                    <a href="mailto:support@receiptextractor.com" class="btn btn-outline">Email Us</a>
-                </div>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
+                <div>
                     <h4>Receipt Extractor</h4>
-                    <p>AI-powered OCR for modern businesses</p>
+                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
                 </div>
-                <div class="footer-section">
-                    <h4>Product</h4>
-                    <a href="index.html#features">Features</a>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="api.html">API</a>
+                <div>
+                    <h5>Resources</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="help.html">Help</a></li>
+                        <li><a href="api.html">API Documentation</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                    </ul>
                 </div>
-                <div class="footer-section">
-                    <h4>Company</h4>
-                    <a href="about.html">About</a>
-                    <a href="privacy.html">Privacy</a>
-                    <a href="terms.html">Terms</a>
+                <div>
+                    <h5>Legal</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
                 </div>
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <a href="help.html">Help Center</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="status.html">Status</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
             </div>
         </div>
     </footer>
+</body>
+</html>
+                    <h2>API Integration</h2>
+                    <h3>Authentication</h3>
+                    <p>Professional and Business plans include API access. Use JWT tokens for authentication.</p>
+                    
+                    <h3>Endpoints</h3>
+                    <div class="gov-alert gov-alert-info">
+                        <code style="background: #ffffff; padding: 4px 8px; border-radius: 2px; font-family: monospace;">
+                            POST /api/extract
+                        </code>
+                    </div>
+                    <p>Extract text from receipt image with full preprocessing pipeline.</p>
+                    
+                    <h4>Request Parameters:</h4>
+                    <ul style="margin-left: 24px; color: #5b616b; font-family: monospace; font-size: 0.875rem;">
+                        <li>image: File (required)</li>
+                        <li>model_id: String (default: ocr_tesseract)</li>
+                        <li>detection_mode: auto | manual | line | column</li>
+                        <li>enable_deskew: Boolean (default: true)</li>
+                        <li>enable_enhancement: Boolean (default: true)</li>
+                    </ul>
+                </div>
 
-    <script>
-        // Tab switching functionality
-        document.querySelectorAll('.help-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                // Remove active from all tabs
-                document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                // Add active to clicked tab
-                tab.classList.add('active');
-                const tabId = tab.getAttribute('data-tab');
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
+                <div class="gov-card gov-mb-6">
+                    <h2>Best Practices</h2>
+                    <h3>Image Quality</h3>
+                    <ul style="margin-left: 24px; color: #5b616b;">
+                        <li>Use high-resolution images (minimum 300 DPI)</li>
+                        <li>Ensure good lighting and contrast</li>
+                        <li>Avoid blurry or out-of-focus photos</li>
+                        <li>Straighten rotated receipts for better accuracy</li>
+                    </ul>
 
-        // FAQ Toggle functionality
-        document.querySelectorAll('.faq-question').forEach(button => {
-            button.addEventListener('click', () => {
-                const item = button.parentElement;
-                item.classList.toggle('open');
-            });
-        });
+                    <h3>Model Selection</h3>
+                    <ul style="margin-left: 24px; color: #5b616b;">
+                        <li>Use Tesseract for standard English receipts</li>
+                        <li>Choose EasyOCR or PaddleOCR for non-English text</li>
+                        <li>Select Donut or Florence-2 for complex layouts</li>
+                        <li>Use Spatial Multi-Method for maximum accuracy</li>
+                    </ul>
+                </div>
 
-        // Search functionality
-        const helpTopics = [
-            { title: 'How to upload a receipt', tab: 'faq', id: 'faq-upload' },
-            { title: 'Supported file formats', tab: 'faq', id: 'faq-formats' },
-            { title: 'Exporting extracted data', tab: 'faq', id: 'faq-export' },
-            { title: 'Choosing OCR models', tab: 'ocr-models', id: null },
-            { title: 'Tesseract OCR', tab: 'ocr-models', id: null },
-            { title: 'EasyOCR', tab: 'ocr-models', id: null },
-            { title: 'PaddleOCR', tab: 'ocr-models', id: null },
-            { title: 'Florence-2 AI', tab: 'ocr-models', id: null },
-            { title: 'Batch processing', tab: 'batch-processing', id: null },
-            { title: 'Model finetuning', tab: 'finetuning', id: null },
-            { title: 'Cloud training', tab: 'finetuning', id: null },
-            { title: 'Poor extraction quality', tab: 'faq', id: 'faq-quality' },
-            { title: 'Data security', tab: 'faq', id: 'faq-security' },
-            { title: 'Refund policy', tab: 'faq', id: 'faq-refunds' }
-        ];
+                <div class="gov-card">
+                    <h2>Troubleshooting</h2>
+                    <h3>Low Accuracy Results</h3>
+                    <p>Try these solutions:</p>
+                    <ul style="margin-left: 24px; color: #5b616b;">
+                        <li>Enable image enhancement</li>
+                        <li>Enable deskew for rotated receipts</li>
+                        <li>Try a different OCR model</li>
+                        <li>Use manual selection for specific regions</li>
+                    </ul>
 
-        function performSearch() {
-            const query = document.getElementById('helpSearch').value.toLowerCase().trim();
-            const resultsContainer = document.getElementById('searchResults');
-            
-            if (!query) {
-                resultsContainer.classList.remove('has-results');
-                resultsContainer.innerHTML = '';
-                return;
-            }
-            
-            const matches = helpTopics.filter(topic => 
-                topic.title.toLowerCase().includes(query)
-            );
-            
-            if (matches.length > 0) {
-                resultsContainer.classList.add('has-results');
-                resultsContainer.innerHTML = matches.map(match => 
-                    '<div class="search-result-item" onclick="navigateToTopic(\'' + match.tab + '\', \'' + (match.id || '') + '\')">' + 
-                    match.title + 
-                    '</div>'
-                ).join('');
-            } else {
-                resultsContainer.classList.add('has-results');
-                resultsContainer.innerHTML = '<div class="search-result-item">No results found. Try different keywords.</div>';
-            }
-        }
+                    <h3>Processing Errors</h3>
+                    <p>Common issues:</p>
+                    <ul style="margin-left: 24px; color: #5b616b;">
+                        <li>Check file size is under 100MB</li>
+                        <li>Verify file format is supported</li>
+                        <li>Ensure stable internet connection</li>
+                        <li>Try a different browser if issues persist</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
-        function navigateToTopic(tab, id) {
-            // Switch to tab
-            document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
-            document.getElementById(tab).classList.add('active');
-            
-            // Scroll to specific FAQ if id provided
-            if (id) {
-                setTimeout(() => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        element.classList.add('open');
-                    }
-                }, 100);
-            }
-            
-            // Clear search
-            document.getElementById('searchResults').classList.remove('has-results');
-            document.getElementById('searchResults').innerHTML = '';
-        }
+        <section class="gov-section">
+            <div class="gov-alert gov-alert-info">
+                <strong>Need More Help?</strong> Contact our support team at support@receiptextractor.com or visit our community forum.
+            </div>
+        </section>
+    </main>
 
-        // Search on enter
-        document.getElementById('helpSearch').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-
-        // Handle hash links
-        if (window.location.hash) {
-            const hash = window.location.hash.substring(1);
-            const faqItem = document.getElementById(hash);
-            if (faqItem) {
-                // Switch to FAQ tab
-                document.querySelector('[data-tab="faq"]').click();
-                setTimeout(() => {
-                    faqItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    faqItem.classList.add('open');
-                }, 100);
-            }
-        }
-    </script>
-    <script src="js/cookie-consent.js"></script>
-    <script src="js/analytics-integration.js"></script>
+    <footer style="background: #f1f1f1; padding: 48px 24px; margin-top: 64px; border-top: 1px solid #d6d7d9;">
+        <div class="gov-container">
+            <div style="text-align: center; color: #5b616b; font-size: 0.875rem;">
+                2024 Receipt Extractor. All rights reserved.
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

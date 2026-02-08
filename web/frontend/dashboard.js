@@ -1,627 +1,763 @@
 /**
- * Dashboard JavaScript
- * Handles all dashboard interactions, navigation, and data management
+ * Dashboard JavaScript - Professional Government Style
+ * Handles real API integration for dashboard data and receipt management
+ * NO emojis, NO fake data, clean professional design
  */
+
+// =============================================================================
+// CONFIGURATION & CONSTANTS
+// =============================================================================
+
+const API_BASE_URL = window.location.origin;
+const API_TIMEOUT = 30000; // 30 seconds
+
+const PLAN_LIMITS = {
+    'free': { receipts: 10, storage: 104857600 }, // 100 MB
+    'pro': { receipts: 500, storage: 5368709120 }, // 5 GB
+    'business': { receipts: 2000, storage: 21474836480 }, // 20 GB
+    'enterprise': { receipts: -1, storage: -1 } // Unlimited
+};
+
+const MODEL_NAMES = {
+    'ocr_tesseract': 'Tesseract OCR',
+    'ocr_easyocr': 'EasyOCR',
+    'ocr_paddle': 'PaddleOCR',
+    'donut_cord': 'Donut',
+    'florence2': 'Florence-2',
+    'craft_detector': 'CRAFT',
+    'spatial': 'Spatial OCR'
+};
 
 // =============================================================================
 // STATE MANAGEMENT
 // =============================================================================
 
 const DashboardState = {
-    currentSection: 'overview',
-    user: {
-        name: 'John Doe',
-        email: 'john@example.com',
-        plan: 'Pro',
-        avatar: 'JD'
-    },
+    currentPage: 1,
+    perPage: 20,
+    totalReceipts: 0,
+    receipts: [],
     stats: {
-        totalExtractions: 1247,
-        successRate: 97.3,
-        avgProcessingTime: 2.3,
-        apiCalls: 3429
+        totalExtractions: 0,
+        monthlyExtractions: 0,
+        storageUsed: 0,
+        currentPlan: 'free'
     },
-    recentExtractions: [],
-    apiKeys: [],
-    templates: [],
-    batchJobs: []
+    loading: false,
+    error: null
 };
 
 // =============================================================================
-// NAVIGATION
+// API UTILITIES
 // =============================================================================
 
-class DashboardNavigation {
-    constructor() {
-        this.setupSidebarLinks();
-        this.setupMobileMenu();
+class APIClient {
+    constructor(baseURL = API_BASE_URL) {
+        this.baseURL = baseURL;
     }
 
-    setupSidebarLinks() {
-        const links = document.querySelectorAll('.sidebar-link');
-        links.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const section = link.dataset.section;
-                this.navigateToSection(section);
-            });
-        });
-
-        // Handle hash navigation
-        window.addEventListener('hashchange', () => {
-            const hash = window.location.hash.substring(1);
-            if (hash) {
-                this.navigateToSection(hash);
-            }
-        });
-
-        // Initial navigation
-        const initialHash = window.location.hash.substring(1);
-        if (initialHash) {
-            this.navigateToSection(initialHash);
-        }
+    getAuthToken() {
+        return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
     }
 
-    navigateToSection(sectionId) {
-        // Update sidebar
-        document.querySelectorAll('.sidebar-link').forEach(link => {
-            link.classList.remove('active');
-            if (link.dataset.section === sectionId) {
-                link.classList.add('active');
-            }
-        });
-
-        // Update sections
-        document.querySelectorAll('.dashboard-section').forEach(section => {
-            section.classList.remove('active');
-        });
-
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-            targetSection.classList.add('active');
-            DashboardState.currentSection = sectionId;
-            
-            // Update URL
-            history.pushState(null, null, `#${sectionId}`);
-            
-            // Load section data
-            this.loadSectionData(sectionId);
-        }
-    }
-
-    loadSectionData(sectionId) {
-        switch (sectionId) {
-            case 'overview':
-                Dashboard.loadOverview();
-                break;
-            case 'extractions':
-                Dashboard.loadExtractions();
-                break;
-            case 'batch':
-                Dashboard.loadBatchJobs();
-                break;
-            case 'api':
-                Dashboard.loadApiKeys();
-                break;
-            case 'templates':
-                Dashboard.loadTemplates();
-                break;
-            case 'analytics':
-                Dashboard.loadAnalytics();
-                break;
-        }
-    }
-
-    setupMobileMenu() {
-        // Add mobile menu toggle if needed
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'mobile-menu-toggle btn btn-ghost btn-sm';
-        toggleBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+    async request(endpoint, options = {}) {
+        const url = `${this.baseURL}${endpoint}`;
+        const token = this.getAuthToken();
         
-        // Add to nav on mobile
-        if (window.innerWidth <= 768) {
-            const navContainer = document.querySelector('.nav-container');
-            navContainer.insertBefore(toggleBtn, navContainer.firstChild);
+        const defaultHeaders = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            defaultHeaders['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const config = {
+            ...options,
+            headers: {
+                ...defaultHeaders,
+                ...options.headers
+            }
+        };
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+        config.signal = controller.signal;
+        
+        try {
+            const response = await fetch(url, config);
+            clearTimeout(timeoutId);
             
-            toggleBtn.addEventListener('click', () => {
-                const sidebar = document.querySelector('.dashboard-sidebar');
-                sidebar.classList.toggle('open');
+            if (response.status === 401) {
+                this.handleUnauthorized();
+                throw new Error('Unauthorized - please sign in again');
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || `Request failed: ${response.status}`);
+                }
+                
+                return data;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`Request failed: ${response.status}`);
+            }
+            
+            return response;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout - please try again');
+            }
+            
+            throw error;
+        }
+    }
+
+    handleUnauthorized() {
+        localStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('user_data');
+        
+        setTimeout(() => {
+            window.location.href = '/enhanced-login.html';
+        }, 2000);
+    }
+
+    async get(endpoint) {
+        return this.request(endpoint, { method: 'GET' });
+    }
+
+    async post(endpoint, data) {
+        return this.request(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async patch(endpoint, data) {
+        return this.request(endpoint, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async delete(endpoint) {
+        return this.request(endpoint, { method: 'DELETE' });
+    }
+}
+
+const apiClient = new APIClient();
+
+// =============================================================================
+// DATA FETCHING
+// =============================================================================
+
+async function fetchUserStats() {
+    try {
+        const response = await apiClient.get('/api/receipts?page=1&per_page=1');
+        
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        let monthlyCount = 0;
+        let totalCount = 0;
+        let storageUsed = 0;
+        
+        if (response.receipts && Array.isArray(response.receipts)) {
+            response.receipts.forEach(receipt => {
+                const receiptDate = new Date(receipt.created_at || receipt.upload_date);
+                if (receiptDate.getMonth() === currentMonth && receiptDate.getFullYear() === currentYear) {
+                    monthlyCount++;
+                }
+                totalCount++;
+                storageUsed += receipt.file_size || 0;
             });
         }
+        
+        if (response.pagination && response.pagination.total) {
+            totalCount = response.pagination.total;
+        }
+        
+        return {
+            totalExtractions: totalCount,
+            monthlyExtractions: monthlyCount,
+            storageUsed: storageUsed,
+            currentPlan: 'free'
+        };
+    } catch (error) {
+        console.error('Error fetching user stats:', error);
+        return {
+            totalExtractions: 0,
+            monthlyExtractions: 0,
+            storageUsed: 0,
+            currentPlan: 'free'
+        };
+    }
+}
+
+async function fetchReceipts(page = 1, perPage = 20) {
+    try {
+        const response = await apiClient.get(`/api/receipts?page=${page}&per_page=${perPage}`);
+        
+        return {
+            receipts: response.receipts || [],
+            pagination: response.pagination || {
+                page: page,
+                per_page: perPage,
+                total: 0,
+                pages: 0
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching receipts:', error);
+        throw error;
+    }
+}
+
+async function fetchReceiptDetails(receiptId) {
+    try {
+        const response = await apiClient.get(`/api/receipts/${receiptId}`);
+        return response.receipt || response;
+    } catch (error) {
+        console.error('Error fetching receipt details:', error);
+        throw error;
+    }
+}
+
+async function deleteReceipt(receiptId) {
+    try {
+        await apiClient.delete(`/api/receipts/${receiptId}`);
+        return true;
+    } catch (error) {
+        console.error('Error deleting receipt:', error);
+        throw error;
+    }
+}
+
+async function exportReceiptsData() {
+    try {
+        let allReceipts = [];
+        let page = 1;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const response = await fetchReceipts(page, 100);
+            allReceipts = allReceipts.concat(response.receipts);
+            
+            if (response.pagination.page >= response.pagination.pages) {
+                hasMore = false;
+            } else {
+                page++;
+            }
+        }
+        
+        const dataStr = JSON.stringify(allReceipts, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `receipts_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        return true;
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        throw error;
     }
 }
 
 // =============================================================================
-// DASHBOARD CORE
+// UI UPDATES
 // =============================================================================
 
-const Dashboard = {
-    charts: {},
+function updateStatsDisplay(stats) {
+    document.getElementById('totalExtractions').textContent = stats.totalExtractions.toLocaleString();
+    document.getElementById('monthlyExtractions').textContent = stats.monthlyExtractions.toLocaleString();
+    
+    const storageGB = (stats.storageUsed / (1024 * 1024 * 1024)).toFixed(2);
+    const storageMB = (stats.storageUsed / (1024 * 1024)).toFixed(1);
+    document.getElementById('storageUsed').textContent = storageGB >= 1 ? `${storageGB} GB` : `${storageMB} MB`;
+    
+    const planName = stats.currentPlan.charAt(0).toUpperCase() + stats.currentPlan.slice(1);
+    document.getElementById('currentPlan').textContent = planName;
+    
+    DashboardState.stats = stats;
+    updateUsageDisplay(stats);
+}
 
-    init() {
-        console.log('Initializing Dashboard...');
-        
-        // Initialize navigation
-        this.navigation = new DashboardNavigation();
-        
-        // Setup event listeners
-        this.setupEventListeners();
-        
-        // Load initial data
-        this.loadOverview();
-        
-        // Initialize charts
-        this.initializeCharts();
-        
-        console.log('Dashboard initialized successfully');
-    },
+function updateUsageDisplay(stats) {
+    const plan = stats.currentPlan.toLowerCase();
+    const limits = PLAN_LIMITS[plan];
+    
+    if (!limits) return;
+    
+    const receiptsUsed = stats.monthlyExtractions;
+    const receiptsLimit = limits.receipts;
+    const storageUsed = stats.storageUsed;
+    const storageLimit = limits.storage;
+    
+    if (receiptsLimit > 0) {
+        const receiptsPercent = Math.min((receiptsUsed / receiptsLimit) * 100, 100);
+        document.getElementById('usageReceiptsText').textContent = `${receiptsUsed} / ${receiptsLimit}`;
+        document.getElementById('usageReceiptsBar').style.width = `${receiptsPercent}%`;
+    } else {
+        document.getElementById('usageReceiptsText').textContent = `${receiptsUsed} / Unlimited`;
+        document.getElementById('usageReceiptsBar').style.width = '0%';
+    }
+    
+    if (storageLimit > 0) {
+        const storagePercent = Math.min((storageUsed / storageLimit) * 100, 100);
+        const usedMB = (storageUsed / (1024 * 1024)).toFixed(1);
+        const limitMB = (storageLimit / (1024 * 1024)).toFixed(0);
+        document.getElementById('usageStorageText').textContent = `${usedMB} MB / ${limitMB} MB`;
+        document.getElementById('usageStorageBar').style.width = `${storagePercent}%`;
+    } else {
+        const usedGB = (storageUsed / (1024 * 1024 * 1024)).toFixed(2);
+        document.getElementById('usageStorageText').textContent = `${usedGB} GB / Unlimited`;
+        document.getElementById('usageStorageBar').style.width = '0%';
+    }
+}
 
-    setupEventListeners() {
-        // Quick extract button
-        const quickExtractBtn = document.getElementById('quickExtractBtn');
-        if (quickExtractBtn) {
-            quickExtractBtn.addEventListener('click', () => this.openQuickExtractModal());
-        }
-
-        // Settings tabs
-        document.querySelectorAll('.settings-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.switchSettingsTab(tab.dataset.tab);
-            });
+function updateReceiptsTable(receipts) {
+    const tableBody = document.getElementById('receiptsTableBody');
+    const table = document.getElementById('receiptsTable');
+    const emptyState = document.getElementById('receiptsEmpty');
+    const loading = document.getElementById('receiptsLoading');
+    
+    loading.style.display = 'none';
+    
+    if (!receipts || receipts.length === 0) {
+        table.style.display = 'none';
+        emptyState.style.display = 'block';
+        document.getElementById('paginationContainer').style.display = 'none';
+        return;
+    }
+    
+    table.style.display = 'table';
+    emptyState.style.display = 'none';
+    
+    tableBody.innerHTML = receipts.map(receipt => {
+        const date = new Date(receipt.created_at || receipt.upload_date);
+        const formattedDate = date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
         });
-
-        // Modal close
-        document.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.closest('.modal').classList.remove('active');
-            });
-        });
-
-        // Dark mode toggle
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('change', (e) => {
-                this.toggleDarkMode(e.target.checked);
-            });
+        
+        const modelName = MODEL_NAMES[receipt.model_id] || receipt.model_id || 'Unknown';
+        const status = receipt.status || 'completed';
+        const fileName = receipt.filename || receipt.file_name || 'Unknown';
+        const storeName = receipt.store_name || receipt.merchant_name || 'N/A';
+        
+        let badgeClass = 'badge-success';
+        let statusText = 'Completed';
+        
+        if (status === 'processing') {
+            badgeClass = 'badge-processing';
+            statusText = 'Processing';
+        } else if (status === 'failed') {
+            badgeClass = 'badge-error';
+            statusText = 'Failed';
+        } else if (status === 'pending') {
+            badgeClass = 'badge-warning';
+            statusText = 'Pending';
         }
-    },
-
-    // =============================================================================
-    // OVERVIEW SECTION
-    // =============================================================================
-
-    loadOverview() {
-        this.loadRecentActivity();
-        this.updateStats();
-    },
-
-    updateStats() {
-        // Update stat values with animation
-        this.animateValue('Total Extractions', 0, DashboardState.stats.totalExtractions, 1000);
-    },
-
-    animateValue(label, start, end, duration) {
-        const element = Array.from(document.querySelectorAll('.stat-content h3'))
-            .find(el => el.textContent === label);
         
-        if (!element) return;
-        
-        const valueElement = element.nextElementSibling;
-        const range = end - start;
-        const increment = range / (duration / 16);
-        let current = start;
-
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= end) {
-                current = end;
-                clearInterval(timer);
-            }
-            valueElement.textContent = Math.floor(current).toLocaleString();
-        }, 16);
-    },
-
-    loadRecentActivity() {
-        const recentActivity = document.getElementById('recentActivity');
-        if (!recentActivity) return;
-
-        const mockData = [
-            {
-                merchant: 'Whole Foods Market',
-                total: 127.45,
-                date: '2024-01-15',
-                model: 'Florence-2 AI',
-                status: 'success'
-            },
-            {
-                merchant: 'Target',
-                total: 89.99,
-                date: '2024-01-15',
-                model: 'Tesseract OCR',
-                status: 'success'
-            },
-            {
-                merchant: 'Starbucks',
-                total: 12.50,
-                date: '2024-01-14',
-                model: 'EasyOCR',
-                status: 'success'
-            },
-            {
-                merchant: 'Amazon',
-                total: 245.00,
-                date: '2024-01-14',
-                model: 'PaddleOCR',
-                status: 'success'
-            },
-            {
-                merchant: 'Best Buy',
-                total: 599.99,
-                date: '2024-01-13',
-                model: 'Florence-2 AI',
-                status: 'success'
-            }
-        ];
-
-        recentActivity.innerHTML = mockData.map(item => `
-            <div class="activity-item">
-                <div class="activity-thumb">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </svg>
-                </div>
-                <div class="activity-details">
-                    <div class="activity-merchant">${item.merchant}</div>
-                    <div class="activity-meta">${item.date} • ${item.model}</div>
-                </div>
-                <div class="activity-amount">$${item.total.toFixed(2)}</div>
-            </div>
-        `).join('');
-    },
-
-    // =============================================================================
-    // EXTRACTIONS SECTION
-    // =============================================================================
-
-    loadExtractions() {
-        const tableBody = document.querySelector('#extractionsTable tbody');
-        if (!tableBody) return;
-
-        const mockData = [
-            {
-                id: 1,
-                merchant: 'Whole Foods Market',
-                total: 127.45,
-                date: '2024-01-15',
-                model: 'Florence-2',
-                status: 'success'
-            },
-            {
-                id: 2,
-                merchant: 'Target',
-                total: 89.99,
-                date: '2024-01-15',
-                model: 'Tesseract',
-                status: 'success'
-            },
-            {
-                id: 3,
-                merchant: 'Starbucks',
-                total: 12.50,
-                date: '2024-01-14',
-                model: 'EasyOCR',
-                status: 'success'
-            }
-        ];
-
-        tableBody.innerHTML = mockData.map(item => `
-            <tr>
-                <td><input type="checkbox"></td>
+        return `
+            <tr class="receipt-row" data-receipt-id="${receipt.id}">
+                <td>${formattedDate}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">${fileName}</td>
+                <td>${storeName}</td>
+                <td>${modelName}</td>
+                <td><span class="badge ${badgeClass}">${statusText}</span></td>
                 <td>
-                    <div class="table-thumb">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
-                    </div>
-                </td>
-                <td>${item.merchant}</td>
-                <td>$${item.total.toFixed(2)}</td>
-                <td>${item.date}</td>
-                <td>${item.model}</td>
-                <td><span class="status-badge ${item.status}">${item.status}</span></td>
-                <td>
-                    <button class="btn btn-ghost btn-sm">View</button>
-                    <button class="btn btn-ghost btn-sm">Download</button>
+                    <button class="btn btn-secondary btn-sm view-receipt-btn" data-receipt-id="${receipt.id}">View</button>
+                    <button class="btn btn-secondary btn-sm delete-receipt-btn" data-receipt-id="${receipt.id}">Delete</button>
                 </td>
             </tr>
-        `).join('');
-    },
-
-    // =============================================================================
-    // BATCH PROCESSING
-    // =============================================================================
-
-    loadBatchJobs() {
-        const queueList = document.getElementById('batchQueue');
-        const historyList = document.getElementById('batchHistory');
-        
-        if (queueList) {
-            queueList.innerHTML = `
-                <div class="queue-item">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <strong>Batch #1247</strong>
-                        <span>45 / 50 receipts</span>
-                    </div>
-                    <div class="batch-progress">
-                        <div class="batch-progress-bar" style="width: 90%"></div>
-                    </div>
-                    <div style="font-size: 0.875rem; color: var(--color-gray-500); margin-top: 8px;">
-                        Processing... ETA: 2 minutes
-                    </div>
-                </div>
-            `;
-        }
-        
-        if (historyList) {
-            historyList.innerHTML = `
-                <div class="history-item">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <strong>Batch #1246</strong>
-                        <span class="status-badge success">Completed</span>
-                    </div>
-                    <div style="font-size: 0.875rem; color: var(--color-gray-500);">
-                        100 receipts • Completed 2 hours ago
-                    </div>
-                </div>
-            `;
-        }
-    },
-
-    // =============================================================================
-    // API KEYS
-    // =============================================================================
-
-    loadApiKeys() {
-        const apiKeysList = document.getElementById('apiKeysList');
-        if (!apiKeysList) return;
-
-        apiKeysList.innerHTML = `
-            <div class="api-key-card">
-                <div class="api-key-header">
-                    <div>
-                        <div class="api-key-name">Production API Key</div>
-                        <div class="api-key-meta">Created on Jan 1, 2024</div>
-                    </div>
-                    <button class="btn btn-ghost btn-sm">Delete</button>
-                </div>
-                <div class="api-key-value">
-                    <code>re_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
-                    <button class="btn btn-ghost btn-sm" onclick="copyToClipboard(this.previousElementSibling.textContent)">Copy</button>
-                </div>
-                <div class="api-key-meta">Last used: 2 hours ago • 1,234 requests this month</div>
-            </div>
         `;
-    },
-
-    // =============================================================================
-    // TEMPLATES
-    // =============================================================================
-
-    loadTemplates() {
-        const templatesGrid = document.getElementById('templatesGrid');
-        if (!templatesGrid) return;
-
-        const templates = [
-            { name: 'Grocery Receipt', icon: '🛒', description: 'Optimized for grocery store receipts' },
-            { name: 'Restaurant Receipt', icon: '🍽️', description: 'Extracts tips and itemized food items' },
-            { name: 'Retail Receipt', icon: '🏪', description: 'For general retail transactions' },
-            { name: 'Gas Station', icon: '⛽', description: 'Specialized for fuel receipts' }
-        ];
-
-        templatesGrid.innerHTML = templates.map(template => `
-            <div class="template-card">
-                <div class="template-icon">${template.icon}</div>
-                <div class="template-name">${template.name}</div>
-                <div class="template-description">${template.description}</div>
-            </div>
-        `).join('');
-    },
-
-    // =============================================================================
-    // ANALYTICS
-    // =============================================================================
-
-    loadAnalytics() {
-        // Load analytics charts and data
-        setTimeout(() => {
-            this.renderAnalyticsCharts();
-        }, 100);
-    },
-
-    // =============================================================================
-    // CHARTS
-    // =============================================================================
-
-    initializeCharts() {
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js not loaded');
-            return;
-        }
-
-        // Activity Chart
-        const activityCtx = document.getElementById('activityChart');
-        if (activityCtx) {
-            this.charts.activity = new Chart(activityCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Extractions',
-                        data: [12, 19, 15, 25, 22, 18, 24],
-                        borderColor: '#3B82F6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // Model Usage Chart
-        const modelCtx = document.getElementById('modelChart');
-        if (modelCtx) {
-            this.charts.model = new Chart(modelCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Tesseract', 'EasyOCR', 'PaddleOCR', 'Florence-2'],
-                    datasets: [{
-                        data: [30, 25, 20, 25],
-                        backgroundColor: [
-                            '#3B82F6',
-                            '#10B981',
-                            '#F59E0B',
-                            '#EF4444'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-    },
-
-    renderAnalyticsCharts() {
-        // Render additional analytics charts
-        console.log('Rendering analytics charts...');
-    },
-
-    // =============================================================================
-    // SETTINGS
-    // =============================================================================
-
-    switchSettingsTab(tabId) {
-        // Update tabs
-        document.querySelectorAll('.settings-tab').forEach(tab => {
-            tab.classList.remove('active');
-            if (tab.dataset.tab === tabId) {
-                tab.classList.add('active');
-            }
+    }).join('');
+    
+    document.querySelectorAll('.view-receipt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const receiptId = btn.getAttribute('data-receipt-id');
+            showReceiptDetails(receiptId);
         });
-
-        // Update panels
-        document.querySelectorAll('.settings-panel').forEach(panel => {
-            panel.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.delete-receipt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const receiptId = btn.getAttribute('data-receipt-id');
+            handleDeleteReceipt(receiptId);
         });
-        
-        const targetPanel = document.getElementById(tabId);
-        if (targetPanel) {
-            targetPanel.classList.add('active');
-        }
-    },
-
-    toggleDarkMode(enabled) {
-        if (enabled) {
-            document.body.classList.add('dark-mode');
-            localStorage.setItem('dark_mode', 'true');
-        } else {
-            document.body.classList.remove('dark-mode');
-            localStorage.setItem('dark_mode', 'false');
-        }
-    },
-
-    // =============================================================================
-    // MODALS
-    // =============================================================================
-
-    openQuickExtractModal() {
-        const modal = document.getElementById('quickExtractModal');
-        if (modal) {
-            modal.classList.add('active');
-        }
-    }
-};
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Use NotificationSystem if available, fallback to simple notification
-        if (window.notify) {
-            window.notify.success('Copied to clipboard!');
-        } else {
-            showSimpleNotification('Copied to clipboard!', 'success');
-        }
-    }).catch(() => {
-        if (window.notify) {
-            window.notify.error('Failed to copy to clipboard');
-        } else {
-            showSimpleNotification('Failed to copy', 'error');
-        }
     });
 }
 
-function showSimpleNotification(message, type = 'info') {
-    // Fallback simple toast notification
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
+function updatePagination(pagination) {
+    const container = document.getElementById('paginationContainer');
     
-    document.body.appendChild(toast);
+    if (!pagination || pagination.total === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    const currentPage = pagination.page;
+    const totalPages = pagination.pages;
+    
+    let html = '<button class="pagination-btn" id="prevPageBtn">Previous</button>';
+    
+    const maxButtons = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    
+    if (endPage - startPage < maxButtons - 1) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? 'active' : '';
+        html += `<button class="pagination-btn ${activeClass}" data-page="${i}">${i}</button>`;
+    }
+    
+    html += '<button class="pagination-btn" id="nextPageBtn">Next</button>';
+    
+    container.innerHTML = html;
+    
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) loadReceipts(currentPage - 1);
+    });
+    
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        if (currentPage < totalPages) loadReceipts(currentPage + 1);
+    });
+    
+    document.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = parseInt(btn.getAttribute('data-page'));
+            loadReceipts(page);
+        });
+    });
+    
+    document.getElementById('prevPageBtn').disabled = currentPage === 1;
+    document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+}
+
+function showError(message) {
+    const container = document.getElementById('errorContainer');
+    container.innerHTML = `<div class="error-message">${message}</div>`;
     
     setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+        container.innerHTML = '';
+    }, 5000);
+}
+
+function showSuccess(message) {
+    const container = document.getElementById('successContainer');
+    container.innerHTML = `<div class="success-message">${message}</div>`;
+    
+    setTimeout(() => {
+        container.innerHTML = '';
     }, 3000);
+}
+
+function setLoading(isLoading) {
+    DashboardState.loading = isLoading;
+    
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshText = document.getElementById('refreshBtnText');
+    const refreshSpinner = document.getElementById('refreshSpinner');
+    
+    if (isLoading) {
+        refreshBtn.disabled = true;
+        refreshText.style.display = 'none';
+        refreshSpinner.style.display = 'inline-block';
+    } else {
+        refreshBtn.disabled = false;
+        refreshText.style.display = 'inline';
+        refreshSpinner.style.display = 'none';
+    }
+}
+
+// =============================================================================
+// MAIN OPERATIONS
+// =============================================================================
+
+async function loadDashboardData() {
+    if (DashboardState.loading) return;
+    
+    setLoading(true);
+    
+    try {
+        const stats = await fetchUserStats();
+        updateStatsDisplay(stats);
+        
+        await loadReceipts(DashboardState.currentPage);
+        
+        showSuccess('Dashboard data loaded successfully');
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showError(`Failed to load dashboard data: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
+}
+
+async function loadReceipts(page = 1) {
+    const loading = document.getElementById('receiptsLoading');
+    loading.style.display = 'block';
+    document.getElementById('receiptsTable').style.display = 'none';
+    document.getElementById('receiptsEmpty').style.display = 'none';
+    
+    try {
+        const data = await fetchReceipts(page, DashboardState.perPage);
+        
+        DashboardState.receipts = data.receipts;
+        DashboardState.currentPage = data.pagination.page;
+        DashboardState.totalReceipts = data.pagination.total;
+        
+        updateReceiptsTable(data.receipts);
+        updatePagination(data.pagination);
+    } catch (error) {
+        console.error('Error loading receipts:', error);
+        showError(`Failed to load receipts: ${error.message}`);
+        
+        loading.style.display = 'none';
+        document.getElementById('receiptsEmpty').style.display = 'block';
+    }
+}
+
+async function showReceiptDetails(receiptId) {
+    const modal = document.getElementById('receiptModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    modal.classList.add('active');
+    modalBody.innerHTML = '<div style="text-align: center; padding: 24px;"><div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px;"></div><p style="margin-top: 16px;">Loading receipt details...</p></div>';
+    
+    try {
+        const receipt = await fetchReceiptDetails(receiptId);
+        
+        const date = new Date(receipt.created_at || receipt.upload_date);
+        const formattedDate = date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        const modelName = MODEL_NAMES[receipt.model_id] || receipt.model_id || 'Unknown';
+        const extractedText = receipt.extracted_text || receipt.text || 'No text extracted';
+        
+        modalBody.innerHTML = `
+            <dl class="receipt-details">
+                <dt>Receipt ID</dt>
+                <dd>${receipt.id}</dd>
+                
+                <dt>File Name</dt>
+                <dd>${receipt.filename || receipt.file_name || 'Unknown'}</dd>
+                
+                <dt>Upload Date</dt>
+                <dd>${formattedDate}</dd>
+                
+                <dt>Store Name</dt>
+                <dd>${receipt.store_name || receipt.merchant_name || 'N/A'}</dd>
+                
+                <dt>Model Used</dt>
+                <dd>${modelName}</dd>
+                
+                <dt>Status</dt>
+                <dd>${receipt.status || 'completed'}</dd>
+                
+                <dt>File Size</dt>
+                <dd>${receipt.file_size ? (receipt.file_size / 1024).toFixed(2) + ' KB' : 'N/A'}</dd>
+                
+                <dt>Extracted Text</dt>
+                <dd>
+                    <div class="text-content">${extractedText}</div>
+                </dd>
+            </dl>
+            
+            <div style="margin-top: 24px; display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn btn-secondary" id="closeDetailsBtn">Close</button>
+                <button class="btn btn-primary" id="downloadReceiptBtn">Download JSON</button>
+            </div>
+        `;
+        
+        document.getElementById('closeDetailsBtn').addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+        
+        document.getElementById('downloadReceiptBtn').addEventListener('click', () => {
+            const dataStr = JSON.stringify(receipt, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `receipt_${receipt.id}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showSuccess('Receipt downloaded successfully');
+        });
+        
+    } catch (error) {
+        console.error('Error loading receipt details:', error);
+        modalBody.innerHTML = `<div class="error-message">Failed to load receipt details: ${error.message}</div>`;
+    }
+}
+
+async function handleDeleteReceipt(receiptId) {
+    if (!confirm('Are you sure you want to delete this receipt? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        await deleteReceipt(receiptId);
+        showSuccess('Receipt deleted successfully');
+        await loadDashboardData();
+    } catch (error) {
+        console.error('Error deleting receipt:', error);
+        showError(`Failed to delete receipt: ${error.message}`);
+    }
+}
+
+async function handleExportData() {
+    if (!confirm('Export all receipt data as JSON?')) {
+        return;
+    }
+    
+    setLoading(true);
+    
+    try {
+        await exportReceiptsData();
+        showSuccess('Data exported successfully');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showError(`Failed to export data: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
+}
+
+async function handleDeleteAll() {
+    if (!confirm('Are you sure you want to delete ALL your receipts? This action cannot be undone.')) {
+        return;
+    }
+    
+    if (!confirm('Final confirmation: Delete all receipts permanently?')) {
+        return;
+    }
+    
+    setLoading(true);
+    
+    try {
+        const data = await fetchReceipts(1, 100);
+        const receipts = data.receipts;
+        
+        if (receipts.length === 0) {
+            showSuccess('No receipts to delete');
+            return;
+        }
+        
+        let deleted = 0;
+        for (const receipt of receipts) {
+            try {
+                await deleteReceipt(receipt.id);
+                deleted++;
+            } catch (error) {
+                console.error(`Failed to delete receipt ${receipt.id}:`, error);
+            }
+        }
+        
+        showSuccess(`Deleted ${deleted} receipts successfully`);
+        await loadDashboardData();
+    } catch (error) {
+        console.error('Error deleting all receipts:', error);
+        showError(`Failed to delete receipts: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user_data');
+    window.location.href = '/enhanced-login.html';
 }
 
 // =============================================================================
 // INITIALIZATION
 // =============================================================================
 
-// Initialize dashboard when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => Dashboard.init());
-} else {
-    Dashboard.init();
+function checkAuthentication() {
+    const token = apiClient.getAuthToken();
+    
+    if (!token) {
+        window.location.href = '/enhanced-login.html';
+        return false;
+    }
+    
+    return true;
 }
 
-// Export for debugging
-window.Dashboard = Dashboard;
+function setupEventListeners() {
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        loadDashboardData();
+    });
+    
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        document.getElementById('receiptModal').classList.remove('active');
+    });
+    
+    document.getElementById('exportDataBtn').addEventListener('click', handleExportData);
+    
+    document.getElementById('deleteAllBtn').addEventListener('click', handleDeleteAll);
+    
+    document.getElementById('receiptModal').addEventListener('click', (e) => {
+        if (e.target.id === 'receiptModal') {
+            document.getElementById('receiptModal').classList.remove('active');
+        }
+    });
+}
+
+function initializeDashboard() {
+    console.log('Initializing dashboard...');
+    
+    if (!checkAuthentication()) {
+        return;
+    }
+    
+    setupEventListeners();
+    
+    loadDashboardData();
+    
+    console.log('Dashboard initialized successfully');
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
+} else {
+    initializeDashboard();
+}
+
 window.DashboardState = DashboardState;

@@ -3,35 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Choose the perfect plan for your receipt extraction needs - Receipt Extractor Pricing">
-    <meta name="theme-color" content="#3B82F6">
-
-    <!-- Cache Control Meta Tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <meta name="description" content="Receipt Extractor Pricing - Choose the right plan for your needs">
+    <title>Pricing - Receipt Extractor</title>
     
-    <!-- Stripe Configuration -->
-    <meta name="stripe-publishable-key" content="">
-    
-    <title>Pricing | Receipt Extractor</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="styles/cookie-consent.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
-    
-    <!-- Stripe.js -->
-    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <!-- Navigation -->
-    <nav class="nav" id="nav">
+    <nav class="nav" role="navigation" aria-label="Main navigation">
         <div class="nav-container">
             <div class="nav-brand">
                 <a href="index.html">
-                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 2l7 7-7 7"></path>
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M9 9h6M9 15h6"></path>
                     </svg>
                     <span class="nav-title">Receipt Extractor</span>
                 </a>
@@ -41,667 +30,351 @@
                 <a href="pricing.html" class="nav-link">Pricing</a>
                 <a href="api.html" class="nav-link">API</a>
                 <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
+                <button class="btn btn-secondary btn-sm" type="button">Sign In</button>
             </div>
         </div>
     </nav>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <h1>Simple, Transparent Pricing</h1>
-            <p class="page-subtitle">Choose the plan that fits your needs. All plans include our core AI-powered extraction technology.</p>
-            
-            <!-- Billing Toggle -->
-            <div class="billing-toggle">
-                <span id="monthlyLabel" class="toggle-label active">Monthly</span>
-                <button class="toggle-switch" id="billingToggle" onclick="toggleBilling()" aria-label="Toggle billing period">
-                    <span class="toggle-slider" id="toggleSlider"></span>
-                </button>
-                <span id="annualLabel" class="toggle-label">Annual <span class="save-badge">Save 20%</span></span>
+    <main id="main-content" role="main">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1 class="hero-title">Simple, Transparent Pricing</h1>
+                <p class="hero-subtitle">
+                    Choose the plan that fits your needs. All plans include secure processing and automatic file deletion.
+                </p>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Trust Signals -->
-    <section style="background: #F9FAFB; padding: 24px 0; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB;">
-        <div class="container">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 48px; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        <path d="M9 12l2 2 4-4"/>
-                    </svg>
-                    <div>
-                        <div style="font-weight: 600; color: #111827;">Secure & Encrypted</div>
-                        <div style="font-size: 0.875rem; color: #6B7280;">AES-256 + TLS 1.3</div>
+        <!-- Pricing Grid -->
+        <section class="section">
+            <div class="container">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); max-width: 1200px; margin: 0 auto;">
+                    
+                    <!-- Free Plan -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Free</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                                $0
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">10 receipts per month</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Basic OCR models</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">100MB storage</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Community support</li>
+                                <li style="padding: var(--space-3) 0;">Files deleted after 24 hours</li>
+                            </ul>
+                            <button class="btn btn-secondary" style="width: 100%;" type="button">Get Started</button>
+                        </div>
                     </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <div>
-                        <div style="font-weight: 600; color: #111827;">GDPR Compliant</div>
-                        <div style="font-size: 0.875rem; color: #6B7280;">Privacy guaranteed</div>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <div>
-                        <div style="font-weight: 600; color: #111827;">SOC 2 Certified</div>
-                        <div style="font-size: 0.875rem; color: #6B7280;">Enterprise-grade security</div>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <div>
-                        <div style="font-weight: 600; color: #111827;">10,000+ Users</div>
-                        <div style="font-size: 0.875rem; color: #6B7280;">Trusted worldwide</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- Pricing Section -->
-    <section class="content-section">
-        <div class="container">
-            <div class="pricing-grid">
-                <!-- Free Plan -->
-                <div class="pricing-card" data-plan="free">
-                    <div class="pricing-header">
-                        <h3>Free</h3>
-                        <p class="pricing-desc">Get started with basic receipt extraction</p>
-                        <div class="price">
-                            <span class="price-amount">$0</span>
-                            <span class="price-period">/month</span>
+                    <!-- Pro Plan -->
+                    <div class="card" style="position: relative; border: 2px solid var(--color-primary);">
+                        <div style="position: absolute; top: calc(-1 * var(--space-3)); left: 50%; transform: translateX(-50%); background: var(--color-primary); color: var(--color-white); padding: var(--space-1) var(--space-4); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius-sm);">
+                            RECOMMENDED
+                        </div>
+                        <div class="card-header">
+                            <h3 class="card-title">Professional</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                                $19
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">500 receipts per month</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">All OCR models</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">5GB storage</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">API access</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Email support</li>
+                                <li style="padding: var(--space-3) 0;">Files deleted after 7 days</li>
+                            </ul>
+                            <button class="btn btn-primary" style="width: 100%;" type="button">Start Free Trial</button>
                         </div>
                     </div>
-                    <ul class="pricing-features">
-                        <li>10 receipts per month</li>
-                        <li>100 MB storage</li>
-                        <li>Basic OCR models (Tesseract, EasyOCR)</li>
-                        <li>JSON export</li>
-                        <li>Community support</li>
-                    </ul>
-                    <ul class="pricing-features disabled">
-                        <li>Cloud training</li>
-                        <li>API access</li>
-                        <li>Priority support</li>
-                    </ul>
-                    <button class="btn btn-outline btn-full" onclick="selectPlan('free')">
-                        Get Started Free
-                    </button>
-                </div>
-                
-                <!-- Pro Plan -->
-                <div class="pricing-card pricing-card-featured" data-plan="pro">
-                    <div class="pricing-badge">Most Popular</div>
-                    <div class="pricing-header">
-                        <h3>Pro</h3>
-                        <p class="pricing-desc">For power users who need more extractions</p>
-                        <div class="price">
-                            <span class="price-amount" id="proPrice">$19</span>
-                            <span class="price-period">/month</span>
+
+                    <!-- Business Plan -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Business</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                                $49
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">2,000 receipts per month</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">All OCR models</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">20GB storage</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Priority API access</li>
+                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Priority support</li>
+                                <li style="padding: var(--space-3) 0;">Files deleted after 30 days</li>
+                            </ul>
+                            <button class="btn btn-secondary" style="width: 100%;" type="button">Contact Sales</button>
                         </div>
                     </div>
-                    <ul class="pricing-features">
-                        <li>500 receipts per month</li>
-                        <li>5 GB storage</li>
-                        <li>All AI models (Florence-2, PaddleOCR)</li>
-                        <li>JSON, CSV, Excel export</li>
-                        <li>Email support</li>
-                        <li>Cloud training</li>
-                        <li>API access</li>
-                        <li>Batch processing</li>
-                    </ul>
-                    <button class="btn btn-primary btn-full" onclick="selectPlan('pro')">
-                        Start 14-Day Free Trial
-                    </button>
-                </div>
-                
-                <!-- Business Plan -->
-                <div class="pricing-card" data-plan="business">
-                    <div class="pricing-header">
-                        <h3>Business</h3>
-                        <p class="pricing-desc">For teams with high volume needs</p>
-                        <div class="price">
-                            <span class="price-amount" id="businessPrice">$49</span>
-                            <span class="price-period">/month</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li>2,000 receipts per month</li>
-                        <li>20 GB storage</li>
-                        <li>All AI models</li>
-                        <li>All export formats + PDF</li>
-                        <li>Priority support</li>
-                        <li>Cloud training</li>
-                        <li>API access</li>
-                        <li>Model finetuning</li>
-                    </ul>
-                    <button class="btn btn-outline btn-full" onclick="selectPlan('business')">
-                        Subscribe to Business
-                    </button>
-                </div>
-                
-                <!-- Enterprise Plan -->
-                <div class="pricing-card" data-plan="enterprise">
-                    <div class="pricing-header">
-                        <h3>Enterprise</h3>
-                        <p class="pricing-desc">Custom solutions for large organizations</p>
-                        <div class="price">
-                            <span class="price-amount">Custom</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li>Unlimited receipts</li>
-                        <li>100+ GB storage</li>
-                        <li>All AI models</li>
-                        <li>All export formats</li>
-                        <li>Dedicated support</li>
-                        <li>Cloud training</li>
-                        <li>Full API access</li>
-                        <li>Custom integrations</li>
-                        <li>On-premise deployment</li>
-                        <li>SLA guarantee</li>
-                    </ul>
-                    <button class="btn btn-outline btn-full" onclick="contactSales()">
-                        Contact Sales
-                    </button>
                 </div>
             </div>
+        </section>
 
-            <!-- Feature Comparison -->
-            <div class="comparison-section">
-                <h2 class="section-title">Feature Comparison</h2>
-                <div class="comparison-table-wrapper">
-                    <table class="comparison-table">
+        <!-- Features Comparison -->
+        <section class="section">
+            <div class="container">
+                <h2 class="text-center mb-8">Feature Comparison</h2>
+                <div class="card">
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Feature</th>
                                 <th>Free</th>
-                                <th>Pro</th>
+                                <th>Professional</th>
                                 <th>Business</th>
-                                <th>Enterprise</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Receipts per month</td>
+                                <td>Monthly Receipts</td>
                                 <td>10</td>
                                 <td>500</td>
                                 <td>2,000</td>
-                                <td>Unlimited</td>
                             </tr>
                             <tr>
                                 <td>Storage</td>
-                                <td>100 MB</td>
-                                <td>5 GB</td>
-                                <td>20 GB</td>
-                                <td>100+ GB</td>
+                                <td>100MB</td>
+                                <td>5GB</td>
+                                <td>20GB</td>
                             </tr>
                             <tr>
-                                <td>Tesseract OCR</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>EasyOCR</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>PaddleOCR</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Florence-2 AI</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>Batch Processing</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
+                                <td>OCR Models</td>
+                                <td>Basic</td>
+                                <td>All Models</td>
+                                <td>All Models</td>
                             </tr>
                             <tr>
                                 <td>API Access</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
+                                <td>No</td>
+                                <td>Yes</td>
+                                <td>Priority</td>
                             </tr>
                             <tr>
-                                <td>Model Finetuning</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                                <td class="check">✓</td>
+                                <td>Support</td>
+                                <td>Community</td>
+                                <td>Email</td>
+                                <td>Priority</td>
                             </tr>
                             <tr>
-                                <td>Custom Integrations</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
-                            </tr>
-                            <tr>
-                                <td>SLA Guarantee</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="cross">–</td>
-                                <td class="check">✓</td>
+                                <td>File Retention</td>
+                                <td>24 hours</td>
+                                <td>7 days</td>
+                                <td>30 days</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+        </section>
 
-            <!-- FAQ Section -->
-            <div class="faq-section">
-                <h2 class="section-title">Frequently Asked Questions</h2>
-                
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Can I change my plan at any time?</span>
-                        <span class="faq-toggle">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Yes! You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged the prorated difference. When downgrading, the change takes effect at the end of your current billing period.</p>
+        <!-- FAQ Section -->
+        <section class="section">
+            <div class="container">
+                <h2 class="text-center mb-8">Frequently Asked Questions</h2>
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="card mb-4">
+                        <h3>Can I upgrade or downgrade my plan?</h3>
+                        <p>Yes, you can change your plan at any time. Upgrades take effect immediately, downgrades at the next billing cycle.</p>
                     </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>What payment methods do you accept?</span>
-                        <span class="faq-toggle">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>We accept all major credit cards (Visa, Mastercard, American Express) through Stripe. Enterprise customers can also pay via invoice.</p>
+                    <div class="card mb-4">
+                        <h3>What payment methods do you accept?</h3>
+                        <p>We accept all major credit cards (Visa, MasterCard, American Express) through our secure payment processor Stripe.</p>
                     </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>What happens if I exceed my monthly limit?</span>
-                        <span class="faq-toggle">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>When you reach your monthly limit, you'll be notified and can either wait until the next billing cycle or upgrade your plan for immediate access to more extractions.</p>
+                    <div class="card mb-4">
+                        <h3>Is there a free trial?</h3>
+                        <p>The Free plan provides 10 receipts per month at no cost. Professional and Business plans offer a 14-day free trial.</p>
                     </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Do you offer refunds?</span>
-                        <span class="faq-toggle">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>We offer a 14-day money-back guarantee for all paid plans. If you're not satisfied, contact our support team for a full refund.</p>
-                    </div>
-                </div>
-                
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggleFaq(this)">
-                        <span>Is my data secure?</span>
-                        <span class="faq-toggle">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>Absolutely. We use industry-standard encryption for all data in transit and at rest. Your receipt images and extracted data are stored securely and never shared with third parties.</p>
+                    <div class="card mb-4">
+                        <h3>How secure is my data?</h3>
+                        <p>All files are encrypted in transit and at rest. Files are automatically deleted after the retention period for your plan.</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Money-Back Guarantee -->
-            <div class="guarantee-section">
-                <div class="guarantee-icon">🛡️</div>
-                <h3>14-Day Money-Back Guarantee</h3>
-                <p>Try any paid plan risk-free. If you're not completely satisfied, we'll refund your payment—no questions asked.</p>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
+                <div>
                     <h4>Receipt Extractor</h4>
-                    <p>AI-powered OCR for modern businesses</p>
+                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
                 </div>
-                <div class="footer-section">
-                    <h4>Product</h4>
-                    <a href="index.html#features">Features</a>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="api.html">API</a>
+                <div>
+                    <h5>Resources</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="help.html">Help</a></li>
+                        <li><a href="api.html">API Documentation</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                    </ul>
                 </div>
-                <div class="footer-section">
-                    <h4>Company</h4>
-                    <a href="about.html">About</a>
-                    <a href="privacy.html">Privacy</a>
-                    <a href="terms.html">Terms</a>
+                <div>
+                    <h5>Legal</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
                 </div>
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <a href="help.html">Help Center</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="status.html">Status</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
             </div>
         </div>
     </footer>
+</body>
+</html>
+                        <ul style="list-style: none; padding: 0; margin: 0 0 24px;">
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">500 receipts per month</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">All OCR models + AI</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">5GB storage</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Email support</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">API access</li>
+                            <li style="padding: 12px 0;">Priority processing</li>
+                        </ul>
+                        <button class="gov-button" style="width: 100%;">Start Pro Trial</button>
+                    </div>
+                </div>
 
-    <style>
-        /* Pricing Page Specific Styles - Blue/White Theme */
-        .billing-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-2);
-            margin-top: var(--space-4);
-        }
-        
-        .toggle-label {
-            font-size: 0.9375rem;
-            color: var(--color-gray-500);
-            transition: color var(--transition-fast);
-        }
-        
-        .toggle-label.active {
-            color: var(--color-gray-900);
-            font-weight: var(--font-semibold);
-        }
-        
-        .save-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: var(--color-success-light);
-            color: var(--color-success-dark);
-            font-size: 0.75rem;
-            font-weight: var(--font-semibold);
-            border-radius: var(--radius-full);
-            margin-left: 4px;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            width: 56px;
-            height: 28px;
-            background: var(--color-gray-300);
-            border: none;
-            border-radius: var(--radius-full);
-            cursor: pointer;
-            transition: background var(--transition-fast);
-            padding: 0;
-        }
-        
-        .toggle-switch.annual {
-            background: var(--color-primary);
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border-radius: var(--radius-full);
-            transition: transform var(--transition-fast);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .toggle-switch.annual .toggle-slider {
-            transform: translateX(28px);
-        }
-        
-        .pricing-desc {
-            color: var(--color-gray-500);
-            font-size: 0.9375rem;
-            margin-bottom: var(--space-3);
-        }
-        
-        .pricing-features.disabled li {
-            color: var(--color-gray-400);
-            text-decoration: line-through;
-        }
-        
-        .pricing-features.disabled li::before {
-            content: "✗";
-            color: var(--color-gray-400);
-        }
-        
-        /* Comparison Section */
-        .comparison-section {
-            margin-top: var(--space-10);
-        }
-        
-        .comparison-table-wrapper {
-            overflow-x: auto;
-            margin-top: var(--space-4);
-        }
-        
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            min-width: 600px;
-        }
-        
-        .comparison-table th,
-        .comparison-table td {
-            padding: var(--space-2) var(--space-3);
-            text-align: center;
-            border-bottom: 1px solid var(--color-gray-100);
-        }
-        
-        .comparison-table th:first-child,
-        .comparison-table td:first-child {
-            text-align: left;
-            font-weight: var(--font-medium);
-        }
-        
-        .comparison-table th {
-            background: var(--color-gray-50);
-            font-weight: var(--font-semibold);
-            color: var(--color-gray-700);
-            font-size: 0.875rem;
-        }
-        
-        .comparison-table td {
-            font-size: 0.9375rem;
-            color: var(--color-gray-700);
-        }
-        
-        .comparison-table .check {
-            color: var(--color-success);
-            font-weight: var(--font-bold);
-        }
-        
-        .comparison-table .cross {
-            color: var(--color-gray-400);
-        }
-        
-        .comparison-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .comparison-table tr:hover td {
-            background: var(--color-gray-50);
-        }
-        
-        /* Guarantee Section */
-        .guarantee-section {
-            text-align: center;
-            padding: var(--space-6);
-            background: var(--color-primary-50);
-            border-radius: var(--radius-lg);
-            margin-top: var(--space-8);
-        }
-        
-        .guarantee-icon {
-            font-size: 3rem;
-            margin-bottom: var(--space-2);
-        }
-        
-        .guarantee-section h3 {
-            color: var(--color-primary-dark);
-            margin-bottom: var(--space-2);
-        }
-        
-        .guarantee-section p {
-            color: var(--color-gray-600);
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .billing-toggle {
-                flex-wrap: wrap;
-            }
-            
-            .comparison-table {
-                font-size: 0.875rem;
-            }
-            
-            .comparison-table th,
-            .comparison-table td {
-                padding: var(--space-1) var(--space-2);
-            }
-        }
-    </style>
+                <!-- Business Plan -->
+                <div class="gov-card" style="position: relative;">
+                    <div class="gov-card-header">
+                        <h3 class="gov-card-title">Business</h3>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: #112e51; margin: 16px 0;">
+                            $49
+                            <span style="font-size: 1rem; font-weight: 400; color: #5b616b;">/month</span>
+                        </div>
+                    </div>
+                    <div class="gov-card-body">
+                        <ul style="list-style: none; padding: 0; margin: 0 0 24px;">
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">2,000 receipts per month</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Custom AI models</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">20GB storage</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Priority support</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Advanced API</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Batch processing</li>
+                            <li style="padding: 12px 0;">SLA guarantee</li>
+                        </ul>
+                        <button class="gov-button" style="width: 100%;">Start Business Trial</button>
+                    </div>
+                </div>
 
-    <script>
-        // Stripe configuration
-        const STRIPE_PUBLISHABLE_KEY = document.querySelector('meta[name="stripe-publishable-key"]')?.content || '';
-        let stripe = null;
-        
-        // Pricing data
-        const pricing = {
-            monthly: { pro: 19, business: 49 },
-            annual: { pro: 15, business: 39 }
-        };
-        
-        let billingCycle = 'monthly';
-        
-        // Initialize Stripe
-        function initStripe() {
-            if (STRIPE_PUBLISHABLE_KEY && STRIPE_PUBLISHABLE_KEY.startsWith('pk_')) {
-                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-                console.log('Stripe initialized');
-            }
-        }
-        
-        // Toggle billing cycle
-        function toggleBilling() {
-            const toggle = document.getElementById('billingToggle');
-            const monthlyLabel = document.getElementById('monthlyLabel');
-            const annualLabel = document.getElementById('annualLabel');
-            
-            if (billingCycle === 'monthly') {
-                billingCycle = 'annual';
-                toggle.classList.add('annual');
-                monthlyLabel.classList.remove('active');
-                annualLabel.classList.add('active');
-            } else {
-                billingCycle = 'monthly';
-                toggle.classList.remove('annual');
-                monthlyLabel.classList.add('active');
-                annualLabel.classList.remove('active');
-            }
-            
-            updatePrices();
-        }
-        
-        // Update displayed prices
-        function updatePrices() {
-            document.getElementById('proPrice').textContent = '$' + pricing[billingCycle].pro;
-            document.getElementById('businessPrice').textContent = '$' + pricing[billingCycle].business;
-        }
-        
-        // Select a plan
-        async function selectPlan(plan) {
-            if (plan === 'free') {
-                window.location.href = 'index.html';
-                return;
-            }
-            
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                alert('Please sign in to subscribe to a paid plan.');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/billing/create-checkout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
-                    },
-                    body: JSON.stringify({
-                        plan: plan,
-                        billing_cycle: billingCycle
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.checkout_url) {
-                    window.location.href = data.checkout_url;
-                } else {
-                    alert(data.error || 'Error creating checkout session. Please try again.');
-                }
-            } catch (error) {
-                console.error('Checkout error:', error);
-                alert('Error creating checkout session. Please try again.');
-            }
-        }
-        
-        // Contact sales
-        function contactSales() {
-            window.location.href = 'mailto:sales@receiptextractor.com?subject=Enterprise%20Inquiry';
-        }
-        
-        // Toggle FAQ item
-        function toggleFaq(element) {
-            const item = element.parentElement;
-            item.classList.toggle('open');
-        }
-        
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => {
-            initStripe();
-        });
-    </script>
-    <script src="js/cookie-consent.js"></script>
-    <script src="js/analytics-integration.js"></script>
+                <!-- Enterprise Plan -->
+                <div class="gov-card" style="position: relative; background: #f9f9f9;">
+                    <div class="gov-card-header">
+                        <h3 class="gov-card-title">Enterprise</h3>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: #112e51; margin: 16px 0;">
+                            Custom
+                        </div>
+                    </div>
+                    <div class="gov-card-body">
+                        <ul style="list-style: none; padding: 0; margin: 0 0 24px;">
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Unlimited receipts</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Dedicated models</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">100GB+ storage</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Dedicated support</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">On-premise deployment</li>
+                            <li style="padding: 12px 0; border-bottom: 1px solid #e4e4e4;">Custom integrations</li>
+                            <li style="padding: 12px 0;">99.9% uptime SLA</li>
+                        </ul>
+                        <button class="gov-button-secondary" style="width: 100%; padding: 12px; border: 2px solid #112e51; background: #ffffff; color: #112e51; font-weight: 700; border-radius: 2px; cursor: pointer;">Contact Sales</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Feature Comparison -->
+        <section class="gov-section">
+            <h2 class="gov-text-center" style="margin-bottom: 32px;">Feature Comparison</h2>
+            <div style="max-width: 1000px; margin: 0 auto;">
+                <table class="gov-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Free</th>
+                            <th>Professional</th>
+                            <th>Business</th>
+                            <th>Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Monthly Receipts</strong></td>
+                            <td>10</td>
+                            <td>500</td>
+                            <td>2,000</td>
+                            <td>Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Storage</strong></td>
+                            <td>100MB</td>
+                            <td>5GB</td>
+                            <td>20GB</td>
+                            <td>100GB+</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OCR Models</strong></td>
+                            <td>Basic</td>
+                            <td>All Models</td>
+                            <td>Custom Models</td>
+                            <td>Dedicated Models</td>
+                        </tr>
+                        <tr>
+                            <td><strong>API Access</strong></td>
+                            <td>No</td>
+                            <td>Yes</td>
+                            <td>Advanced</td>
+                            <td>Full Access</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Support</strong></td>
+                            <td>Community</td>
+                            <td>Email</td>
+                            <td>Priority</td>
+                            <td>Dedicated</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="gov-section">
+            <h2 class="gov-text-center" style="margin-bottom: 32px;">Frequently Asked Questions</h2>
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="gov-card" style="margin-bottom: 16px;">
+                    <h4 style="color: #112e51; margin-bottom: 8px;">Can I change plans anytime?</h4>
+                    <p style="margin: 0; color: #5b616b;">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+                </div>
+                <div class="gov-card" style="margin-bottom: 16px;">
+                    <h4 style="color: #112e51; margin-bottom: 8px;">Is there a free trial?</h4>
+                    <p style="margin: 0; color: #5b616b;">Professional and Business plans include a 14-day free trial. No credit card required.</p>
+                </div>
+                <div class="gov-card" style="margin-bottom: 16px;">
+                    <h4 style="color: #112e51; margin-bottom: 8px;">How secure is my data?</h4>
+                    <p style="margin: 0; color: #5b616b;">All files are processed securely and automatically deleted after extraction. We never store or share your data.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer style="background: #f1f1f1; padding: 48px 24px; margin-top: 64px; border-top: 1px solid #d6d7d9;">
+        <div class="gov-container">
+            <div style="text-align: center; color: #5b616b; font-size: 0.875rem;">
+                2024 Receipt Extractor. All rights reserved.
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

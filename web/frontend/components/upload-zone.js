@@ -468,30 +468,81 @@ class UploadZone extends HTMLElement {
         });
 
         // Action buttons
-        extractBtn.addEventListener('click', () => {
-            if (this.selectedFile && this.onFileSelected) {
-                this.onFileSelected(this.selectedFile);
-            }
-        });
+        if (extractBtn) {
+            extractBtn.addEventListener('click', () => {
+                if (this.selectedFile) {
+                    // Dispatch extract request event
+                    this.dispatchEvent(new CustomEvent('extract-request', {
+                        detail: { file: this.selectedFile },
+                        bubbles: true,
+                        composed: true
+                    }));
 
-        clearBtn.addEventListener('click', () => {
-            this.clearFile();
-        });
+                    // Also call callback if set
+                    if (this.onFileSelected) {
+                        this.onFileSelected(this.selectedFile);
+                    }
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                this.clearFile();
+            });
+        }
     }
 
     requestPaste() {
-        alert('Press Ctrl+V (or Cmd+V on Mac) to paste an image from your clipboard');
+        // Try to read clipboard if Clipboard API is available
+        if (navigator.clipboard && navigator.clipboard.read) {
+            navigator.clipboard.read().then(items => {
+                for (const item of items) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            item.getType(type).then(blob => {
+                                const file = new File([blob], `pasted-${Date.now()}.${type.split('/')[1]}`, { type });
+                                this.handleFile(file);
+                            }).catch(err => {
+                                console.error('Failed to read clipboard image:', err);
+                                alert('Failed to read clipboard. Please use Ctrl+V or Cmd+V to paste.');
+                            });
+                            return;
+                        }
+                    }
+                }
+                alert('No image found in clipboard. Please copy an image first.');
+            }).catch(err => {
+                console.error('Clipboard read failed:', err);
+                alert('Press Ctrl+V (or Cmd+V on Mac) to paste an image from your clipboard');
+            });
+        } else {
+            alert('Press Ctrl+V (or Cmd+V on Mac) to paste an image from your clipboard');
+        }
     }
 
     handleFile(file) {
-        if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
+        if (!file) {
             return;
         }
 
-        if (file.size > 100 * 1024 * 1024) {
-            alert('File too large. Maximum size is 100MB');
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
+            this.showError('Invalid file type. Please upload an image (JPG, PNG, WEBP, etc.) or PDF.');
             return;
+        }
+
+        // Validate file size (100MB max)
+        const maxSize = 100 * 1024 * 1024;
+        if (file.size > maxSize) {
+            this.showError(`File too large. Maximum size is ${this.formatFileSize(maxSize)}`);
+            return;
+        }
+
+        // Additional size warning for large files
+        if (file.size > 10 * 1024 * 1024) {
+            console.warn('Large file detected:', this.formatFileSize(file.size));
         }
 
         this.selectedFile = file;
@@ -505,20 +556,62 @@ class UploadZone extends HTMLElement {
             const fileSize = this.shadowRoot.getElementById('fileSize');
             const dropZone = this.shadowRoot.getElementById('dropZone');
 
-            previewImage.src = e.target.result;
-            fileName.textContent = file.name;
-            fileSize.textContent = ` (${this.formatFileSize(file.size)})`;
+            if (previewImage && fileName && fileSize) {
+                previewImage.src = e.target.result;
+                fileName.textContent = file.name;
+                fileSize.textContent = ` (${this.formatFileSize(file.size)})`;
+            }
 
-            previewContainer.classList.remove('hidden');
-            dropZone.classList.add('has-file');
+            if (previewContainer) {
+                previewContainer.classList.remove('hidden');
+            }
+            
+            if (dropZone) {
+                dropZone.classList.add('has-file');
+            }
 
             // Hide upload methods
-            this.shadowRoot.querySelector('.upload-icon').style.display = 'none';
-            this.shadowRoot.querySelector('.upload-title').style.display = 'none';
-            this.shadowRoot.querySelector('.upload-subtitle').style.display = 'none';
-            this.shadowRoot.querySelector('.upload-methods').style.display = 'none';
+            const uploadIcon = this.shadowRoot.querySelector('.upload-icon');
+            const uploadTitle = this.shadowRoot.querySelector('.upload-title');
+            const uploadSubtitle = this.shadowRoot.querySelector('.upload-subtitle');
+            const uploadMethods = this.shadowRoot.querySelector('.upload-methods');
+
+            if (uploadIcon) uploadIcon.style.display = 'none';
+            if (uploadTitle) uploadTitle.style.display = 'none';
+            if (uploadSubtitle) uploadSubtitle.style.display = 'none';
+            if (uploadMethods) uploadMethods.style.display = 'none';
+
+            // Dispatch file selected event
+            this.dispatchEvent(new CustomEvent('file-selected', {
+                detail: { file },
+                bubbles: true,
+                composed: true
+            }));
+
+            // Auto-trigger extraction if callback is set
+            if (this.onFileSelected) {
+                this.onFileSelected(file);
+            }
         };
+
+        reader.onerror = (error) => {
+            console.error('File read error:', error);
+            this.showError('Failed to read file. Please try again.');
+        };
+
         reader.readAsDataURL(file);
+    }
+
+    showError(message) {
+        // Dispatch error event
+        this.dispatchEvent(new CustomEvent('upload-error', {
+            detail: { message },
+            bubbles: true,
+            composed: true
+        }));
+
+        // Also show alert (can be replaced with better UI)
+        alert(message);
     }
 
     clearFile() {

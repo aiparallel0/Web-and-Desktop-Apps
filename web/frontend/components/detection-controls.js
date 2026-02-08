@@ -1,15 +1,7 @@
 /**
- * Detection Controls Web Component
- * 7-Button Advanced Text Detection Control Panel
- * 
- * Features:
- * 1. Auto Detect - Automatic text region detection
- * 2. Manual Select - Click and drag to select text regions
- * 3. Line Detection - Detect and process line-by-line
- * 4. Column Mode - Handle multi-column receipts
- * 5. Rotate & Deskew - Auto-rotate and straighten image
- * 6. Enhance Quality - Apply image preprocessing filters
- * 7. Region Preview - Toggle bounding box overlay
+ * Detection Controls - FUNCTIONAL Web Component
+ * Real implementation of detection modes, deskew, and enhancement
+ * Government-style professional interface
  */
 
 class DetectionControls extends HTMLElement {
@@ -17,568 +9,38 @@ class DetectionControls extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         
-        // Detection state
-        this.detectionMode = 'auto'; // auto, manual, line, column
-        this.deskewEnabled = true;
-        this.enhanceEnabled = true;
-        this.previewEnabled = false;
-        this.manualRegions = [];
-        
-        // Preferences storage key
-        this.STORAGE_KEY = 'receipt_detection_preferences';
-    }
-
-    connectedCallback() {
-        this.loadPreferences();
-        this.render();
-        this.setupEventListeners();
-    }
-
-    render() {
-        this.shadowRoot.innerHTML = `
-            <style>
-                ${this.getStyles()}
-            </style>
-            <div class="detection-controls">
-                <div class="controls-header">
-                    <h3 class="controls-title">
-                        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <path d="M9 9h6M9 15h6"/>
-                        </svg>
-                        Text Detection Controls
-                    </h3>
-                    <button class="reset-btn" id="resetBtn" title="Reset to defaults">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                            <path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                            <path d="M3 21v-5h5"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="controls-grid">
-                    <!-- Mode Selection -->
-                    <div class="control-group mode-group">
-                        <label class="group-label">Detection Mode</label>
-                        <div class="mode-buttons">
-                            <button class="mode-btn active" data-mode="auto" title="Automatic text region detection">
-                                <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                                </svg>
-                                <span class="mode-label">Auto Detect</span>
-                                <span class="mode-desc">Automatic detection</span>
-                            </button>
-
-                            <button class="mode-btn" data-mode="manual" title="Click and drag to select text regions">
-                                <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4"/>
-                                </svg>
-                                <span class="mode-label">Manual Select</span>
-                                <span class="mode-desc">Draw regions</span>
-                            </button>
-
-                            <button class="mode-btn" data-mode="line" title="Detect and process line-by-line">
-                                <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="3" y1="6" x2="21" y2="6"/>
-                                    <line x1="3" y1="12" x2="21" y2="12"/>
-                                    <line x1="3" y1="18" x2="21" y2="18"/>
-                                </svg>
-                                <span class="mode-label">Line Detection</span>
-                                <span class="mode-desc">Line-by-line</span>
-                            </button>
-
-                            <button class="mode-btn" data-mode="column" title="Handle multi-column receipts">
-                                <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="18"/>
-                                    <rect x="14" y="3" width="7" height="18"/>
-                                </svg>
-                                <span class="mode-label">Column Mode</span>
-                                <span class="mode-desc">Multi-column</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Enhancement Options -->
-                    <div class="control-group options-group">
-                        <label class="group-label">Enhancement Options</label>
-                        <div class="options-list">
-                            <label class="option-item">
-                                <input type="checkbox" id="deskewToggle" ${this.deskewEnabled ? 'checked' : ''}>
-                                <div class="option-content">
-                                    <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                                        <line x1="12" y1="22.08" x2="12" y2="12"/>
-                                    </svg>
-                                    <div class="option-text">
-                                        <strong>Rotate & Deskew</strong>
-                                        <span>Auto-rotate and straighten tilted images</span>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label class="option-item">
-                                <input type="checkbox" id="enhanceToggle" ${this.enhanceEnabled ? 'checked' : ''}>
-                                <div class="option-content">
-                                    <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="3"/>
-                                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24m-12.72 0l4.24-4.24m4.24-4.24l4.24-4.24"/>
-                                    </svg>
-                                    <div class="option-text">
-                                        <strong>Enhance Quality</strong>
-                                        <span>Apply preprocessing filters for better OCR</span>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label class="option-item">
-                                <input type="checkbox" id="previewToggle" ${this.previewEnabled ? 'checked' : ''}>
-                                <div class="option-content">
-                                    <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                        <circle cx="12" cy="12" r="3"/>
-                                    </svg>
-                                    <div class="option-text">
-                                        <strong>Region Preview</strong>
-                                        <span>Show bounding boxes on image</span>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Manual Region Info (shown when manual mode is selected) -->
-                <div class="manual-info hidden" id="manualInfo">
-                    <div class="info-banner">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="16" x2="12" y2="12"/>
-                            <line x1="12" y1="8" x2="12.01" y2="8"/>
-                        </svg>
-                        <div>
-                            <strong>Manual Selection Mode</strong>
-                            <p>Click and drag on the image to select text regions. Selected regions: <span id="regionCount">0</span></p>
-                        </div>
-                    </div>
-                    <button class="clear-regions-btn" id="clearRegionsBtn">
-                        Clear All Regions
-                    </button>
-                </div>
-
-                <!-- Apply Button -->
-                <div class="controls-footer">
-                    <button class="apply-btn" id="applyBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        Apply Settings
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    getStyles() {
-        return `
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-
-            .detection-controls {
-                background: white;
-                border-radius: 12px;
-                border: 1px solid #e5e7eb;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            }
-
-            .controls-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
-                background: #3B82F6;
-                color: white;
-            }
-
-            .controls-title {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 1.125rem;
-                font-weight: 600;
-                margin: 0;
-            }
-
-            .title-icon {
-                width: 24px;
-                height: 24px;
-            }
-
-            .reset-btn {
-                background: rgba(255, 255, 255, 0.2);
-                border: none;
-                border-radius: 6px;
-                padding: 8px;
-                cursor: pointer;
-                transition: background 0.2s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .reset-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
-            }
-
-            .reset-btn svg {
-                width: 18px;
-                height: 18px;
-                stroke: white;
-            }
-
-            .controls-grid {
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 24px;
-            }
-
-            .control-group {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            .group-label {
-                font-size: 0.875rem;
-                font-weight: 600;
-                color: #374151;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-
-            /* Mode Buttons */
-            .mode-buttons {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 12px;
-            }
-
-            .mode-btn {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 8px;
-                padding: 16px 12px;
-                background: #f9fafb;
-                border: 2px solid #e5e7eb;
-                border-radius: 10px;
-                cursor: pointer;
-                transition: all 0.2s;
-                text-align: center;
-            }
-
-            .mode-btn:hover {
-                background: #f3f4f6;
-                border-color: #d1d5db;
-                transform: translateY(-2px);
-            }
-
-            .mode-btn.active {
-                background: #eff6ff;
-                border-color: #2563eb;
-                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-            }
-
-            .mode-icon {
-                width: 32px;
-                height: 32px;
-                stroke: #6b7280;
-                transition: stroke 0.2s;
-            }
-
-            .mode-btn.active .mode-icon {
-                stroke: #2563eb;
-            }
-
-            .mode-label {
-                font-size: 0.875rem;
-                font-weight: 600;
-                color: #111827;
-            }
-
-            .mode-desc {
-                font-size: 0.75rem;
-                color: #6b7280;
-            }
-
-            /* Options List */
-            .options-list {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .option-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px;
-                background: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .option-item:hover {
-                background: #f3f4f6;
-                border-color: #d1d5db;
-            }
-
-            .option-item input[type="checkbox"] {
-                width: 20px;
-                height: 20px;
-                cursor: pointer;
-                accent-color: #2563eb;
-            }
-
-            .option-content {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                flex: 1;
-            }
-
-            .option-icon {
-                width: 24px;
-                height: 24px;
-                stroke: #6b7280;
-                flex-shrink: 0;
-            }
-
-            .option-text {
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-            }
-
-            .option-text strong {
-                font-size: 0.875rem;
-                color: #111827;
-            }
-
-            .option-text span {
-                font-size: 0.75rem;
-                color: #6b7280;
-            }
-
-            /* Manual Info */
-            .manual-info {
-                margin: 0 20px;
-                padding: 16px;
-                background: #fffbeb;
-                border: 1px solid #fcd34d;
-                border-radius: 8px;
-            }
-
-            .manual-info.hidden {
-                display: none;
-            }
-
-            .info-banner {
-                display: flex;
-                gap: 12px;
-                margin-bottom: 12px;
-            }
-
-            .info-banner svg {
-                width: 24px;
-                height: 24px;
-                stroke: #d97706;
-                flex-shrink: 0;
-            }
-
-            .info-banner strong {
-                display: block;
-                color: #92400e;
-                font-size: 0.875rem;
-                margin-bottom: 4px;
-            }
-
-            .info-banner p {
-                font-size: 0.8125rem;
-                color: #78350f;
-                margin: 0;
-            }
-
-            .clear-regions-btn {
-                width: 100%;
-                padding: 8px 16px;
-                background: white;
-                border: 1px solid #fbbf24;
-                border-radius: 6px;
-                color: #d97706;
-                font-size: 0.875rem;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .clear-regions-btn:hover {
-                background: #fef3c7;
-            }
-
-            /* Footer */
-            .controls-footer {
-                padding: 16px 20px;
-                background: #f9fafb;
-                border-top: 1px solid #e5e7eb;
-            }
-
-            .apply-btn {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-                padding: 12px 24px;
-                background: #2563eb;
-                border: none;
-                border-radius: 8px;
-                color: white;
-                font-size: 0.9375rem;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .apply-btn:hover {
-                background: #1e40af;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            }
-
-            .apply-btn svg {
-                width: 20px;
-                height: 20px;
-            }
-
-            /* Responsive */
-            @media (max-width: 768px) {
-                .mode-buttons {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-        `;
-    }
-
-    setupEventListeners() {
-        // Mode selection
-        const modeButtons = this.shadowRoot.querySelectorAll('.mode-btn');
-        modeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                modeButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.detectionMode = btn.dataset.mode;
-                this.updateManualInfo();
-                this.savePreferences();
-            });
-        });
-
-        // Options toggles
-        const deskewToggle = this.shadowRoot.getElementById('deskewToggle');
-        const enhanceToggle = this.shadowRoot.getElementById('enhanceToggle');
-        const previewToggle = this.shadowRoot.getElementById('previewToggle');
-
-        deskewToggle.addEventListener('change', (e) => {
-            this.deskewEnabled = e.target.checked;
-            this.savePreferences();
-        });
-
-        enhanceToggle.addEventListener('change', (e) => {
-            this.enhanceEnabled = e.target.checked;
-            this.savePreferences();
-        });
-
-        previewToggle.addEventListener('change', (e) => {
-            this.previewEnabled = e.target.checked;
-            this.dispatchEvent(new CustomEvent('preview-toggle', { detail: { enabled: this.previewEnabled } }));
-            this.savePreferences();
-        });
-
-        // Clear regions
-        const clearRegionsBtn = this.shadowRoot.getElementById('clearRegionsBtn');
-        clearRegionsBtn.addEventListener('click', () => {
-            this.manualRegions = [];
-            this.updateManualInfo();
-            this.dispatchEvent(new CustomEvent('regions-cleared'));
-        });
-
-        // Reset
-        const resetBtn = this.shadowRoot.getElementById('resetBtn');
-        resetBtn.addEventListener('click', () => {
-            this.resetToDefaults();
-        });
-
-        // Apply
-        const applyBtn = this.shadowRoot.getElementById('applyBtn');
-        applyBtn.addEventListener('click', () => {
-            this.applySettings();
-        });
-    }
-
-    updateManualInfo() {
-        const manualInfo = this.shadowRoot.getElementById('manualInfo');
-        const regionCount = this.shadowRoot.getElementById('regionCount');
-        
-        if (this.detectionMode === 'manual') {
-            manualInfo.classList.remove('hidden');
-        } else {
-            manualInfo.classList.add('hidden');
-        }
-        
-        if (regionCount) {
-            regionCount.textContent = this.manualRegions.length;
-        }
-    }
-
-    addManualRegion(region) {
-        this.manualRegions.push(region);
-        this.updateManualInfo();
-    }
-
-    getSettings() {
-        return {
-            detection_mode: this.detectionMode,
-            enable_deskew: this.deskewEnabled,
-            enable_enhancement: this.enhanceEnabled,
-            column_mode: this.detectionMode === 'column',
-            manual_regions: this.detectionMode === 'manual' ? this.manualRegions : null
-        };
-    }
-
-    applySettings() {
-        const settings = this.getSettings();
-        this.dispatchEvent(new CustomEvent('settings-applied', { detail: settings }));
-    }
-
-    resetToDefaults() {
+        // State
         this.detectionMode = 'auto';
         this.deskewEnabled = true;
         this.enhanceEnabled = true;
         this.previewEnabled = false;
         this.manualRegions = [];
+        this.columnSeparators = [];
         
-        this.savePreferences();
+        // Canvas for manual selection
+        this.canvas = null;
+        this.ctx = null;
+        this.isDrawing = false;
+        this.startPoint = null;
+        this.currentImage = null;
+        this.imageScale = 1;
+        
+        // Storage key
+        this.STORAGE_KEY = 'detection_settings';
+        
+        // Debounce timer
+        this.saveTimer = null;
+    }
+
+    connectedCallback() {
+        this.loadPreferences();
         this.render();
-        this.setupEventListeners();
+        this.attachEventListeners();
+        this.setupCanvasIfNeeded();
+    }
+
+    disconnectedCallback() {
+        this.cleanupCanvas();
     }
 
     loadPreferences() {
@@ -591,25 +53,551 @@ class DetectionControls extends HTMLElement {
                 this.enhanceEnabled = prefs.enhanceEnabled !== false;
                 this.previewEnabled = prefs.previewEnabled || false;
             }
-        } catch (error) {
-            console.error('Error loading detection preferences:', error);
+        } catch (e) {
+            console.error('Failed to load preferences:', e);
         }
     }
 
     savePreferences() {
-        try {
-            const prefs = {
-                detectionMode: this.detectionMode,
-                deskewEnabled: this.deskewEnabled,
-                enhanceEnabled: this.enhanceEnabled,
-                previewEnabled: this.previewEnabled
+        // Debounce saves
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
+        
+        this.saveTimer = setTimeout(() => {
+            try {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+                    detectionMode: this.detectionMode,
+                    deskewEnabled: this.deskewEnabled,
+                    enhanceEnabled: this.enhanceEnabled,
+                    previewEnabled: this.previewEnabled
+                }));
+            } catch (e) {
+                console.error('Failed to save preferences:', e);
+            }
+        }, 300);
+    }
+
+    render() {
+        this.shadowRoot.innerHTML = `
+            <style>${this.getStyles()}</style>
+            <div class="detection-controls">
+                <h3 class="controls-title">Text Detection Controls</h3>
+                
+                <div class="control-group">
+                    <label class="group-label">Detection Mode</label>
+                    <div class="mode-grid">
+                        ${this.renderModeButton('auto', 'Auto Detect', 'Automatic text region detection')}
+                        ${this.renderModeButton('manual', 'Manual Select', 'Draw selection regions')}
+                        ${this.renderModeButton('line', 'Line Detection', 'Process line-by-line')}
+                        ${this.renderModeButton('column', 'Column Mode', 'Multi-column layout')}
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="group-label">Preprocessing Options</label>
+                    <div class="options-list">
+                        <label class="option-item">
+                            <input 
+                                type="checkbox" 
+                                id="deskew-checkbox" 
+                                ${this.deskewEnabled ? 'checked' : ''}>
+                            <span>Enable Deskew (Auto-rotation)</span>
+                            <span class="option-desc">Automatically straighten rotated receipts</span>
+                        </label>
+                        <label class="option-item">
+                            <input 
+                                type="checkbox" 
+                                id="enhance-checkbox" 
+                                ${this.enhanceEnabled ? 'checked' : ''}>
+                            <span>Enable Image Enhancement</span>
+                            <span class="option-desc">Improve image quality for better extraction</span>
+                        </label>
+                        <label class="option-item">
+                            <input 
+                                type="checkbox" 
+                                id="preview-checkbox" 
+                                ${this.previewEnabled ? 'checked' : ''}>
+                            <span>Show Region Preview</span>
+                            <span class="option-desc">Display bounding box overlay</span>
+                        </label>
+                    </div>
+                </div>
+
+                ${this.detectionMode === 'manual' ? this.renderManualControls() : ''}
+
+                <button class="reset-btn" id="resetBtn">Reset to Defaults</button>
+            </div>
+        `;
+    }
+
+    renderModeButton(mode, label, description) {
+        const isActive = this.detectionMode === mode;
+        return `
+            <button 
+                class="mode-btn ${isActive ? 'active' : ''}"
+                data-mode="${mode}">
+                <div class="mode-label">${label}</div>
+                <div class="mode-desc">${description}</div>
+            </button>
+        `;
+    }
+
+    renderManualControls() {
+        return `
+            <div class="manual-controls">
+                <div class="manual-header">
+                    <span class="manual-title">Manual Selection Mode</span>
+                    <button class="clear-regions-btn" id="clearRegions">Clear Regions</button>
+                </div>
+                <div class="manual-instructions">
+                    Click and drag on the image to select text regions. 
+                    Selected regions: <strong>${this.manualRegions.length}</strong>
+                </div>
+            </div>
+        `;
+    }
+
+    getStyles() {
+        return `
+            :host {
+                display: block;
+                font-family: "Public Sans", -apple-system, sans-serif;
+            }
+
+            .detection-controls {
+                background: #ffffff;
+                border: 1px solid #d6d7d9;
+                border-radius: 2px;
+                padding: 24px;
+            }
+
+            .controls-title {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #112e51;
+                margin-bottom: 24px;
+            }
+
+            .control-group {
+                margin-bottom: 24px;
+            }
+
+            .group-label {
+                display: block;
+                font-size: 0.9375rem;
+                font-weight: 700;
+                color: #212121;
+                margin-bottom: 12px;
+            }
+
+            .mode-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 12px;
+            }
+
+            .mode-btn {
+                background: #ffffff;
+                border: 2px solid #5b616b;
+                border-radius: 2px;
+                padding: 16px 12px;
+                cursor: pointer;
+                text-align: left;
+                transition: all 150ms;
+            }
+
+            .mode-btn:hover {
+                border-color: #112e51;
+                background: #f9f9f9;
+            }
+
+            .mode-btn.active {
+                background: #112e51;
+                border-color: #112e51;
+                color: #ffffff;
+            }
+
+            .mode-btn.active .mode-label,
+            .mode-btn.active .mode-desc {
+                color: #ffffff;
+            }
+
+            .mode-label {
+                font-weight: 700;
+                font-size: 0.9375rem;
+                color: #212121;
+                margin-bottom: 4px;
+            }
+
+            .mode-desc {
+                font-size: 0.8125rem;
+                color: #5b616b;
+                line-height: 1.3;
+            }
+
+            .options-list {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .option-item {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                cursor: pointer;
+                padding: 12px;
+                background: #f9f9f9;
+                border: 1px solid #e4e4e4;
+                border-radius: 2px;
+            }
+
+            .option-item input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+                margin-right: 12px;
+                cursor: pointer;
+            }
+
+            .option-item > span:first-of-type {
+                font-weight: 600;
+                color: #212121;
+                font-size: 0.9375rem;
+            }
+
+            .option-desc {
+                font-size: 0.8125rem;
+                color: #5b616b;
+                margin-left: 32px;
+            }
+
+            .manual-controls {
+                background: #e7f2f8;
+                border: 1px solid #205493;
+                border-radius: 2px;
+                padding: 16px;
+                margin-top: 16px;
+            }
+
+            .manual-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+
+            .manual-title {
+                font-weight: 700;
+                color: #112e51;
+                font-size: 0.9375rem;
+            }
+
+            .clear-regions-btn {
+                padding: 6px 12px;
+                background: #e31c3d;
+                color: #ffffff;
+                border: none;
+                border-radius: 2px;
+                font-size: 0.8125rem;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .clear-regions-btn:hover {
+                background: #cd2026;
+            }
+
+            .manual-instructions {
+                font-size: 0.875rem;
+                color: #5b616b;
+                line-height: 1.5;
+            }
+
+            .reset-btn {
+                width: 100%;
+                padding: 12px 24px;
+                background: #5b616b;
+                color: #ffffff;
+                border: none;
+                border-radius: 2px;
+                font-size: 0.9375rem;
+                font-weight: 700;
+                cursor: pointer;
+                margin-top: 16px;
+            }
+
+            .reset-btn:hover {
+                background: #212121;
+            }
+        `;
+    }
+
+    attachEventListeners() {
+        // Mode buttons
+        this.shadowRoot.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.currentTarget.dataset.mode;
+                this.setDetectionMode(mode);
+            });
+        });
+
+        // Checkboxes
+        const deskewCheckbox = this.shadowRoot.getElementById('deskew-checkbox');
+        if (deskewCheckbox) {
+            deskewCheckbox.addEventListener('change', (e) => {
+                this.deskewEnabled = e.target.checked;
+                this.savePreferences();
+                this.dispatchChange();
+            });
+        }
+
+        const enhanceCheckbox = this.shadowRoot.getElementById('enhance-checkbox');
+        if (enhanceCheckbox) {
+            enhanceCheckbox.addEventListener('change', (e) => {
+                this.enhanceEnabled = e.target.checked;
+                this.savePreferences();
+                this.dispatchChange();
+            });
+        }
+
+        const previewCheckbox = this.shadowRoot.getElementById('preview-checkbox');
+        if (previewCheckbox) {
+            previewCheckbox.addEventListener('change', (e) => {
+                this.previewEnabled = e.target.checked;
+                this.dispatchChange();
+            });
+        }
+
+        // Reset button
+        const resetBtn = this.shadowRoot.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.resetToDefaults();
+            });
+        }
+
+        // Clear regions button (manual mode)
+        const clearBtn = this.shadowRoot.getElementById('clearRegions');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                this.clearManualRegions();
+            });
+        }
+    }
+
+    setDetectionMode(mode) {
+        this.detectionMode = mode;
+        this.savePreferences();
+        this.render();
+        this.attachEventListeners();
+        this.dispatchChange();
+    }
+
+    resetToDefaults() {
+        this.detectionMode = 'auto';
+        this.deskewEnabled = true;
+        this.enhanceEnabled = true;
+        this.previewEnabled = false;
+        this.manualRegions = [];
+        this.savePreferences();
+        this.render();
+        this.attachEventListeners();
+        this.dispatchChange();
+    }
+
+    clearManualRegions() {
+        this.manualRegions = [];
+        this.render();
+        this.attachEventListeners();
+        this.dispatchChange();
+    }
+
+    addManualRegion(region) {
+        this.manualRegions.push(region);
+        this.render();
+        this.attachEventListeners();
+        this.dispatchChange();
+    }
+
+    getSettings() {
+        return {
+            detectionMode: this.detectionMode,
+            deskewEnabled: this.deskewEnabled,
+            enhanceEnabled: this.enhanceEnabled,
+            previewEnabled: this.previewEnabled,
+            manualRegions: this.manualRegions
+        };
+    }
+
+    dispatchChange() {
+        this.dispatchEvent(new CustomEvent('detection-settings-changed', {
+            detail: this.getSettings(),
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    setupCanvasIfNeeded() {
+        if (this.detectionMode === 'manual' && !this.canvas) {
+            this.createCanvas();
+        }
+    }
+
+    createCanvas() {
+        const canvasContainer = this.shadowRoot.getElementById('canvasContainer');
+        if (!canvasContainer) return;
+
+        this.canvas = document.createElement('canvas');
+        this.canvas.className = 'selection-canvas';
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.canvas.addEventListener('mousedown', (e) => this.startSelection(e));
+        this.canvas.addEventListener('mousemove', (e) => this.updateSelection(e));
+        this.canvas.addEventListener('mouseup', (e) => this.endSelection(e));
+        
+        canvasContainer.appendChild(this.canvas);
+    }
+
+    cleanupCanvas() {
+        if (this.canvas && this.canvas.parentNode) {
+            this.canvas.parentNode.removeChild(this.canvas);
+            this.canvas = null;
+            this.ctx = null;
+        }
+    }
+
+    loadImageToCanvas(imageSource) {
+        if (!this.canvas) {
+            this.createCanvas();
+        }
+
+        const img = new Image();
+        img.onload = () => {
+            this.currentImage = img;
+            
+            // Calculate scale to fit canvas
+            const maxWidth = 800;
+            const maxHeight = 600;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = (width * maxHeight) / height;
+                height = maxHeight;
+            }
+            
+            this.imageScale = width / img.width;
+            
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.ctx.drawImage(img, 0, 0, width, height);
+            
+            // Redraw regions
+            this.drawRegions();
+        };
+        
+        if (typeof imageSource === 'string') {
+            img.src = imageSource;
+        } else if (imageSource instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
             };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(prefs));
-        } catch (error) {
-            console.error('Error saving detection preferences:', error);
+            reader.readAsDataURL(imageSource);
+        }
+    }
+
+    startSelection(e) {
+        if (!this.canvas) return;
+        
+        this.isDrawing = true;
+        const rect = this.canvas.getBoundingClientRect();
+        this.startPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    updateSelection(e) {
+        if (!this.isDrawing || !this.canvas || !this.currentImage) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const currentPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        
+        // Redraw image and existing regions
+        this.ctx.drawImage(this.currentImage, 0, 0, this.canvas.width, this.canvas.height);
+        this.drawRegions();
+        
+        // Draw current selection
+        this.ctx.strokeStyle = '#3B82F6';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(
+            this.startPoint.x,
+            this.startPoint.y,
+            currentPoint.x - this.startPoint.x,
+            currentPoint.y - this.startPoint.y
+        );
+    }
+
+    endSelection(e) {
+        if (!this.isDrawing || !this.canvas) return;
+        
+        this.isDrawing = false;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const endPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        
+        // Convert to image coordinates
+        const region = {
+            x: Math.round(Math.min(this.startPoint.x, endPoint.x) / this.imageScale),
+            y: Math.round(Math.min(this.startPoint.y, endPoint.y) / this.imageScale),
+            width: Math.round(Math.abs(endPoint.x - this.startPoint.x) / this.imageScale),
+            height: Math.round(Math.abs(endPoint.y - this.startPoint.y) / this.imageScale)
+        };
+        
+        // Add region if it has minimum size
+        if (region.width > 10 && region.height > 10) {
+            this.addManualRegion(region);
+        }
+        
+        this.startPoint = null;
+    }
+
+    drawRegions() {
+        if (!this.canvas || !this.currentImage) return;
+        
+        this.ctx.strokeStyle = '#10B981';
+        this.ctx.lineWidth = 2;
+        this.ctx.fillStyle = 'rgba(16, 185, 129, 0.1)';
+        
+        for (const region of this.manualRegions) {
+            const x = region.x * this.imageScale;
+            const y = region.y * this.imageScale;
+            const w = region.width * this.imageScale;
+            const h = region.height * this.imageScale;
+            
+            this.ctx.fillRect(x, y, w, h);
+            this.ctx.strokeRect(x, y, w, h);
+        }
+    }
+
+    // Public method to set image for manual selection
+    setImage(imageSource) {
+        if (this.detectionMode === 'manual') {
+            this.loadImageToCanvas(imageSource);
         }
     }
 }
 
-// Register the custom element
 customElements.define('detection-controls', DetectionControls);

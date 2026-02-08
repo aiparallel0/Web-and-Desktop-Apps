@@ -3,100 +3,107 @@
 RECEIPT EXTRACTOR - PROFESSIONAL GOVERNMENT-STYLE DESIGN SYSTEM
 =============================================================================
 
-Professional, accessible design inspired by federal government websites
-(USA.gov, USDS, NHS.uk) with clear hierarchy, high contrast, and
-excellent readability.
+Official government design standards based on USWDS (U.S. Web Design System)
+Following federal accessibility requirements and .gov style guidelines
 
 Design Principles:
-- Clarity over cleverness
-- Accessibility first
-- High contrast ratios (WCAG AAA)
-- Clear visual hierarchy
-- Consistent spacing system
-- Reliable interactions
+- Clarity and simplicity over decoration
+- WCAG AA compliance (minimum 4.5:1 contrast)
+- Sharp, functional design (minimal border-radius)
+- System fonts for fast loading
+- High contrast, readable typography
+- Reliable, predictable interactions
+
+Color Reference:
+- Navy Blue #112e51 (Primary - trustworthy, official)
+- White #ffffff (Backgrounds, text on dark)
+- Gray #5b616b (Body text, borders)
+- Red #e31c3d (Errors, alerts)
 
 =============================================================================
 */
 
 /* =============================================================================
-   ROOT VARIABLES - Design Tokens
+   ROOT VARIABLES - Government Design Tokens
    ============================================================================= */
 
 :root {
-    /* Government Blue Palette - Professional, trustworthy */
-    --color-primary: #005EA2;          /* USWDS Primary Blue */
-    --color-primary-dark: #0B4778;     /* Darker blue for hover */
-    --color-primary-darker: #1B1B1B;   /* Near black */
-    --color-primary-light: #2672DE;    /* Lighter blue */
-    --color-primary-lighter: #E7F2F5;  /* Very light blue */
+    /* Government Color Palette - Official Standards */
+    --gov-blue-base: #112e51;           /* Primary navy blue */
+    --gov-blue-dark: #0d2540;           /* Darker navy for hover */
+    --gov-blue-light: #205493;          /* Light blue for accents */
+    --gov-blue-lighter: #4773aa;        /* Lighter blue */
+    --gov-blue-lightest: #e1e7f1;       /* Very light blue backgrounds */
     
-    /* Semantic Colors */
-    --color-success: #00A91C;          /* Green - success states */
-    --color-warning: #FFBE2E;          /* Yellow - warnings */
-    --color-error: #D54309;            /* Red - errors */
-    --color-info: #00BDE3;             /* Cyan - information */
+    /* Semantic Colors - Government Standards */
+    --gov-red: #e31c3d;                 /* Errors, required fields */
+    --gov-red-dark: #cd2026;            /* Dark red for hover */
+    --gov-green: #2e8540;               /* Success states */
+    --gov-green-light: #4aa564;         /* Light green for hover */
+    --gov-gold: #fdb81e;                /* Warnings */
+    --gov-gold-light: #f9c642;          /* Light gold */
     
-    /* Neutral Palette - High contrast */
-    --color-base-darkest: #1B1B1B;     /* Near black */
-    --color-base-darker: #3D4551;      /* Dark gray */
-    --color-base-dark: #565C65;        /* Medium gray */
-    --color-base: #71767A;             /* Base gray */
-    --color-base-light: #A9AEB1;       /* Light gray */
-    --color-base-lighter: #DFE1E2;     /* Very light gray */
-    --color-base-lightest: #F0F0F0;    /* Almost white */
-    --color-white: #FFFFFF;            /* Pure white */
+    /* Neutral Palette - High Contrast */
+    --gov-gray-dark: #212121;           /* Near black - headings */
+    --gov-gray-medium: #5b616b;         /* Body text, icons */
+    --gov-gray-base: #757575;           /* Secondary text */
+    --gov-gray-light: #aeb0b5;          /* Borders, disabled */
+    --gov-gray-lighter: #d6d7d9;        /* Light borders */
+    --gov-gray-lightest: #f1f1f1;       /* Backgrounds */
+    --gov-white: #ffffff;               /* Pure white */
     
     /* Background Colors */
-    --color-bg-primary: #FFFFFF;
-    --color-bg-secondary: #F9F9F9;
-    --color-bg-tertiary: #F0F0F0;
-    --color-bg-accent: #E7F2F5;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9f9f9;
+    --bg-accent: #f1f1f1;
+    --bg-dark: #112e51;
     
     /* Border Colors */
-    --color-border: #A9AEB1;
-    --color-border-light: #DFE1E2;
-    --color-border-dark: #565C65;
+    --border-base: #5b616b;
+    --border-light: #d6d7d9;
+    --border-lighter: #e4e4e4;
     
-    /* Typography */
-    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-family-serif: "Merriweather", Georgia, "Times New Roman", serif;
-    --font-family-mono: "Roboto Mono", "Courier New", Courier, monospace;
+    /* Typography - System Fonts Only */
+    --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-serif: "Source Serif Pro", Georgia, "Times New Roman", serif;
+    --font-mono: "Roboto Mono", "SF Mono", Menlo, Monaco, Consolas, monospace;
     
-    /* Font Sizes - USWDS Scale */
-    --font-size-xs: 0.875rem;    /* 14px */
-    --font-size-sm: 0.9375rem;   /* 15px */
-    --font-size-md: 1rem;         /* 16px - base */
-    --font-size-lg: 1.125rem;     /* 18px */
-    --font-size-xl: 1.375rem;     /* 22px */
-    --font-size-2xl: 1.625rem;    /* 26px */
-    --font-size-3xl: 2rem;        /* 32px */
-    --font-size-4xl: 2.5rem;      /* 40px */
+    /* Font Sizes - Government Scale */
+    --text-xs: 0.8125rem;     /* 13px */
+    --text-sm: 0.875rem;      /* 14px */
+    --text-base: 0.9375rem;   /* 15px - body */
+    --text-md: 1rem;          /* 16px */
+    --text-lg: 1.125rem;      /* 18px */
+    --text-xl: 1.375rem;      /* 22px */
+    --text-2xl: 1.75rem;      /* 28px */
+    --text-3xl: 2.25rem;      /* 36px */
+    --text-4xl: 2.75rem;      /* 44px */
     
     /* Font Weights */
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
+    --weight-normal: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
     
-    /* Line Heights */
-    --line-height-tight: 1.2;
-    --line-height-base: 1.5;
-    --line-height-relaxed: 1.6;
-    --line-height-loose: 1.8;
+    /* Line Heights - Readable */
+    --leading-tight: 1.3;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.7;
     
-    /* Spacing System - 8px base */
-    --spacing-1: 0.25rem;   /* 4px */
-    --spacing-2: 0.5rem;    /* 8px */
-    --spacing-3: 0.75rem;   /* 12px */
-    --spacing-4: 1rem;      /* 16px */
-    --spacing-5: 1.5rem;    /* 24px */
-    --spacing-6: 2rem;      /* 32px */
-    --spacing-7: 2.5rem;    /* 40px */
-    --spacing-8: 3rem;      /* 48px */
-    --spacing-9: 4rem;      /* 64px */
-    --spacing-10: 5rem;     /* 80px */
+    /* Spacing System - 8px Base Grid */
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
     
-    /* Border Radius */
+    /* Border Radius - Minimal (Sharp Design) */
+    --radius-none: 0;
     --radius-sm: 2px;
     --radius-md: 4px;
     --radius-lg: 8px;
