@@ -401,7 +401,7 @@ class ProcessorFactory:
             '.spatial_ocr', 'EasyOCRSpatialProcessor',
             "Spatial EasyOCR requires EasyOCR and spatial analysis. "
             "Install with: pip install easyocr opencv-python.",
-            None, None
+            '.enhanced_spatial', 'EnhancedEasyOCRSpatialProcessor'
         ),
         ModelType.PADDLE.value: (
             '.processors', 'PaddleProcessor', None,
@@ -411,7 +411,7 @@ class ProcessorFactory:
             '.spatial_ocr', 'PaddleOCRSpatialProcessor',
             "Spatial PaddleOCR requires PaddleOCR and spatial analysis. "
             "Install with: pip install paddleocr opencv-python.",
-            None, None
+            '.enhanced_spatial', 'EnhancedPaddleOCRSpatialProcessor'
         ),
         ModelType.SPATIAL.value: (
             '.spatial_ocr', 'SpatialOCRProcessor',

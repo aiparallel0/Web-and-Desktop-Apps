@@ -511,23 +511,10 @@ def extract_receipt() -> Response:
             # Extract from preprocessed image
             result = processor.extract(preprocessed_path)
             
-            # Convert result to dictionary
-            if hasattr(result, 'to_dict'):
-                result_dict = result.to_dict()
-            else:
-                # Handle case where result doesn't have to_dict
-                result_dict = {
-                    'success': hasattr(result, 'success') and result.success,
-                    'data': result if not hasattr(result, 'data') else result.data,
-                    'error': getattr(result, 'error', None)
-                }
+            # Process result with comprehensive validation and formatting
+            from shared.utils.result_processing import process_extraction_result
             
-            # Ensure metadata exists
-            if 'metadata' not in result_dict:
-                result_dict['metadata'] = {}
-            
-            # Add preprocessing metadata
-            result_dict['metadata']['preprocessing'] = {
+            preprocessing_metadata = {
                 'applied_operations': preprocessing_result.applied_operations,
                 'detected_angle': preprocessing_result.detected_angle,
                 'detected_columns': preprocessing_result.detected_columns,
@@ -536,14 +523,19 @@ def extract_receipt() -> Response:
                 'detection_mode': detection_mode
             }
             
-            # Add detection settings
-            result_dict['metadata']['detection_settings'] = {
+            detection_settings_dict = {
                 'detection_mode': detection_mode,
                 'enable_deskew': enable_deskew,
                 'enable_enhancement': enable_enhancement,
                 'column_mode': column_mode,
                 'applied': True  # Settings were actually applied
             }
+            
+            result_dict = process_extraction_result(
+                result,
+                preprocessing_metadata=preprocessing_metadata,
+                detection_settings=detection_settings_dict
+            )
             
             logger.info(f"Extraction complete. Success: {result_dict.get('success', False)}")
             
