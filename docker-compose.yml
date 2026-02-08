@@ -94,11 +94,51 @@ services:
     environment:
       DATABASE_URL: postgresql://receipt_user:dev_password_change_in_production@postgres:5432/receipt_extractor
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: dev-secret-key-change-in-production-min-32-chars
       ENABLE_CEFR: "false"
     volumes:
       - ./:/app
+      - celerybeat_data:/tmp
     command: celery -A shared.services.background_tasks worker --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A shared.services.background_tasks inspect ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - with-celery  # Only start with: docker-compose --profile with-celery up
+  
+  # Celery beat scheduler for periodic tasks (optional)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: receipt-extractor-celery-beat
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://receipt_user:dev_password_change_in_production@postgres:5432/receipt_extractor
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_BEAT_SCHEDULE: /tmp/celerybeat-schedule.db
+      SECRET_KEY: dev-secret-key-change-in-production-min-32-chars
+      ENABLE_CEFR: "false"
+    volumes:
+      - ./:/app
+      - celerybeat_data:/tmp
+    command: python -c "from shared.services.background_tasks import configure_beat_schedule; configure_beat_schedule()" && celery -A shared.services.background_tasks beat --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat-schedule.db || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     profiles:
       - with-celery  # Only start with: docker-compose --profile with-celery up
 
@@ -109,6 +149,8 @@ volumes:
     name: receipt-extractor-redis-data
   uploads:
     name: receipt-extractor-uploads
+  celerybeat_data:
+    name: receipt-extractor-celerybeat-data
 
 networks:
   default:
