@@ -410,21 +410,31 @@ def extract_receipt() -> Response:
     Extract text from a receipt image.
     
     Request:
-        - file: Image file (multipart/form-data)
+        - image: Image file (multipart/form-data) - changed from 'file' to match frontend
         - model_id: Model to use (optional, default: easyocr)
+        - detection_mode: Detection mode (optional: 'auto', 'manual', 'line', 'column')
+        - enable_deskew: Enable deskew preprocessing (optional, default: true)
+        - enable_enhancement: Enable image enhancement (optional, default: true)
+        - column_mode: Enable column mode detection (optional, default: false)
+        - manual_regions: JSON string of manual regions (optional)
     
     Returns:
         DetectionResult with extracted text and metadata
     """
     try:
-        # Check if file was uploaded
-        if 'file' not in request.files:
+        # Check if file was uploaded - accept both 'image' and 'file' for backward compatibility
+        file = None
+        if 'image' in request.files:
+            file = request.files['image']
+        elif 'file' in request.files:
+            file = request.files['file']
+        
+        if not file:
             return jsonify({
                 'success': False,
                 'error': 'No file uploaded'
             }), 400
         
-        file = request.files['file']
         if file.filename == '':
             return jsonify({
                 'success': False,
@@ -434,6 +444,18 @@ def extract_receipt() -> Response:
         # Get model_id from form data or use default
         model_id = request.form.get('model_id', 'easyocr')
         
+        # Extract detection settings from form data
+        detection_mode = request.form.get('detection_mode', 'auto')
+        enable_deskew = request.form.get('enable_deskew', 'true').lower() in ('true', '1', 'yes')
+        enable_enhancement = request.form.get('enable_enhancement', 'true').lower() in ('true', '1', 'yes')
+        column_mode = request.form.get('column_mode', 'false').lower() in ('true', '1', 'yes')
+        manual_regions = request.form.get('manual_regions', None)
+        
+        # Log received parameters for debugging
+        logger.info(f"Extraction request - model_id: {model_id}, detection_mode: {detection_mode}, "
+                   f"deskew: {enable_deskew}, enhancement: {enable_enhancement}, "
+                   f"column_mode: {column_mode}, manual_regions: {bool(manual_regions)}")
+        
         # Save file temporarily
         import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
@@ -442,13 +464,34 @@ def extract_receipt() -> Response:
         
         try:
             # Process with model
-            from shared.models.engine import process_receipt
-            result = process_receipt(tmp_path, model_id)
+            # Note: Current model processors use their own preprocessing
+            # The detection settings are logged but not yet passed to processors
+            # This would require updating the processor interface to accept these parameters
+            from shared.models.manager import ModelManager
+            manager = ModelManager()
+            processor = manager.get_processor(model_id)
+            result = processor.extract(tmp_path)
+            
+            # Add detection settings to metadata
+            if hasattr(result, 'to_dict'):
+                result_dict = result.to_dict()
+                if 'metadata' not in result_dict:
+                    result_dict['metadata'] = {}
+                result_dict['metadata']['detection_settings'] = {
+                    'detection_mode': detection_mode,
+                    'enable_deskew': enable_deskew,
+                    'enable_enhancement': enable_enhancement,
+                    'column_mode': column_mode,
+                    'applied': False  # Settings are logged but not yet applied to processors
+                }
+                logger.info(f"Detection settings logged (not yet applied to processor): {result_dict['metadata']['detection_settings']}")
+            else:
+                result_dict = result.to_dict() if hasattr(result, 'to_dict') else {}
             
             # Clean up temp file
             os.unlink(tmp_path)
             
-            return jsonify(result.to_dict())
+            return jsonify(result_dict)
             
         except Exception as e:
             # Clean up temp file on error

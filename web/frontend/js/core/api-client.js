@@ -181,6 +181,14 @@ class APIClient {
             });
         }
 
+        // Log extraction parameters being sent
+        console.log('[API Client] Extract request:', {
+            filename: file.name,
+            size: file.size,
+            modelId: options.modelId || 'default',
+            detectionSettings: options.detectionSettings || 'none'
+        });
+
         return this.request('/api/extract', {
             method: 'POST',
             body: formData,

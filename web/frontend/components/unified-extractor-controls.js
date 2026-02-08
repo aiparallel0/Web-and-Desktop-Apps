@@ -321,7 +321,7 @@ class UnifiedExtractorControls extends HTMLElement {
             /* Main Header */
             .main-header {
                 padding: 24px 28px;
-                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+                background: #3B82F6;
                 color: white;
             }
 
@@ -385,7 +385,7 @@ class UnifiedExtractorControls extends HTMLElement {
             }
 
             .section-badge {
-                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+                background: #3B82F6;
                 color: white;
                 padding: 4px 12px;
                 border-radius: 12px;
@@ -704,7 +704,7 @@ class UnifiedExtractorControls extends HTMLElement {
                 justify-content: center;
                 gap: 8px;
                 padding: 12px 24px;
-                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+                background: #3B82F6;
                 border: none;
                 border-radius: 8px;
                 color: white;
@@ -715,8 +715,8 @@ class UnifiedExtractorControls extends HTMLElement {
             }
 
             .apply-btn:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+                background: #2563EB;
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             }
 
             .apply-btn svg {
