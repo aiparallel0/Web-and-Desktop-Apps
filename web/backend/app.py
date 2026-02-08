@@ -219,13 +219,14 @@ def api_root() -> Response:
             'version': '/api/version',
             'database_health': '/api/database/health',
             'models': '/api/models',
+            'models_health': '/api/models/health',
             'select_model': '/api/models/select (POST)',
             'extract': '/api/extract (POST)',
             'batch_extract': '/api/extract/batch (POST)',
             'model_info': '/api/models/<model_id>/info',
             'unload_models': '/api/models/unload (POST)'
         },
-        'documentation': 'Visit /api/health for health check or /api/models to see available models'
+        'documentation': 'Visit /api/health for health check, /api/models/health for model availability, or /api/models to see available models'
     })
 
 @app.route('/api/health', methods=['GET'])
