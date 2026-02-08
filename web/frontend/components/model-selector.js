@@ -29,8 +29,8 @@ class ModelSelector extends HTMLElement {
 
     async fetchAvailableModels() {
         try {
-            // Try to fetch from API
-            const apiUrl = this.getAttribute('api-url') || '/api/models';
+            // Fetch from API with availability check
+            const apiUrl = this.getAttribute('api-url') || '/api/models?check_availability=true';
             const response = await fetch(apiUrl);
             
             if (response.ok) {
@@ -39,14 +39,28 @@ class ModelSelector extends HTMLElement {
                 
                 // Set default if none selected
                 if (!this.selectedModelId && data.default_model) {
-                    this.selectedModelId = data.default_model;
+                    // Use default only if it's available
+                    const defaultModel = this.availableModels.find(m => m.id === data.default_model);
+                    if (defaultModel && defaultModel.available !== false) {
+                        this.selectedModelId = data.default_model;
+                    } else {
+                        // Find first available model
+                        const firstAvailable = this.availableModels.find(m => m.available !== false);
+                        if (firstAvailable) {
+                            this.selectedModelId = firstAvailable.id;
+                        }
+                    }
                 }
+                
+                console.log(`[Model Selector] Loaded ${this.availableModels.length} models, ` +
+                           `${this.availableModels.filter(m => m.available !== false).length} available`);
             } else {
                 // Fallback to hardcoded list matching the 7 methods
+                console.warn('[Model Selector] API failed, using fallback models');
                 this.availableModels = this.getDefaultModels();
             }
         } catch (error) {
-            console.error('Error fetching models:', error);
+            console.error('[Model Selector] Error fetching models:', error);
             // Fallback to hardcoded list
             this.availableModels = this.getDefaultModels();
         }
@@ -56,11 +70,13 @@ class ModelSelector extends HTMLElement {
     }
 
     getDefaultModels() {
+        // Return default list with unknown availability
         return [
             {
                 id: 'ocr_tesseract',
                 name: 'Tesseract OCR',
-                description: 'Fast & reliable for clear receipts'
+                description: 'Fast & reliable for clear receipts',
+                available: true  // Assume available if API fails
             },
             {
                 id: 'ocr_easyocr',
@@ -120,17 +136,31 @@ class ModelSelector extends HTMLElement {
 
     renderModelCard(model) {
         const isSelected = model.id === this.selectedModelId;
+        const isAvailable = model.available !== false;  // Default to available if not specified
         const selectedClass = isSelected ? 'selected' : '';
+        const unavailableClass = !isAvailable ? 'unavailable' : '';
+        
+        // Status badge
+        let statusBadge = '';
+        if (!isAvailable) {
+            statusBadge = '<span class="status-badge unavailable">⚠️ Unavailable</span>';
+        } else if (isSelected) {
+            statusBadge = '<span class="status-badge active">✓ Active</span>';
+        }
         
         return `
-            <button class="model-card ${selectedClass}" data-model-id="${model.id}">
+            <button class="model-card ${selectedClass} ${unavailableClass}" 
+                    data-model-id="${model.id}"
+                    ${!isAvailable ? 'disabled' : ''}>
                 <div class="model-header">
                     <div class="model-check">
                         ${isSelected ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                     </div>
                     <h4 class="model-name">${model.name}</h4>
+                    ${statusBadge}
                 </div>
                 <p class="model-description">${model.description}</p>
+                ${!isAvailable && model.error ? `<p class="error-hint">Dependencies missing</p>` : ''}
             </button>
         `;
     }
@@ -252,6 +282,42 @@ class ModelSelector extends HTMLElement {
                 flex: 1;
             }
 
+            .status-badge {
+                font-size: 0.75rem;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-weight: 500;
+                white-space: nowrap;
+            }
+
+            .status-badge.active {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+            .status-badge.unavailable {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .model-card.unavailable {
+                opacity: 0.6;
+                cursor: not-allowed;
+                background: #fafafa;
+            }
+
+            .model-card.unavailable:hover {
+                transform: none;
+                box-shadow: none;
+                border-color: #e5e7eb;
+            }
+
+            .error-hint {
+                font-size: 0.75rem;
+                color: #dc2626;
+                margin: -4px 0 0 0;
+            }
+
             .model-description {
                 font-size: 0.8125rem;
                 color: #6b7280;
@@ -275,7 +341,7 @@ class ModelSelector extends HTMLElement {
     }
 
     setupEventListeners() {
-        const cards = this.shadowRoot.querySelectorAll('.model-card');
+        const cards = this.shadowRoot.querySelectorAll('.model-card:not([disabled])');
         cards.forEach(card => {
             card.addEventListener('click', () => {
                 const modelId = card.dataset.modelId;
@@ -285,6 +351,13 @@ class ModelSelector extends HTMLElement {
     }
 
     selectModel(modelId) {
+        // Check if model is available
+        const model = this.availableModels.find(m => m.id === modelId);
+        if (model && model.available === false) {
+            console.warn(`[Model Selector] Cannot select unavailable model: ${modelId}`);
+            return;
+        }
+        
         this.selectedModelId = modelId;
         this.saveSelectedModel();
         
