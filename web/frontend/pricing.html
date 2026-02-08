@@ -11,111 +11,115 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="usa-skipnav">Skip to main content</a>
     
-    <!-- Navigation -->
-    <nav class="nav" role="navigation" aria-label="Main navigation">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <!-- USWDS Header -->
+    <header class="usa-header usa-header--basic" role="banner">
+        <div class="usa-nav-container">
+            <div class="usa-logo">
                 <a href="index.html">
                     <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                         <path d="M9 9h6M9 15h6"></path>
                     </svg>
-                    <span class="nav-title">Receipt Extractor</span>
+                    <span>Receipt Extractor</span>
                 </a>
             </div>
-            <div class="nav-actions">
-                <a href="index.html#features" class="nav-link">Features</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="api.html" class="nav-link">API</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-secondary btn-sm" type="button">Sign In</button>
-            </div>
+            <nav class="usa-nav" role="navigation" aria-label="Primary navigation">
+                <div class="nav-actions">
+                    <a href="index.html#features" class="usa-nav__link">Features</a>
+                    <a href="pricing.html" class="usa-nav__link usa-nav__link--current">Pricing</a>
+                    <a href="api.html" class="usa-nav__link">API</a>
+                    <a href="help.html" class="usa-nav__link">Help</a>
+                    <button class="usa-button usa-button--outline btn-sm" type="button">Sign In</button>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <main id="main-content" role="main">
         <!-- Hero Section -->
-        <section class="hero">
-            <div class="container">
-                <h1 class="hero-title">Simple, Transparent Pricing</h1>
-                <p class="hero-subtitle">
-                    Choose the plan that fits your needs. All plans include secure processing and automatic file deletion.
-                </p>
+        <section class="usa-hero">
+            <div class="usa-container">
+                <div class="usa-hero__callout">
+                    <h1 class="usa-hero__heading">Simple, Transparent Pricing</h1>
+                    <p class="hero-subtitle">
+                        Choose the plan that fits your needs. All plans include secure processing and automatic file deletion.
+                    </p>
+                </div>
             </div>
         </section>
 
         <!-- Pricing Grid -->
-        <section class="section">
-            <div class="container">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); max-width: 1200px; margin: 0 auto;">
+        <section class="usa-section">
+            <div class="usa-container">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--usa-spacing-3); max-width: 80rem; margin: 0 auto;">
                     
                     <!-- Free Plan -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Free</h3>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                    <div class="usa-card">
+                        <div class="usa-card__header">
+                            <h3 class="usa-card__heading">Free</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--usa-base-darkest); margin: var(--usa-spacing-2) 0;">
                                 $0
-                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--usa-base-dark);">/month</span>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">10 receipts per month</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Basic OCR models</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">100MB storage</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Community support</li>
-                                <li style="padding: var(--space-3) 0;">Files deleted after 24 hours</li>
+                        <div class="usa-card__body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--usa-spacing-3);">
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">10 receipts per month</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">Basic OCR models</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">100MB storage</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">Community support</li>
+                                <li style="padding: var(--usa-spacing-1) 0;">Files deleted after 24 hours</li>
                             </ul>
-                            <button class="btn btn-secondary" style="width: 100%;" type="button">Get Started</button>
+                            <button class="usa-button usa-button--outline" style="width: 100%;" type="button">Get Started</button>
                         </div>
                     </div>
 
                     <!-- Pro Plan -->
-                    <div class="card" style="position: relative; border: 2px solid var(--color-primary);">
-                        <div style="position: absolute; top: calc(-1 * var(--space-3)); left: 50%; transform: translateX(-50%); background: var(--color-primary); color: var(--color-white); padding: var(--space-1) var(--space-4); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius-sm);">
+                    <div class="usa-card" style="position: relative; border: 2px solid var(--usa-primary);">
+                        <div style="position: absolute; top: calc(-1 * var(--usa-spacing-1)); left: 50%; transform: translateX(-50%); background: var(--usa-primary); color: var(--usa-white); padding: var(--usa-spacing-05) var(--usa-spacing-2); font-size: 0.75rem; font-weight: 700; border-radius: var(--usa-radius-sm);">
                             RECOMMENDED
                         </div>
-                        <div class="card-header">
-                            <h3 class="card-title">Professional</h3>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                        <div class="usa-card__header">
+                            <h3 class="usa-card__heading">Professional</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--usa-base-darkest); margin: var(--usa-spacing-2) 0;">
                                 $19
-                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--usa-base-dark);">/month</span>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">500 receipts per month</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">All OCR models</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">5GB storage</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">API access</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Email support</li>
-                                <li style="padding: var(--space-3) 0;">Files deleted after 7 days</li>
+                        <div class="usa-card__body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--usa-spacing-3);">
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">500 receipts per month</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">All OCR models</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">5GB storage</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">API access</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">Email support</li>
+                                <li style="padding: var(--usa-spacing-1) 0;">Files deleted after 7 days</li>
                             </ul>
-                            <button class="btn btn-primary" style="width: 100%;" type="button">Start Free Trial</button>
+                            <button class="usa-button" style="width: 100%;" type="button">Start Free Trial</button>
                         </div>
                     </div>
 
                     <!-- Business Plan -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Business</h3>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-primary); margin: var(--space-4) 0;">
+                    <div class="usa-card">
+                        <div class="usa-card__header">
+                            <h3 class="usa-card__heading">Business</h3>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: var(--usa-base-darkest); margin: var(--usa-spacing-2) 0;">
                                 $49
-                                <span style="font-size: 1rem; font-weight: 400; color: var(--color-gray-dark);">/month</span>
+                                <span style="font-size: 1rem; font-weight: 400; color: var(--usa-base-dark);">/month</span>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--space-6);">
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">2,000 receipts per month</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">All OCR models</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">20GB storage</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Priority API access</li>
-                                <li style="padding: var(--space-3) 0; border-bottom: 1px solid var(--border-color);">Priority support</li>
-                                <li style="padding: var(--space-3) 0;">Files deleted after 30 days</li>
+                        <div class="usa-card__body">
+                            <ul style="list-style: none; padding: 0; margin: 0 0 var(--usa-spacing-3);">
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">2,000 receipts per month</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">All OCR models</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">20GB storage</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">Priority API access</li>
+                                <li style="padding: var(--usa-spacing-1) 0; border-bottom: 1px solid var(--usa-base-lighter);">Priority support</li>
+                                <li style="padding: var(--usa-spacing-1) 0;">Files deleted after 30 days</li>
                             </ul>
-                            <button class="btn btn-secondary" style="width: 100%;" type="button">Contact Sales</button>
+                            <button class="usa-button usa-button--outline" style="width: 100%;" type="button">Contact Sales</button>
                         </div>
                     </div>
                 </div>
@@ -123,11 +127,11 @@
         </section>
 
         <!-- Features Comparison -->
-        <section class="section">
-            <div class="container">
+        <section class="usa-section">
+            <div class="usa-container">
                 <h2 class="text-center mb-8">Feature Comparison</h2>
-                <div class="card">
-                    <table class="table">
+                <div class="usa-card">
+                    <table class="usa-table usa-table--striped">
                         <thead>
                             <tr>
                                 <th>Feature</th>
@@ -180,23 +184,23 @@
         </section>
 
         <!-- FAQ Section -->
-        <section class="section">
-            <div class="container">
+        <section class="usa-section">
+            <div class="usa-container">
                 <h2 class="text-center mb-8">Frequently Asked Questions</h2>
                 <div style="max-width: 800px; margin: 0 auto;">
-                    <div class="card mb-4">
+                    <div class="usa-card mb-4">
                         <h3>Can I upgrade or downgrade my plan?</h3>
                         <p>Yes, you can change your plan at any time. Upgrades take effect immediately, downgrades at the next billing cycle.</p>
                     </div>
-                    <div class="card mb-4">
+                    <div class="usa-card mb-4">
                         <h3>What payment methods do you accept?</h3>
                         <p>We accept all major credit cards (Visa, MasterCard, American Express) through our secure payment processor Stripe.</p>
                     </div>
-                    <div class="card mb-4">
+                    <div class="usa-card mb-4">
                         <h3>Is there a free trial?</h3>
                         <p>The Free plan provides 10 receipts per month at no cost. Professional and Business plans offer a 14-day free trial.</p>
                     </div>
-                    <div class="card mb-4">
+                    <div class="usa-card mb-4">
                         <h3>How secure is my data?</h3>
                         <p>All files are encrypted in transit and at rest. Files are automatically deleted after the retention period for your plan.</p>
                     </div>
@@ -206,27 +210,29 @@
     </main>
 
     <!-- Footer -->
-    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
-                <div>
-                    <h4>Receipt Extractor</h4>
-                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
-                </div>
-                <div>
-                    <h5>Resources</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="api.html">API Documentation</a></li>
-                        <li><a href="pricing.html">Pricing</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h5>Legal</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="privacy.html">Privacy Policy</a></li>
-                        <li><a href="terms.html">Terms of Service</a></li>
-                    </ul>
+    <footer class="usa-footer">
+        <div class="usa-footer__primary-section">
+            <div class="usa-container">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--usa-spacing-4);">
+                    <div>
+                        <h4>Receipt Extractor</h4>
+                        <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
+                    </div>
+                    <div>
+                        <h5>Resources</h5>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><a href="help.html">Help</a></li>
+                            <li><a href="api.html">API Documentation</a></li>
+                            <li><a href="pricing.html">Pricing</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>Legal</h5>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><a href="privacy.html">Privacy Policy</a></li>
+                            <li><a href="terms.html">Terms of Service</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

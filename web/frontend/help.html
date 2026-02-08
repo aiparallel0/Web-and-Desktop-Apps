@@ -11,48 +11,52 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="usa-skipnav">Skip to main content</a>
     
     <!-- Navigation -->
-    <nav class="nav" role="navigation" aria-label="Main navigation">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <header class="usa-header usa-header--basic" role="banner">
+        <div class="usa-nav-container">
+            <div class="usa-logo">
                 <a href="index.html">
                     <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                         <path d="M9 9h6M9 15h6"></path>
                     </svg>
-                    <span class="nav-title">Receipt Extractor</span>
+                    <span>Receipt Extractor</span>
                 </a>
             </div>
-            <div class="nav-actions">
-                <a href="index.html#features" class="nav-link">Features</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="api.html" class="nav-link">API</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-secondary btn-sm" type="button">Sign In</button>
-            </div>
+            <nav class="usa-nav" role="navigation" aria-label="Primary navigation">
+                <div class="nav-actions">
+                    <a href="index.html#features" class="usa-nav__link">Features</a>
+                    <a href="pricing.html" class="usa-nav__link">Pricing</a>
+                    <a href="api.html" class="usa-nav__link">API</a>
+                    <a href="help.html" class="usa-nav__link">Help</a>
+                    <button class="usa-button usa-button--outline btn-sm" type="button">Sign In</button>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <main id="main-content" role="main">
-        <section class="hero">
-            <div class="container">
-                <h1 class="hero-title">Help & Documentation</h1>
-                <p class="hero-subtitle">
-                    Complete guide to using Receipt Extractor for text extraction from receipts.
-                </p>
+        <section class="usa-hero">
+            <div class="usa-container">
+                <div class="usa-hero__callout">
+                    <h1 class="usa-hero__heading">Help & Documentation</h1>
+                    <p class="hero-subtitle">
+                        Complete guide to using Receipt Extractor for text extraction from receipts.
+                    </p>
+                </div>
             </div>
         </section>
 
-        <section class="section">
-            <div class="container">
+        <section class="usa-section">
+            <div class="usa-container">
                 <div style="max-width: 900px; margin: 0 auto;">
-                    <div class="card mb-8">
-                        <div class="card-header">
-                            <h2 class="card-title">Getting Started</h2>
+                    <div class="usa-card mb-8">
+                        <div class="usa-card__header">
+                            <h2 class="usa-card__heading">Getting Started</h2>
                         </div>
-                        <div class="card-body">
+                        <div class="usa-card__body">
                             <h3>1. Upload Your Receipt</h3>
                             <p>Click the upload area or drag and drop your receipt image. Supported formats include JPG, PNG, WEBP, and PDF files up to 100MB.</p>
                             
@@ -89,12 +93,12 @@
                         </div>
                     </div>
 
-                    <div class="card mb-8">
-                        <div class="card-header">
-                            <h2 class="card-title">Extraction Methods Explained</h2>
+                    <div class="usa-card mb-8">
+                        <div class="usa-card__header">
+                            <h2 class="usa-card__heading">Extraction Methods Explained</h2>
                         </div>
-                        <div class="card-body">
-                            <table class="table">
+                        <div class="usa-card__body">
+                            <table class="usa-table usa-table--striped">
                                 <thead>
                                     <tr>
                                         <th>Method</th>
@@ -151,11 +155,11 @@
                         </div>
                     </div>
 
-                    <div class="card mb-8">
-                        <div class="card-header">
-                            <h2 class="card-title">Tips for Best Results</h2>
+                    <div class="usa-card mb-8">
+                        <div class="usa-card__header">
+                            <h2 class="usa-card__heading">Tips for Best Results</h2>
                         </div>
-                        <div class="card-body">
+                        <div class="usa-card__body">
                             <h3>Image Quality</h3>
                             <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
                                 <li>Use good lighting when photographing receipts</li>
@@ -181,11 +185,11 @@
                         </div>
                     </div>
 
-                    <div class="card mb-8">
-                        <div class="card-header">
-                            <h2 class="card-title">Troubleshooting</h2>
+                    <div class="usa-card mb-8">
+                        <div class="usa-card__header">
+                            <h2 class="usa-card__heading">Troubleshooting</h2>
                         </div>
-                        <div class="card-body">
+                        <div class="usa-card__body">
                             <h3>Poor Extraction Results</h3>
                             <p><strong>Issue:</strong> Text is missing or inaccurate</p>
                             <p><strong>Solutions:</strong></p>
@@ -218,11 +222,11 @@
                         </div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-header">
-                            <h2 class="card-title">Contact Support</h2>
+                    <div class="usa-card">
+                        <div class="usa-card__header">
+                            <h2 class="usa-card__heading">Contact Support</h2>
                         </div>
-                        <div class="card-body">
+                        <div class="usa-card__body">
                             <p>Need additional help? Contact our support team:</p>
                             <ul style="list-style: none; padding: 0;">
                                 <li><strong>Email:</strong> support@receiptextractor.com</li>
@@ -237,27 +241,29 @@
     </main>
 
     <!-- Footer -->
-    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
-                <div>
-                    <h4>Receipt Extractor</h4>
-                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
-                </div>
-                <div>
-                    <h5>Resources</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="api.html">API Documentation</a></li>
-                        <li><a href="pricing.html">Pricing</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h5>Legal</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="privacy.html">Privacy Policy</a></li>
-                        <li><a href="terms.html">Terms of Service</a></li>
-                    </ul>
+    <footer class="usa-footer">
+        <div class="usa-footer__primary-section">
+            <div class="usa-container">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--usa-spacing-4);">
+                    <div>
+                        <h4>Receipt Extractor</h4>
+                        <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
+                    </div>
+                    <div>
+                        <h5>Resources</h5>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><a href="help.html">Help</a></li>
+                            <li><a href="api.html">API Documentation</a></li>
+                            <li><a href="pricing.html">Pricing</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>Legal</h5>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><a href="privacy.html">Privacy Policy</a></li>
+                            <li><a href="terms.html">Terms of Service</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

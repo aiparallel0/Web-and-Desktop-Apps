@@ -17,26 +17,28 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="nav" id="nav">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <header class="usa-header usa-header--basic" role="banner">
+        <div class="usa-nav-container">
+            <div class="usa-logo">
                 <a href="index.html">
                     <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 2l7 7-7 7"></path>
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                     </svg>
-                    <span class="nav-title">Receipt Extractor</span>
+                    <span>Receipt Extractor</span>
                 </a>
             </div>
-            <div class="nav-actions">
-                <a href="index.html#features" class="nav-link">Features</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="api.html" class="nav-link">API</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-primary btn-sm" id="signInBtn">Sign In</button>
-            </div>
+            <nav class="usa-nav" role="navigation" aria-label="Primary navigation">
+                <div class="nav-actions">
+                    <a href="index.html#features" class="usa-nav__link">Features</a>
+                    <a href="pricing.html" class="usa-nav__link">Pricing</a>
+                    <a href="api.html" class="usa-nav__link">API</a>
+                    <a href="help.html" class="usa-nav__link">Help</a>
+                    <button class="usa-button usa-button--outline btn-sm" id="signInBtn" type="button">Sign In</button>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <!-- Page Header -->
     <section class="page-header">
@@ -138,34 +140,39 @@
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Receipt Extractor</h4>
-                    <p>AI-powered OCR for modern businesses</p>
+    <footer class="usa-footer">
+        <div class="usa-footer__primary-section">
+            <div class="usa-container">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--usa-spacing-4);">
+                    <div>
+                        <h4>Receipt Extractor</h4>
+                        <p>AI-powered OCR for modern businesses</p>
+                    </div>
+                    <div>
+                        <h5>Product</h5>
+                        <ul>
+                            <li><a href="index.html#features">Features</a></li>
+                            <li><a href="pricing.html">Pricing</a></li>
+                            <li><a href="api.html">API</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>Company</h5>
+                        <ul>
+                            <li><a href="about.html">About</a></li>
+                            <li><a href="privacy.html">Privacy</a></li>
+                            <li><a href="terms.html">Terms</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>Support</h5>
+                        <ul>
+                            <li><a href="help.html">Help Center</a></li>
+                            <li><a href="contact.html">Contact</a></li>
+                            <li><a href="status.html">Status</a></li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="footer-section">
-                    <h4>Product</h4>
-                    <a href="index.html#features">Features</a>
-                    <a href="pricing.html">Pricing</a>
-                    <a href="api.html">API</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Company</h4>
-                    <a href="about.html">About</a>
-                    <a href="privacy.html">Privacy</a>
-                    <a href="terms.html">Terms</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <a href="help.html">Help Center</a>
-                    <a href="contact.html">Contact</a>
-                    <a href="status.html">Status</a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Receipt Extractor. All rights reserved.</p>
             </div>
         </div>
     </footer>

@@ -213,31 +213,33 @@
     </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="usa-skipnav">Skip to main content</a>
     
-    <nav class="nav" role="navigation" aria-label="Main navigation">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <header class="usa-header usa-header--basic" role="banner">
+        <div class="usa-nav-container">
+            <div class="usa-logo">
                 <a href="index.html">
                     <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                         <path d="M9 9h6M9 15h6"></path>
                     </svg>
-                    <span class="nav-title">Receipt Extractor</span>
+                    <span>Receipt Extractor</span>
                 </a>
             </div>
-            <div class="nav-actions">
-                <a href="dashboard.html" class="nav-link">Dashboard</a>
-                <a href="index.html" class="nav-link">Extract</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-secondary btn-sm" id="logoutBtn" type="button">Sign Out</button>
-            </div>
+            <nav class="usa-nav" role="navigation" aria-label="Primary navigation">
+                <div class="nav-actions">
+                    <a href="dashboard.html" class="usa-nav__link">Dashboard</a>
+                    <a href="index.html" class="usa-nav__link">Extract</a>
+                    <a href="pricing.html" class="usa-nav__link">Pricing</a>
+                    <a href="help.html" class="usa-nav__link">Help</a>
+                    <button class="usa-button usa-button--outline btn-sm" id="logoutBtn" type="button">Sign Out</button>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
-    <main id="main-content" class="container" role="main" style="padding: 48px 24px;">
-        <section class="section">
+    <main id="main-content" class="usa-container" role="main" style="padding: 48px 24px;">
+        <section class="usa-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
                     <h1 style="margin-bottom: 8px;">Dashboard</h1>
@@ -245,7 +247,7 @@
                         Manage your receipts and view extraction history
                     </p>
                 </div>
-                <button class="btn btn-primary" id="refreshBtn" type="button">
+                <button class="usa-button" id="refreshBtn" type="button">
                     <span id="refreshBtnText">Refresh Data</span>
                     <span id="refreshSpinner" class="loading-spinner" style="display: none;"></span>
                 </button>
@@ -255,9 +257,9 @@
             <div id="successContainer"></div>
         </section>
 
-        <section class="section">
+        <section class="usa-section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
-                <div class="card">
+                <div class="usa-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <p class="stat-label">Total Extractions</p>
@@ -270,7 +272,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="usa-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <p class="stat-label">This Month</p>
@@ -282,7 +284,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="usa-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <p class="stat-label">Storage Used</p>
@@ -296,7 +298,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="usa-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <p class="stat-label">Current Plan</p>
@@ -311,9 +313,9 @@
             </div>
         </section>
 
-        <section class="section">
+        <section class="usa-section">
             <h2>Recent Extractions</h2>
-            <div class="card" style="padding: 0; margin-top: 24px; overflow-x: auto;">
+            <div class="usa-card" style="padding: 0; margin-top: 24px; overflow-x: auto;">
                 <div id="receiptsLoading" style="display: none; padding: 48px; text-align: center;">
                     <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px;"></div>
                     <p style="margin-top: 16px; color: #5b616b;">Loading receipts...</p>
@@ -326,10 +328,10 @@
                     </svg>
                     <h3>No receipts yet</h3>
                     <p>Start by extracting your first receipt</p>
-                    <a href="index.html" class="btn btn-primary" style="margin-top: 16px; text-decoration: none; display: inline-block;">Extract Receipt</a>
+                    <a href="index.html" class="usa-button" style="margin-top: 16px; text-decoration: none; display: inline-block;">Extract Receipt</a>
                 </div>
                 
-                <table class="table" id="receiptsTable" style="display: none;">
+                <table class="usa-table usa-table--striped" id="receiptsTable" style="display: none;">
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -349,9 +351,9 @@
             </div>
         </section>
 
-        <section class="section">
+        <section class="usa-section">
             <h2>Usage Summary</h2>
-            <div class="card" style="margin-top: 24px;">
+            <div class="usa-card" style="margin-top: 24px;">
                 <div style="margin-bottom: 24px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span style="font-weight: 600; color: #212121;">Monthly Receipts</span>
@@ -374,31 +376,33 @@
                 
                 <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #d6d7d9;">
                     <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">Want more capacity?</p>
-                    <a href="pricing.html" class="btn btn-secondary">Upgrade Plan</a>
+                    <a href="pricing.html" class="usa-button usa-button--outline">Upgrade Plan</a>
                 </div>
             </div>
         </section>
 
-        <section class="section">
+        <section class="usa-section">
             <h2>Quick Actions</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px;">
-                <a href="index.html" class="btn btn-primary" style="text-decoration: none; text-align: center;">
+                <a href="index.html" class="usa-button" style="text-decoration: none; text-align: center;">
                     New Extraction
                 </a>
-                <button class="btn btn-secondary" id="exportDataBtn" type="button">
+                <button class="usa-button usa-button--outline" id="exportDataBtn" type="button">
                     Export All Data
                 </button>
-                <button class="btn btn-secondary" id="deleteAllBtn" type="button">
+                <button class="usa-button usa-button--outline" id="deleteAllBtn" type="button">
                     Delete All Receipts
                 </button>
             </div>
         </section>
     </main>
 
-    <footer style="background: #f1f1f1; padding: 48px 24px; margin-top: 64px; border-top: 1px solid #d6d7d9;">
-        <div class="container">
-            <div style="text-align: center; color: #5b616b; font-size: 0.875rem;">
-                2024 Receipt Extractor. All rights reserved.
+    <footer class="usa-footer">
+        <div class="usa-footer__primary-section">
+            <div class="usa-container">
+                <div style="text-align: center; color: #5b616b; font-size: 0.875rem;">
+                    2024 Receipt Extractor. All rights reserved.
+                </div>
             </div>
         </div>
     </footer>
