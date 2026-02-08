@@ -97,7 +97,7 @@ class UnifiedExtractorControls extends HTMLElement {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
-            const response = await fetch(`${this.apiBaseUrl}/api/models`, {
+            const response = await fetch(`${this.apiBaseUrl}/api/models?check_availability=true`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
@@ -117,7 +117,10 @@ class UnifiedExtractorControls extends HTMLElement {
                         description: model.description || '',
                         accuracy: model.accuracy || 'N/A',
                         speed: model.speed || 'medium',
-                        enabled: model.enabled !== false
+                        enabled: model.enabled !== false,
+                        available: model.available !== false,
+                        status: model.status || (model.available !== false ? 'ready' : 'unavailable'),
+                        missing_dependencies: model.missing_dependencies || []
                     }));
                     
                     if (data.default_model) {
@@ -206,19 +209,30 @@ class UnifiedExtractorControls extends HTMLElement {
                 <div class="control-section">
                     <h3 class="section-title">Extraction Method</h3>
                     <div class="model-grid">
-                        ${this.availableModels.map(model => `
+                        ${this.availableModels.map(model => {
+                            const isAvailable = model.available !== false;
+                            const unavailableClass = !isAvailable ? 'unavailable' : '';
+                            const disabledAttr = !isAvailable ? 'disabled' : '';
+                            const statusBadge = !isAvailable 
+                                ? '<span class="status-badge unavailable">⚠ Dependencies Missing</span>'
+                                : (model.id === this.selectedModelId ? '<span class="status-badge selected">✓ Selected</span>' : '');
+                            
+                            return `
                             <button 
-                                class="model-card ${model.id === this.selectedModelId ? 'selected' : ''}"
+                                class="model-card ${model.id === this.selectedModelId ? 'selected' : ''} ${unavailableClass}"
                                 data-model-id="${model.id}"
-                                type="button">
+                                type="button"
+                                ${disabledAttr}
+                                title="${!isAvailable ? 'Missing: ' + (model.missing_dependencies || []).join(', ') : ''}">
                                 <div class="model-header">
                                     <div class="model-name">${model.name}</div>
-                                    <div class="model-accuracy">${model.accuracy || 'N/A'}</div>
+                                    ${statusBadge}
                                 </div>
                                 <div class="model-description">${model.description}</div>
-                                ${model.id === this.selectedModelId ? '<div class="selected-badge">SELECTED</div>' : ''}
+                                ${!isAvailable ? `<div class="missing-deps">Missing: ${(model.missing_dependencies || []).join(', ')}</div>` : ''}
                             </button>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </div>
                 </div>
 
@@ -376,6 +390,50 @@ class UnifiedExtractorControls extends HTMLElement {
                 border-radius: 2px;
             }
 
+            .status-badge {
+                font-size: 0.75rem;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+
+            .status-badge.selected {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+            .status-badge.unavailable {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .model-card.unavailable {
+                background: #f9fafb;
+                border-color: #d1d5db;
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+            .model-card.unavailable:hover {
+                border-color: #d1d5db;
+                transform: none;
+            }
+
+            .model-card.unavailable .model-name {
+                color: #6b7280;
+            }
+
+            .missing-deps {
+                font-size: 0.75rem;
+                color: #991b1b;
+                margin-top: 8px;
+                padding: 8px;
+                background: #fee2e2;
+                border-radius: 4px;
+                font-weight: 500;
+            }
+
             .settings-grid {
                 display: flex;
                 flex-direction: column;
@@ -468,10 +526,15 @@ class UnifiedExtractorControls extends HTMLElement {
 
     attachEventListeners() {
         // Model selection
-        this.shadowRoot.querySelectorAll('.model-card').forEach(card => {
+        this.shadowRoot.querySelectorAll('.model-card:not([disabled])').forEach(card => {
             card.addEventListener('click', (e) => {
                 const modelId = e.currentTarget.dataset.modelId;
-                this.selectModel(modelId);
+                const model = this.availableModels.find(m => m.id === modelId);
+                
+                // Only allow selection of available models
+                if (model && model.available !== false) {
+                    this.selectModel(modelId);
+                }
             });
         });
 
@@ -562,6 +625,16 @@ class UnifiedExtractorControls extends HTMLElement {
     async processFile(file) {
         if (!file) {
             throw new Error('No file provided');
+        }
+
+        // Check if selected model is available
+        const selectedModel = this.availableModels.find(m => m.id === this.selectedModelId);
+        if (selectedModel && selectedModel.available === false) {
+            throw new Error(
+                `Model "${selectedModel.name}" is not available. ` +
+                `Missing dependencies: ${(selectedModel.missing_dependencies || []).join(', ')}. ` +
+                `Please install them or select a different model.`
+            );
         }
 
         this.currentFile = file;
