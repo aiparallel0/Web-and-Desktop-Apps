@@ -457,6 +457,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             AppState.detectionSettings = e.detail;
             console.log('Settings changed:', e.detail);
         });
+        
+        unifiedControls.addEventListener('api-warning', (e) => {
+            UIHandler.showError(e.detail.message, 'API Connection Warning');
+        });
     }
 
     // Global process button

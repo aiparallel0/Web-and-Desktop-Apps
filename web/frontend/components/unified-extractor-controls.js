@@ -11,6 +11,7 @@ class UnifiedExtractorControls extends HTMLElement {
         
         // API Configuration
         this.apiBaseUrl = this.getApiBaseUrl();
+        this.apiConnected = false;
         
         // State
         this.selectedModelId = 'ocr_tesseract';
@@ -48,16 +49,31 @@ class UnifiedExtractorControls extends HTMLElement {
             if (response.ok) {
                 const data = await response.json();
                 this.availableModels = data.models || this.getDefaultModels();
+                this.apiConnected = true;
             } else {
+                console.warn('API models endpoint returned error status, using fallback models');
                 this.availableModels = this.getDefaultModels();
+                this.apiConnected = false;
+                this.showApiWarning('Unable to connect to API. Using default models.');
             }
         } catch (error) {
             console.error('Failed to fetch models:', error);
             this.availableModels = this.getDefaultModels();
+            this.apiConnected = false;
+            this.showApiWarning('API unavailable. Using offline model list.');
         }
         
         this.render();
         this.attachEventListeners();
+    }
+
+    showApiWarning(message) {
+        // Dispatch event to notify parent of API connectivity issue
+        this.dispatchEvent(new CustomEvent('api-warning', {
+            detail: { message },
+            bubbles: true,
+            composed: true
+        }));
     }
 
     getDefaultModels() {
