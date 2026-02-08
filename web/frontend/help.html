@@ -7,77 +7,263 @@
     <title>Help - Receipt Extractor</title>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="styles/professional-gov-complete.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
 </head>
 <body>
-    <div class="gov-header">
-        <div class="gov-header-container">
-            <a href="index.html" class="gov-header-logo">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                    <path d="M9 9h6M9 15h6"></path>
-                </svg>
-                <span>Receipt Extractor</span>
-            </a>
-            <nav class="gov-nav">
-                <a href="index.html#features" class="gov-nav-link">Features</a>
-                <a href="pricing.html" class="gov-nav-link">Pricing</a>
-                <a href="help.html" class="gov-nav-link">Help</a>
-                <a href="api.html" class="gov-nav-link">API</a>
-            </nav>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M9 9h6M9 15h6"></path>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <a href="help.html" class="nav-link">Help</a>
+                <button class="btn btn-secondary btn-sm" type="button">Sign In</button>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <main class="gov-container">
-        <section class="gov-section">
-            <h1>Help & Documentation</h1>
-            <p style="font-size: 1.125rem; color: #5b616b;">
-                Complete guide to using Receipt Extractor for text extraction from receipts.
-            </p>
+    <main id="main-content" role="main">
+        <section class="hero">
+            <div class="container">
+                <h1 class="hero-title">Help & Documentation</h1>
+                <p class="hero-subtitle">
+                    Complete guide to using Receipt Extractor for text extraction from receipts.
+                </p>
+            </div>
         </section>
 
-        <section class="gov-section">
-            <div style="max-width: 900px;">
-                <div class="gov-card gov-mb-6">
-                    <h2>Getting Started</h2>
-                    <h3>1. Upload Your Receipt</h3>
-                    <p>Click the upload area or drag and drop your receipt image. Supported formats include JPG, PNG, WEBP, and PDF files up to 100MB.</p>
-                    
-                    <h3>2. Select Extraction Method</h3>
-                    <p>Choose from 7 OCR models:</p>
-                    <ul style="margin-left: 24px; color: #5b616b;">
-                        <li><strong>Tesseract OCR:</strong> Fast and reliable for clear receipts</li>
-                        <li><strong>EasyOCR:</strong> Supports 80+ languages</li>
-                        <li><strong>PaddleOCR:</strong> High accuracy multilingual OCR</li>
-                        <li><strong>Donut:</strong> AI-powered structured extraction</li>
-                        <li><strong>Florence-2:</strong> Vision-language model</li>
-                        <li><strong>CRAFT:</strong> Text detection specialist</li>
-                        <li><strong>Spatial Multi-Method:</strong> Ensemble for maximum accuracy</li>
-                    </ul>
+        <section class="section">
+            <div class="container">
+                <div style="max-width: 900px; margin: 0 auto;">
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Getting Started</h2>
+                        </div>
+                        <div class="card-body">
+                            <h3>1. Upload Your Receipt</h3>
+                            <p>Click the upload area or drag and drop your receipt image. Supported formats include JPG, PNG, WEBP, and PDF files up to 100MB.</p>
+                            
+                            <h3>2. Select Extraction Method</h3>
+                            <p>Choose from 7 OCR models:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Tesseract OCR:</strong> Fast and reliable for clear receipts</li>
+                                <li><strong>EasyOCR:</strong> Supports 80+ languages</li>
+                                <li><strong>PaddleOCR:</strong> High accuracy multilingual OCR</li>
+                                <li><strong>Donut:</strong> AI-powered structured extraction</li>
+                                <li><strong>Florence-2:</strong> Vision-language model</li>
+                                <li><strong>CRAFT:</strong> Text detection specialist</li>
+                                <li><strong>Spatial Multi-Method:</strong> Ensemble for maximum accuracy</li>
+                            </ul>
 
-                    <h3>3. Configure Detection Settings</h3>
-                    <p>Choose detection mode:</p>
-                    <ul style="margin-left: 24px; color: #5b616b;">
-                        <li><strong>Auto Detect:</strong> Automatic text region detection</li>
-                        <li><strong>Manual Select:</strong> Draw custom regions</li>
-                        <li><strong>Line Detection:</strong> Process line-by-line</li>
-                        <li><strong>Column Mode:</strong> Handle multi-column layouts</li>
-                    </ul>
+                            <h3>3. Configure Detection Settings</h3>
+                            <p>Choose detection mode:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Auto Detect:</strong> Automatic text region detection</li>
+                                <li><strong>Manual Select:</strong> Draw custom regions</li>
+                                <li><strong>Line Detection:</strong> Process line-by-line</li>
+                                <li><strong>Column Mode:</strong> Handle multi-column layouts</li>
+                            </ul>
 
-                    <h3>4. Enable Preprocessing</h3>
-                    <p>Improve extraction accuracy:</p>
-                    <ul style="margin-left: 24px; color: #5b616b;">
-                        <li><strong>Deskew:</strong> Auto-rotation for straightening</li>
-                        <li><strong>Enhancement:</strong> Image quality improvements</li>
-                    </ul>
+                            <h3>4. Enable Preprocessing</h3>
+                            <p>Improve extraction accuracy:</p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li><strong>Deskew:</strong> Auto-rotation for straightening</li>
+                                <li><strong>Enhancement:</strong> Image quality improvements</li>
+                            </ul>
 
-                    <h3>5. Process and Review</h3>
-                    <p>Click Process Receipt to extract text. Results show all detected text regions with confidence scores.</p>
+                            <h3>5. Process and Review</h3>
+                            <p>Click Process Receipt to extract text. Results show all detected text regions with confidence scores.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Extraction Methods Explained</h2>
+                        </div>
+                        <div class="card-body">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Speed</th>
+                                        <th>Accuracy</th>
+                                        <th>Best Use Case</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Tesseract OCR</td>
+                                        <td>Very Fast</td>
+                                        <td>95%</td>
+                                        <td>Clear, high-quality receipts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>EasyOCR</td>
+                                        <td>Fast</td>
+                                        <td>90%</td>
+                                        <td>Multilingual receipts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>PaddleOCR</td>
+                                        <td>Medium</td>
+                                        <td>93%</td>
+                                        <td>Asian languages, complex layouts</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Donut</td>
+                                        <td>Medium</td>
+                                        <td>92%</td>
+                                        <td>Structured data extraction</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Florence-2</td>
+                                        <td>Slow</td>
+                                        <td>94%</td>
+                                        <td>Challenging, low-quality images</td>
+                                    </tr>
+                                    <tr>
+                                        <td>CRAFT</td>
+                                        <td>Fast</td>
+                                        <td>91%</td>
+                                        <td>Text region detection</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Spatial Multi-Method</td>
+                                        <td>Slow</td>
+                                        <td>96%</td>
+                                        <td>Maximum accuracy needed</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Tips for Best Results</h2>
+                        </div>
+                        <div class="card-body">
+                            <h3>Image Quality</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Use good lighting when photographing receipts</li>
+                                <li>Avoid shadows and glare</li>
+                                <li>Keep the receipt flat and unwrinkled</li>
+                                <li>Ensure text is in focus</li>
+                            </ul>
+
+                            <h3>Preprocessing</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Enable deskew for rotated or tilted receipts</li>
+                                <li>Use enhancement for low-quality or faded receipts</li>
+                                <li>Try different detection modes if results are poor</li>
+                            </ul>
+
+                            <h3>Model Selection</h3>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Start with Tesseract for standard English receipts</li>
+                                <li>Use EasyOCR or PaddleOCR for non-English text</li>
+                                <li>Try Spatial Multi-Method for maximum accuracy</li>
+                                <li>Use Donut or Florence-2 for complex layouts</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-8">
+                        <div class="card-header">
+                            <h2 class="card-title">Troubleshooting</h2>
+                        </div>
+                        <div class="card-body">
+                            <h3>Poor Extraction Results</h3>
+                            <p><strong>Issue:</strong> Text is missing or inaccurate</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Try a different extraction method</li>
+                                <li>Enable preprocessing options</li>
+                                <li>Improve image quality and re-upload</li>
+                                <li>Try manual region selection</li>
+                            </ul>
+
+                            <h3>File Upload Errors</h3>
+                            <p><strong>Issue:</strong> Cannot upload receipt</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Check file size (max 100MB)</li>
+                                <li>Verify file format (JPG, PNG, WEBP, PDF)</li>
+                                <li>Try a different browser</li>
+                                <li>Check internet connection</li>
+                            </ul>
+
+                            <h3>Processing Timeout</h3>
+                            <p><strong>Issue:</strong> Extraction takes too long</p>
+                            <p><strong>Solutions:</strong></p>
+                            <ul style="margin-left: var(--space-6); color: var(--color-gray-dark);">
+                                <li>Try a faster method (Tesseract)</li>
+                                <li>Reduce image size before upload</li>
+                                <li>Disable unnecessary preprocessing</li>
+                                <li>Wait and retry - server may be busy</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Contact Support</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>Need additional help? Contact our support team:</p>
+                            <ul style="list-style: none; padding: 0;">
+                                <li><strong>Email:</strong> support@receiptextractor.com</li>
+                                <li><strong>Response Time:</strong> Within 24 hours</li>
+                                <li><strong>Hours:</strong> Monday - Friday, 9 AM - 5 PM EST</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </section>
+    </main>
 
-                <div class="gov-card gov-mb-6">
+    <!-- Footer -->
+    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
+                <div>
+                    <h4>Receipt Extractor</h4>
+                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
+                </div>
+                <div>
+                    <h5>Resources</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="help.html">Help</a></li>
+                        <li><a href="api.html">API Documentation</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5>Legal</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
                     <h2>API Integration</h2>
                     <h3>Authentication</h3>
                     <p>Professional and Business plans include API access. Use JWT tokens for authentication.</p>
