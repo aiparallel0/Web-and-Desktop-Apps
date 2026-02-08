@@ -154,7 +154,7 @@ class ModelSelector extends HTMLElement {
 
             .selector-header {
                 padding: 20px 24px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                background: #10b981;
                 color: white;
             }
 
