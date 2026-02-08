@@ -13,8 +13,9 @@ class DetectionControls extends HTMLElement {
         this.detectionMode = 'auto';
         this.deskewEnabled = true;
         this.enhanceEnabled = true;
-        this.preview Enabled = false;
+        this.previewEnabled = false;
         this.manualRegions = [];
+        this.columnSeparators = [];
         
         // Canvas for manual selection
         this.canvas = null;
@@ -22,15 +23,24 @@ class DetectionControls extends HTMLElement {
         this.isDrawing = false;
         this.startPoint = null;
         this.currentImage = null;
+        this.imageScale = 1;
         
         // Storage key
         this.STORAGE_KEY = 'detection_settings';
+        
+        // Debounce timer
+        this.saveTimer = null;
     }
 
     connectedCallback() {
         this.loadPreferences();
         this.render();
         this.attachEventListeners();
+        this.setupCanvasIfNeeded();
+    }
+
+    disconnectedCallback() {
+        this.cleanupCanvas();
     }
 
     loadPreferences() {
@@ -41,6 +51,7 @@ class DetectionControls extends HTMLElement {
                 this.detectionMode = prefs.detectionMode || 'auto';
                 this.deskewEnabled = prefs.deskewEnabled !== false;
                 this.enhanceEnabled = prefs.enhanceEnabled !== false;
+                this.previewEnabled = prefs.previewEnabled || false;
             }
         } catch (e) {
             console.error('Failed to load preferences:', e);
@@ -48,11 +59,23 @@ class DetectionControls extends HTMLElement {
     }
 
     savePreferences() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
-            detectionMode: this.detectionMode,
-            deskewEnabled: this.deskewEnabled,
-            enhanceEnabled: this.enhanceEnabled
-        }));
+        // Debounce saves
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
+        
+        this.saveTimer = setTimeout(() => {
+            try {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+                    detectionMode: this.detectionMode,
+                    deskewEnabled: this.deskewEnabled,
+                    enhanceEnabled: this.enhanceEnabled,
+                    previewEnabled: this.previewEnabled
+                }));
+            } catch (e) {
+                console.error('Failed to save preferences:', e);
+            }
+        }, 300);
     }
 
     render() {
@@ -413,6 +436,167 @@ class DetectionControls extends HTMLElement {
             bubbles: true,
             composed: true
         }));
+    }
+
+    setupCanvasIfNeeded() {
+        if (this.detectionMode === 'manual' && !this.canvas) {
+            this.createCanvas();
+        }
+    }
+
+    createCanvas() {
+        const canvasContainer = this.shadowRoot.getElementById('canvasContainer');
+        if (!canvasContainer) return;
+
+        this.canvas = document.createElement('canvas');
+        this.canvas.className = 'selection-canvas';
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.canvas.addEventListener('mousedown', (e) => this.startSelection(e));
+        this.canvas.addEventListener('mousemove', (e) => this.updateSelection(e));
+        this.canvas.addEventListener('mouseup', (e) => this.endSelection(e));
+        
+        canvasContainer.appendChild(this.canvas);
+    }
+
+    cleanupCanvas() {
+        if (this.canvas && this.canvas.parentNode) {
+            this.canvas.parentNode.removeChild(this.canvas);
+            this.canvas = null;
+            this.ctx = null;
+        }
+    }
+
+    loadImageToCanvas(imageSource) {
+        if (!this.canvas) {
+            this.createCanvas();
+        }
+
+        const img = new Image();
+        img.onload = () => {
+            this.currentImage = img;
+            
+            // Calculate scale to fit canvas
+            const maxWidth = 800;
+            const maxHeight = 600;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = (width * maxHeight) / height;
+                height = maxHeight;
+            }
+            
+            this.imageScale = width / img.width;
+            
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.ctx.drawImage(img, 0, 0, width, height);
+            
+            // Redraw regions
+            this.drawRegions();
+        };
+        
+        if (typeof imageSource === 'string') {
+            img.src = imageSource;
+        } else if (imageSource instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(imageSource);
+        }
+    }
+
+    startSelection(e) {
+        if (!this.canvas) return;
+        
+        this.isDrawing = true;
+        const rect = this.canvas.getBoundingClientRect();
+        this.startPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    updateSelection(e) {
+        if (!this.isDrawing || !this.canvas || !this.currentImage) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const currentPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        
+        // Redraw image and existing regions
+        this.ctx.drawImage(this.currentImage, 0, 0, this.canvas.width, this.canvas.height);
+        this.drawRegions();
+        
+        // Draw current selection
+        this.ctx.strokeStyle = '#3B82F6';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(
+            this.startPoint.x,
+            this.startPoint.y,
+            currentPoint.x - this.startPoint.x,
+            currentPoint.y - this.startPoint.y
+        );
+    }
+
+    endSelection(e) {
+        if (!this.isDrawing || !this.canvas) return;
+        
+        this.isDrawing = false;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const endPoint = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        
+        // Convert to image coordinates
+        const region = {
+            x: Math.round(Math.min(this.startPoint.x, endPoint.x) / this.imageScale),
+            y: Math.round(Math.min(this.startPoint.y, endPoint.y) / this.imageScale),
+            width: Math.round(Math.abs(endPoint.x - this.startPoint.x) / this.imageScale),
+            height: Math.round(Math.abs(endPoint.y - this.startPoint.y) / this.imageScale)
+        };
+        
+        // Add region if it has minimum size
+        if (region.width > 10 && region.height > 10) {
+            this.addManualRegion(region);
+        }
+        
+        this.startPoint = null;
+    }
+
+    drawRegions() {
+        if (!this.canvas || !this.currentImage) return;
+        
+        this.ctx.strokeStyle = '#10B981';
+        this.ctx.lineWidth = 2;
+        this.ctx.fillStyle = 'rgba(16, 185, 129, 0.1)';
+        
+        for (const region of this.manualRegions) {
+            const x = region.x * this.imageScale;
+            const y = region.y * this.imageScale;
+            const w = region.width * this.imageScale;
+            const h = region.height * this.imageScale;
+            
+            this.ctx.fillRect(x, y, w, h);
+            this.ctx.strokeRect(x, y, w, h);
+        }
+    }
+
+    // Public method to set image for manual selection
+    setImage(imageSource) {
+        if (this.detectionMode === 'manual') {
+            this.loadImageToCanvas(imageSource);
+        }
     }
 }
 

@@ -12,6 +12,7 @@ class UnifiedExtractorControls extends HTMLElement {
         // API Configuration
         this.apiBaseUrl = this.getApiBaseUrl();
         this.apiConnected = false;
+        this.healthCheckInterval = null;
         
         // State
         this.selectedModelId = 'ocr_tesseract';
@@ -22,10 +23,15 @@ class UnifiedExtractorControls extends HTMLElement {
         this.previewEnabled = false;
         this.manualRegions = [];
         this.isProcessing = false;
+        this.currentFile = null;
         
         // Storage keys
         this.MODEL_KEY = 'extractor_model_id';
         this.DETECTION_KEY = 'extractor_detection_settings';
+        
+        // Performance tracking
+        this.lastExtractionTime = 0;
+        this.extractionCount = 0;
     }
 
     getApiBaseUrl() {
@@ -41,26 +47,103 @@ class UnifiedExtractorControls extends HTMLElement {
     connectedCallback() {
         this.loadPreferences();
         this.fetchModels();
+        this.startHealthCheck();
+    }
+
+    disconnectedCallback() {
+        this.stopHealthCheck();
+    }
+
+    startHealthCheck() {
+        this.checkHealth();
+        this.healthCheckInterval = setInterval(() => {
+            this.checkHealth();
+        }, 30000); // Check every 30 seconds
+    }
+
+    stopHealthCheck() {
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+    }
+
+    async checkHealth() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/health`, {
+                method: 'GET',
+                signal: AbortSignal.timeout(5000)
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const wasConnected = this.apiConnected;
+                this.apiConnected = data.status === 'healthy' || data.status === 'ok';
+                
+                if (!wasConnected && this.apiConnected) {
+                    console.log('Backend connection restored');
+                    this.fetchModels();
+                }
+            } else {
+                this.apiConnected = false;
+            }
+        } catch (error) {
+            this.apiConnected = false;
+        }
     }
 
     async fetchModels() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/models`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(`${this.apiBaseUrl}/api/models`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (response.ok) {
                 const data = await response.json();
-                this.availableModels = data.models || this.getDefaultModels();
+                
+                if (data.models && Array.isArray(data.models)) {
+                    this.availableModels = data.models.map(model => ({
+                        id: model.id || model.model_id,
+                        name: model.name || model.id,
+                        description: model.description || '',
+                        accuracy: model.accuracy || 'N/A',
+                        speed: model.speed || 'medium',
+                        enabled: model.enabled !== false
+                    }));
+                    
+                    if (data.default_model) {
+                        this.selectedModelId = data.default_model;
+                    }
+                } else {
+                    this.availableModels = this.getDefaultModels();
+                }
+                
                 this.apiConnected = true;
+                console.log('Loaded models from backend:', this.availableModels.length);
             } else {
-                console.warn('API models endpoint returned error status, using fallback models');
+                console.warn('API models endpoint returned error status:', response.status);
                 this.availableModels = this.getDefaultModels();
                 this.apiConnected = false;
-                this.showApiWarning('Unable to connect to API. Using default models.');
+                this.showApiWarning('Unable to fetch models from backend. Using defaults.');
             }
         } catch (error) {
-            console.error('Failed to fetch models:', error);
+            if (error.name === 'AbortError') {
+                console.error('Models fetch timeout');
+            } else {
+                console.error('Failed to fetch models:', error);
+            }
             this.availableModels = this.getDefaultModels();
             this.apiConnected = false;
-            this.showApiWarning('API unavailable. Using offline model list.');
+            this.showApiWarning('Backend connection failed. Using offline models.');
         }
         
         this.render();
@@ -481,38 +564,105 @@ class UnifiedExtractorControls extends HTMLElement {
             throw new Error('No file provided');
         }
 
+        this.currentFile = file;
         this.isProcessing = true;
+        const startTime = performance.now();
+        
         this.render();
         this.attachEventListeners();
 
         try {
+            // Preprocess image if enhancement or deskew is enabled
+            let processedFile = file;
+            
+            if (this.enhanceEnabled || this.deskewEnabled) {
+                try {
+                    if (window.ImageProcessingUtils) {
+                        console.log('Preprocessing image...');
+                        processedFile = await window.ImageProcessingUtils.processFile(file, {
+                            deskew: this.deskewEnabled,
+                            enhance: this.enhanceEnabled,
+                            enhanceOptions: {
+                                brightness: 1.1,
+                                contrast: 1.2,
+                                sharpen: true
+                            }
+                        });
+                        console.log('Image preprocessed successfully');
+                    }
+                } catch (preprocessError) {
+                    console.warn('Preprocessing failed, using original image:', preprocessError);
+                    processedFile = file;
+                }
+            }
+
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('image', processedFile);
             formData.append('model_id', this.selectedModelId);
             formData.append('detection_mode', this.detectionMode);
-            formData.append('enable_deskew', this.deskewEnabled.toString());
-            formData.append('enable_enhancement', this.enhanceEnabled.toString());
-            formData.append('column_mode', (this.detectionMode === 'column').toString());
+            formData.append('enable_deskew', String(this.deskewEnabled));
+            formData.append('enable_enhancement', String(this.enhanceEnabled));
+            formData.append('column_mode', String(this.detectionMode === 'column'));
 
             if (this.manualRegions.length > 0) {
                 formData.append('manual_regions', JSON.stringify(this.manualRegions));
             }
 
-            const response = await fetch(`${this.apiBaseUrl}/api/extract`, {
-                method: 'POST',
-                body: formData
+            console.log('Sending extraction request:', {
+                model: this.selectedModelId,
+                mode: this.detectionMode,
+                deskew: this.deskewEnabled,
+                enhance: this.enhanceEnabled
             });
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+            const response = await fetch(`${this.apiBaseUrl}/api/extract`, {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Extraction failed');
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorData.message || errorMessage;
+                } catch (e) {
+                    // Use default error message
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
             
+            const endTime = performance.now();
+            this.lastExtractionTime = (endTime - startTime) / 1000;
+            this.extractionCount++;
+            
+            console.log('Extraction completed:', {
+                time: this.lastExtractionTime.toFixed(2) + 's',
+                texts: result.texts?.length || 0,
+                success: result.success
+            });
+            
             this.isProcessing = false;
             this.render();
             this.attachEventListeners();
+
+            // Dispatch extraction complete event
+            this.dispatchEvent(new CustomEvent('extraction-complete', {
+                detail: {
+                    result,
+                    processingTime: this.lastExtractionTime,
+                    modelId: this.selectedModelId
+                },
+                bubbles: true,
+                composed: true
+            }));
 
             return result;
 
@@ -520,9 +670,52 @@ class UnifiedExtractorControls extends HTMLElement {
             this.isProcessing = false;
             this.render();
             this.attachEventListeners();
+            
+            console.error('Extraction error:', error);
+            
+            // Dispatch extraction error event
+            this.dispatchEvent(new CustomEvent('extraction-error', {
+                detail: {
+                    error: error.message,
+                    modelId: this.selectedModelId
+                },
+                bubbles: true,
+                composed: true
+            }));
+            
             throw error;
         }
     }
+
+    // Public method to set file from external sources
+    setFile(file) {
+        this.currentFile = file;
+        this.dispatchEvent(new CustomEvent('file-selected', {
+            detail: { file },
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    // Public method to trigger extraction
+    async extract() {
+        if (!this.currentFile) {
+            throw new Error('No file selected');
+        }
+        return this.processFile(this.currentFile);
+    }
+
+    // Get statistics
+    getStatistics() {
+        return {
+            totalExtractions: this.extractionCount,
+            lastExtractionTime: this.lastExtractionTime,
+            currentModel: this.selectedModelId,
+            apiConnected: this.apiConnected
+        };
+    }
 }
+
+customElements.define('unified-extractor-controls', UnifiedExtractorControls);
 
 customElements.define('unified-extractor-controls', UnifiedExtractorControls);

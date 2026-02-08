@@ -231,22 +231,102 @@ def api_root() -> Response:
 @app.route('/api/health', methods=['GET'])
 def health_check() -> Response:
     """
-    Basic health check endpoint.
-    Returns 200 if the application is running.
+    Comprehensive health check endpoint for load balancers and monitoring.
+    Returns detailed application health status including all subsystems.
     """
+    health_status = {
+        'status': 'healthy',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'service': 'receipt-extractor-api',
+        'checks': {}
+    }
+    
+    overall_healthy = True
+    
+    # Check database connectivity
     try:
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'service': 'receipt-extractor',
-            'version': '2.0'
-        })
+        from web.backend.database_pool import test_database_connectivity, monitor_pool_health
+        
+        db_test = test_database_connectivity(timeout=5)
+        pool_health = monitor_pool_health()
+        
+        health_status['checks']['database'] = {
+            'status': db_test.get('status', 'unknown'),
+            'latency_ms': int(db_test.get('latency_seconds', 0) * 1000),
+            'pool': pool_health
+        }
+        
+        if db_test.get('status') != 'success':
+            overall_healthy = False
+            health_status['checks']['database']['error'] = db_test.get('error', 'Unknown error')
+            
     except Exception as e:
-        logger.error(f"Health check failed: {e}", exc_info=True)
-        return jsonify({
-            'status': 'unhealthy',
+        logger.error(f"Database health check failed: {e}")
+        overall_healthy = False
+        health_status['checks']['database'] = {
+            'status': 'error',
             'error': str(e)
-        }), 503
+        }
+    
+    # Check Redis connectivity
+    try:
+        from web.backend.redis_manager import RedisManager
+        redis_mgr = RedisManager()
+        redis_health = redis_mgr.health_check()
+        health_status['checks']['redis'] = redis_health
+        
+        if not redis_health.get('connected', False):
+            logger.warning("Redis health check failed")
+            
+    except Exception as e:
+        logger.warning(f"Redis health check failed: {e}")
+        health_status['checks']['redis'] = {
+            'status': 'unavailable',
+            'error': str(e)
+        }
+    
+    # Check Celery workers
+    try:
+        from web.backend.celery_monitor import CeleryMonitor
+        celery_mon = CeleryMonitor()
+        celery_health = celery_mon.get_worker_status()
+        health_status['checks']['celery'] = celery_health
+        
+        if celery_health.get('active_workers', 0) == 0:
+            logger.warning("No active Celery workers detected")
+            
+    except Exception as e:
+        logger.warning(f"Celery health check failed: {e}")
+        health_status['checks']['celery'] = {
+            'status': 'unavailable',
+            'error': str(e)
+        }
+    
+    # Check model manager
+    try:
+        from shared.models.manager import ModelManager
+        manager = ModelManager()
+        models = manager.get_available_models()
+        loaded_models = [m['id'] for m in models if m.get('loaded', False)]
+        
+        health_status['checks']['models'] = {
+            'status': 'operational',
+            'available': len(models),
+            'loaded': len(loaded_models),
+            'gpu_available': manager._detect_gpu()
+        }
+    except Exception as e:
+        logger.warning(f"Model manager check failed: {e}")
+        health_status['checks']['models'] = {
+            'status': 'degraded',
+            'error': str(e)
+        }
+    
+    # Update overall status
+    health_status['status'] = 'healthy' if overall_healthy else 'unhealthy'
+    status_code = 200 if overall_healthy else 503
+    
+    return jsonify(health_status), status_code
 
 @app.route('/api/ready', methods=['GET'])
 def readiness_check() -> Response:

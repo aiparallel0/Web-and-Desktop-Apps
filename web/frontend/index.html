@@ -4,50 +4,206 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Official Receipt Text Extraction Service - Extract text from receipts with AI-powered OCR">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Receipt Extractor - Official Text Extraction Service</title>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="styles/professional-gov-complete.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
 </head>
 <body>
-    <!-- Official Government-Style Header -->
-    <div class="gov-header">
-        <div class="gov-header-container">
-            <a href="index.html" class="gov-header-logo">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                    <path d="M9 9h6M9 15h6"></path>
-                </svg>
-                <span>Receipt Extractor</span>
-            </a>
-            <nav class="gov-nav">
-                <a href="#features" class="gov-nav-link">Features</a>
-                <a href="pricing.html" class="gov-nav-link">Pricing</a>
-                <a href="help.html" class="gov-nav-link">Help</a>
-                <a href="api.html" class="gov-nav-link">API</a>
-            </nav>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M9 9h6M9 15h6"></path>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="api.html" class="nav-link">API</a>
+                <a href="help.html" class="nav-link">Help</a>
+                <button class="btn btn-secondary btn-sm" id="signInBtn" type="button">Sign In</button>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- Main Content -->
-    <main class="gov-container">
-        <section class="gov-section gov-text-center">
-            <h1>Official Receipt Text Extraction Service</h1>
-            <p style="font-size: 1.125rem; color: #5b616b; max-width: 800px; margin: 0 auto 40px;">
-                Extract text from receipts using advanced OCR technology. 
-                Fast, accurate, and secure processing.
-            </p>
+    <main id="main-content" role="main">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">Official Receipt Text Extraction Service</h1>
+                    <p class="hero-subtitle">
+                        Extract text from receipts using advanced OCR technology. 
+                        Fast, accurate, and secure processing.
+                    </p>
+
+                    <!-- Trust Signals -->
+                    <div class="trust-signals">
+                        <div class="trust-item">
+                            <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>10,000+ receipts processed today</span>
+                        </div>
+                        <div class="trust-item">
+                            <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <span>Files auto-deleted after processing</span>
+                        </div>
+                        <div class="trust-item">
+                            <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                            <span>No credit card required for trial</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
-        <!-- File Upload Section -->
-        <section class="gov-section">
-            <div class="gov-card" style="max-width: 800px; margin: 0 auto;">
-                <div class="gov-card-header">
-                    <h2 class="gov-card-title">Upload Receipt</h2>
+        <!-- Upload Zone Section -->
+        <section class="section">
+            <div class="container">
+                <div class="upload-zone-wrapper">
+                    <upload-zone id="mainUploadZone"></upload-zone>
                 </div>
-                <div class="gov-card-body">
+            </div>
+        </section>
+
+        <!-- Unified Extractor Controls -->
+        <section class="section">
+            <div class="container">
+                <unified-extractor-controls id="unifiedControls"></unified-extractor-controls>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="section">
+            <div class="container">
+                <div id="resultsContainer" class="hidden">
+                    <div class="results-container">
+                        <div class="results-header">
+                            <h2 class="results-title">Extraction Results</h2>
+                            <div class="results-actions">
+                                <button type="button" class="btn btn-secondary btn-sm" id="copyResultsBtn">Copy Text</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="downloadResultsBtn">Download</button>
+                            </div>
+                        </div>
+                        <div class="results-text" id="resultsText"></div>
+                        <div id="resultsMetadata" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="section">
+            <div class="container">
+                <h2 class="text-center mb-8">Extraction Methods</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Description</th>
+                                    <th>Best For</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Tesseract OCR</td>
+                                    <td>Fast traditional OCR engine</td>
+                                    <td>Clear, high-quality receipts</td>
+                                </tr>
+                                <tr>
+                                    <td>EasyOCR</td>
+                                    <td>Deep learning OCR with 80+ languages</td>
+                                    <td>Multilingual receipts</td>
+                                </tr>
+                                <tr>
+                                    <td>PaddleOCR</td>
+                                    <td>Production-grade OCR</td>
+                                    <td>Asian languages, complex layouts</td>
+                                </tr>
+                                <tr>
+                                    <td>Donut</td>
+                                    <td>Transformer-based document understanding</td>
+                                    <td>Structured data extraction</td>
+                                </tr>
+                                <tr>
+                                    <td>Florence-2</td>
+                                    <td>Vision-language model</td>
+                                    <td>Complex, challenging receipts</td>
+                                </tr>
+                                <tr>
+                                    <td>CRAFT</td>
+                                    <td>Character-region awareness</td>
+                                    <td>Text region detection</td>
+                                </tr>
+                                <tr>
+                                    <td>Spatial Multi-Method</td>
+                                    <td>Ensemble of multiple methods</td>
+                                    <td>Maximum accuracy</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
+                <div>
+                    <h4>Receipt Extractor</h4>
+                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
+                </div>
+                <div>
+                    <h5>Resources</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="help.html">Help</a></li>
+                        <li><a href="api.html">API Documentation</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5>Legal</h5>
+                    <ul style="list-style: none; padding: 0;">
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Web Components -->
+    <script src="components/upload-zone.js"></script>
+    <script src="components/unified-extractor-controls.js"></script>
+    <script src="components/detection-controls.js"></script>
+    <script src="components/progress-bar.js"></script>
+    <script src="components/results-view.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
                     <div id="dropZone" style="border: 2px dashed #5b616b; padding: 48px; text-align: center; border-radius: 2px; background: #f9f9f9; cursor: pointer;">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#5b616b" stroke-width="2" style="margin: 0 auto 16px;">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
