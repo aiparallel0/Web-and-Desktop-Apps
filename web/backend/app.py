@@ -479,63 +479,100 @@ def extract_receipt() -> Response:
             tmp_path = tmp.name
         
         try:
-            # Apply preprocessing
+            # Apply preprocessing if dependencies available
             logger.info("Applying preprocessing pipeline...")
-            image = Image.open(tmp_path)
             
-            preprocessing_result = preprocess_image_with_settings(
-                image,
-                detection_mode=detection_mode,
-                enable_deskew=enable_deskew,
-                enable_enhancement=enable_enhancement,
-                column_mode=column_mode,
-                manual_regions=manual_regions
-            )
-            
-            # Save preprocessed image
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_preprocessed:
-                preprocessing_result.image.save(tmp_preprocessed.name, 'PNG')
-                preprocessed_path = tmp_preprocessed.name
-            
-            logger.info(f"Preprocessing complete. Applied: {', '.join(preprocessing_result.applied_operations)}")
+            try:
+                from PIL import Image
+                from shared.utils.advanced_preprocessing import preprocess_image_with_settings
+                
+                image = Image.open(tmp_path)
+                preprocessing_result = preprocess_image_with_settings(
+                    image,
+                    detection_mode=detection_mode,
+                    enable_deskew=enable_deskew,
+                    enable_enhancement=enable_enhancement,
+                    column_mode=column_mode,
+                    manual_regions=manual_regions
+                )
+                
+                # Save preprocessed image
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_preprocessed:
+                    preprocessing_result.image.save(tmp_preprocessed.name, 'PNG')
+                    preprocessed_path = tmp_preprocessed.name
+                
+                logger.info(f"Preprocessing complete. Applied: {', '.join(preprocessing_result.applied_operations)}")
+                image_to_process = preprocessed_path
+                
+            except ImportError as e:
+                logger.warning(f"Preprocessing dependencies not available ({e}), using original image")
+                preprocessing_result = None
+                image_to_process = tmp_path
             
             # Process with model
             logger.info(f"Processing with model: {model_id}")
             manager = ModelManager()
             base_processor = manager.get_processor(model_id)
             
-            # Wrap processor with extended capabilities if needed
-            from shared.models.extended_processors import create_extended_processor
-            processor = create_extended_processor(base_processor, preprocessing_result)
+            # Wrap processor with extended capabilities if needed and available
+            try:
+                from shared.models.extended_processors import create_extended_processor
+                processor = create_extended_processor(base_processor, preprocessing_result)
+            except (ImportError, Exception) as e:
+                logger.warning(f"Extended processor not available ({e}), using base processor")
+                processor = base_processor
             
-            # Extract from preprocessed image
-            result = processor.extract(preprocessed_path)
+            # Extract from image
+            result = processor.extract(image_to_process)
             
-            # Process result with comprehensive validation and formatting
-            from shared.utils.result_processing import process_extraction_result
-            
-            preprocessing_metadata = {
-                'applied_operations': preprocessing_result.applied_operations,
-                'detected_angle': preprocessing_result.detected_angle,
-                'detected_columns': preprocessing_result.detected_columns,
-                'manual_regions': preprocessing_result.manual_regions,
-                'original_size': preprocessing_result.metadata.get('original_size'),
-                'detection_mode': detection_mode
-            }
-            
-            detection_settings_dict = {
-                'detection_mode': detection_mode,
-                'enable_deskew': enable_deskew,
-                'enable_enhancement': enable_enhancement,
-                'column_mode': column_mode,
-                'applied': True  # Settings were actually applied
-            }
-            
-            result_dict = process_extraction_result(
-                result,
-                preprocessing_metadata=preprocessing_metadata,
-                detection_settings=detection_settings_dict
-            )
+            # Process result with comprehensive validation and formatting if available
+            try:
+                from shared.utils.result_processing import process_extraction_result
+                
+                preprocessing_metadata = {
+                    'applied_operations': preprocessing_result.applied_operations if preprocessing_result else [],
+                    'detected_angle': preprocessing_result.detected_angle if preprocessing_result else None,
+                    'detected_columns': preprocessing_result.detected_columns if preprocessing_result else None,
+                    'manual_regions': preprocessing_result.manual_regions if preprocessing_result else None,
+                    'original_size': preprocessing_result.metadata.get('original_size') if preprocessing_result else None,
+                    'detection_mode': detection_mode
+                }
+                
+                detection_settings_dict = {
+                    'detection_mode': detection_mode,
+                    'enable_deskew': enable_deskew,
+                    'enable_enhancement': enable_enhancement,
+                    'column_mode': column_mode,
+                    'applied': preprocessing_result is not None
+                }
+                
+                result_dict = process_extraction_result(
+                    result,
+                    preprocessing_metadata=preprocessing_metadata,
+                    detection_settings=detection_settings_dict
+                )
+            except (ImportError, Exception) as e:
+                logger.warning(f"Result processing not available ({e}), using basic format")
+                # Basic result conversion
+                if hasattr(result, 'to_dict'):
+                    result_dict = result.to_dict()
+                else:
+                    result_dict = {
+                        'success': hasattr(result, 'success') and result.success,
+                        'data': result.data if hasattr(result, 'data') else None,
+                        'error': getattr(result, 'error', None)
+                    }
+                
+                # Add basic metadata
+                if 'metadata' not in result_dict:
+                    result_dict['metadata'] = {}
+                result_dict['metadata']['detection_settings'] = {
+                    'detection_mode': detection_mode,
+                    'enable_deskew': enable_deskew,
+                    'enable_enhancement': enable_enhancement,
+                    'column_mode': column_mode,
+                    'applied': preprocessing_result is not None
+                }
             
             logger.info(f"Extraction complete. Success: {result_dict.get('success', False)}")
             
