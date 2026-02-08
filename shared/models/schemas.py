@@ -163,6 +163,7 @@ class DetectionResult:
     success: bool = True
     error_code: Optional[ErrorCode] = None
     error_message: Optional[str] = None
+    missing_dependencies: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format."""
@@ -177,6 +178,8 @@ class DetectionResult:
             result['error_code'] = self.error_code.value
         if self.error_message:
             result['error_message'] = self.error_message
+        if self.missing_dependencies:
+            result['missing_dependencies'] = self.missing_dependencies
         return result
     
     @classmethod
@@ -189,7 +192,8 @@ class DetectionResult:
             model_id=data['model_id'],
             success=data.get('success', True),
             error_code=ErrorCode(data['error_code']) if data.get('error_code') else None,
-            error_message=data.get('error_message')
+            error_message=data.get('error_message'),
+            missing_dependencies=data.get('missing_dependencies', [])
         )
     
     @classmethod
@@ -209,6 +213,33 @@ class DetectionResult:
             success=False,
             error_code=error_code,
             error_message=error_message
+        )
+    
+    @classmethod
+    def create_dependency_error(
+        cls,
+        missing_deps: List[str],
+        model_id: str = "unknown"
+    ) -> 'DetectionResult':
+        """
+        Create an error result for missing dependencies.
+        
+        Args:
+            missing_deps: List of missing dependency names
+            model_id: Model identifier
+            
+        Returns:
+            DetectionResult with error details
+        """
+        return cls(
+            texts=[],
+            metadata={},
+            processing_time=0.0,
+            model_id=model_id,
+            success=False,
+            error_code=ErrorCode.MISSING_DEPENDENCIES,
+            error_message=f"Missing dependencies: {', '.join(missing_deps)}",
+            missing_dependencies=missing_deps
         )
 
 __all__ = [
