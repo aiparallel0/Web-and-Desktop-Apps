@@ -375,40 +375,55 @@ class ProcessorFactory:
     Implements the Factory Pattern with a registry-based approach to eliminate code duplication.
     """
 
-    # Registry: {model_type: (module_path, class_name, optional_error_message)}
+    # Registry: {model_type: (module_path, class_name, optional_error_message, enhanced_module, enhanced_class)}
     _REGISTRY = {
         ModelType.DONUT.value: (
             '.ai_models', 'DonutProcessor',
             "Donut models require PyTorch and Transformers. "
-            "Install with: pip install torch transformers accelerate sentencepiece."
+            "Install with: pip install torch transformers accelerate sentencepiece.",
+            None, None
         ),
         ModelType.FLORENCE.value: (
             '.ai_models', 'FlorenceProcessor',
             "Florence models require PyTorch and Transformers. "
-            "Install with: pip install torch transformers accelerate sentencepiece."
+            "Install with: pip install torch transformers accelerate sentencepiece.",
+            None, None
         ),
-        ModelType.OCR.value: ('.ocr_processor', 'OCRProcessor', None),
-        ModelType.EASYOCR.value: ('.processors', 'EasyOCRProcessor', None),
+        ModelType.OCR.value: (
+            '.ocr_processor', 'OCRProcessor', None,
+            '.enhanced_tesseract', 'EnhancedTesseractProcessor'
+        ),
+        ModelType.EASYOCR.value: (
+            '.processors', 'EasyOCRProcessor', None,
+            '.enhanced_ocr_engines', 'EnhancedEasyOCRProcessor'
+        ),
         ModelType.EASYOCR_SPATIAL.value: (
             '.spatial_ocr', 'EasyOCRSpatialProcessor',
             "Spatial EasyOCR requires EasyOCR and spatial analysis. "
-            "Install with: pip install easyocr opencv-python."
+            "Install with: pip install easyocr opencv-python.",
+            None, None
         ),
-        ModelType.PADDLE.value: ('.processors', 'PaddleProcessor', None),
+        ModelType.PADDLE.value: (
+            '.processors', 'PaddleProcessor', None,
+            '.enhanced_ocr_engines', 'EnhancedPaddleOCRProcessor'
+        ),
         ModelType.PADDLE_SPATIAL.value: (
             '.spatial_ocr', 'PaddleOCRSpatialProcessor',
             "Spatial PaddleOCR requires PaddleOCR and spatial analysis. "
-            "Install with: pip install paddleocr opencv-python."
+            "Install with: pip install paddleocr opencv-python.",
+            None, None
         ),
         ModelType.SPATIAL.value: (
             '.spatial_ocr', 'SpatialOCRProcessor',
             "Spatial OCR requires multiple OCR engines. "
-            "Install with: pip install pytesseract easyocr paddleocr opencv-python."
+            "Install with: pip install pytesseract easyocr paddleocr opencv-python.",
+            None, None
         ),
         ModelType.CRAFT.value: (
             '.craft_detector', 'CRAFTProcessor',
             "CRAFT text detector requires craft-text-detector and PyTorch. "
-            "Install with: pip install craft-text-detector torch."
+            "Install with: pip install craft-text-detector torch.",
+            None, None
         ),
     }
 
@@ -416,6 +431,8 @@ class ProcessorFactory:
     def create(cls, model_config: Dict[str, Any]) -> Processor:
         """
         Create a processor instance for the given model configuration.
+        
+        Tries to use enhanced processor if available, falls back to standard processor.
 
         Args:
             model_config: Model configuration dictionary
@@ -435,7 +452,22 @@ class ProcessorFactory:
         if model_type not in cls._REGISTRY:
             raise ValueError(f"Unknown model type: {model_type}")
 
-        module_path, class_name, error_msg = cls._REGISTRY[model_type]
+        registry_entry = cls._REGISTRY[model_type]
+        module_path, class_name, error_msg = registry_entry[0], registry_entry[1], registry_entry[2]
+        enhanced_module = registry_entry[3] if len(registry_entry) > 3 else None
+        enhanced_class = registry_entry[4] if len(registry_entry) > 4 else None
+        
+        # Try enhanced processor first if available
+        if enhanced_module and enhanced_class:
+            try:
+                logger.debug(f"Attempting to load enhanced processor: {enhanced_class}")
+                processor = cls._instantiate(enhanced_module, enhanced_class, model_config, error_msg)
+                logger.info(f"✓ Using enhanced processor: {enhanced_class}")
+                return processor
+            except Exception as e:
+                logger.warning(f"Enhanced processor not available, falling back to standard: {e}")
+        
+        # Fall back to standard processor
         return cls._instantiate(module_path, class_name, model_config, error_msg)
 
     @classmethod
