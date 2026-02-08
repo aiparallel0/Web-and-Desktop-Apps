@@ -83,6 +83,7 @@ def serve_frontend():
 
 try:
     from web.backend.database import init_db, get_engine
+    from web.backend.database_pool import setup_connection_listeners
     
     # Check if DATABASE_URL is configured
     import os
@@ -91,6 +92,14 @@ try:
     if database_url and not database_url.startswith('postgresql://localhost'):
         # Only attempt initialization if we have a proper database URL
         init_db()
+        
+        # Setup connection pool monitoring
+        try:
+            setup_connection_listeners()
+            logger.info("Database connection pool monitoring enabled")
+        except Exception as e:
+            logger.warning(f"Pool monitoring setup failed: {e}")
+        
         logger.info("Database initialized successfully")
     else:
         logger.warning("DATABASE_URL not configured or using localhost - skipping database initialization")
@@ -694,8 +703,19 @@ def database_health():
     """Check database connection health and pool status."""
     try:
         from web.backend.database import check_database_health
+        from web.backend.database_pool import monitor_pool_health
         
+        # Get basic health info
         health_info = check_database_health()
+        
+        # Add pool monitoring
+        try:
+            pool_health = monitor_pool_health()
+            health_info['pool_health'] = pool_health
+        except Exception as e:
+            logger.warning(f"Pool health check failed: {e}")
+            health_info['pool_health'] = {'error': str(e)}
+        
         status_code = 200 if health_info.get('status') == 'healthy' else 503
         
         return jsonify(health_info), status_code
