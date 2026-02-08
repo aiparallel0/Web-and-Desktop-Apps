@@ -407,11 +407,11 @@ def unload_models() -> Response:
 @app.route('/api/extract', methods=['POST'])
 def extract_receipt() -> Response:
     """
-    Extract text from a receipt image.
+    Extract text from a receipt image with full preprocessing pipeline.
     
     Request:
-        - image: Image file (multipart/form-data) - changed from 'file' to match frontend
-        - model_id: Model to use (optional, default: easyocr)
+        - image: Image file (multipart/form-data)
+        - model_id: Model to use (optional, default: ocr_tesseract)
         - detection_mode: Detection mode (optional: 'auto', 'manual', 'line', 'column')
         - enable_deskew: Enable deskew preprocessing (optional, default: true)
         - enable_enhancement: Enable image enhancement (optional, default: true)
@@ -421,6 +421,15 @@ def extract_receipt() -> Response:
     Returns:
         DetectionResult with extracted text and metadata
     """
+    import tempfile
+    import json
+    from PIL import Image
+    from shared.utils.advanced_preprocessing import preprocess_image_with_settings, PreprocessingSettings
+    from shared.models.manager import ModelManager
+    
+    tmp_path = None
+    preprocessed_path = None
+    
     try:
         # Check if file was uploaded - accept both 'image' and 'file' for backward compatibility
         file = None
@@ -442,68 +451,124 @@ def extract_receipt() -> Response:
             }), 400
         
         # Get model_id from form data or use default
-        model_id = request.form.get('model_id', 'easyocr')
+        model_id = request.form.get('model_id', 'ocr_tesseract')
         
         # Extract detection settings from form data
         detection_mode = request.form.get('detection_mode', 'auto')
         enable_deskew = request.form.get('enable_deskew', 'true').lower() in ('true', '1', 'yes')
         enable_enhancement = request.form.get('enable_enhancement', 'true').lower() in ('true', '1', 'yes')
         column_mode = request.form.get('column_mode', 'false').lower() in ('true', '1', 'yes')
-        manual_regions = request.form.get('manual_regions', None)
+        manual_regions_str = request.form.get('manual_regions', None)
         
-        # Log received parameters for debugging
-        logger.info(f"Extraction request - model_id: {model_id}, detection_mode: {detection_mode}, "
-                   f"deskew: {enable_deskew}, enhancement: {enable_enhancement}, "
-                   f"column_mode: {column_mode}, manual_regions: {bool(manual_regions)}")
+        # Parse manual regions if provided
+        manual_regions = None
+        if manual_regions_str:
+            try:
+                manual_regions = json.loads(manual_regions_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse manual_regions: {e}")
+        
+        # Log received parameters
+        logger.info(f"Extraction request - model: {model_id}, mode: {detection_mode}, "
+                   f"deskew: {enable_deskew}, enhance: {enable_enhancement}, "
+                   f"column: {column_mode}, regions: {bool(manual_regions)}")
         
         # Save file temporarily
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1] or '.jpg') as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
         
         try:
-            # Process with model
-            # Note: Current model processors use their own preprocessing
-            # The detection settings are logged but not yet passed to processors
-            # This would require updating the processor interface to accept these parameters
-            from shared.models.manager import ModelManager
-            manager = ModelManager()
-            processor = manager.get_processor(model_id)
-            result = processor.extract(tmp_path)
+            # Apply preprocessing
+            logger.info("Applying preprocessing pipeline...")
+            image = Image.open(tmp_path)
             
-            # Add detection settings to metadata
+            preprocessing_result = preprocess_image_with_settings(
+                image,
+                detection_mode=detection_mode,
+                enable_deskew=enable_deskew,
+                enable_enhancement=enable_enhancement,
+                column_mode=column_mode,
+                manual_regions=manual_regions
+            )
+            
+            # Save preprocessed image
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_preprocessed:
+                preprocessing_result.image.save(tmp_preprocessed.name, 'PNG')
+                preprocessed_path = tmp_preprocessed.name
+            
+            logger.info(f"Preprocessing complete. Applied: {', '.join(preprocessing_result.applied_operations)}")
+            
+            # Process with model
+            logger.info(f"Processing with model: {model_id}")
+            manager = ModelManager()
+            base_processor = manager.get_processor(model_id)
+            
+            # Wrap processor with extended capabilities if needed
+            from shared.models.extended_processors import create_extended_processor
+            processor = create_extended_processor(base_processor, preprocessing_result)
+            
+            # Extract from preprocessed image
+            result = processor.extract(preprocessed_path)
+            
+            # Convert result to dictionary
             if hasattr(result, 'to_dict'):
                 result_dict = result.to_dict()
-                if 'metadata' not in result_dict:
-                    result_dict['metadata'] = {}
-                result_dict['metadata']['detection_settings'] = {
-                    'detection_mode': detection_mode,
-                    'enable_deskew': enable_deskew,
-                    'enable_enhancement': enable_enhancement,
-                    'column_mode': column_mode,
-                    'applied': False  # Settings are logged but not yet applied to processors
-                }
-                logger.info(f"Detection settings logged (not yet applied to processor): {result_dict['metadata']['detection_settings']}")
             else:
-                result_dict = result.to_dict() if hasattr(result, 'to_dict') else {}
+                # Handle case where result doesn't have to_dict
+                result_dict = {
+                    'success': hasattr(result, 'success') and result.success,
+                    'data': result if not hasattr(result, 'data') else result.data,
+                    'error': getattr(result, 'error', None)
+                }
             
-            # Clean up temp file
-            os.unlink(tmp_path)
+            # Ensure metadata exists
+            if 'metadata' not in result_dict:
+                result_dict['metadata'] = {}
+            
+            # Add preprocessing metadata
+            result_dict['metadata']['preprocessing'] = {
+                'applied_operations': preprocessing_result.applied_operations,
+                'detected_angle': preprocessing_result.detected_angle,
+                'detected_columns': preprocessing_result.detected_columns,
+                'manual_regions': preprocessing_result.manual_regions,
+                'original_size': preprocessing_result.metadata.get('original_size'),
+                'detection_mode': detection_mode
+            }
+            
+            # Add detection settings
+            result_dict['metadata']['detection_settings'] = {
+                'detection_mode': detection_mode,
+                'enable_deskew': enable_deskew,
+                'enable_enhancement': enable_enhancement,
+                'column_mode': column_mode,
+                'applied': True  # Settings were actually applied
+            }
+            
+            logger.info(f"Extraction complete. Success: {result_dict.get('success', False)}")
+            
+            # Clean up temp files
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            if preprocessed_path and os.path.exists(preprocessed_path):
+                os.unlink(preprocessed_path)
             
             return jsonify(result_dict)
             
         except Exception as e:
-            # Clean up temp file on error
-            if os.path.exists(tmp_path):
+            # Clean up temp files on error
+            if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+            if preprocessed_path and os.path.exists(preprocessed_path):
+                os.unlink(preprocessed_path)
             raise
         
     except Exception as e:
         logger.error(f"Extraction failed: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'error_type': type(e).__name__
         }), 500
 
 @app.route('/api/extract/batch', methods=['POST'])
