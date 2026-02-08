@@ -15,43 +15,45 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="usa-skipnav">Skip to main content</a>
     
-    <!-- Navigation -->
-    <nav class="nav" role="navigation" aria-label="Main navigation">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <!-- USWDS Header -->
+    <header class="usa-header usa-header--basic" role="banner">
+        <div class="usa-nav-container">
+            <div class="usa-logo">
                 <a href="index.html">
                     <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2"></rect>
                         <path d="M9 9h6M9 15h6"></path>
                     </svg>
-                    <span class="nav-title">Receipt Extractor</span>
+                    <span>Receipt Extractor</span>
                 </a>
             </div>
-            <div class="nav-actions">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="pricing.html" class="nav-link">Pricing</a>
-                <a href="api.html" class="nav-link">API</a>
-                <a href="help.html" class="nav-link">Help</a>
-                <button class="btn btn-secondary btn-sm" id="signInBtn" type="button">Sign In</button>
-            </div>
+            <nav class="usa-nav" role="navigation" aria-label="Primary navigation">
+                <div class="nav-actions">
+                    <a href="#features" class="usa-nav__link">Features</a>
+                    <a href="pricing.html" class="usa-nav__link">Pricing</a>
+                    <a href="api.html" class="usa-nav__link">API</a>
+                    <a href="help.html" class="usa-nav__link">Help</a>
+                    <button class="usa-button usa-button--outline btn-sm" id="signInBtn" type="button">Sign In</button>
+                </div>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <main id="main-content" role="main">
         <!-- Hero Section -->
-        <section class="hero">
-            <div class="container">
-                <div class="hero-content">
-                    <h1 class="hero-title">Official Receipt Text Extraction Service</h1>
+        <section class="usa-hero">
+            <div class="usa-container">
+                <div class="usa-hero__callout">
+                    <h1 class="usa-hero__heading">Official Receipt Text Extraction Service</h1>
                     <p class="hero-subtitle">
                         Extract text from receipts using advanced OCR technology. 
                         Fast, accurate, and secure processing.
                     </p>
 
                     <!-- Trust Signals -->
-                    <div class="trust-signals">
+                    <div class="usa-identifier trust-signals">
                         <div class="trust-item">
                             <svg class="trust-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -76,52 +78,52 @@
         </section>
 
         <!-- Upload Zone Section -->
-        <section class="section">
-            <div class="container">
-                <div class="upload-zone-wrapper">
+        <section class="usa-section">
+            <div class="usa-container">
+                <div class="usa-file-input upload-zone-wrapper">
                     <upload-zone id="mainUploadZone"></upload-zone>
                 </div>
             </div>
         </section>
 
         <!-- Unified Extractor Controls -->
-        <section class="section">
-            <div class="container">
+        <section class="usa-section">
+            <div class="usa-container">
                 <unified-extractor-controls id="unifiedControls"></unified-extractor-controls>
             </div>
         </section>
 
         <!-- Results Section -->
-        <section class="section">
-            <div class="container">
+        <section class="usa-section">
+            <div class="usa-container">
                 <div id="resultsContainer" class="hidden">
                     <div class="results-container">
                         <div class="results-header">
                             <h2 class="results-title">Extraction Results</h2>
                             <div class="results-actions">
-                                <button type="button" class="btn btn-secondary btn-sm" id="copyResultsBtn">Copy Text</button>
-                                <button type="button" class="btn btn-secondary btn-sm" id="downloadResultsBtn">Download</button>
+                                <button type="button" class="usa-button usa-button--outline btn-sm" id="copyResultsBtn">Copy Text</button>
+                                <button type="button" class="usa-button usa-button--outline btn-sm" id="downloadResultsBtn">Download</button>
                             </div>
                         </div>
                         <div class="results-text" id="resultsText"></div>
-                        <div id="resultsMetadata" class="mt-4"></div>
+                        <div id="resultsMetadata" class="margin-top-4"></div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Features Section -->
-        <section id="features" class="section">
-            <div class="container">
-                <h2 class="text-center mb-8">Extraction Methods</h2>
-                <div class="card">
-                    <div class="card-body">
-                        <table class="table">
+        <section id="features" class="usa-section">
+            <div class="usa-container">
+                <h2 class="text-center margin-bottom-4">Extraction Methods</h2>
+                <div class="usa-card">
+                    <div class="usa-card__body">
+                        <table class="usa-table usa-table--striped">
                             <thead>
                                 <tr>
-                                    <th>Method</th>
-                                    <th>Description</th>
-                                    <th>Best For</th>
+                                    <th scope="col">Method</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col">Best For</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -168,28 +170,30 @@
         </section>
     </main>
 
-    <!-- Footer -->
-    <footer style="background: var(--bg-tertiary); padding: var(--space-8) 0; margin-top: var(--space-12); border-top: 2px solid var(--border-color);">
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-6);">
-                <div>
-                    <h4>Receipt Extractor</h4>
-                    <p style="color: var(--color-gray-dark);">Professional receipt text extraction service</p>
-                </div>
-                <div>
-                    <h5>Resources</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="api.html">API Documentation</a></li>
-                        <li><a href="pricing.html">Pricing</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h5>Legal</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li><a href="privacy.html">Privacy Policy</a></li>
-                        <li><a href="terms.html">Terms of Service</a></li>
-                    </ul>
+    <!-- USWDS Footer -->
+    <footer class="usa-footer">
+        <div class="usa-footer__primary-section">
+            <div class="usa-container">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--usa-spacing-4);">
+                    <div>
+                        <h4>Receipt Extractor</h4>
+                        <p>Professional receipt text extraction service</p>
+                    </div>
+                    <div>
+                        <h5>Resources</h5>
+                        <ul>
+                            <li><a href="help.html">Help</a></li>
+                            <li><a href="api.html">API Documentation</a></li>
+                            <li><a href="pricing.html">Pricing</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>Legal</h5>
+                        <ul>
+                            <li><a href="privacy.html">Privacy Policy</a></li>
+                            <li><a href="terms.html">Terms of Service</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -201,111 +205,6 @@
     <script src="components/detection-controls.js"></script>
     <script src="components/progress-bar.js"></script>
     <script src="components/results-view.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
-                    <div id="dropZone" style="border: 2px dashed #5b616b; padding: 48px; text-align: center; border-radius: 2px; background: #f9f9f9; cursor: pointer;">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#5b616b" stroke-width="2" style="margin: 0 auto 16px;">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        <p style="margin: 0 0 16px; font-size: 1rem; color: #212121; font-weight: 600;">
-                            Drop receipt image here or click to browse
-                        </p>
-                        <input type="file" id="fileInput" accept="image/*,.pdf" style="display: none;">
-                        <button class="gov-button gov-button-secondary" onclick="document.getElementById('fileInput').click()">
-                            Select File
-                        </button>
-                        <p style="margin: 16px 0 0; font-size: 0.875rem; color: #5b616b;">
-                            Supported formats: JPG, PNG, WEBP, PDF (Max 100MB)
-                        </p>
-                    </div>
-
-                    <!-- File Preview -->
-                    <div id="filePreview" class="hidden" style="margin-top: 24px;"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Extraction Controls -->
-        <section class="gov-section">
-            <div style="max-width: 1000px; margin: 0 auto;">
-                <unified-extractor-controls id="unifiedControls"></unified-extractor-controls>
-            </div>
-        </section>
-
-        <!-- Results Display -->
-        <section class="gov-section">
-            <div id="resultsContainer" class="hidden"></div>
-        </section>
-
-        <!-- Features Section -->
-        <section id="features" class="gov-section">
-            <h2 class="gov-text-center">Features</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 32px;">
-                <div class="gov-card">
-                    <h3>Multiple OCR Models</h3>
-                    <p>Choose from 7 different extraction methods including Tesseract, EasyOCR, PaddleOCR, and advanced AI models.</p>
-                </div>
-                <div class="gov-card">
-                    <h3>Advanced Detection</h3>
-                    <p>Auto, manual, line-by-line, and column detection modes for accurate text extraction.</p>
-                </div>
-                <div class="gov-card">
-                    <h3>Image Enhancement</h3>
-                    <p>Automatic deskew and image quality enhancement for better results.</p>
-                </div>
-                <div class="gov-card">
-                    <h3>Secure Processing</h3>
-                    <p>All files are processed securely and automatically deleted after extraction.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Trust Signals -->
-        <section class="gov-section">
-            <div class="gov-alert gov-alert-info">
-                <strong>Privacy Notice:</strong> Your uploaded files are processed securely and automatically deleted after extraction. We do not store or share your data.
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer style="background: #f1f1f1; padding: 48px 24px; margin-top: 64px; border-top: 1px solid #d6d7d9;">
-        <div class="gov-container">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 32px;">
-                <div>
-                    <h4 style="margin-bottom: 16px; color: #112e51;">Receipt Extractor</h4>
-                    <p style="color: #5b616b; font-size: 0.875rem;">
-                        Professional text extraction service powered by advanced OCR technology.
-                    </p>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 16px; color: #112e51;">Resources</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li style="margin-bottom: 8px;"><a href="help.html" style="color: #205493;">Documentation</a></li>
-                        <li style="margin-bottom: 8px;"><a href="api.html" style="color: #205493;">API Reference</a></li>
-                        <li style="margin-bottom: 8px;"><a href="pricing.html" style="color: #205493;">Pricing</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 16px; color: #112e51;">Legal</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li style="margin-bottom: 8px;"><a href="privacy.html" style="color: #205493;">Privacy Policy</a></li>
-                        <li style="margin-bottom: 8px;"><a href="terms.html" style="color: #205493;">Terms of Service</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #d6d7d9; text-align: center; color: #5b616b; font-size: 0.875rem;">
-                2024 Receipt Extractor. All rights reserved.
-            </div>
-        </div>
-    </footer>
-
-    <!-- Load Components and App -->
-    <script src="components/unified-extractor-controls.js"></script>
-    <script src="components/detection-controls.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
