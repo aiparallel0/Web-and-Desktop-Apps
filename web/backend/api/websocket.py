@@ -1,11 +1,22 @@
 """
 WebSocket Support for Real-time Progress Updates
-Allows clients to receive live extraction progress
+Enhanced with connection pooling, heartbeat, and automatic reconnection
+
+Features:
+- Real-time extraction progress updates
+- Connection health monitoring with heartbeat
+- Automatic reconnection handling
+- Room-based message routing
+- Message queuing and replay
+- Connection pool management
 """
 
 import logging
 import json
 import time
+import threading
+from collections import defaultdict, deque
+from typing import Dict, List, Optional, Any
 from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 
@@ -16,6 +27,16 @@ logger = logging.getLogger(__name__)
 
 # Global SocketIO instance (will be initialized by app)
 socketio = None
+
+# Connection management
+active_connections = {}  # session_id -> connection_info
+room_members = defaultdict(set)  # room_id -> set of session_ids
+message_queues = defaultdict(lambda: deque(maxlen=100))  # room_id -> message queue
+
+# Heartbeat configuration
+HEARTBEAT_INTERVAL = 15  # seconds
+heartbeat_thread = None
+heartbeat_running = False
 
 def init_websocket(app):
     """
