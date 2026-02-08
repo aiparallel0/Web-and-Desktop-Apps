@@ -163,8 +163,9 @@ async function fetchUserStats() {
     try {
         const response = await apiClient.get('/api/receipts?page=1&per_page=1');
         
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
         
         let monthlyCount = 0;
         let totalCount = 0;
@@ -656,9 +657,11 @@ async function handleExportData() {
 }
 
 async function handleDeleteAll() {
-    const confirmation = prompt('This will delete ALL your receipts. Type "DELETE ALL" to confirm:');
+    if (!confirm('Are you sure you want to delete ALL your receipts? This action cannot be undone.')) {
+        return;
+    }
     
-    if (confirmation !== 'DELETE ALL') {
+    if (!confirm('Final confirmation: Delete all receipts permanently?')) {
         return;
     }
     
@@ -667,6 +670,11 @@ async function handleDeleteAll() {
     try {
         const data = await fetchReceipts(1, 100);
         const receipts = data.receipts;
+        
+        if (receipts.length === 0) {
+            showSuccess('No receipts to delete');
+            return;
+        }
         
         let deleted = 0;
         for (const receipt of receipts) {
