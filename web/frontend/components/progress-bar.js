@@ -77,7 +77,7 @@ class ProgressBar extends HTMLElement {
 
                 .progress-bar-fill {
                     height: 100%;
-                    background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
+                    background: #3B82F6;
                     border-radius: 9999px;
                     transition: width 0.3s ease;
                     position: relative;
@@ -91,12 +91,7 @@ class ProgressBar extends HTMLElement {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: linear-gradient(
-                        90deg,
-                        transparent,
-                        rgba(255, 255, 255, 0.3),
-                        transparent
-                    );
+                    background: rgba(255, 255, 255, 0.2);
                     animation: shimmer 2s infinite;
                 }
 

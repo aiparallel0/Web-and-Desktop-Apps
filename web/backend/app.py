@@ -294,18 +294,34 @@ def get_version() -> Response:
 
 @app.route('/api/models', methods=['GET'])
 def list_models() -> Response:
-    """List available OCR/AI models."""
+    """List available OCR/AI models with availability status."""
     try:
         from shared.models.manager import ModelManager
         
         manager = ModelManager()
-        models = manager.get_available_models()
         
-        return jsonify({
-            'success': True,
-            'models': models,
-            'count': len(models)
-        })
+        # Check if availability check is requested
+        check_availability = request.args.get('check_availability', 'true').lower() == 'true'
+        
+        models = manager.get_available_models(check_availability=check_availability)
+        
+        # Count working vs total
+        if check_availability:
+            working_count = sum(1 for m in models if m.get('available', False))
+            return jsonify({
+                'success': True,
+                'models': models,
+                'count': len(models),
+                'working_count': working_count,
+                'default_model': manager.get_default_model()
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'models': models,
+                'count': len(models),
+                'default_model': manager.get_default_model()
+            })
     except Exception as e:
         logger.error(f"Failed to list models: {e}", exc_info=True)
         return jsonify({
@@ -407,24 +423,43 @@ def unload_models() -> Response:
 @app.route('/api/extract', methods=['POST'])
 def extract_receipt() -> Response:
     """
-    Extract text from a receipt image.
+    Extract text from a receipt image with full preprocessing pipeline.
     
     Request:
-        - file: Image file (multipart/form-data)
-        - model_id: Model to use (optional, default: easyocr)
+        - image: Image file (multipart/form-data)
+        - model_id: Model to use (optional, default: ocr_tesseract)
+        - detection_mode: Detection mode (optional: 'auto', 'manual', 'line', 'column')
+        - enable_deskew: Enable deskew preprocessing (optional, default: true)
+        - enable_enhancement: Enable image enhancement (optional, default: true)
+        - column_mode: Enable column mode detection (optional, default: false)
+        - manual_regions: JSON string of manual regions (optional)
     
     Returns:
         DetectionResult with extracted text and metadata
     """
+    import tempfile
+    import json
+    from PIL import Image
+    from shared.utils.advanced_preprocessing import preprocess_image_with_settings, PreprocessingSettings
+    from shared.models.manager import ModelManager
+    
+    tmp_path = None
+    preprocessed_path = None
+    
     try:
-        # Check if file was uploaded
-        if 'file' not in request.files:
+        # Check if file was uploaded - accept both 'image' and 'file' for backward compatibility
+        file = None
+        if 'image' in request.files:
+            file = request.files['image']
+        elif 'file' in request.files:
+            file = request.files['file']
+        
+        if not file:
             return jsonify({
                 'success': False,
                 'error': 'No file uploaded'
             }), 400
         
-        file = request.files['file']
         if file.filename == '':
             return jsonify({
                 'success': False,
@@ -432,35 +467,153 @@ def extract_receipt() -> Response:
             }), 400
         
         # Get model_id from form data or use default
-        model_id = request.form.get('model_id', 'easyocr')
+        model_id = request.form.get('model_id', 'ocr_tesseract')
+        
+        # Extract detection settings from form data
+        detection_mode = request.form.get('detection_mode', 'auto')
+        enable_deskew = request.form.get('enable_deskew', 'true').lower() in ('true', '1', 'yes')
+        enable_enhancement = request.form.get('enable_enhancement', 'true').lower() in ('true', '1', 'yes')
+        column_mode = request.form.get('column_mode', 'false').lower() in ('true', '1', 'yes')
+        manual_regions_str = request.form.get('manual_regions', None)
+        
+        # Parse manual regions if provided
+        manual_regions = None
+        if manual_regions_str:
+            try:
+                manual_regions = json.loads(manual_regions_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse manual_regions: {e}")
+        
+        # Log received parameters
+        logger.info(f"Extraction request - model: {model_id}, mode: {detection_mode}, "
+                   f"deskew: {enable_deskew}, enhance: {enable_enhancement}, "
+                   f"column: {column_mode}, regions: {bool(manual_regions)}")
         
         # Save file temporarily
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1] or '.jpg') as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
         
         try:
+            # Apply preprocessing if dependencies available
+            logger.info("Applying preprocessing pipeline...")
+            
+            try:
+                from PIL import Image
+                from shared.utils.advanced_preprocessing import preprocess_image_with_settings
+                
+                image = Image.open(tmp_path)
+                preprocessing_result = preprocess_image_with_settings(
+                    image,
+                    detection_mode=detection_mode,
+                    enable_deskew=enable_deskew,
+                    enable_enhancement=enable_enhancement,
+                    column_mode=column_mode,
+                    manual_regions=manual_regions
+                )
+                
+                # Save preprocessed image
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_preprocessed:
+                    preprocessing_result.image.save(tmp_preprocessed.name, 'PNG')
+                    preprocessed_path = tmp_preprocessed.name
+                
+                logger.info(f"Preprocessing complete. Applied: {', '.join(preprocessing_result.applied_operations)}")
+                image_to_process = preprocessed_path
+                
+            except ImportError as e:
+                logger.warning(f"Preprocessing dependencies not available ({e}), using original image")
+                preprocessing_result = None
+                image_to_process = tmp_path
+            
             # Process with model
-            from shared.models.engine import process_receipt
-            result = process_receipt(tmp_path, model_id)
+            logger.info(f"Processing with model: {model_id}")
+            manager = ModelManager()
+            base_processor = manager.get_processor(model_id)
             
-            # Clean up temp file
-            os.unlink(tmp_path)
+            # Wrap processor with extended capabilities if needed and available
+            try:
+                from shared.models.extended_processors import create_extended_processor
+                processor = create_extended_processor(base_processor, preprocessing_result)
+            except (ImportError, Exception) as e:
+                logger.warning(f"Extended processor not available ({e}), using base processor")
+                processor = base_processor
             
-            return jsonify(result.to_dict())
+            # Extract from image
+            result = processor.extract(image_to_process)
+            
+            # Process result with comprehensive validation and formatting if available
+            try:
+                from shared.utils.result_processing import process_extraction_result
+                
+                preprocessing_metadata = {
+                    'applied_operations': preprocessing_result.applied_operations if preprocessing_result else [],
+                    'detected_angle': preprocessing_result.detected_angle if preprocessing_result else None,
+                    'detected_columns': preprocessing_result.detected_columns if preprocessing_result else None,
+                    'manual_regions': preprocessing_result.manual_regions if preprocessing_result else None,
+                    'original_size': preprocessing_result.metadata.get('original_size') if preprocessing_result else None,
+                    'detection_mode': detection_mode
+                }
+                
+                detection_settings_dict = {
+                    'detection_mode': detection_mode,
+                    'enable_deskew': enable_deskew,
+                    'enable_enhancement': enable_enhancement,
+                    'column_mode': column_mode,
+                    'applied': preprocessing_result is not None
+                }
+                
+                result_dict = process_extraction_result(
+                    result,
+                    preprocessing_metadata=preprocessing_metadata,
+                    detection_settings=detection_settings_dict
+                )
+            except (ImportError, Exception) as e:
+                logger.warning(f"Result processing not available ({e}), using basic format")
+                # Basic result conversion
+                if hasattr(result, 'to_dict'):
+                    result_dict = result.to_dict()
+                else:
+                    result_dict = {
+                        'success': hasattr(result, 'success') and result.success,
+                        'data': result.data if hasattr(result, 'data') else None,
+                        'error': getattr(result, 'error', None)
+                    }
+                
+                # Add basic metadata
+                if 'metadata' not in result_dict:
+                    result_dict['metadata'] = {}
+                result_dict['metadata']['detection_settings'] = {
+                    'detection_mode': detection_mode,
+                    'enable_deskew': enable_deskew,
+                    'enable_enhancement': enable_enhancement,
+                    'column_mode': column_mode,
+                    'applied': preprocessing_result is not None
+                }
+            
+            logger.info(f"Extraction complete. Success: {result_dict.get('success', False)}")
+            
+            # Clean up temp files
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            if preprocessed_path and os.path.exists(preprocessed_path):
+                os.unlink(preprocessed_path)
+            
+            return jsonify(result_dict)
             
         except Exception as e:
-            # Clean up temp file on error
-            if os.path.exists(tmp_path):
+            # Clean up temp files on error
+            if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+            if preprocessed_path and os.path.exists(preprocessed_path):
+                os.unlink(preprocessed_path)
             raise
         
     except Exception as e:
         logger.error(f"Extraction failed: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'error_type': type(e).__name__
         }), 500
 
 @app.route('/api/extract/batch', methods=['POST'])

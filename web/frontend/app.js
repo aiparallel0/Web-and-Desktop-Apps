@@ -112,6 +112,14 @@ class APIService {
                 formData.append('manual_regions', JSON.stringify(detectionSettings.manual_regions));
             }
         }
+        
+        // Log detection parameters being sent
+        console.log('[Extract API] Sending extraction request:', {
+            filename: file.name,
+            size: file.size,
+            model_id: modelId || 'default',
+            detection_settings: detectionSettings || 'none'
+        });
 
         try {
             const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.API_ENDPOINTS.extract}`, {
@@ -124,6 +132,11 @@ class APIService {
             }
 
             const data = await response.json();
+            console.log('[Extract API] Received response:', {
+                success: data.success,
+                has_metadata: !!data.metadata,
+                detection_settings_applied: data.metadata?.detection_settings?.applied || false
+            });
             return data;
         } catch (error) {
             console.error('Error extracting receipt:', error);

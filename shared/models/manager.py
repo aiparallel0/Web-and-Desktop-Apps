@@ -375,40 +375,55 @@ class ProcessorFactory:
     Implements the Factory Pattern with a registry-based approach to eliminate code duplication.
     """
 
-    # Registry: {model_type: (module_path, class_name, optional_error_message)}
+    # Registry: {model_type: (module_path, class_name, optional_error_message, enhanced_module, enhanced_class)}
     _REGISTRY = {
         ModelType.DONUT.value: (
             '.ai_models', 'DonutProcessor',
             "Donut models require PyTorch and Transformers. "
-            "Install with: pip install torch transformers accelerate sentencepiece."
+            "Install with: pip install torch transformers accelerate sentencepiece.",
+            None, None
         ),
         ModelType.FLORENCE.value: (
             '.ai_models', 'FlorenceProcessor',
             "Florence models require PyTorch and Transformers. "
-            "Install with: pip install torch transformers accelerate sentencepiece."
+            "Install with: pip install torch transformers accelerate sentencepiece.",
+            None, None
         ),
-        ModelType.OCR.value: ('.ocr_processor', 'OCRProcessor', None),
-        ModelType.EASYOCR.value: ('.processors', 'EasyOCRProcessor', None),
+        ModelType.OCR.value: (
+            '.ocr_processor', 'OCRProcessor', None,
+            '.enhanced_tesseract', 'EnhancedTesseractProcessor'
+        ),
+        ModelType.EASYOCR.value: (
+            '.processors', 'EasyOCRProcessor', None,
+            '.enhanced_ocr_engines', 'EnhancedEasyOCRProcessor'
+        ),
         ModelType.EASYOCR_SPATIAL.value: (
             '.spatial_ocr', 'EasyOCRSpatialProcessor',
             "Spatial EasyOCR requires EasyOCR and spatial analysis. "
-            "Install with: pip install easyocr opencv-python."
+            "Install with: pip install easyocr opencv-python.",
+            '.enhanced_spatial', 'EnhancedEasyOCRSpatialProcessor'
         ),
-        ModelType.PADDLE.value: ('.processors', 'PaddleProcessor', None),
+        ModelType.PADDLE.value: (
+            '.processors', 'PaddleProcessor', None,
+            '.enhanced_ocr_engines', 'EnhancedPaddleOCRProcessor'
+        ),
         ModelType.PADDLE_SPATIAL.value: (
             '.spatial_ocr', 'PaddleOCRSpatialProcessor',
             "Spatial PaddleOCR requires PaddleOCR and spatial analysis. "
-            "Install with: pip install paddleocr opencv-python."
+            "Install with: pip install paddleocr opencv-python.",
+            '.enhanced_spatial', 'EnhancedPaddleOCRSpatialProcessor'
         ),
         ModelType.SPATIAL.value: (
             '.spatial_ocr', 'SpatialOCRProcessor',
             "Spatial OCR requires multiple OCR engines. "
-            "Install with: pip install pytesseract easyocr paddleocr opencv-python."
+            "Install with: pip install pytesseract easyocr paddleocr opencv-python.",
+            None, None
         ),
         ModelType.CRAFT.value: (
             '.craft_detector', 'CRAFTProcessor',
             "CRAFT text detector requires craft-text-detector and PyTorch. "
-            "Install with: pip install craft-text-detector torch."
+            "Install with: pip install craft-text-detector torch.",
+            None, None
         ),
     }
 
@@ -416,6 +431,9 @@ class ProcessorFactory:
     def create(cls, model_config: Dict[str, Any]) -> Processor:
         """
         Create a processor instance for the given model configuration.
+        
+        Uses standard processors only - enhanced processors disabled due to
+        signature incompatibility with data structures.
 
         Args:
             model_config: Model configuration dictionary
@@ -435,7 +453,15 @@ class ProcessorFactory:
         if model_type not in cls._REGISTRY:
             raise ValueError(f"Unknown model type: {model_type}")
 
-        module_path, class_name, error_msg = cls._REGISTRY[model_type]
+        registry_entry = cls._REGISTRY[model_type]
+        module_path, class_name, error_msg = registry_entry[0], registry_entry[1], registry_entry[2]
+        
+        # DISABLED: Enhanced processors have incompatible signatures
+        # Use standard processors only for now
+        # enhanced_module = registry_entry[3] if len(registry_entry) > 3 else None
+        # enhanced_class = registry_entry[4] if len(registry_entry) > 4 else None
+        
+        # Use standard processor
         return cls._instantiate(module_path, class_name, model_config, error_msg)
 
     @classmethod
@@ -582,23 +608,43 @@ class ModelManager:
             logger.error(f"Failed to load models config: {e}")
             raise
     
-    def get_available_models(self) -> List[Dict[str, Any]]:
+    def get_available_models(self, check_availability: bool = False) -> List[Dict[str, Any]]:
         """
         Get list of all available models.
         
+        Args:
+            check_availability: If True, test each model to see if it can actually load
+        
         Returns:
-            List of model information dictionaries
+            List of model information dictionaries with 'available' flag if checked
         """
         models = []
         for model_id, config in self.models_config['available_models'].items():
-            models.append({
+            model_info = {
                 'id': config['id'],
                 'name': config['name'],
                 'type': config['type'],
                 'description': config['description'],
                 'requires_auth': config.get('requires_auth', False),
                 'capabilities': config.get('capabilities', {})
-            })
+            }
+            
+            # Optionally check if model can actually be loaded
+            if check_availability:
+                try:
+                    self.get_processor(model_id)
+                    model_info['available'] = True
+                    model_info['status'] = 'ready'
+                except ImportError as e:
+                    model_info['available'] = False
+                    model_info['status'] = 'missing_dependencies'
+                    model_info['error'] = str(e)
+                except Exception as e:
+                    model_info['available'] = False
+                    model_info['status'] = 'error'
+                    model_info['error'] = str(e)
+            
+            models.append(model_info)
         return models
     
     def get_model_info(self, model_id: str) -> Optional[Dict[str, Any]]:

@@ -202,7 +202,7 @@ class DetectionControls extends HTMLElement {
                 align-items: center;
                 justify-content: space-between;
                 padding: 16px 20px;
-                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                background: #3B82F6;
                 color: white;
             }
 
