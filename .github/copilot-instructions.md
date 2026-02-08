@@ -1,5 +1,5 @@
 # GitHub Copilot Instructions - Receipt Extractor
-
+DO NOT USE ANY EMOJIS ANY LONG TEXTS BE BRIEF
 > **Last Updated:** 2025-12-08  
 > **Version:** 2.1.0  
 > **Purpose:** Comprehensive guide for GitHub Copilot to understand project architecture, conventions, and integration patterns
