@@ -314,7 +314,7 @@ def health_check() -> Response:
             'status': 'operational',
             'available': len(models),
             'loaded': len(loaded_models),
-            'gpu_available': manager._detect_gpu()
+            'gpu_available': manager.gpu_info.available if hasattr(manager, 'gpu_info') else False
         }
     except Exception as e:
         logger.warning(f"Model manager check failed: {e}")
