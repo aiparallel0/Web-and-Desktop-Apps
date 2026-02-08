@@ -7,72 +7,288 @@
     <title>Dashboard - Receipt Extractor</title>
     
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="styles/professional-gov-complete.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192x192.png">
+    
+    <style>
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #d6d7d9;
+            border-top-color: #112e51;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #fef1f1;
+            border: 1px solid #e31c3d;
+            color: #cd2026;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 2px;
+        }
+        
+        .success-message {
+            background: #ecf3ec;
+            border: 1px solid #2e8540;
+            color: #2e8540;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 2px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #5b616b;
+        }
+        
+        .empty-state svg {
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        
+        .pagination button {
+            min-width: 36px;
+            height: 36px;
+            border: 1px solid #d6d7d9;
+            background: white;
+            color: #112e51;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #f1f1f1;
+            border-color: #112e51;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination button.active {
+            background: #112e51;
+            color: white;
+            border-color: #112e51;
+        }
+        
+        .receipt-row:hover {
+            background: #f9f9f9;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 2px;
+        }
+        
+        .badge-success { background: #ecf3ec; color: #2e8540; }
+        .badge-error { background: #fef1f1; color: #cd2026; }
+        .badge-processing { background: #e7f6f8; color: #046b99; }
+        .badge-warning { background: #fff1d2; color: #9c7500; }
+        
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-top: 16px;
+        }
+        
+        .usage-bar {
+            width: 100%;
+            height: 8px;
+            background: #e4e4e4;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .usage-bar-fill {
+            height: 100%;
+            background: #112e51;
+            transition: width 0.3s ease;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #112e51;
+            margin: 0;
+        }
+        
+        .stat-label {
+            margin: 0 0 8px;
+            color: #5b616b;
+            font-size: 0.875rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 2px;
+        }
+        
+        .modal-header {
+            margin-bottom: 24px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+        }
+        
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #5b616b;
+        }
+        
+        .receipt-details {
+            margin-top: 16px;
+        }
+        
+        .receipt-details dt {
+            font-weight: 600;
+            margin-top: 12px;
+            color: #212121;
+        }
+        
+        .receipt-details dd {
+            margin: 4px 0 0 0;
+            color: #5b616b;
+        }
+        
+        .text-content {
+            background: #f9f9f9;
+            padding: 16px;
+            border: 1px solid #d6d7d9;
+            border-radius: 2px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
-    <div class="gov-header">
-        <div class="gov-header-container">
-            <a href="index.html" class="gov-header-logo">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                    <path d="M9 9h6M9 15h6"></path>
-                </svg>
-                <span>Receipt Extractor</span>
-            </a>
-            <nav class="gov-nav">
-                <a href="dashboard.html" class="gov-nav-link">Dashboard</a>
-                <a href="index.html" class="gov-nav-link">Extract</a>
-                <a href="help.html" class="gov-nav-link">Help</a>
-                <button class="gov-button-secondary" id="logoutBtn" style="padding: 8px 16px; font-size: 0.875rem;">Sign Out</button>
-            </nav>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <svg class="nav-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M9 9h6M9 15h6"></path>
+                    </svg>
+                    <span class="nav-title">Receipt Extractor</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="index.html" class="nav-link">Extract</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="help.html" class="nav-link">Help</a>
+                <button class="btn btn-secondary btn-sm" id="logoutBtn" type="button">Sign Out</button>
+            </div>
         </div>
-    </div>
+    </nav>
 
-    <main class="gov-container">
-        <section class="gov-section">
-            <h1>Dashboard</h1>
-            <p style="font-size: 1.125rem; color: #5b616b;">
-                Manage your receipts and view extraction history.
-            </p>
+    <main id="main-content" class="container" role="main" style="padding: 48px 24px;">
+        <section class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h1 style="margin-bottom: 8px;">Dashboard</h1>
+                    <p style="margin: 0; font-size: 1.125rem; color: #5b616b;">
+                        Manage your receipts and view extraction history
+                    </p>
+                </div>
+                <button class="btn btn-primary" id="refreshBtn" type="button">
+                    <span id="refreshBtnText">Refresh Data</span>
+                    <span id="refreshSpinner" class="loading-spinner" style="display: none;"></span>
+                </button>
+            </div>
+            
+            <div id="errorContainer"></div>
+            <div id="successContainer"></div>
         </section>
 
-        <!-- Stats Cards -->
-        <section class="gov-section">
+        <section class="section">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
-                <div class="gov-card">
+                <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">Total Extractions</p>
-                            <p style="margin: 0; font-size: 2rem; font-weight: 700; color: #112e51;">342</p>
+                            <p class="stat-label">Total Extractions</p>
+                            <p class="stat-value" id="totalExtractions">0</p>
                         </div>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#112e51" stroke-width="2">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#112e51" stroke-width="2" aria-hidden="true">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                         </svg>
                     </div>
                 </div>
 
-                <div class="gov-card">
+                <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">This Month</p>
-                            <p style="margin: 0; font-size: 2rem; font-weight: 700; color: #112e51;">45</p>
+                            <p class="stat-label">This Month</p>
+                            <p class="stat-value" id="monthlyExtractions">0</p>
                         </div>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2e8540" stroke-width="2">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2e8540" stroke-width="2" aria-hidden="true">
                             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                         </svg>
                     </div>
                 </div>
 
-                <div class="gov-card">
+                <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">Storage Used</p>
-                            <p style="margin: 0; font-size: 2rem; font-weight: 700; color: #112e51;">1.2GB</p>
+                            <p class="stat-label">Storage Used</p>
+                            <p class="stat-value" id="storageUsed">0 MB</p>
                         </div>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#205493" stroke-width="2">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#205493" stroke-width="2" aria-hidden="true">
                             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                             <line x1="8" y1="21" x2="16" y2="21"></line>
                             <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -80,13 +296,13 @@
                     </div>
                 </div>
 
-                <div class="gov-card">
+                <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">Plan</p>
-                            <p style="margin: 0; font-size: 2rem; font-weight: 700; color: #112e51;">Pro</p>
+                            <p class="stat-label">Current Plan</p>
+                            <p class="stat-value" id="currentPlan">Free</p>
                         </div>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fdb81e" stroke-width="2">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fdb81e" stroke-width="2" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M12 6v6l4 2"></path>
                         </svg>
@@ -95,123 +311,112 @@
             </div>
         </section>
 
-        <!-- Recent Extractions -->
-        <section class="gov-section">
+        <section class="section">
             <h2>Recent Extractions</h2>
-            <div class="gov-card" style="padding: 0; margin-top: 24px;">
-                <table class="gov-table">
+            <div class="card" style="padding: 0; margin-top: 24px; overflow-x: auto;">
+                <div id="receiptsLoading" style="display: none; padding: 48px; text-align: center;">
+                    <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px;"></div>
+                    <p style="margin-top: 16px; color: #5b616b;">Loading receipts...</p>
+                </div>
+                
+                <div id="receiptsEmpty" class="empty-state" style="display: none;">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <h3>No receipts yet</h3>
+                    <p>Start by extracting your first receipt</p>
+                    <a href="index.html" class="btn btn-primary" style="margin-top: 16px; text-decoration: none; display: inline-block;">Extract Receipt</a>
+                </div>
+                
+                <table class="table" id="receiptsTable" style="display: none;">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>File Name</th>
+                            <th>Store Name</th>
                             <th>Model</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>2024-01-15 14:32</td>
-                            <td>receipt_grocery.jpg</td>
-                            <td>Tesseract OCR</td>
-                            <td><span style="color: #2e8540; font-weight: 600;">Success</span></td>
-                            <td>
-                                <button class="gov-button-secondary" style="padding: 6px 12px; font-size: 0.8125rem;">View</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-15 12:15</td>
-                            <td>restaurant_bill.png</td>
-                            <td>PaddleOCR</td>
-                            <td><span style="color: #2e8540; font-weight: 600;">Success</span></td>
-                            <td>
-                                <button class="gov-button-secondary" style="padding: 6px 12px; font-size: 0.8125rem;">View</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-14 16:48</td>
-                            <td>gas_station.jpg</td>
-                            <td>EasyOCR</td>
-                            <td><span style="color: #2e8540; font-weight: 600;">Success</span></td>
-                            <td>
-                                <button class="gov-button-secondary" style="padding: 6px 12px; font-size: 0.8125rem;">View</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-14 10:22</td>
-                            <td>pharmacy_receipt.pdf</td>
-                            <td>Florence-2</td>
-                            <td><span style="color: #2e8540; font-weight: 600;">Success</span></td>
-                            <td>
-                                <button class="gov-button-secondary" style="padding: 6px 12px; font-size: 0.8125rem;">View</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-13 18:55</td>
-                            <td>hardware_store.jpg</td>
-                            <td>Donut</td>
-                            <td><span style="color: #e31c3d; font-weight: 600;">Failed</span></td>
-                            <td>
-                                <button class="gov-button-secondary" style="padding: 6px 12px; font-size: 0.8125rem;">Retry</button>
-                            </td>
-                        </tr>
+                    <tbody id="receiptsTableBody">
                     </tbody>
                 </table>
+                
+                <div id="paginationContainer" class="pagination" style="display: none; padding: 16px;">
+                </div>
             </div>
         </section>
 
-        <!-- Usage -->
-        <section class="gov-section">
-            <h2>Monthly Usage</h2>
-            <div class="gov-card" style="margin-top: 24px;">
-                <div style="margin-bottom: 16px;">
+        <section class="section">
+            <h2>Usage Summary</h2>
+            <div class="card" style="margin-top: 24px;">
+                <div style="margin-bottom: 24px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="font-weight: 600; color: #212121;">Receipts Processed</span>
-                        <span style="color: #5b616b;">45 / 500</span>
+                        <span style="font-weight: 600; color: #212121;">Monthly Receipts</span>
+                        <span style="color: #5b616b;" id="usageReceiptsText">0 / 10</span>
                     </div>
-                    <div style="width: 100%; height: 8px; background: #e4e4e4; border-radius: 2px; overflow: hidden;">
-                        <div style="width: 9%; height: 100%; background: #112e51;"></div>
+                    <div class="usage-bar">
+                        <div class="usage-bar-fill" id="usageReceiptsBar" style="width: 0%;"></div>
                     </div>
                 </div>
 
                 <div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span style="font-weight: 600; color: #212121;">Storage</span>
-                        <span style="color: #5b616b;">1.2 / 5 GB</span>
+                        <span style="color: #5b616b;" id="usageStorageText">0 MB / 100 MB</span>
                     </div>
-                    <div style="width: 100%; height: 8px; background: #e4e4e4; border-radius: 2px; overflow: hidden;">
-                        <div style="width: 24%; height: 100%; background: #2e8540;"></div>
+                    <div class="usage-bar">
+                        <div class="usage-bar-fill" id="usageStorageBar" style="width: 0%; background: #2e8540;"></div>
                     </div>
+                </div>
+                
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #d6d7d9;">
+                    <p style="margin: 0 0 8px; color: #5b616b; font-size: 0.875rem;">Want more capacity?</p>
+                    <a href="pricing.html" class="btn btn-secondary">Upgrade Plan</a>
                 </div>
             </div>
         </section>
 
-        <!-- Quick Actions -->
-        <section class="gov-section">
+        <section class="section">
             <h2>Quick Actions</h2>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px;">
-                <a href="index.html" class="gov-button" style="text-decoration: none;">
+                <a href="index.html" class="btn btn-primary" style="text-decoration: none; text-align: center;">
                     New Extraction
                 </a>
-                <a href="pricing.html" class="gov-button-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
-                    Upgrade Plan
-                </a>
-                <button class="gov-button-secondary">
-                    Export Data
+                <button class="btn btn-secondary" id="exportDataBtn" type="button">
+                    Export All Data
                 </button>
-                <button class="gov-button-secondary">
-                    API Keys
+                <button class="btn btn-secondary" id="deleteAllBtn" type="button">
+                    Delete All Receipts
                 </button>
             </div>
         </section>
     </main>
 
     <footer style="background: #f1f1f1; padding: 48px 24px; margin-top: 64px; border-top: 1px solid #d6d7d9;">
-        <div class="gov-container">
+        <div class="container">
             <div style="text-align: center; color: #5b616b; font-size: 0.875rem;">
                 2024 Receipt Extractor. All rights reserved.
             </div>
         </div>
     </footer>
+
+    <div id="receiptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" id="closeModalBtn" type="button">&times;</button>
+                <h2>Receipt Details</h2>
+            </div>
+            <div id="modalBody">
+                <div style="text-align: center; padding: 24px;">
+                    <div class="loading-spinner" style="width: 32px; height: 32px; border-width: 3px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
 </body>
 </html>
