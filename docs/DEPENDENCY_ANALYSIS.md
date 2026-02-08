@@ -2,8 +2,8 @@
 DEPENDENCY ANALYSIS REPORT
 ================================================================================
 
-Total Python modules: 219
-Total import relationships: 1393
+Total Python modules: 222
+Total import relationships: 1419
 
 ⚠️  CIRCULAR DEPENDENCIES DETECTED: 1
 
@@ -22,15 +22,15 @@ Import Depth Analysis:
     examples.spatial_ocr_usage: depth 2
 
 Import Bottlenecks (imported by 10+ modules):
-  logging: 114 imports
-  os: 111 imports
-  shared: 106 imports
-  typing: 103 imports
-  sys: 79 imports
-  datetime: 67 imports
-  pathlib: 55 imports
+  logging: 117 imports
+  os: 114 imports
+  shared: 108 imports
+  typing: 106 imports
+  sys: 80 imports
+  datetime: 69 imports
+  pathlib: 56 imports
   json: 54 imports
-  time: 45 imports
+  time: 48 imports
   pytest: 41 imports
 
 Consider: These modules are heavily coupled
