@@ -219,13 +219,14 @@ def api_root() -> Response:
             'version': '/api/version',
             'database_health': '/api/database/health',
             'models': '/api/models',
+            'models_health': '/api/models/health',
             'select_model': '/api/models/select (POST)',
             'extract': '/api/extract (POST)',
             'batch_extract': '/api/extract/batch (POST)',
             'model_info': '/api/models/<model_id>/info',
             'unload_models': '/api/models/unload (POST)'
         },
-        'documentation': 'Visit /api/health for health check or /api/models to see available models'
+        'documentation': 'Visit /api/health for health check, /api/models/health for model availability, or /api/models to see available models'
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -416,6 +417,74 @@ def list_models() -> Response:
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@app.route('/api/models/health', methods=['GET'])
+def models_health() -> Response:
+    """
+    Check detailed health status of all models.
+    Returns available models, unavailable models with reasons, and dependency status.
+    """
+    try:
+        from shared.models.manager import ModelManager
+        
+        manager = ModelManager()
+        
+        # Get models with availability check
+        all_models = manager.get_available_models(check_availability=True)
+        
+        # Get dependency status
+        deps = manager._check_dependencies()
+        
+        # Categorize models
+        available_models = []
+        unavailable_models = []
+        
+        for model in all_models:
+            if model.get('available', False):
+                available_models.append({
+                    'id': model['id'],
+                    'name': model['name'],
+                    'type': model['type'],
+                    'status': 'ready'
+                })
+            else:
+                unavailable_models.append({
+                    'id': model['id'],
+                    'name': model['name'],
+                    'type': model['type'],
+                    'error': model.get('error', 'Unknown error'),
+                    'missing_dependencies': model.get('missing_dependencies', [])
+                })
+        
+        # Build missing dependencies list
+        missing_deps = []
+        for dep_name, dep_info in deps.items():
+            if not dep_info.get('available', False):
+                missing_deps.append(dep_name)
+        
+        health = {
+            'success': True,
+            'available_models': available_models,
+            'unavailable_models': unavailable_models,
+            'missing_dependencies': missing_deps,
+            'dependency_status': deps,
+            'summary': {
+                'total_models': len(all_models),
+                'available_count': len(available_models),
+                'unavailable_count': len(unavailable_models)
+            }
+        }
+        
+        return jsonify(health)
+        
+    except Exception as e:
+        logger.error(f"Model health check failed: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'available_models': [],
+            'unavailable_models': []
         }), 500
 
 @app.route('/api/models/select', methods=['POST'])

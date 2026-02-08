@@ -608,17 +608,92 @@ class ModelManager:
             logger.error(f"Failed to load models config: {e}")
             raise
     
+    def _check_dependencies(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Check which model dependencies are available.
+        
+        Returns:
+            Dictionary mapping dependency names to their status and info
+        """
+        deps = {}
+        
+        # Check OpenCV (for Tesseract)
+        try:
+            import cv2
+            deps['opencv'] = {'available': True, 'version': cv2.__version__}
+        except ImportError as e:
+            deps['opencv'] = {'available': False, 'error': str(e)}
+            logger.warning("OpenCV not available - Tesseract models may not work properly")
+        
+        # Check EasyOCR
+        try:
+            import easyocr
+            deps['easyocr'] = {'available': True, 'version': getattr(easyocr, '__version__', 'unknown')}
+        except ImportError as e:
+            deps['easyocr'] = {'available': False, 'error': str(e)}
+            logger.warning("EasyOCR not available")
+        
+        # Check PaddleOCR
+        try:
+            import paddleocr
+            deps['paddleocr'] = {'available': True, 'version': getattr(paddleocr, '__version__', 'unknown')}
+        except ImportError as e:
+            deps['paddleocr'] = {'available': False, 'error': str(e)}
+            logger.warning("PaddleOCR not available")
+        
+        # Check PyTorch (for Florence-2, DONUT, CRAFT)
+        try:
+            import torch
+            deps['torch'] = {
+                'available': True, 
+                'version': torch.__version__,
+                'cuda_available': torch.cuda.is_available()
+            }
+        except ImportError as e:
+            deps['torch'] = {'available': False, 'error': str(e)}
+            logger.warning("PyTorch not available - AI models will not work")
+        
+        # Check Transformers (for Florence-2, DONUT)
+        try:
+            import transformers
+            deps['transformers'] = {'available': True, 'version': transformers.__version__}
+        except ImportError as e:
+            deps['transformers'] = {'available': False, 'error': str(e)}
+            logger.warning("Transformers not available - Florence-2 and DONUT models will not work")
+        
+        # Check CRAFT detector
+        try:
+            import craft_text_detector
+            deps['craft'] = {'available': True, 'version': getattr(craft_text_detector, '__version__', 'unknown')}
+        except ImportError as e:
+            deps['craft'] = {'available': False, 'error': str(e)}
+            logger.warning("CRAFT text detector not available")
+        
+        # Check Tesseract
+        try:
+            import pytesseract
+            deps['pytesseract'] = {'available': True, 'version': pytesseract.get_tesseract_version().public}
+        except Exception as e:
+            deps['pytesseract'] = {'available': False, 'error': str(e)}
+            logger.warning("Tesseract OCR not available or not properly installed")
+        
+        return deps
+    
     def get_available_models(self, check_availability: bool = False) -> List[Dict[str, Any]]:
         """
         Get list of all available models.
         
         Args:
-            check_availability: If True, test each model to see if it can actually load
+            check_availability: If True, check dependency availability for each model
         
         Returns:
             List of model information dictionaries with 'available' flag if checked
         """
         models = []
+        
+        # Get dependency status if checking availability
+        deps = self._check_dependencies() if check_availability else {}
+        
         for model_id, config in self.models_config['available_models'].items():
             model_info = {
                 'id': config['id'],
@@ -629,20 +704,52 @@ class ModelManager:
                 'capabilities': config.get('capabilities', {})
             }
             
-            # Optionally check if model can actually be loaded
+            # Check dependency availability based on model type
             if check_availability:
-                try:
-                    self.get_processor(model_id)
-                    model_info['available'] = True
-                    model_info['status'] = 'ready'
-                except ImportError as e:
-                    model_info['available'] = False
-                    model_info['status'] = 'missing_dependencies'
-                    model_info['error'] = str(e)
-                except Exception as e:
-                    model_info['available'] = False
-                    model_info['status'] = 'error'
-                    model_info['error'] = str(e)
+                model_type = config.get('type', '')
+                available = True
+                missing_deps = []
+                
+                # Check dependencies based on model type
+                if model_type == 'ocr' or config.get('requires_tesseract'):
+                    if not deps.get('opencv', {}).get('available'):
+                        available = False
+                        missing_deps.append('opencv-python-headless')
+                    if not deps.get('pytesseract', {}).get('available'):
+                        available = False
+                        missing_deps.append('pytesseract')
+                
+                elif model_type in ['easyocr', 'easyocr_spatial']:
+                    if not deps.get('easyocr', {}).get('available'):
+                        available = False
+                        missing_deps.append('easyocr')
+                
+                elif model_type in ['paddle', 'paddle_spatial'] or config.get('requires_paddleocr'):
+                    if not deps.get('paddleocr', {}).get('available'):
+                        available = False
+                        missing_deps.append('paddleocr')
+                
+                elif model_type in ['florence', 'donut']:
+                    if not deps.get('torch', {}).get('available'):
+                        available = False
+                        missing_deps.append('torch')
+                    if not deps.get('transformers', {}).get('available'):
+                        available = False
+                        missing_deps.append('transformers')
+                
+                elif model_type == 'craft':
+                    if not deps.get('torch', {}).get('available'):
+                        available = False
+                        missing_deps.append('torch')
+                    if not deps.get('craft', {}).get('available'):
+                        available = False
+                        missing_deps.append('craft-text-detector')
+                
+                model_info['available'] = available
+                model_info['status'] = 'ready' if available else 'missing_dependencies'
+                if missing_deps:
+                    model_info['missing_dependencies'] = missing_deps
+                    model_info['error'] = f"Missing: {', '.join(missing_deps)}"
             
             models.append(model_info)
         return models
