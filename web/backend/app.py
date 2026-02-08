@@ -84,12 +84,21 @@ def serve_frontend():
 try:
     from web.backend.database import init_db, get_engine
     
-    # Initialize database
-    init_db()
-    logger.info("Database initialized successfully")
+    # Check if DATABASE_URL is configured
+    import os
+    database_url = os.environ.get('DATABASE_URL', '').strip()
+    
+    if database_url and not database_url.startswith('postgresql://localhost'):
+        # Only attempt initialization if we have a proper database URL
+        init_db()
+        logger.info("Database initialized successfully")
+    else:
+        logger.warning("DATABASE_URL not configured or using localhost - skipping database initialization")
+        logger.warning("Database-dependent features will be unavailable")
 except Exception as e:
-    logger.error(f"Database initialization failed: {e}", exc_info=True)
-    # Continue anyway - some routes may work without DB
+    logger.warning(f"Database initialization failed: {e}")
+    logger.warning("Continuing without database - core API functionality will still work")
+    # Continue anyway - OCR routes work without DB
 
 # =============================================================================
 # TELEMETRY & MONITORING SETUP
