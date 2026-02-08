@@ -294,18 +294,34 @@ def get_version() -> Response:
 
 @app.route('/api/models', methods=['GET'])
 def list_models() -> Response:
-    """List available OCR/AI models."""
+    """List available OCR/AI models with availability status."""
     try:
         from shared.models.manager import ModelManager
         
         manager = ModelManager()
-        models = manager.get_available_models()
         
-        return jsonify({
-            'success': True,
-            'models': models,
-            'count': len(models)
-        })
+        # Check if availability check is requested
+        check_availability = request.args.get('check_availability', 'true').lower() == 'true'
+        
+        models = manager.get_available_models(check_availability=check_availability)
+        
+        # Count working vs total
+        if check_availability:
+            working_count = sum(1 for m in models if m.get('available', False))
+            return jsonify({
+                'success': True,
+                'models': models,
+                'count': len(models),
+                'working_count': working_count,
+                'default_model': manager.get_default_model()
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'models': models,
+                'count': len(models),
+                'default_model': manager.get_default_model()
+            })
     except Exception as e:
         logger.error(f"Failed to list models: {e}", exc_info=True)
         return jsonify({

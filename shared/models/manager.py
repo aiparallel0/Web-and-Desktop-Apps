@@ -432,7 +432,8 @@ class ProcessorFactory:
         """
         Create a processor instance for the given model configuration.
         
-        Tries to use enhanced processor if available, falls back to standard processor.
+        Uses standard processors only - enhanced processors disabled due to
+        signature incompatibility with data structures.
 
         Args:
             model_config: Model configuration dictionary
@@ -454,20 +455,13 @@ class ProcessorFactory:
 
         registry_entry = cls._REGISTRY[model_type]
         module_path, class_name, error_msg = registry_entry[0], registry_entry[1], registry_entry[2]
-        enhanced_module = registry_entry[3] if len(registry_entry) > 3 else None
-        enhanced_class = registry_entry[4] if len(registry_entry) > 4 else None
         
-        # Try enhanced processor first if available
-        if enhanced_module and enhanced_class:
-            try:
-                logger.debug(f"Attempting to load enhanced processor: {enhanced_class}")
-                processor = cls._instantiate(enhanced_module, enhanced_class, model_config, error_msg)
-                logger.info(f"✓ Using enhanced processor: {enhanced_class}")
-                return processor
-            except Exception as e:
-                logger.warning(f"Enhanced processor not available, falling back to standard: {e}")
+        # DISABLED: Enhanced processors have incompatible signatures
+        # Use standard processors only for now
+        # enhanced_module = registry_entry[3] if len(registry_entry) > 3 else None
+        # enhanced_class = registry_entry[4] if len(registry_entry) > 4 else None
         
-        # Fall back to standard processor
+        # Use standard processor
         return cls._instantiate(module_path, class_name, model_config, error_msg)
 
     @classmethod
@@ -614,23 +608,43 @@ class ModelManager:
             logger.error(f"Failed to load models config: {e}")
             raise
     
-    def get_available_models(self) -> List[Dict[str, Any]]:
+    def get_available_models(self, check_availability: bool = False) -> List[Dict[str, Any]]:
         """
         Get list of all available models.
         
+        Args:
+            check_availability: If True, test each model to see if it can actually load
+        
         Returns:
-            List of model information dictionaries
+            List of model information dictionaries with 'available' flag if checked
         """
         models = []
         for model_id, config in self.models_config['available_models'].items():
-            models.append({
+            model_info = {
                 'id': config['id'],
                 'name': config['name'],
                 'type': config['type'],
                 'description': config['description'],
                 'requires_auth': config.get('requires_auth', False),
                 'capabilities': config.get('capabilities', {})
-            })
+            }
+            
+            # Optionally check if model can actually be loaded
+            if check_availability:
+                try:
+                    self.get_processor(model_id)
+                    model_info['available'] = True
+                    model_info['status'] = 'ready'
+                except ImportError as e:
+                    model_info['available'] = False
+                    model_info['status'] = 'missing_dependencies'
+                    model_info['error'] = str(e)
+                except Exception as e:
+                    model_info['available'] = False
+                    model_info['status'] = 'error'
+                    model_info['error'] = str(e)
+            
+            models.append(model_info)
         return models
     
     def get_model_info(self, model_id: str) -> Optional[Dict[str, Any]]:
