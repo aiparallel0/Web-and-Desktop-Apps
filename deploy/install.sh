@@ -33,7 +33,7 @@ apt-get install -y -qq \
 echo "[2/8] Cloning repository to ${DEPLOY_ROOT}..."
 if [ -d "${DEPLOY_ROOT}/.git" ]; then
     echo "  Repository already exists — pulling latest..."
-    git -C "${DEPLOY_ROOT}" pull --ff-only
+    git -C "${DEPLOY_ROOT}" -c safe.directory="${DEPLOY_ROOT}" pull --ff-only
 else
     git clone "${REPO_URL}" "${DEPLOY_ROOT}"
 fi
@@ -49,38 +49,62 @@ fi
 "${DEPLOY_ROOT}/venv/bin/pip" install --quiet -r "${DEPLOY_ROOT}/requirements-prod.txt"
 
 # ---------------------------------------------------------------------------
-# 4. Create runtime directories and .env
+# 4. Create runtime directories, log files, and .env
 # ---------------------------------------------------------------------------
-echo "[4/8] Creating runtime directories..."
+echo "[4/8] Creating runtime directories and configuring environment..."
 mkdir -p "${DEPLOY_ROOT}/logs" "${DEPLOY_ROOT}/uploads"
+chmod 755 "${DEPLOY_ROOT}/logs" "${DEPLOY_ROOT}/uploads"
+
+# Pre-create log files so systemd append: directives never fail on first boot
+for logfile in access.log error.log gunicorn.log; do
+    touch "${DEPLOY_ROOT}/logs/${logfile}"
+done
 
 if [ ! -f "${DEPLOY_ROOT}/.env" ]; then
     echo "  Creating .env from template..."
     cp "${DEPLOY_ROOT}/.env.production.template" "${DEPLOY_ROOT}/.env"
-    echo ""
-    echo "  IMPORTANT: Edit ${DEPLOY_ROOT}/.env and set:"
-    echo "    SECRET_KEY  (run: python3 generate-secrets.py)"
-    echo "    JWT_SECRET  (run: python3 generate-secrets.py)"
-    echo ""
 fi
+
+# Auto-generate secrets if placeholders are still present
+if grep -qE "^(SECRET_KEY|JWT_SECRET)=.*(CHANGE_ME|REPLACE_ME|REPLACE_WITH_GENERATED)" "${DEPLOY_ROOT}/.env" || \
+   grep -qE "^(SECRET_KEY|JWT_SECRET)=$" "${DEPLOY_ROOT}/.env"; then
+    echo "  Generating random SECRET_KEY and JWT_SECRET..."
+    NEW_SECRET=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
+    NEW_JWT=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')
+    sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${NEW_SECRET}|" "${DEPLOY_ROOT}/.env"
+    sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${NEW_JWT}|" "${DEPLOY_ROOT}/.env"
+fi
+
+# Ensure USE_SQLITE is set (VPS has no PostgreSQL by default)
+if ! grep -q "^USE_SQLITE=" "${DEPLOY_ROOT}/.env"; then
+    echo "USE_SQLITE=true" >> "${DEPLOY_ROOT}/.env"
+else
+    sed -i "s|^USE_SQLITE=.*|USE_SQLITE=true|" "${DEPLOY_ROOT}/.env"
+fi
+
+# Set correct ownership and permissions
+chown -R www-data:www-data "${DEPLOY_ROOT}"
+chmod 640 "${DEPLOY_ROOT}/.env"
 
 # ---------------------------------------------------------------------------
 # 5. Database migration
 # ---------------------------------------------------------------------------
 echo "[5/8] Running database migrations..."
 cd "${DEPLOY_ROOT}"
-"${DEPLOY_ROOT}/venv/bin/python3" -m alembic upgrade head 2>/dev/null || \
+sudo -u www-data "${DEPLOY_ROOT}/venv/bin/python3" -m alembic upgrade head 2>/dev/null || \
     echo "  Alembic migration skipped (SQLite will auto-create on first run)."
 
 # ---------------------------------------------------------------------------
-# 6. Install nginx config
+# 6. Install nginx config — HTTP stub first, SSL config after certbot
 # ---------------------------------------------------------------------------
 echo "[6/8] Installing nginx configuration..."
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 NGINX_LINK="/etc/nginx/sites-enabled/${DOMAIN}"
+HTTP_CONF="${DEPLOY_ROOT}/deploy/nginx/image-to-text.fit.http.conf"
+FULL_CONF="${DEPLOY_ROOT}/deploy/nginx/image-to-text.fit.conf"
 
-cp "${DEPLOY_ROOT}/deploy/nginx/image-to-text.fit.conf" "${NGINX_CONF}"
-# Replace domain if a custom one was passed
+# Install HTTP-only stub so nginx -t passes before certbot runs
+cp "${HTTP_CONF}" "${NGINX_CONF}"
 if [ "${DOMAIN}" != "image-to-text.fit" ]; then
     sed -i "s/image-to-text\.fit/${DOMAIN}/g" "${NGINX_CONF}"
 fi
@@ -89,7 +113,7 @@ if [ ! -L "${NGINX_LINK}" ]; then
     ln -s "${NGINX_CONF}" "${NGINX_LINK}"
 fi
 
-# Remove default site if still enabled
+# Remove default site if still enabled (leave other sites alone)
 if [ -L "/etc/nginx/sites-enabled/default" ]; then
     rm -f /etc/nginx/sites-enabled/default
 fi
@@ -106,11 +130,18 @@ if certbot --nginx \
     -d "${DOMAIN}" -d "www.${DOMAIN}" \
     --non-interactive --agree-tos -m "${ADMIN_EMAIL}" \
     --redirect 2>&1; then
+    # Certbot succeeded — overwrite with the full SSL vhost config
+    cp "${FULL_CONF}" "${NGINX_CONF}"
+    if [ "${DOMAIN}" != "image-to-text.fit" ]; then
+        sed -i "s/image-to-text\.fit/${DOMAIN}/g" "${NGINX_CONF}"
+    fi
+    nginx -t
     systemctl reload nginx
-    echo "  TLS certificate obtained."
+    echo "  TLS certificate obtained and full SSL config installed."
 else
     echo "  certbot failed — DNS may not point here yet. Run manually after DNS:"
     echo "    certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
+    echo "  Site will serve HTTP until TLS is configured."
 fi
 
 # ---------------------------------------------------------------------------
@@ -130,10 +161,18 @@ systemctl daemon-reload
 systemctl enable --now "${SERVICE}"
 
 # ---------------------------------------------------------------------------
-# Summary
+# Health poll — wait up to 30s for gunicorn to be ready
 # ---------------------------------------------------------------------------
-sleep 2
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://127.0.0.1:8000/api/health" 2>/dev/null || echo "000")
+echo "  Waiting for service to become healthy..."
+HTTP_CODE="000"
+for i in $(seq 1 30); do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://127.0.0.1:8000/api/health" 2>/dev/null || echo "000")
+    if [ "${HTTP_CODE}" = "200" ]; then
+        break
+    fi
+    sleep 1
+done
+
 echo ""
 echo "============================================================"
 echo "  Installation complete."
@@ -141,8 +180,11 @@ echo "  Health check (local): HTTP ${HTTP_CODE}"
 echo ""
 echo "  Next steps:"
 echo "    1. Ensure DNS A record for ${DOMAIN} points to this server."
-echo "    2. Edit ${DEPLOY_ROOT}/.env and set SECRET_KEY + JWT_SECRET."
-echo "    3. systemctl restart ${SERVICE}"
+if [ "${HTTP_CODE}" != "200" ]; then
+    echo "    2. Edit ${DEPLOY_ROOT}/.env if secrets need updating."
+    echo "    3. systemctl restart ${SERVICE}"
+fi
 echo "    4. bash ${DEPLOY_ROOT}/deploy/smoke_test.sh ${DOMAIN}"
 echo "============================================================"
 echo ""
+
