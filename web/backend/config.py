@@ -269,6 +269,15 @@ def load_config() -> Config:
             load_dotenv(env_path)
             logger.info(f"Loaded environment from {env_path}")
     
+    # CORS default: restrict to canonical domain in production, allow all in development.
+    # Override with the CORS_ORIGINS env var in any environment.
+    _flask_env = os.getenv('FLASK_ENV', 'development')
+    _cors_default = (
+        'https://image-to-text.fit,https://www.image-to-text.fit'
+        if _flask_env == 'production'
+        else '*'
+    )
+
     config = Config(
         # Application Settings
         FLASK_ENV=os.getenv('FLASK_ENV', 'development'),
@@ -351,7 +360,9 @@ def load_config() -> Config:
         LOG_FILE=os.getenv('LOG_FILE'),
         
         # CORS
-        CORS_ORIGINS=os.getenv('CORS_ORIGINS', '*'),
+        # In production, default to the canonical domain; use * only in development.
+        # Override with the CORS_ORIGINS env var in any environment.
+        CORS_ORIGINS=os.getenv('CORS_ORIGINS', _cors_default),
         CORS_ALLOW_CREDENTIALS=_get_bool(os.getenv('CORS_ALLOW_CREDENTIALS'), True),
         
         # Rate Limiting

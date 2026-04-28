@@ -258,14 +258,15 @@ def health_check() -> Response:
         }
         
         if db_test.get('status') != 'success':
-            overall_healthy = False
+            # Database issues are reported but do not fail the health check.
+            # The app can still serve the landing page without a database connection.
             health_status['checks']['database']['error'] = db_test.get('error', 'Unknown error')
             
     except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        overall_healthy = False
+        logger.warning(f"Database health check failed: {e}")
+        # Database unavailability is non-fatal; report but keep app healthy.
         health_status['checks']['database'] = {
-            'status': 'error',
+            'status': 'unavailable',
             'error': str(e)
         }
     
