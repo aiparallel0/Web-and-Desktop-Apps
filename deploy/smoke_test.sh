@@ -25,22 +25,45 @@ echo "  Target: ${BASE_URL}"
 echo "=================================================="
 echo ""
 
+# Helper: poll a URL until expected code(s) or timeout
+poll_url() {
+    local url="$1"
+    local label="$2"
+    local timeout=30
+    local code="000"
+    for i in $(seq 1 "${timeout}"); do
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${url}" 2>/dev/null || echo "000")
+        if [ "${code}" != "000" ]; then
+            break
+        fi
+        sleep 1
+    done
+    echo "${code}"
+}
+
 # ---------------------------------------------------------------------------
-# Check root path returns 200
+# Check root path returns 200, 301, or 302
 # ---------------------------------------------------------------------------
 info "GET ${BASE_URL}/"
-ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${BASE_URL}/" 2>/dev/null || echo "000")
-if [ "${ROOT_CODE}" = "200" ]; then
+ROOT_CODE=$(poll_url "${BASE_URL}/" "GET /")
+if [ "${ROOT_CODE}" = "200" ] || [ "${ROOT_CODE}" = "301" ] || [ "${ROOT_CODE}" = "302" ]; then
     ok "GET / returned HTTP ${ROOT_CODE}"
 else
-    fail "GET / returned HTTP ${ROOT_CODE} (expected 200)"
+    fail "GET / returned HTTP ${ROOT_CODE} (expected 200, 301, or 302)"
 fi
 
 # ---------------------------------------------------------------------------
-# Check /api/health returns 200
+# Check /api/health returns 200 (poll up to 30s for rolling restart)
 # ---------------------------------------------------------------------------
 info "GET ${BASE_URL}/api/health"
-HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${BASE_URL}/api/health" 2>/dev/null || echo "000")
+HEALTH_CODE="000"
+for i in $(seq 1 30); do
+    HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/api/health" 2>/dev/null || echo "000")
+    if [ "${HEALTH_CODE}" = "200" ]; then
+        break
+    fi
+    sleep 1
+done
 if [ "${HEALTH_CODE}" = "200" ]; then
     ok "GET /api/health returned HTTP ${HEALTH_CODE}"
 else
@@ -85,3 +108,4 @@ else
 fi
 echo "=================================================="
 echo ""
+

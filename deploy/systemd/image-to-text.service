@@ -10,6 +10,7 @@ WorkingDirectory=/opt/image-to-text
 EnvironmentFile=/opt/image-to-text/.env
 ExecStart=/opt/image-to-text/venv/bin/gunicorn \
     -w 2 \
+    --worker-class gevent \
     -b 127.0.0.1:8000 \
     --timeout 120 \
     --keep-alive 5 \
