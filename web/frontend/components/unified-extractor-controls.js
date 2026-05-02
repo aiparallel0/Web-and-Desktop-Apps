@@ -789,6 +789,6 @@ class UnifiedExtractorControls extends HTMLElement {
     }
 }
 
-customElements.define('unified-extractor-controls', UnifiedExtractorControls);
-
-customElements.define('unified-extractor-controls', UnifiedExtractorControls);
+if (!customElements.get('unified-extractor-controls')) {
+    customElements.define('unified-extractor-controls', UnifiedExtractorControls);
+}
