@@ -16,6 +16,15 @@ git -C "${DEPLOY_ROOT}" -c safe.directory="${DEPLOY_ROOT}" pull --ff-only origin
 echo "[2/5] Installing Python dependencies..."
 venv/bin/pip install --quiet -r requirements-prod.txt
 
+# AI engines — set INSTALL_AI=0 to skip on capacity-constrained hosts.
+if [ "${INSTALL_AI:-1}" = "1" ] && [ -f requirements-prod-ai.txt ]; then
+    echo "  Installing AI engine dependencies (INSTALL_AI=0 to skip)..."
+    venv/bin/pip install -r requirements-prod-ai.txt \
+        || echo "  WARNING: AI deps install failed; only Tesseract will be available."
+    venv/bin/pip install paddleocr paddlepaddle 2>/dev/null \
+        || echo "  Note: PaddleOCR install skipped/failed (non-fatal)."
+fi
+
 echo "[3/5] Running database migrations..."
 sudo -u www-data venv/bin/python3 -m alembic upgrade head 2>/dev/null || \
     echo "  Alembic migration skipped."

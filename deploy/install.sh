@@ -48,6 +48,17 @@ fi
 "${DEPLOY_ROOT}/venv/bin/pip" install --quiet --upgrade pip
 "${DEPLOY_ROOT}/venv/bin/pip" install --quiet -r "${DEPLOY_ROOT}/requirements-prod.txt"
 
+# AI engines (Donut, Florence-2, EasyOCR, CRAFT). Adds ~3 GB on disk.
+# Set INSTALL_AI=0 to skip on capacity-constrained hosts.
+if [ "${INSTALL_AI:-1}" = "1" ]; then
+    echo "  Installing AI engine dependencies (set INSTALL_AI=0 to skip)..."
+    "${DEPLOY_ROOT}/venv/bin/pip" install -r "${DEPLOY_ROOT}/requirements-prod-ai.txt" \
+        || echo "  WARNING: AI deps install failed; only Tesseract will be available."
+    # PaddleOCR wheels are flaky on slim Ubuntu — install separately, never fatal.
+    "${DEPLOY_ROOT}/venv/bin/pip" install paddleocr paddlepaddle 2>/dev/null \
+        || echo "  Note: PaddleOCR install skipped/failed (non-fatal)."
+fi
+
 # ---------------------------------------------------------------------------
 # 4. Create runtime directories, log files, and .env
 # ---------------------------------------------------------------------------

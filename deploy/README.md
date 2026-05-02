@@ -33,8 +33,11 @@ Expected outcome: `https://image-to-text.fit/` returns HTTP 200 with the landing
 Requirements: Ubuntu 24.04, root access, DNS A record for `image-to-text.fit` pointing to the server.
 
 ```
-# One-shot install
+# One-shot install (installs all engines, ~3 GB extra on disk)
 sudo bash deploy/install.sh image-to-text.fit
+
+# Tesseract-only install (small VPS, no AI engines)
+sudo INSTALL_AI=0 bash deploy/install.sh image-to-text.fit
 
 # After DNS propagates, verify
 bash deploy/smoke_test.sh image-to-text.fit
@@ -43,7 +46,11 @@ bash deploy/smoke_test.sh image-to-text.fit
 The install script:
 1. Installs nginx, certbot, python3, tesseract.
 2. Clones the repo to `/opt/image-to-text`.
-3. Creates a virtualenv and installs `requirements-prod.txt`.
+3. Creates a virtualenv and installs `requirements-prod.txt`. When
+   `INSTALL_AI=1` (default), it also installs `requirements-prod-ai.txt`
+   (torch CPU build, transformers, easyocr, craft) so Donut, Florence-2,
+   EasyOCR and CRAFT engines are available. PaddleOCR is attempted last
+   and is non-fatal — its wheels are flaky on slim Ubuntu.
 4. Creates runtime dirs, log files, and auto-generates `SECRET_KEY`/`JWT_SECRET` if needed.
 5. Runs Alembic migrations.
 6. Installs an HTTP-only nginx stub, runs certbot for TLS, then installs the full SSL vhost.

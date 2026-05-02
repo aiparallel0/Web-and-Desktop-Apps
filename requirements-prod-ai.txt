@@ -1,0 +1,29 @@
+# Heavy AI/OCR dependencies for VPS deployments that have the disk + RAM
+# budget to serve every detection method. Install AFTER requirements-prod.txt.
+#
+# Adds ~3 GB on disk; first-run downloads add another ~2 GB of model weights
+# under ~/.cache/huggingface and ~/.EasyOCR. PaddleOCR is included but allowed
+# to fail without aborting the install (its wheels are flaky on some hosts).
+#
+# Toggle via INSTALL_AI=0 in deploy/install.sh and deploy/redeploy.sh.
+
+# CPU-only PyTorch — PyPI's default torch wheel for Linux x86_64 is CPU-only,
+# so no extra index URL is needed here. For GPU hosts, install torch separately
+# from the cu118/cu121 index before this file.
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Transformer models (Donut, Florence-2)
+transformers>=4.30.0
+accelerate>=0.26.0
+sentencepiece>=0.1.99
+
+# Classical OCR engines
+easyocr>=1.7.0
+
+# CRAFT text detector
+craft-text-detector>=0.4.3
+
+# Image processing pulled in by easyocr / craft / donut preprocessing
+opencv-python-headless>=4.8.0
+scikit-image>=0.22.0

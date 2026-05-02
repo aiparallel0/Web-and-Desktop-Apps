@@ -12,7 +12,7 @@ ExecStart=/opt/image-to-text/venv/bin/gunicorn \
     -w 2 \
     --worker-class gevent \
     -b 127.0.0.1:8000 \
-    --timeout 120 \
+    --timeout 300 \
     --keep-alive 5 \
     --log-level info \
     --access-logfile /opt/image-to-text/logs/access.log \
@@ -20,7 +20,7 @@ ExecStart=/opt/image-to-text/venv/bin/gunicorn \
     web.backend.app:app
 Restart=always
 RestartSec=5
-TimeoutStartSec=30
+TimeoutStartSec=180
 StandardOutput=append:/opt/image-to-text/logs/gunicorn.log
 StandardError=append:/opt/image-to-text/logs/gunicorn.log
 
