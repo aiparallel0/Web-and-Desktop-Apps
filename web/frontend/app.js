@@ -586,12 +586,12 @@ class FileHandler {
         const file = event.target.files?.[0] || event.dataTransfer?.files?.[0];
         if (!file) return;
 
-        if (!this.validateFile(file)) {
+        if (!FileHandler.validateFile(file)) {
             return;
         }
 
         AppState.setFile(file);
-        this.displayFilePreview(file);
+        FileHandler.displayFilePreview(file);
     }
 
     static validateFile(file) {
