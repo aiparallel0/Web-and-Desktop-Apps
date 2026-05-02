@@ -767,7 +767,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Listen to upload zone events
-    const uploadZone = document.getElementById('uploadZone');
+    const uploadZone = document.getElementById('mainUploadZone') || document.getElementById('uploadZone');
     if (uploadZone) {
         uploadZone.addEventListener('file-selected', (e) => {
             console.log('File selected:', e.detail.file.name);
