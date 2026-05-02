@@ -621,51 +621,51 @@ class ModelManager:
         try:
             import cv2
             deps['opencv'] = {'available': True, 'version': cv2.__version__}
-        except ImportError as e:
+        except Exception as e:
             deps['opencv'] = {'available': False, 'error': str(e)}
             logger.warning("OpenCV not available - Tesseract models may not work properly")
-        
+
         # Check EasyOCR
         try:
             import easyocr
             deps['easyocr'] = {'available': True, 'version': getattr(easyocr, '__version__', 'unknown')}
-        except ImportError as e:
+        except Exception as e:
             deps['easyocr'] = {'available': False, 'error': str(e)}
             logger.warning("EasyOCR not available")
-        
+
         # Check PaddleOCR
         try:
             import paddleocr
             deps['paddleocr'] = {'available': True, 'version': getattr(paddleocr, '__version__', 'unknown')}
-        except ImportError as e:
+        except Exception as e:
             deps['paddleocr'] = {'available': False, 'error': str(e)}
-            logger.warning("PaddleOCR not available")
-        
+            logger.warning("PaddleOCR not available: %s", e)
+
         # Check PyTorch (for Florence-2, DONUT, CRAFT)
         try:
             import torch
             deps['torch'] = {
-                'available': True, 
+                'available': True,
                 'version': torch.__version__,
                 'cuda_available': torch.cuda.is_available()
             }
-        except ImportError as e:
+        except Exception as e:
             deps['torch'] = {'available': False, 'error': str(e)}
             logger.warning("PyTorch not available - AI models will not work")
-        
+
         # Check Transformers (for Florence-2, DONUT)
         try:
             import transformers
             deps['transformers'] = {'available': True, 'version': transformers.__version__}
-        except ImportError as e:
+        except Exception as e:
             deps['transformers'] = {'available': False, 'error': str(e)}
             logger.warning("Transformers not available - Florence-2 and DONUT models will not work")
-        
+
         # Check CRAFT detector
         try:
             import craft_text_detector
             deps['craft'] = {'available': True, 'version': getattr(craft_text_detector, '__version__', 'unknown')}
-        except ImportError as e:
+        except Exception as e:
             deps['craft'] = {'available': False, 'error': str(e)}
             logger.warning("CRAFT text detector not available")
         
