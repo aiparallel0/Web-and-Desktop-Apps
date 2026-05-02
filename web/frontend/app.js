@@ -637,6 +637,11 @@ class FileHandler {
 // =============================================================================
 
 async function handleExtraction() {
+    if (AppState.isProcessing) {
+        console.log('Extraction already in progress — ignoring duplicate request');
+        return;
+    }
+
     const file = AppState.currentFile;
     if (!file) {
         UIHandler.showError('Please select a file first');
