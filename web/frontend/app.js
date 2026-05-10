@@ -16,7 +16,7 @@ const API_CONFIG = {
         health: '/api/health'
     },
     maxFileSize: 100 * 1024 * 1024, // 100MB
-    timeout: 60000
+    timeout: 180000
 };
 
 function detectBackendUrl() {
